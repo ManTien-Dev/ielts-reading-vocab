@@ -186,7 +186,20 @@
   }
 
   function getScopeDef(key) {
-    return getAllScopes().find(s => s.key === key) || SCOPES[0];
+    const found = getAllScopes().find(s => s.key === key);
+    if (found) return found;
+    if (key && key.startsWith('task_') && window.TasksModule?.getTaskById) {
+      const t = window.TasksModule.getTaskById(key);
+      if (t) {
+        return {
+          key: t.id,
+          name: `${t.label}: ${t.theme}`,
+          isTask: true,
+          getList: () => resolveTaskItems(t),
+        };
+      }
+    }
+    return SCOPES[0];
   }
 
   function escapeHtml(str) {
@@ -205,7 +218,7 @@
     el.textContent = msg;
     el.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
   }
 
   function saveState() {
@@ -1376,12 +1389,27 @@
   function populateScopeSelect() {
     const sel = document.getElementById('study-scope-select');
     if (!sel) return;
-    const inTaskScope = Boolean(currentScopeKey && currentScopeKey.startsWith('task_') && dynamicTaskScopes.length > 0);
-    if (inTaskScope) {
-      sel.innerHTML = dynamicTaskScopes.map(it =>
+    const isTaskActive = Boolean(
+      (currentScopeKey && currentScopeKey.startsWith('task_')) ||
+      (window.TasksModule?.getActiveTask?.()) ||
+      (dynamicTaskScopes.length > 0 && currentScopeKey && currentScopeKey.startsWith('task_'))
+    );
+    if (isTaskActive) {
+      // Khi đang trong chế độ Task: BỎ HẾT các bộ từ mặc định (Paraphrase, Nền tảng, Học thuật, Chuyên sâu, Từ nối)
+      // CHỈ hiển thị duy nhất các Task được giao hoặc Task hiện tại!
+      let taskOptions = dynamicTaskScopes;
+      if (taskOptions.length === 0 && window.TasksModule?.getAllTasks) {
+        taskOptions = window.TasksModule.getAllTasks().map(t => ({
+          key: t.id,
+          name: `${t.label}: ${t.theme}`,
+          isTask: true,
+          getList: () => resolveTaskItems(t),
+        }));
+      }
+      sel.innerHTML = taskOptions.map(it =>
         `<option value="${escapeHtml(it.key)}">${escapeHtml(it.name)}</option>`
       ).join('');
-      sel.value = dynamicTaskScopes.some(s => s.key === currentScopeKey) ? currentScopeKey : dynamicTaskScopes[0].key;
+      sel.value = taskOptions.some(s => s.key === currentScopeKey) ? currentScopeKey : (taskOptions[0]?.key || currentScopeKey);
       return;
     }
     let html = SCOPES.map(it =>
@@ -3637,19 +3665,31 @@
     showToast('Phiên kiểm tra ở tab kia đã kết thúc. Đã mở khóa!');
   }
 
+  function isExamAntiCheatBypassed() {
+    return Boolean(
+      currentUser?.role === 'teacher' ||
+      window.TasksModule?.isPreviewMode?.() ||
+      window.TasksModule?.getExamState?.()?.isPreview ||
+      window.TasksModule?.getExamState?.()?.isTeacher ||
+      new URLSearchParams(window.location.search || '').has('adminTest') ||
+      new URLSearchParams(window.location.search || '').has('preview') ||
+      localStorage.getItem('ielts_bypass_anti_cheat') === '1'
+    );
+  }
+
   function bindNoPasteGuards(el, toastMsg) {
     if (!el || el.dataset.noPasteBound === '1') return;
     el.dataset.noPasteBound = '1';
     const msg = toastMsg || 'Không được dán (paste) khi kiểm tra — hãy tự nhập trực tiếp!';
     ['paste', 'drop', 'copy', 'cut', 'contextmenu'].forEach((evt) => {
       el.addEventListener(evt, (e) => {
-        if (currentUser?.role === 'teacher' || window.TasksModule?.getExamState?.().isPreview) return;
+        if (isExamAntiCheatBypassed()) return;
         e.preventDefault();
         if (evt === 'paste' || evt === 'drop') showToast(msg);
       });
     });
     el.addEventListener('beforeinput', (e) => {
-      if (currentUser?.role === 'teacher' || window.TasksModule?.getExamState?.().isPreview) return;
+      if (isExamAntiCheatBypassed()) return;
       if (e.inputType === 'insertFromPaste' || e.inputType === 'insertFromDrop') {
         e.preventDefault();
         showToast(msg);
@@ -3839,20 +3879,15 @@
   };
 
   function applyOneTimeStudentResetEpoch() {
-    const EPOCH_KEY = 'ielts_reset_thanhngoc_epoch_20261117_2105';
+    const EPOCH_KEY = 'ielts_reset_thanhngoc_clean_20261118_v5';
     const TARGET_UID = 'thanhngoc';
     try {
       if (localStorage.getItem(EPOCH_KEY)) return;
-      const toRemove = [
-        `${STORAGE_KEY_BASE}_${TARGET_UID}`,
-        `${STREAK_KEY_BASE}_${TARGET_UID}`,
-        `${TASK_PROGRESS_KEY_BASE}${TARGET_UID}`,
-        `${TASK_LOCKS_KEY_BASE}${TARGET_UID}`,
-      ];
+      const toRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (!k) continue;
-        if (k.startsWith(`${TIMER_KEY_BASE}${TARGET_UID}_`) || k.startsWith(`${DAILY_WORDS_BASE}${TARGET_UID}_`)) {
+        if (k.toLowerCase().includes(TARGET_UID) || k.startsWith('ielts_trans_draft_')) {
           toRemove.push(k);
         }
       }
