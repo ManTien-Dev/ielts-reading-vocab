@@ -987,12 +987,12 @@
     const isTeacher = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
     if (isTeacher) {
       nav.innerHTML = `
-        <button type="button" class="task-step-pill ${activeStage === 1 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(1)" title="Xem Test 1">TEST 1 (Ghép từ)</button>
-        <button type="button" class="task-step-pill ${activeStage === 2 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(2)" title="Xem Test 2">TEST 2 (Ngữ cảnh)</button>
-        <button type="button" class="task-step-pill ${activeStage === 3 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(3)" title="Xem Test cuối">TEST cuối (Dịch bài AI)</button>
+        <button type="button" class="task-step-pill ${activeStage === 1 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(1)" title="Xem Test 1">Test 1 · Ghép từ</button>
+        <button type="button" class="task-step-pill ${activeStage === 2 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(2)" title="Xem Test 2">Test 2 · Ngữ cảnh</button>
+        <button type="button" class="task-step-pill ${activeStage === 3 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(3)" title="Xem Test cuối">Test cuối · Dịch AI</button>
       `;
     } else {
-      const stageText = activeStage === 1 ? 'TEST 1 (Ghép từ)' : activeStage === 2 ? 'TEST 2 (Ngữ cảnh)' : 'TEST cuối (Dịch bài AI)';
+      const stageText = activeStage === 1 ? 'Test 1 · Ghép từ' : activeStage === 2 ? 'Test 2 · Ngữ cảnh' : 'Test cuối · Dịch AI';
       nav.innerHTML = `<span class="task-step-pill active" id="task-current-step-badge">${stageText}</span>`;
     }
   }
@@ -1020,8 +1020,8 @@
         if (badge) badge.textContent = activeTask.label.toUpperCase();
         if (theme) {
           theme.textContent = isPreviewTestMode
-            ? `${activeTask.theme} · CHẾ ĐỘ TEST`
-            : `${activeTask.theme} · BÀI KIỂM TRA TASK`;
+            ? `${activeTask.theme} · Chế độ Test`
+            : activeTask.theme;
         }
         if (idleBadge) idleBadge.style.display = isPreviewTestMode ? 'none' : '';
       } else {
@@ -1125,8 +1125,7 @@
       <div class="task-card-panel">
         <div class="task-exam-header-row">
           <div class="task-exam-title-group">
-            <span class="tip-pill" style="margin:0;">GHÉP TỪ</span>
-            <h2 class="task-exam-title">Bảng ${t1BoardIndex + 1} / 10</h2>
+            <h2 class="task-exam-title">Ghép từ · Bảng ${t1BoardIndex + 1} / 10</h2>
           </div>
           <div class="task-stat-pills">
             <span class="task-err-pill ${t1Mistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t1-err-cnt">${t1Mistakes}</strong></span>
@@ -1350,7 +1349,6 @@
         <div class="task-card-panel">
           <div class="task-exam-header-row">
             <div class="task-exam-title-group">
-              <span class="tip-pill" style="margin:0;">GHÉP PARAPHRASE</span>
               <h2 class="task-exam-title">Nối cụm từ tương đương</h2>
             </div>
             <div class="task-stat-pills">
@@ -1360,11 +1358,11 @@
           </div>
           <div class="task-match-wrap">
             <div class="task-match-col">
-              <div class="task-col-caption">Cụm câu hỏi</div>
+              <div class="task-col-caption">Từ / Cụm gốc</div>
               ${leftHtml}
             </div>
             <div class="task-match-col">
-              <div class="task-col-caption">Paraphrase trong bài</div>
+              <div class="task-col-caption">Paraphrase tương ứng</div>
               ${rightHtml}
             </div>
           </div>
@@ -1383,48 +1381,50 @@
         ? `<div id="task-t2-review-list" class="task-mistake-review-grid">
             ${t2WrongRecords.map((m, idx) => `
               <div class="task-mistake-card">
-                <div class="task-text-err" style="font-size:12px; font-weight:800;">Câu nhầm #${idx + 1}</div>
-                <div style="font-size:13.5px; font-weight:750; color:var(--text-bright); margin-top:4px;">${esc(m.prompt)}</div>
-                <div class="task-text-err" style="font-size:12.5px; margin-top:5px;">Đã chọn: <strong>${esc(m.chosen)}</strong></div>
-                <div class="task-text-ok" style="font-size:12.5px; margin-top:2px;">Đáp án: <strong>${esc(m.answer)}</strong></div>
-                ${m.explain ? `<div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${esc(m.explain)}</div>` : ''}
+                <div class="task-text-err" style="font-size:13.5px; font-weight:800;">Câu nhầm #${idx + 1}</div>
+                <div style="font-size:15.5px; font-weight:750; color:var(--text-bright); margin-top:4px;">${esc(m.prompt)}</div>
+                <div class="task-text-err" style="font-size:14.5px; margin-top:5px;">Đã chọn: <strong>${esc(m.chosen)}</strong></div>
+                <div class="task-text-ok" style="font-size:14.5px; margin-top:2px;">Đáp án: <strong>${esc(m.answer)}</strong></div>
+                ${m.explain ? `<div style="font-size:13.5px; color:var(--text-muted); margin-top:4px;">${esc(m.explain)}</div>` : ''}
               </div>
             `).join('')}
           </div>`
-        : `<div id="task-t2-review-list" class="task-notice-box" style="max-width:420px; margin:0 auto 18px;">✓ Xuất sắc! Đúng 100% ở Test 2.</div>`;
+        : `<div id="task-t2-review-list" class="task-notice-box" style="max-width:440px; margin:0 auto 18px;">✓ Xuất sắc! Đúng 100% ở Test 2.</div>`;
 
       container.innerHTML = `
-        <div class="task-card-panel" style="text-align:center; padding:30px 24px;">
-          <h2 style="margin:0 0 8px;">Kết quả Test 2: ${t2Correct} / ${totalT2}</h2>
-          <p style="color:var(--text-muted); margin:0 0 14px;">
-            ${passed ? 'Đạt chuẩn! Chuyển sang Test cuối.' : `Cần đạt tối thiểu ${passThreshold}/${totalT2} để qua Test 2.`}
+        <div class="task-card-panel" style="text-align:center; padding:34px 28px;">
+          <h2 style="margin:0 0 10px; font-size:25px; font-weight:850;">Kết quả Test 2: ${t2Correct} / ${totalT2}</h2>
+          <p style="color:var(--text-muted); font-size:16px; margin:0 0 18px;">
+            ${passed ? 'Đạt yêu cầu! Tiếp tục làm bài dịch cuối.' : `Cần đạt tối thiểu ${passThreshold}/${totalT2} để qua Test 2.`}
           </p>
           ${mistakesHtml}
           ${passed
-            ? `<button type="button" class="btn btn-primary" onclick="TasksModule.startFinalTranslation()">Vào Test cuối (Dịch bài AI) →</button>`
-            : `<button type="button" class="btn btn-primary" onclick="TasksModule.retryTest2()">Làm lại Test 2</button>`}
+            ? `<button type="button" class="btn btn-primary" style="font-size:16px; padding:12px 26px;" onclick="TasksModule.startFinalTranslation()">Vào Test cuối (Dịch bài AI) →</button>`
+            : `<button type="button" class="btn btn-primary" style="font-size:16px; padding:12px 26px;" onclick="TasksModule.retryTest2()">Làm lại Test 2</button>`}
         </div>
       `;
       return;
     }
 
     const q = qs[t2Index];
-    const typeLabel = q.type === 'word_family' ? 'WORD FAMILY' : 'NGỮ CẢNH';
+    const typeLabel = q.type === 'word_family' ? 'Word Family' : 'Ngữ cảnh';
 
     container.innerHTML = `
       <div class="task-card-panel">
         <div class="task-exam-header-row">
-          <span class="tip-pill" style="margin:0;">${typeLabel}</span>
-          <span class="recall-stage-pill">Câu ${t2Index + 1} / ${qs.length} · Đúng ${t2Correct}/${totalT2}</span>
+          <h2 class="task-exam-title">${typeLabel} · Câu ${t2Index + 1} / ${qs.length}</h2>
+          <div class="task-stat-pills">
+            <span class="recall-stage-pill">Đúng ${t2Correct} / ${totalT2}</span>
+          </div>
         </div>
-        <div style="font-size:16px; font-weight:750; color:var(--text-bright); margin-bottom:10px;">${esc(q.prompt)}</div>
-        ${q.qText ? `<div style="padding:12px 15px; border-radius:12px; background:var(--bg-soft); border:1px solid var(--card-border); margin-bottom:10px; font-size:15.5px; line-height:1.5;">${esc(q.qText)}</div>` : ''}
+        <div style="font-size:19.5px; font-weight:750; color:var(--text-bright); line-height:1.5; margin-bottom:14px;">${esc(q.prompt)}</div>
+        ${q.qText ? `<div style="padding:16px 20px; border-radius:14px; background:var(--bg-soft); border:1px solid var(--card-border); margin-bottom:14px; font-size:18px; line-height:1.65;">${esc(q.qText)}</div>` : ''}
         <div class="task-q-opts" id="task-t2-opts">
           ${q.options.map((opt, idx) => `<button type="button" class="task-q-opt" data-opt-idx="${idx}" onclick="TasksModule.answerTest2(${idx})">${esc(opt)}</button>`).join('')}
         </div>
-        <div id="task-t2-explain" style="display:none; margin-top:12px;" class="task-notice-box"></div>
-        <div style="display:flex; justify-content:flex-end; margin-top:14px;">
-          <button type="button" class="btn btn-primary" id="btn-t2-next" style="display:none;" onclick="TasksModule.nextTest2Question()">
+        <div id="task-t2-explain" style="display:none; margin-top:16px;" class="task-notice-box"></div>
+        <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+          <button type="button" class="btn btn-primary" id="btn-t2-next" style="display:none; font-size:16px; padding:11px 24px;" onclick="TasksModule.nextTest2Question()">
             ${t2Index < qs.length - 1 ? 'Câu tiếp →' : 'Xem kết quả Test 2'}
           </button>
         </div>
@@ -1486,8 +1486,20 @@
     renderTaskStage();
   }
 
+  function switchT3Tab(tab) {
+    const isGrade = tab === 'grade';
+    const writePane = document.getElementById('t3-pane-write');
+    const gradePane = document.getElementById('t3-pane-grade');
+    const btnWrite = document.getElementById('t3-tab-btn-write');
+    const btnGrade = document.getElementById('t3-tab-btn-grade');
+    if (writePane) writePane.style.display = isGrade ? 'none' : 'block';
+    if (gradePane) gradePane.style.display = isGrade ? 'block' : 'none';
+    if (btnWrite) btnWrite.classList.toggle('active', !isGrade);
+    if (btnGrade) btnGrade.classList.toggle('active', isGrade);
+  }
+
   // =========================================================
-  // STAGE 3: FINAL 2-COLUMN TRANSLATION + GEMINI AI GRADING
+  // STAGE 3: FINAL 2-COLUMN TRANSLATION + DEDICATED AI GRADING TAB
   // =========================================================
   function renderFinalTranslationStage() {
     const container = document.getElementById('task-stage-container');
@@ -1508,40 +1520,50 @@
             <span>${esc(p.topic || activeTask.theme)}</span>
             <span>${p.wordCount} từ</span>
           </div>
-          ${(p.signalClues || []).length ? `<div style="font-size:12.5px; color:var(--accent); font-weight:750; margin-bottom:10px;">Từ nối: ${esc(p.signalClues.join(' · '))}</div>` : ''}
-          <div id="task-passage-hl-legend" class="passage-hl-legend" style="display:none;"></div>
+          <div id="task-passage-hl-legend" class="passage-hl-legend" style="display:none; margin-bottom:12px;"></div>
           <div class="english-passage" id="task-english-passage">${esc(p.text)}</div>
         </article>
 
-        <section class="practice-paper writing-paper" aria-label="Bài làm">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h2 style="margin:0; font-size:19px; font-weight:800;">Bài làm</h2>
-            <span style="font-size:12px; color:var(--text-muted);" id="task-draft-status">Tự lưu nháp</span>
+        <section class="practice-paper writing-paper" aria-label="Bài làm và Chấm điểm">
+          <div class="t3-tabs-bar" role="tablist">
+            <button type="button" role="tab" id="t3-tab-btn-write" class="t3-tab-btn active" onclick="TasksModule.switchT3Tab('write')">
+              Bài làm
+            </button>
+            <button type="button" role="tab" id="t3-tab-btn-grade" class="t3-tab-btn" onclick="TasksModule.switchT3Tab('grade')">
+              Kết quả chấm AI
+              <span id="t3-tab-score-badge" class="t3-tab-score-badge" style="display:none;"></span>
+            </button>
           </div>
-          <label class="writing-label" for="task-trans-input">
-            <span><b>01</b> Dịch toàn đoạn</span>
-            <span id="task-trans-wc" style="color:var(--text-muted);">0 từ</span>
-          </label>
-          <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Dịch đoạn văn sang tiếng Việt...">${esc(savedDraft.trans || '')}</textarea>
 
-          <label class="writing-label" for="task-summary-input">
-            <span><b>02</b> Tóm tắt (1–3 câu)</span>
-            <span id="task-sum-wc" style="color:var(--text-muted);">0 từ</span>
-          </label>
-          <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Tóm tắt ý chính (1–3 câu)...">${esc(savedDraft.summary || '')}</textarea>
+          <div id="t3-pane-write">
+            <label class="writing-label" for="task-trans-input">
+              <span>01. Dịch toàn đoạn</span>
+              <span id="task-trans-wc" style="color:var(--text-muted); font-size:14px;">0 từ</span>
+            </label>
+            <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Nhập bản dịch tiếng Việt...">${esc(savedDraft.trans || '')}</textarea>
 
-          <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; margin-top:8px; flex-wrap:wrap;">
-            <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
-              <span class="tip-pill" style="margin:0; font-size:11px;">CHẤM AI THỰC TẾ</span>
-              <span>Đối chiếu ngữ cảnh &amp; từ khóa bài đọc</span>
-            </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <button type="button" class="btn btn-primary" id="btn-submit-ai-grade" onclick="TasksModule.submitTranslationForAi()">
+            <label class="writing-label" for="task-summary-input">
+              <span>02. Tóm tắt ý chính (1–3 câu)</span>
+              <span id="task-sum-wc" style="color:var(--text-muted); font-size:14px;">0 từ</span>
+            </label>
+            <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Tóm tắt ý chính đoạn văn...">${esc(savedDraft.summary || '')}</textarea>
+
+            <div style="display:flex; justify-content:flex-end; margin-top:4px;">
+              <button type="button" class="btn btn-primary" id="btn-submit-ai-grade" style="font-size:16.5px; padding:12px 26px;" onclick="TasksModule.submitTranslationForAi()">
                 Nộp &amp; AI chấm
               </button>
             </div>
           </div>
-          <div id="task-ai-grade-result" style="display:none;"></div>
+
+          <div id="t3-pane-grade" style="display:none;">
+            <div id="task-ai-grade-result" class="ai-grade-box" style="display:block; background:var(--bg-soft); border-color:var(--card-border);">
+              <div style="text-align:center; padding:36px 16px; color:var(--text-muted);">
+                <div style="font-size:18px; font-weight:750; color:var(--text-bright); margin-bottom:8px;">Chưa có bài nộp</div>
+                <div style="font-size:15.5px; margin-bottom:18px;">Hoàn thành bản dịch và tóm tắt ở tab Bài làm rồi nhấn Nộp &amp; AI chấm.</div>
+                <button type="button" class="btn btn-primary" onclick="TasksModule.switchT3Tab('write')">← Quay lại viết bài</button>
+              </div>
+            </div>
+          </div>
         </section>
       </div>
     `;
@@ -2064,6 +2086,7 @@
           out.className = 'ai-grade-box fail';
           out.innerHTML = `<strong>Chưa chấm được:</strong> ${B()?.escapeHtml(res.error || 'Lỗi kết nối AI')}`;
         }
+        switchT3Tab('grade');
         return;
       }
 
@@ -2072,19 +2095,19 @@
       const esc = B()?.escapeHtml || ((x) => String(x));
       const c = g.criteria || {};
       const linesHtml = (g.lineFeedback || []).slice(0, 6).map((lf) => `
-        <div style="padding:8px 10px; border-radius:9px; background:var(--card-bg); border:1px solid var(--card-border); margin-top:6px; font-size:13px;">
-          <div><strong>Cụm/câu cần sửa:</strong> ${esc(lf.issue || '')}</div>
-          ${lf.student ? `<div class="task-text-err" style="margin-top:2px;"><strong>Bạn dịch:</strong> ${esc(lf.student)}</div>` : ''}
-          ${lf.advice ? `<div style="margin-top:2px;"><strong>Phân tích ngữ cảnh:</strong> ${esc(lf.advice)}</div>` : ''}
-          ${lf.suggested ? `<div class="task-text-ok" style="margin-top:2px;"><strong>Gợi ý chuẩn:</strong> ${esc(lf.suggested)}</div>` : ''}
+        <div style="padding:12px 15px; border-radius:12px; background:var(--card-bg); border:1px solid var(--card-border); margin-top:10px; font-size:15.5px; line-height:1.55;">
+          <div><strong>Cụm / câu cần sửa:</strong> ${esc(lf.issue || '')}</div>
+          ${lf.student ? `<div class="task-text-err" style="margin-top:4px;"><strong>Bạn dịch:</strong> ${esc(lf.student)}</div>` : ''}
+          ${lf.advice ? `<div style="margin-top:4px;"><strong>Phân tích:</strong> ${esc(lf.advice)}</div>` : ''}
+          ${lf.suggested ? `<div class="task-text-ok" style="margin-top:4px;"><strong>Gợi ý chuẩn:</strong> ${esc(lf.suggested)}</div>` : ''}
         </div>
       `).join('');
 
       let masteryNote = '';
       if (g.passed && isPreviewTestMode) {
         masteryNote = `
-          <div style="margin-top:10px; padding:12px 14px; border-radius:10px; background:rgba(82,136,62,0.16); border:1px solid rgba(82,136,62,0.35); color:var(--text-bright);">
-            <div style="font-weight:800;">✓ Đạt Test thử ${esc(activeTask.label)}! (Chế độ Test thử — không ghi nhận điểm hay mở khóa từ vào tài khoản học viên.)</div>
+          <div style="margin-top:14px; padding:14px 16px; border-radius:12px; background:rgba(82,136,62,0.16); border:1px solid rgba(82,136,62,0.35); color:var(--text-bright); font-size:15.5px;">
+            <div style="font-weight:800;">✓ Đạt Test thử ${esc(activeTask.label)}!</div>
           </div>`;
       } else if (g.passed) {
         taskTestPassed = true;
@@ -2110,21 +2133,28 @@
         saveTaskProgress(prog);
         B()?.saveAndSync?.();
         masteryNote = `
-          <div style="margin-top:10px; padding:12px 14px; border-radius:10px; background:rgba(82,136,62,0.16); border:1px solid rgba(82,136,62,0.35); color:var(--text-bright);">
+          <div style="margin-top:14px; padding:14px 16px; border-radius:12px; background:rgba(82,136,62,0.16); border:1px solid rgba(82,136,62,0.35); color:var(--text-bright); font-size:15.5px;">
             <div style="font-weight:800;">✓ Hoàn thành ${esc(activeTask.label)}! Đã tự động cập nhật Đã thuộc (+${newlyMarked} mục mới, tổng ${activeTask.linkedIds.length} từ/biến thể liên kết) vào bộ từ vựng chính.</div>
-            <div style="margin-top:8px;">
+            <div style="margin-top:10px;">
               <button type="button" class="btn btn-primary" onclick="TasksModule.openTaskSummaryModal('${esc(activeTask.id)}')">Xem Bảng Thống Kê Task</button>
             </div>
           </div>`;
+      }
+
+      const tabBadge = document.getElementById('t3-tab-score-badge');
+      if (tabBadge) {
+        tabBadge.style.display = 'inline-flex';
+        tabBadge.className = `t3-tab-score-badge ${g.passed ? '' : 'is-fail'}`;
+        tabBadge.textContent = `${g.score.toFixed(1)}/10`;
       }
 
       if (out) {
         out.style.display = 'block';
         out.className = `ai-grade-box ${g.passed ? '' : 'fail'}`;
         out.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <strong style="font-size:18px;">Điểm AI: ${g.score.toFixed(1)} / 10</strong>
-            <span class="tip-pill" style="margin:0;">${g.passed ? 'ĐẠT TASK' : 'CẦN DỊCH LẠI (>= 6.0)'}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <strong style="font-size:24px; color:var(--text-bright);">Điểm AI: ${g.score.toFixed(1)} / 10</strong>
+            <span class="tip-pill" style="margin:0; font-size:13.5px;">${g.passed ? 'ĐẠT TASK' : 'CẦN DỊCH LẠI (>= 6.0)'}</span>
           </div>
           <div class="ai-criteria-grid">
             <div class="ai-crit-pill"><span>Độ chính xác</span><span>${c.accuracy ?? '--'}/10</span></div>
@@ -2132,12 +2162,17 @@
             <div class="ai-crit-pill"><span>Đoán từ ngữ cảnh</span><span>${c.contextInference ?? '--'}/10</span></div>
             <div class="ai-crit-pill"><span>Tóm tắt ý chính</span><span>${c.summary ?? '--'}/10</span></div>
           </div>
-          <div style="font-size:13.5px; line-height:1.5;"><strong>Nhận xét:</strong> ${esc(g.overallComment || '')}</div>
+          <div style="font-size:16.5px; line-height:1.6;"><strong>Nhận xét:</strong> ${esc(g.overallComment || '')}</div>
           ${linesHtml}
-          ${g.modelTranslation ? `<details style="margin-top:10px; font-size:13px;"><summary style="cursor:pointer; font-weight:700;">Xem bản dịch chuẩn tham khảo</summary><div style="margin-top:6px; line-height:1.55;">${esc(g.modelTranslation)}</div></details>` : ''}
+          ${g.modelTranslation ? `<details style="margin-top:14px; font-size:15.5px;"><summary style="cursor:pointer; font-weight:750;">Xem bản dịch chuẩn tham khảo</summary><div style="margin-top:8px; line-height:1.65;">${esc(g.modelTranslation)}</div></details>` : ''}
           ${masteryNote}
+          <div style="display:flex; justify-content:flex-start; margin-top:16px;">
+            <button type="button" class="btn-subtle" id="btn-t3-back-to-write" style="font-size:15px; padding:10px 18px;" onclick="TasksModule.switchT3Tab('write')">← Quay lại sửa bài</button>
+          </div>
         `;
       }
+
+      switchT3Tab('grade');
 
       if (g.passed && !isPreviewTestMode) {
         setTimeout(() => openTaskSummaryModal(activeTask?.id), 180);
@@ -2148,6 +2183,7 @@
         out.className = 'ai-grade-box fail';
         out.textContent = `Lỗi khi chấm bài: ${err.message || err}`;
       }
+      switchT3Tab('grade');
     } finally {
       if (btn) {
         btn.disabled = false;
@@ -2403,6 +2439,7 @@
     openAdminTestPreview,
     pickT2ParaLeft,
     pickT2ParaRight,
+    switchT3Tab,
     submitTranslationForAi,
     promptGeminiApiKey,
     onUserEntered,
