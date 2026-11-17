@@ -10,9 +10,9 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261117h">
-  <link rel="stylesheet" href="css/motion.css?v=20261117h">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261117h">
+  <link rel="stylesheet" href="css/style.css?v=20261117i">
+  <link rel="stylesheet" href="css/motion.css?v=20261117i">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261117i">
 </head>
 <body>
 
@@ -536,11 +536,9 @@
           <button type="button" class="btn btn-primary" onclick="TasksModule.copyTeacherTaskLink()">Copy Link Task</button>
         </div>
 
-        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; padding:8px 12px; border-radius:12px; background:var(--bg-soft); border:1px solid var(--card-border);">
-          <span style="font-size:13px; font-weight:750; color:var(--text-muted);">Chế độ Test thử (theo Task đang tick, mặc định Task 1):</span>
-          <button type="button" class="btn-subtle btn-sm-task" id="btn-teacher-test-1" onclick="TasksModule.openAdminTestPreview(1)">Test thử Test 1 (Ghép từ)</button>
-          <button type="button" class="btn-subtle btn-sm-task" id="btn-teacher-test-2" onclick="TasksModule.openAdminTestPreview(2)">Test thử Test 2 (Ngữ cảnh)</button>
-          <button type="button" class="btn-subtle btn-sm-task" id="btn-teacher-test-3" onclick="TasksModule.openAdminTestPreview(3)">Test thử Test 3 (Dịch bài AI)</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:12px; padding:8px 12px; border-radius:12px; background:var(--bg-soft); border:1px solid var(--card-border);">
+          <span style="font-size:13px; font-weight:700; color:var(--text-muted);">Chế độ Test (theo Task đầu đang tick, mặc định Task 1):</span>
+          <button type="button" class="btn btn-primary btn-sm-task" id="btn-teacher-test-1" onclick="TasksModule.openAdminTestPreview(1)">Chế độ Test (Test 1 → 2 → 3)</button>
         </div>
 
         <div class="teacher-task-dash-grid" id="teacher-dash-task-grid"></div>
@@ -832,18 +830,18 @@
   <div class="modal-overlay task-exam-overlay" id="screen-task" aria-label="Bài Test kết thúc Task">
     <div class="modal-card task-exam-dialog" onclick="event.stopPropagation()">
       <div class="task-topbar">
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <button type="button" class="btn-subtle" id="btn-task-exit" onclick="TasksModule.exitTaskWorkspace(true)">← Thoát Test</button>
-          <span class="tip-pill" id="task-active-badge" style="margin-right:0;">TASK 1</span>
-          <span id="task-active-theme" style="font-size:13.5px; font-weight:700; color:var(--text-bright);"></span>
+        <div class="task-topbar-left">
+          <button type="button" class="btn-task-arrow-exit" id="btn-task-exit" onclick="TasksModule.exitTaskWorkspace(true)" title="Quay lại" aria-label="Quay lại">←</button>
+          <span class="tip-pill" id="task-active-badge" style="margin:0;">TASK 1</span>
+          <span id="task-active-theme" class="task-active-theme-text"></span>
         </div>
         <div class="task-steps-nav" id="task-steps-nav">
-          <span class="task-step-pill active" id="task-pill-1" onclick="TasksModule.jumpPreviewStage(1)">1. Test 1 (Ghép từ)</span>
-          <span class="task-step-pill" id="task-pill-2" onclick="TasksModule.jumpPreviewStage(2)">2. Test 2 (Ngữ cảnh)</span>
-          <span class="task-step-pill" id="task-pill-3" onclick="TasksModule.jumpPreviewStage(3)">3. Test cuối (Dịch bài AI)</span>
+          <span class="task-step-pill active" id="task-pill-1">1. Test 1 (Ghép từ)</span>
+          <span class="task-step-pill" id="task-pill-2">2. Test 2 (Ngữ cảnh)</span>
+          <span class="task-step-pill" id="task-pill-3">3. Test cuối (Dịch bài AI)</span>
         </div>
         <div class="task-idle-badge" id="task-idle-badge" title="Không thao tác quá 10 phút sẽ tự thoát và khóa 30 phút">
-          Tập trung · 00:00 / 10:00
+          00:00 / 10:00
         </div>
       </div>
       <div class="modal-body" style="padding:14px 20px 20px;">
@@ -908,12 +906,12 @@
     </div>
   </div>
 
-  <script src="data/accounts.js?v=20261117h"></script>
-  <script src="data/vocab_data.js?v=20261117h"></script>
-  <script src="data/tasks_data.js?v=20261117h"></script>
-  <script src="data/ipa_dict.js?v=20261117h"></script>
-  <script src="js/motion.js?v=20261117h"></script>
-  <script src="js/app.js?v=20261117h"></script>
-  <script src="js/tasks.js?v=20261117h"></script>
+  <script src="data/accounts.js?v=20261117i"></script>
+  <script src="data/vocab_data.js?v=20261117i"></script>
+  <script src="data/tasks_data.js?v=20261117i"></script>
+  <script src="data/ipa_dict.js?v=20261117i"></script>
+  <script src="js/motion.js?v=20261117i"></script>
+  <script src="js/app.js?v=20261117i"></script>
+  <script src="js/tasks.js?v=20261117i"></script>
 </body>
 </html>

@@ -31,6 +31,14 @@
   let t2Correct = 0;
   let t2Answered = false;
   let t2WrongRecords = [];
+  let t2ParaPairs = [];
+  let t2ParaShuffledRight = [];
+  let t2ParaSelectedLeft = null;
+  let t2ParaMatchedIds = new Set();
+  let t2ParaFailedIds = new Set();
+  let t2ParaMistakes = 0;
+  let t2ParaDone = false;
+  let t2ContextQs = [];
 
   let idleTimer = null;
   let lastActivityAt = 0;
@@ -912,7 +920,7 @@
       const idleMs = Date.now() - lastActivityAt;
       const badge = document.getElementById('task-idle-badge');
       if (badge) {
-        badge.textContent = `Tập trung · ${formatMmSs(idleMs)} / 10:00`;
+        badge.textContent = `${formatMmSs(idleMs)} / 10:00`;
       }
       const studyIdle = document.getElementById('task-study-idle-badge');
       if (studyIdle) {
@@ -942,9 +950,7 @@
       const el = document.getElementById(`task-pill-${i}`);
       if (!el) continue;
       el.classList.toggle('active', activeStage === i);
-      el.classList.toggle('done', !isPreviewTestMode && activeStage > i);
-      el.style.cursor = isPreviewTestMode ? 'pointer' : '';
-      el.title = isPreviewTestMode ? `Bấm để nhảy nhanh sang Test ${i}` : '';
+      el.classList.toggle('done', activeStage > i);
     }
   }
 
@@ -966,12 +972,14 @@
         examModal.classList.add('open', 'active');
         const badge = document.getElementById('task-active-badge');
         const theme = document.getElementById('task-active-theme');
+        const idleBadge = document.getElementById('task-idle-badge');
         if (badge) badge.textContent = activeTask.label.toUpperCase();
         if (theme) {
           theme.textContent = isPreviewTestMode
-            ? `${activeTask.theme} · CHẾ ĐỘ TEST THỬ (Không lưu/khóa điểm)`
-            : `${activeTask.theme} · Bài Test kết thúc`;
+            ? `${activeTask.theme} · CHẾ ĐỘ TEST`
+            : activeTask.theme;
         }
+        if (idleBadge) idleBadge.style.display = isPreviewTestMode ? 'none' : '';
       } else {
         examModal.classList.remove('open', 'active');
       }
@@ -986,19 +994,15 @@
   function parseUrlPreviewStage(account) {
     try {
       const sp = new URLSearchParams(window.location.search || '');
-      const adminStage = parseInt(sp.get('adminTest') || '0', 10);
-      if (adminStage >= 1 && adminStage <= 3) return adminStage;
-      if (account?.role === 'teacher') {
-        const tStage = parseInt(sp.get('test') || '0', 10);
-        if (tStage >= 1 && tStage <= 3) return tStage;
-      }
+      if (sp.get('adminTest')) return 1;
+      if (account?.role === 'teacher' && sp.get('test')) return 1;
       return 0;
     } catch (_) {
       return 0;
     }
   }
 
-  function openAdminTestPreview(stage = 1, taskId = null) {
+  function openAdminTestPreview(_stage = 1, taskId = null) {
     const tid = normalizeTaskId(taskId)
       || Array.from(teacherSelectedIds)[0]
       || activeTask?.id
@@ -1015,20 +1019,11 @@
     t1BoardIndex = 0;
     t1Mistakes = 0;
     t1WrongWordIds = new Set();
-    t2Index = 0;
-    t2Correct = 0;
-    t2Answered = false;
-    t2WrongRecords = [];
+    initTest2State(t);
     document.getElementById('task-leave-warn-banner')?.remove();
-    const s = Math.min(3, Math.max(1, Number(stage) || 1));
-    activeStage = s;
-    if (s === 1) setupT1Board();
+    activeStage = 1;
+    setupT1Board();
     renderTaskStage();
-  }
-
-  function jumpPreviewStage(stage) {
-    if (!isPreviewTestMode || !activeTask) return;
-    openAdminTestPreview(stage, activeTask.id);
   }
 
   function speakWord(text, accent) {
@@ -1076,12 +1071,15 @@
 
     container.innerHTML = `
       <div class="task-card-panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-          <div>
-            <h2 style="margin:0; font-size:20px; font-weight:800;">Test 1 · Ghép cặp nhanh (Bảng ${t1BoardIndex + 1} / 10)</h2>
-            <div style="font-size:13.5px; color:var(--text-muted); margin-top:3px;">Chọn 1 từ tiếng Anh bên trái rồi ghép với nghĩa tiếng Việt bên phải · Số lỗi nhầm: <strong id="t1-err-cnt">${t1Mistakes}</strong></div>
+        <div class="task-exam-header-row">
+          <div class="task-exam-title-group">
+            <span class="tip-pill" style="margin:0;">GHÉP TỪ</span>
+            <h2 class="task-exam-title">Bảng ${t1BoardIndex + 1} / 10</h2>
           </div>
-          <span class="recall-stage-pill">${t1MatchedIds.size} / ${pairs.length} cặp</span>
+          <div class="task-stat-pills">
+            <span class="task-err-pill ${t1Mistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t1-err-cnt">${t1Mistakes}</strong></span>
+            <span class="recall-stage-pill">${t1MatchedIds.size} / ${pairs.length} cặp</span>
+          </div>
         </div>
         <div class="task-match-wrap">
           <div class="task-match-col">${leftHtml}</div>
@@ -1097,14 +1095,70 @@
     renderTest1Stage();
   }
 
-  function proceedToTest2FromT1() {
-    if (!activeTask) return;
-    activeStage = 2;
+  function initTest2State(task) {
+    const qs = task?.test2Questions || [];
+    const pairs = [];
+    const usedL = new Set();
+    const usedR = new Set();
+
+    qs.filter((q) => q.type === 'paraphrase').forEach((q) => {
+      const m = String(q.prompt || '').match(/["“]([^"”]+)["”]\s*\??\s*$/);
+      const left = (m ? m[1] : '').trim();
+      const right = String(q.answer || '').trim();
+      if (!left || !right) return;
+      const lKey = left.toLowerCase();
+      const rKey = right.toLowerCase();
+      if (usedL.has(lKey) || usedR.has(rKey)) return;
+      usedL.add(lKey);
+      usedR.add(rKey);
+      pairs.push({
+        id: `p_${pairs.length}`,
+        left,
+        right,
+        explain: q.explain || `${left} ↔ ${right}`,
+      });
+    });
+
+    if (pairs.length < 6) {
+      (task?.words || []).forEach((w) => {
+        if (pairs.length >= 6) return;
+        const left = String(w.lemma || '').trim();
+        const syn = Array.isArray(w.synonyms) ? String(w.synonyms[0] || '').trim() : '';
+        if (!left || !syn) return;
+        const lKey = left.toLowerCase();
+        const rKey = syn.toLowerCase();
+        if (lKey === rKey || usedL.has(lKey) || usedR.has(rKey)) return;
+        usedL.add(lKey);
+        usedR.add(rKey);
+        pairs.push({
+          id: `p_${pairs.length}`,
+          left,
+          right: syn,
+          explain: `${left} đồng nghĩa / paraphrase với ${syn}`,
+        });
+      });
+    }
+
+    t2ParaPairs = pairs;
+    t2ParaShuffledRight = pairs.slice().sort(() => Math.random() - 0.5);
+    t2ParaSelectedLeft = null;
+    t2ParaMatchedIds = new Set();
+    t2ParaFailedIds = new Set();
+    t2ParaMistakes = 0;
+    t2ParaDone = pairs.length === 0;
+    t2ContextQs = qs.filter((q) => q.type !== 'paraphrase').slice(0, 6);
+    if (t2ContextQs.length === 0 && pairs.length === 0) t2ContextQs = qs.slice();
     t2Index = 0;
     t2Correct = 0;
     t2Answered = false;
     t2WrongRecords = [];
-    B()?.showToast(`Hoàn thành Test 1 (10/10 bảng, ${t1Mistakes} lỗi)! Chuyển sang Test 2.`);
+  }
+
+  function proceedToTest2FromT1() {
+    if (!activeTask) return;
+    activeStage = 2;
+    initTest2State(activeTask);
+    B()?.showToast(`Xong Test 1 (${t1Mistakes} lỗi)! Chuyển sang Test 2.`);
     renderTaskStage();
   }
 
@@ -1178,39 +1232,124 @@
   }
 
   // =========================================================
-  // STAGE 2: TEST 2 — 12 CONTEXT QUESTIONS (WORD FAMILY & PARAPHRASE)
+  // STAGE 2: TEST 2 — PARAPHRASE MATCHING (6 PAIRS) + CONTEXT (6 QS)
   // =========================================================
+  function pickT2ParaLeft(id) {
+    if (t2ParaMatchedIds.has(id)) return;
+    t2ParaSelectedLeft = id;
+    renderTest2Stage();
+  }
+
+  function pickT2ParaRight(rightId) {
+    if (!t2ParaSelectedLeft || t2ParaMatchedIds.has(rightId)) return;
+    if (t2ParaSelectedLeft === rightId) {
+      t2ParaMatchedIds.add(rightId);
+      if (!t2ParaFailedIds.has(rightId)) {
+        t2Correct++;
+      }
+      t2ParaSelectedLeft = null;
+      if (t2ParaMatchedIds.size >= t2ParaPairs.length) {
+        t2ParaDone = true;
+        B()?.showToast?.('Xong Ghép Paraphrase! Tiếp tục phần Ngữ cảnh.');
+      }
+      renderTest2Stage();
+      return;
+    }
+
+    t2ParaMistakes++;
+    t2ParaFailedIds.add(t2ParaSelectedLeft);
+    const chosenPair = t2ParaPairs.find((p) => p.id === rightId);
+    const targetPair = t2ParaPairs.find((p) => p.id === t2ParaSelectedLeft);
+    if (targetPair && !t2WrongRecords.some((r) => r.prompt === `Paraphrase: ${targetPair.left}`)) {
+      t2WrongRecords.push({
+        prompt: `Paraphrase: ${targetPair.left}`,
+        chosen: chosenPair?.right || '',
+        answer: targetPair.right,
+        explain: targetPair.explain || '',
+      });
+    }
+    const el = document.getElementById(`t2-para-right-${rightId}`);
+    el?.classList.add('is-err');
+    t2ParaSelectedLeft = null;
+    setTimeout(() => renderTest2Stage(), 260);
+  }
+
   function renderTest2Stage() {
     const container = document.getElementById('task-stage-container');
     if (!container || !activeTask) return;
     const esc = B()?.escapeHtml || ((x) => String(x));
-    const qs = activeTask.test2Questions || [];
+    if (t2ParaPairs.length === 0 && t2ContextQs.length === 0) {
+      initTest2State(activeTask);
+    }
+
+    if (!t2ParaDone && t2ParaPairs.length > 0) {
+      const leftHtml = t2ParaPairs.map((p) => {
+        const matched = t2ParaMatchedIds.has(p.id);
+        const active = t2ParaSelectedLeft === p.id;
+        return `<button type="button" class="task-match-btn ${matched ? 'is-matched' : ''} ${active ? 'is-active' : ''}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaLeft('${esc(p.id)}')">${esc(p.left)}</button>`;
+      }).join('');
+
+      const rightHtml = t2ParaShuffledRight.map((p) => {
+        const matched = t2ParaMatchedIds.has(p.id);
+        return `<button type="button" class="task-match-btn ${matched ? 'is-matched' : ''}" id="t2-para-right-${esc(p.id)}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaRight('${esc(p.id)}')">${esc(p.right)}</button>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="task-card-panel">
+          <div class="task-exam-header-row">
+            <div class="task-exam-title-group">
+              <span class="tip-pill" style="margin:0;">GHÉP PARAPHRASE</span>
+              <h2 class="task-exam-title">Nối cụm từ tương đương</h2>
+            </div>
+            <div class="task-stat-pills">
+              <span class="task-err-pill ${t2ParaMistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t2-err-cnt">${t2ParaMistakes}</strong></span>
+              <span class="recall-stage-pill">${t2ParaMatchedIds.size} / ${t2ParaPairs.length} cặp</span>
+            </div>
+          </div>
+          <div class="task-match-wrap">
+            <div class="task-match-col">
+              <div class="task-col-caption">Cụm câu hỏi</div>
+              ${leftHtml}
+            </div>
+            <div class="task-match-col">
+              <div class="task-col-caption">Paraphrase trong bài</div>
+              ${rightHtml}
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const qs = t2ContextQs;
+    const totalT2 = t2ParaPairs.length + qs.length;
 
     if (t2Index >= qs.length) {
-      const passed = t2Correct >= 8;
+      const passThreshold = Math.max(1, Math.ceil(totalT2 * 0.66));
+      const passed = t2Correct >= passThreshold;
       const mistakesHtml = t2WrongRecords.length > 0
         ? `<div id="task-t2-review-list" class="task-mistake-review-grid">
             ${t2WrongRecords.map((m, idx) => `
               <div class="task-mistake-card">
-                <div class="task-text-err" style="font-size:12px; font-weight:800;">Câu sai #${idx + 1}</div>
+                <div class="task-text-err" style="font-size:12px; font-weight:800;">Câu nhầm #${idx + 1}</div>
                 <div style="font-size:13.5px; font-weight:750; color:var(--text-bright); margin-top:4px;">${esc(m.prompt)}</div>
-                <div class="task-text-err" style="font-size:12.5px; margin-top:5px;">Bạn chọn: <strong>${esc(m.chosen)}</strong></div>
-                <div class="task-text-ok" style="font-size:12.5px; margin-top:2px;">Đáp án đúng: <strong>${esc(m.answer)}</strong></div>
+                <div class="task-text-err" style="font-size:12.5px; margin-top:5px;">Đã chọn: <strong>${esc(m.chosen)}</strong></div>
+                <div class="task-text-ok" style="font-size:12.5px; margin-top:2px;">Đáp án: <strong>${esc(m.answer)}</strong></div>
                 ${m.explain ? `<div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${esc(m.explain)}</div>` : ''}
               </div>
             `).join('')}
           </div>`
-        : `<div id="task-t2-review-list" class="task-notice-box" style="max-width:460px; margin:0 auto 18px;">✓ Xuất sắc! Không sai câu nào ở Test 2.</div>`;
+        : `<div id="task-t2-review-list" class="task-notice-box" style="max-width:420px; margin:0 auto 18px;">✓ Xuất sắc! Đúng 100% ở Test 2.</div>`;
 
       container.innerHTML = `
-        <div class="task-card-panel" style="text-align:center; padding:32px 24px;">
-          <h2 style="margin:0 0 8px;">Kết quả Test 2: ${t2Correct} / ${qs.length} câu đúng</h2>
+        <div class="task-card-panel" style="text-align:center; padding:30px 24px;">
+          <h2 style="margin:0 0 8px;">Kết quả Test 2: ${t2Correct} / ${totalT2}</h2>
           <p style="color:var(--text-muted); margin:0 0 14px;">
-            ${passed ? 'Đạt chuẩn! Xem nhanh các câu từng chọn nhầm (nếu có) rồi sang Test cuối dịch bài 2 cột.' : 'Cần đạt tối thiểu 8/12 câu để qua Test 2. Hãy ôn lại lỗi sai bên dưới và thử lại nhé!'}
+            ${passed ? 'Đạt chuẩn! Chuyển sang Test cuối.' : `Cần đạt tối thiểu ${passThreshold}/${totalT2} để qua Test 2.`}
           </p>
           ${mistakesHtml}
           ${passed
-            ? `<button type="button" class="btn btn-primary" onclick="TasksModule.startFinalTranslation()">Vào Test cuối (Dịch bài 2 cột) →</button>`
+            ? `<button type="button" class="btn btn-primary" onclick="TasksModule.startFinalTranslation()">Vào Test cuối (Dịch bài AI) →</button>`
             : `<button type="button" class="btn btn-primary" onclick="TasksModule.retryTest2()">Làm lại Test 2</button>`}
         </div>
       `;
@@ -1218,19 +1357,16 @@
     }
 
     const q = qs[t2Index];
-    const typeLabel = q.type === 'paraphrase'
-      ? 'PARAPHRASE TRONG ĐỀ'
-      : (q.type === 'word_family' ? 'WORD FAMILY TRONG NGỮ CẢNH' : 'ĐỒNG NGHĨA HỌC THUẬT');
+    const typeLabel = q.type === 'word_family' ? 'WORD FAMILY' : 'NGỮ CẢNH';
 
     container.innerHTML = `
       <div class="task-card-panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
+        <div class="task-exam-header-row">
           <span class="tip-pill" style="margin:0;">${typeLabel}</span>
-          <span style="font-size:13.5px; font-weight:700; color:var(--text-muted);">Câu ${t2Index + 1} / ${qs.length} · Đúng: ${t2Correct}</span>
+          <span class="recall-stage-pill">Câu ${t2Index + 1} / ${qs.length} · Đúng ${t2Correct}/${totalT2}</span>
         </div>
-        <div style="font-size:16px; font-weight:700; color:var(--text-bright); margin-bottom:10px;">${esc(q.prompt)}</div>
-        ${q.qText ? `<div style="padding:11px 14px; border-radius:10px; background:var(--bg-soft); border:1px solid var(--card-border); margin-bottom:8px; font-size:15px;">${esc(q.qText)}</div>` : ''}
-        ${q.pText ? `<div class="fc-sentence-box" style="margin-bottom:10px;">${esc(q.pText)}</div>` : ''}
+        <div style="font-size:16px; font-weight:750; color:var(--text-bright); margin-bottom:10px;">${esc(q.prompt)}</div>
+        ${q.qText ? `<div style="padding:12px 15px; border-radius:12px; background:var(--bg-soft); border:1px solid var(--card-border); margin-bottom:10px; font-size:15.5px; line-height:1.5;">${esc(q.qText)}</div>` : ''}
         <div class="task-q-opts" id="task-t2-opts">
           ${q.options.map((opt, idx) => `<button type="button" class="task-q-opt" data-opt-idx="${idx}" onclick="TasksModule.answerTest2(${idx})">${esc(opt)}</button>`).join('')}
         </div>
@@ -1247,7 +1383,7 @@
   function answerTest2(optIdx) {
     if (t2Answered || !activeTask) return;
     t2Answered = true;
-    const q = activeTask.test2Questions[t2Index];
+    const q = t2ContextQs[t2Index];
     const chosen = q.options[optIdx];
     const isRight = chosen.trim().toLowerCase() === q.answer.trim().toLowerCase();
     if (isRight) {
@@ -1271,7 +1407,7 @@
     const exp = document.getElementById('task-t2-explain');
     if (exp) {
       exp.style.display = 'block';
-      exp.innerHTML = `<strong>${isRight ? 'Chính xác!' : `Chưa đúng (Đáp án: ${B()?.escapeHtml(q.answer)}).`}</strong> ${B()?.escapeHtml(q.explain || '')}`;
+      exp.innerHTML = `<strong>${isRight ? 'Chính xác!' : `Đáp án: ${B()?.escapeHtml(q.answer)}.`}</strong> ${B()?.escapeHtml(q.explain || '')}`;
     }
     const nextBtn = document.getElementById('btn-t2-next');
     if (nextBtn) nextBtn.style.display = 'inline-flex';
@@ -1284,10 +1420,7 @@
   }
 
   function retryTest2() {
-    t2Index = 0;
-    t2Correct = 0;
-    t2Answered = false;
-    t2WrongRecords = [];
+    initTest2State(activeTask);
     taskStartedAt = Date.now();
     taskLeaveWarnings = 0;
     lastTaskLeaveAt = 0;
@@ -1323,33 +1456,31 @@
             <span>${esc(p.topic || activeTask.theme)}</span>
             <span>${p.wordCount} từ</span>
           </div>
-          <div class="task-notice-box" style="font-size:13px; margin-bottom:12px;">
-            <strong>Mẹo đọc hiểu:</strong> Vận dụng các từ nối định hướng (${esc((p.signalClues || []).join(', '))}) và từ khóa đã học trong gói để suy đoán nghĩa của các từ mới ngoài bài khi dịch.
-          </div>
+          ${(p.signalClues || []).length ? `<div style="font-size:12.5px; color:var(--accent); font-weight:750; margin-bottom:10px;">Từ nối: ${esc(p.signalClues.join(' · '))}</div>` : ''}
           <div id="task-passage-hl-legend" class="passage-hl-legend" style="display:none;"></div>
           <div class="english-passage" id="task-english-passage">${esc(p.text)}</div>
         </article>
 
-        <section class="practice-paper writing-paper" aria-label="Bài làm dịch của bạn">
+        <section class="practice-paper writing-paper" aria-label="Bài làm">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h2 style="margin:0; font-size:20px; font-weight:800;">Bài làm của bạn</h2>
+            <h2 style="margin:0; font-size:19px; font-weight:800;">Bài làm</h2>
             <span style="font-size:12px; color:var(--text-muted);" id="task-draft-status">Tự lưu nháp</span>
           </div>
           <label class="writing-label" for="task-trans-input">
-            <span><b>01</b> Dịch toàn bộ đoạn văn sang tiếng Việt</span>
+            <span><b>01</b> Dịch toàn đoạn</span>
             <span id="task-trans-wc" style="color:var(--text-muted);">0 từ</span>
           </label>
-          <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Viết bản dịch tiếng Việt mượt mà, sát nghĩa và giữ đúng quan hệ logic giữa các vế câu...">${esc(savedDraft.trans || '')}</textarea>
+          <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Dịch đoạn văn sang tiếng Việt...">${esc(savedDraft.trans || '')}</textarea>
 
           <label class="writing-label" for="task-summary-input">
-            <span><b>02</b> Tóm tắt ý chính (1–3 câu)</span>
+            <span><b>02</b> Tóm tắt (1–3 câu)</span>
             <span id="task-sum-wc" style="color:var(--text-muted);">0 từ</span>
           </label>
-          <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Tóm tắt trọng tâm đoạn văn bằng tiếng Việt trong 1–3 câu...">${esc(savedDraft.summary || '')}</textarea>
+          <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Tóm tắt ý chính (1–3 câu)...">${esc(savedDraft.summary || '')}</textarea>
 
           <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end;">
             <button type="button" class="btn btn-primary" id="btn-submit-ai-grade" onclick="TasksModule.submitTranslationForAi()">
-              Hoàn thành &amp; AI chấm kỹ
+              Nộp &amp; AI chấm
             </button>
           </div>
           <div id="task-ai-grade-result" style="display:none;"></div>
@@ -1619,7 +1750,7 @@
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = 'Hoàn thành & AI chấm kỹ';
+        btn.textContent = 'Nộp & AI chấm';
       }
     }
   }
@@ -1869,7 +2000,8 @@
     retryTest2,
     startFinalTranslation,
     openAdminTestPreview,
-    jumpPreviewStage,
+    pickT2ParaLeft,
+    pickT2ParaRight,
     submitTranslationForAi,
     onUserEntered,
     onUserLogout,
