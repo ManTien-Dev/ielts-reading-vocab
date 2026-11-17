@@ -83,6 +83,10 @@
 
     <div class="header-actions">
       <span class="header-user-id" id="header-user-id" title="Tài khoản đang học">THANHNGOC</span>
+      <button class="btn-icon-glass btn-header-task" id="btn-teacher-preview" onclick="toggleTeacherStudyPreview()" style="display:none;">
+        <svg class="hdr-btn-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span id="btn-teacher-preview-text">Xem trang học</span>
+      </button>
       <button class="btn-icon-glass btn-header-task" id="btn-teacher-refresh" onclick="TasksModule.refreshTeacherDashboard()" style="display:none;">
         <svg class="hdr-btn-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
         <span>Làm mới</span>
@@ -473,9 +477,12 @@
     <section class="screen" id="screen-teacher" aria-label="Bảng quản lý giáo viên" style="display:none;">
       <div class="teacher-panel">
         <div class="teacher-panel-head">
-          <div>
-            <h2 class="teacher-panel-title">Theo Dõi Học Sinh</h2>
-            <div class="teacher-panel-sub" id="teacher-sync-status">Đang đồng bộ dữ liệu lớp...</div>
+          <div class="teacher-panel-brand">
+            <img src="assets/images/panda_leaderboard.jpg" alt="" class="teacher-panda-badge">
+            <div>
+              <h2 class="teacher-panel-title">Theo Dõi Học Sinh</h2>
+              <div class="teacher-panel-sub" id="teacher-sync-status">Đang đồng bộ dữ liệu lớp...</div>
+            </div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button type="button" class="btn-subtle" id="btn-teacher-task-stats" onclick="TasksModule.openTaskSummaryModal()">Thống kê Task cả lớp</button>
@@ -483,6 +490,7 @@
             <button type="button" class="btn btn-primary" id="btn-teacher-copy-report" onclick="copyFullClassReport()">Sao chép báo cáo lớp</button>
           </div>
         </div>
+        <div class="teacher-kpi-strip" id="teacher-kpi-strip"></div>
         <div class="teacher-toolbar-row">
           <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" placeholder="Tìm nhanh học viên theo tên..." oninput="TasksModule.renderTeacherDashboard()">
           <select class="scope-select teacher-sort-select" id="teacher-student-sort" onchange="TasksModule.renderTeacherDashboard()" aria-label="Sắp xếp danh sách học viên">
@@ -513,9 +521,12 @@
 
       <div class="teacher-panel">
         <div class="teacher-panel-head">
-          <div>
-            <h2 class="teacher-panel-title">Giao Task theo Link (50 từ / Task)</h2>
-            <div class="teacher-panel-sub">Tick chọn Task 1..30 rồi copy link gửi học sinh. Hoàn thành trọn Task tự động cập nhật Đã thuộc sang bộ từ chính.</div>
+          <div class="teacher-panel-brand">
+            <img src="assets/images/panda_vocab.jpg" alt="" class="teacher-panda-badge">
+            <div>
+              <h2 class="teacher-panel-title">Giao Task theo Link (50 từ / Task)</h2>
+              <div class="teacher-panel-sub">Tick chọn Task 1..30 rồi copy link gửi học sinh. Hoàn thành trọn Task tự động cập nhật Đã thuộc sang bộ từ chính.</div>
+            </div>
           </div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
             <button type="button" class="btn-subtle" id="btn-teacher-filter-pending" onclick="TasksModule.toggleTeacherPendingFilter()">Chỉ hiện Task chưa xong hết</button>

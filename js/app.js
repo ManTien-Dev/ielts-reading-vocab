@@ -2878,25 +2878,42 @@
     }
   }
 
+  let teacherPreviewStudy = false;
+
+  function toggleTeacherStudyPreview(forceVal) {
+    if (!isTeacherUser()) return;
+    teacherPreviewStudy = typeof forceVal === 'boolean' ? forceVal : !teacherPreviewStudy;
+    updateClassReportHeaderAndActions();
+    if (teacherPreviewStudy) {
+      showToast('Đang xem trước màn hình học của học viên.');
+    }
+  }
+  window.toggleTeacherStudyPreview = toggleTeacherStudyPreview;
+
   function updateClassReportHeaderAndActions() {
     const teacher = isTeacherUser();
+    if (!teacher) teacherPreviewStudy = false;
     const titleEl = document.getElementById('class-report-modal-title');
     if (titleEl) titleEl.textContent = teacher ? 'Bảng Theo Dõi Giờ Học Lớp' : 'Bảng Xếp Hạng';
     const menuBtn = document.getElementById('btn-menu-class-report');
     if (menuBtn) menuBtn.style.display = teacher ? 'none' : 'inline-flex';
     const actionsEl = document.getElementById('class-report-actions');
     if (actionsEl) actionsEl.style.display = teacher ? 'flex' : 'none';
+    const tPreviewBtn = document.getElementById('btn-teacher-preview');
+    const tPreviewTxt = document.getElementById('btn-teacher-preview-text');
+    if (tPreviewBtn) tPreviewBtn.style.display = teacher ? 'inline-flex' : 'none';
+    if (tPreviewTxt) tPreviewTxt.textContent = teacherPreviewStudy ? 'Quay lại Quản lý' : 'Xem trang học';
     const tRefreshBtn = document.getElementById('btn-teacher-refresh');
-    if (tRefreshBtn) tRefreshBtn.style.display = teacher ? 'inline-flex' : 'none';
+    if (tRefreshBtn) tRefreshBtn.style.display = (teacher && !teacherPreviewStudy) ? 'inline-flex' : 'none';
     const sTasksBtn = document.getElementById('btn-open-student-tasks');
     if (sTasksBtn && teacher) sTasksBtn.style.display = 'none';
     const chipTxt = document.getElementById('header-mode-chip-text');
-    if (chipTxt) chipTxt.textContent = teacher ? 'Quản lý lớp' : 'Reading 95,5%';
+    if (chipTxt) chipTxt.textContent = (teacher && !teacherPreviewStudy) ? 'Quản lý lớp' : 'Reading 95,5%';
     // Toggle Teacher Dashboard vs Student Study Workspace cleanly
     const teacherScreen = document.getElementById('screen-teacher');
     const studyScreen = document.getElementById('screen-study');
     const taskScreen = document.getElementById('screen-task');
-    if (teacher) {
+    if (teacher && !teacherPreviewStudy) {
       if (studyScreen) {
         studyScreen.classList.remove('active');
         studyScreen.style.display = 'none';
@@ -3208,10 +3225,13 @@
       } catch (_) {}
     }
     enterAppForUser(matched, { autoSpeakOnEnter: true });
-    showToast(`Chào ${matched.name}! Chúc bạn học tốt.`);
+    showToast(matched.role === 'teacher'
+      ? 'Chào Giáo viên! Bảng quản lý lớp đã sẵn sàng.'
+      : `Chào ${matched.name}! Chúc bạn học tốt.`);
   }
 
   function logoutCurrentAccount() {
+    teacherPreviewStudy = false;
     if (cloudPullTimer) {
       clearInterval(cloudPullTimer);
       cloudPullTimer = null;

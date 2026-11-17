@@ -397,14 +397,43 @@
       const q = (document.getElementById('teacher-student-search')?.value || '').trim().toLowerCase();
       const sortMode = document.getElementById('teacher-student-sort')?.value || 'rank';
 
-      const enriched = ranked.map((item) => {
+      const allEnriched = ranked.map((item) => {
         const uid = bridge.getScopedUid(item.id);
         const streak = bridge.computeConsecutiveStreakForUser?.(item.id) || 0;
         const tp = readStudentTaskMap(bridge, cache, bridge.TASK_PROGRESS_KEY_BASE, uid);
         const tl = readStudentTaskMap(bridge, cache, bridge.TASK_LOCKS_KEY_BASE, uid);
         const doneEntries = Object.entries(tp).filter(([, v]) => v?.status === 'completed');
         return { item, streak, doneEntries, tl };
-      }).filter((row) => !q || String(row.item.name || '').toLowerCase().includes(q) || String(row.item.id || '').toLowerCase().includes(q));
+      });
+
+      const kpiStrip = document.getElementById('teacher-kpi-strip');
+      if (kpiStrip) {
+        const totalStudents = allEnriched.length;
+        const totalMastered = allEnriched.reduce((s, r) => s + Number(r.item.mastered || 0), 0);
+        const totalDoneTasks = allEnriched.reduce((s, r) => s + r.doneEntries.length, 0);
+        const topRow = allEnriched[0];
+        const topLabel = topRow ? `${esc(topRow.item.name.split(' ').slice(-2).join(' '))} (${topRow.item.weekMins}p)` : 'Chưa có';
+        kpiStrip.innerHTML = `
+          <div class="teacher-kpi-card is-mint">
+            <div class="teacher-kpi-label">Học viên</div>
+            <div class="teacher-kpi-val">${totalStudents}</div>
+          </div>
+          <div class="teacher-kpi-card is-gold">
+            <div class="teacher-kpi-label">Tổng từ đã thuộc</div>
+            <div class="teacher-kpi-val">${totalMastered} từ</div>
+          </div>
+          <div class="teacher-kpi-card is-coral">
+            <div class="teacher-kpi-label">Lượt Task hoàn thành</div>
+            <div class="teacher-kpi-val">${totalDoneTasks}</div>
+          </div>
+          <div class="teacher-kpi-card is-teal">
+            <div class="teacher-kpi-label">Dẫn đầu tuần</div>
+            <div class="teacher-kpi-val" style="font-size:14.5px;">${topLabel}</div>
+          </div>
+        `;
+      }
+
+      const enriched = allEnriched.filter((row) => !q || String(row.item.name || '').toLowerCase().includes(q) || String(row.item.id || '').toLowerCase().includes(q));
 
       if (sortMode === 'mastered') {
         enriched.sort((a, b) => (b.item.mastered - a.item.mastered) || (a.item.rank - b.item.rank));
@@ -414,7 +443,12 @@
         enriched.sort((a, b) => (b.item.todayMins - a.item.todayMins) || (a.item.rank - b.item.rank));
       }
 
-      tbody.innerHTML = enriched.map(({ item, streak, doneEntries, tl }) => {
+      const getMonogram = (name) => {
+        const pts = String(name || 'HV').trim().split(/\s+/).filter(Boolean);
+        return (pts.length >= 2 ? (pts[pts.length - 2][0] + pts[pts.length - 1][0]) : (pts[0] || 'HV').slice(0, 2)).toUpperCase();
+      };
+
+      tbody.innerHTML = enriched.map(({ item, streak, doneEntries, tl }, idx) => {
         const tags = doneEntries.map(([tid, v]) => `T${Number(tid.replace(/\D/g, '')) || tid} (${Number(v.translationScore || 0).toFixed(1)})`).join(', ');
         const lockPills = Object.entries(tl)
           .filter(([, until]) => Number(until || 0) > now)
@@ -427,7 +461,7 @@
         return `
           <tr>
             <td>#${item.rank}</td>
-            <td><strong>${esc(item.name)}</strong></td>
+            <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(getMonogram(item.name))}</span><strong>${esc(item.name)}</strong></div></td>
             <td>${item.todayMins}p</td>
             <td>${item.weekMins}p</td>
             <td>${item.monthMins}p</td>

@@ -1859,20 +1859,29 @@ main.app-main:has(#screen-study.active) {
 }
 @media (max-width: 640px) {
   header.app-header {
-    padding: 10px 14px !important;
-    flex-wrap: nowrap !important;
-    gap: 8px !important;
+    padding: 8px 12px !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
   }
   header.app-header .brand-status-chip {
     display: none;
   }
   header.app-header .brand-title {
-    font-size: 0.98rem !important;
+    font-size: 0.96rem !important;
     white-space: nowrap;
   }
   header.app-header .header-actions {
-    flex-shrink: 0;
-    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 5px;
+  }
+  #btn-teacher-preview,
+  #btn-teacher-refresh,
+  #btn-open-student-tasks {
+    padding: 5px 8px !important;
+    font-size: 11.5px !important;
   }
   main.app-main {
     padding-top: 12px !important;
@@ -3098,19 +3107,86 @@ body:has(#screen-teacher.active) #anki-due-reminder {
   align-items: center;
 }
 
-/* Teacher Dashboard Usability: Search, Sort, Bounded Task Grid & Sticky Table Column */
-.teacher-toolbar-row {
+/* Teacher Dashboard Usability: Mascots, 4 Pastel KPI Cards, Monograms, Single-Row Search+Sort */
+.teacher-panel-brand {
   display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.teacher-panda-badge {
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
+  object-fit: cover;
+  background: #f8f3eb;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(28, 48, 30, 0.14);
+  flex-shrink: 0;
+}
+[data-theme="dark"] .teacher-panda-badge {
+  border-color: #364b3d;
+}
+.teacher-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.teacher-kpi-card {
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--card-border);
+}
+.teacher-kpi-card.is-mint { background: #f1f8ef; border-color: #cde2c7; }
+.teacher-kpi-card.is-gold { background: #fdf7e6; border-color: #ecdcaf; }
+.teacher-kpi-card.is-coral { background: #fdf2eb; border-color: #f0cfc0; }
+.teacher-kpi-card.is-teal { background: #eef7f5; border-color: #c4dfd8; }
+[data-theme="dark"] .teacher-kpi-card.is-mint { background: rgba(46, 125, 79, 0.18); border-color: #2f4b34; }
+[data-theme="dark"] .teacher-kpi-card.is-gold { background: rgba(180, 130, 35, 0.16); border-color: #574824; }
+[data-theme="dark"] .teacher-kpi-card.is-coral { background: rgba(185, 75, 45, 0.16); border-color: #5c3726; }
+[data-theme="dark"] .teacher-kpi-card.is-teal { background: rgba(36, 138, 118, 0.18); border-color: #284e45; }
+.teacher-kpi-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.teacher-kpi-val {
+  font-size: 19px;
+  font-weight: 850;
+  color: var(--text-bright);
+  margin-top: 2px;
+}
+.teacher-student-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.teacher-toolbar-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 10px;
   margin-bottom: 12px;
+  align-items: center;
 }
-.teacher-search-input {
-  flex: 1 1 240px;
-}
+.teacher-search-input,
 .teacher-sort-select {
-  flex: 0 0 auto;
-  min-width: 210px;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+@media (max-width: 760px) {
+  .teacher-kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .teacher-toolbar-row {
+    grid-template-columns: 1fr;
+  }
+  .teacher-panda-badge {
+    width: 54px;
+    height: 54px;
+    border-radius: 13px;
+  }
 }
 .teacher-task-dash-grid {
   max-height: 410px;
