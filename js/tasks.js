@@ -967,102 +967,6 @@
     else if (activeStage === 3) renderFinalTranslationStage();
   }
 
-  // =========================================================
-  // STAGE 0: LEARN 50 WORDS + MANDATORY WORD FAMILY
-  // =========================================================
-  function renderLearnStage() {
-    const container = document.getElementById('task-stage-container');
-    if (!container || !activeTask) return;
-    const esc = B()?.escapeHtml || ((x) => String(x));
-    const card = activeTask.words[learnIndex];
-    if (!card) return;
-    viewedWordIds.add(card.id);
-
-    const rawWf = Array.isArray(card.wordFamily) ? card.wordFamily : [];
-    const hasDetailedWf = rawWf.some((wf) => Boolean(wf.pos || wf.meaning));
-    const normalizedWf = hasDetailedWf ? rawWf.filter((wf) => wf.pos || wf.meaning) : rawWf;
-    const wfHtml = (normalizedWf.length > 0)
-      ? normalizedWf.map((wf) => `
-          <div class="task-wf-chip">
-            <div class="task-wf-head">
-              <div>
-                <strong>${esc(wf.form)}</strong>
-                <span style="color:var(--accent); font-size:11.5px; margin-left:4px;">(${esc(wf.pos || 'Biến thể')})</span>
-              </div>
-              <button type="button" class="btn-wf-speak" onclick="TasksModule.speakWord('${esc(wf.form)}', 'en-US')" title="Nghe phát âm">Nghe</button>
-            </div>
-            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">${esc(wf.meaning || 'Dạng biến thể trong bài đọc')}</div>
-          </div>
-        `).join('')
-      : '<span style="font-size:13px; color:var(--text-muted);">Từ đơn lẻ không tách thêm biến thể bắt buộc.</span>';
-
-    const sigHtml = (activeTask.signalWords || []).map((s) => `
-      <div style="padding:8px 10px; border-radius:10px; background:var(--bg-soft); border:1px solid var(--card-border); margin-top:8px;">
-        <div style="font-weight:800; color:var(--text-bright); font-size:13.5px;">${esc(s.lemma)} <span style="font-weight:600; color:var(--accent); font-size:12px;">(${esc(s.meaning)})</span></div>
-        <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">${esc(s.category)}</div>
-      </div>
-    `).join('');
-
-    const allViewed = viewedWordIds.size >= activeTask.words.length;
-    const pct = Math.round((viewedWordIds.size / activeTask.words.length) * 100);
-
-    container.innerHTML = `
-      <div class="task-card-panel">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-          <div style="font-size:13.5px; font-weight:700; color:var(--text-muted);">
-            Thẻ <strong>${learnIndex + 1} / ${activeTask.words.length}</strong> · Đã học <strong>${viewedWordIds.size} / ${activeTask.words.length}</strong> (${pct}%)
-          </div>
-          <button type="button" class="btn ${allViewed ? 'btn-primary' : 'btn-subtle'}" id="btn-task-to-test1" ${allViewed ? '' : 'disabled'} onclick="TasksModule.startTest1()">
-            ${allViewed ? 'Đã học xong 50 từ · Làm Test 1 →' : `Học hết 50 từ để mở Test (${viewedWordIds.size}/50)`}
-          </button>
-        </div>
-
-        <div class="task-learn-grid">
-          <div>
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-              <h2 style="margin:0; font-size:30px; font-weight:850; color:var(--text-bright);">${esc(card.lemma)}</h2>
-              ${card.ipa ? `<span class="fc-ipa-badge">${esc(card.ipa)}</span>` : ''}
-              <button type="button" class="btn-voice-speak" onclick="TasksModule.speakWord('${esc(card.lemma)}', 'en-GB')">UK</button>
-              <button type="button" class="btn-voice-speak" onclick="TasksModule.speakWord('${esc(card.lemma)}', 'en-US')">US</button>
-              <span class="fc-pos">${esc(card.pos || 'WORD')}</span>
-            </div>
-            <div style="font-size:23px; font-weight:800; color:#265022; margin:10px 0 8px;" class="task-meaning-main">${esc(card.meaning)}</div>
-            ${card.synonyms?.length ? `<div style="font-size:14px; color:var(--text);"><strong>Đồng nghĩa:</strong> ${esc(card.synonyms.join(', '))}</div>` : ''}
-            ${card.antonyms?.length ? `<div style="font-size:14px; color:var(--text); margin-top:4px;"><strong>Trái nghĩa:</strong> ${esc(card.antonyms.join(', '))}</div>` : ''}
-            ${card.example ? `<div class="fc-sentence-box" style="margin-top:12px;">${B()?.formatSentenceHighlight ? B().formatSentenceHighlight(card.example, card.lemma) : esc(card.example)}</div>` : ''}
-
-            <div class="task-wf-box">
-              <div style="font-size:12.5px; font-weight:800; color:var(--accent); text-transform:uppercase;">Word Family bắt buộc học kèm (không tính thêm vào 50 từ gốc)</div>
-              <div class="task-wf-list">${wfHtml}</div>
-            </div>
-          </div>
-
-          <aside style="padding:14px 16px; border-radius:14px; border:1px solid var(--card-border); background:var(--card-bg);">
-            <div style="font-size:12.5px; font-weight:800; color:var(--accent); text-transform:uppercase;">Từ nối định hướng của ${esc(activeTask.label)}</div>
-            <div style="font-size:12.5px; color:var(--text-muted); margin-top:4px;">Ghi nhớ hướng logic để đoán nghĩa câu khi làm bài dịch cuối:</div>
-            ${sigHtml}
-          </aside>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:18px; padding-top:14px; border-top:1px solid var(--card-border);">
-          <button type="button" class="btn-subtle" ${learnIndex === 0 ? 'disabled' : ''} onclick="TasksModule.stepLearnCard(-1)">← Từ trước</button>
-          <span style="font-size:12px; color:var(--text-muted);">Phím tắt: <strong>← / →</strong> chuyển từ</span>
-          <div style="display:flex; gap:10px;">
-            <button type="button" class="btn btn-primary" onclick="TasksModule.stepLearnCard(1)">
-              ${learnIndex < activeTask.words.length - 1 ? 'Đã hiểu & Từ tiếp →' : 'Hoàn thành xem 50 từ'}
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  function stepLearnCard(delta) {
-    if (!activeTask) return;
-    learnIndex = Math.max(0, Math.min(activeTask.words.length - 1, learnIndex + delta));
-    renderLearnStage();
-  }
-
   function speakWord(text, accent) {
     B()?.speakText?.(text, accent);
   }
@@ -1876,7 +1780,6 @@
     onStudyAssessmentChanged,
     startPendingTask,
     exitTaskWorkspace,
-    stepLearnCard,
     speakWord,
     startTest1,
     pickT1Left,
