@@ -39,6 +39,7 @@
   let lastTaskLeaveAt = 0;
   let taskTestPassed = false;
   let lockCountdownTimer = null;
+  let examReadyPromptShownForTaskId = null;
 
   const B = () => window.__VOCAB_BRIDGE__;
 
@@ -542,9 +543,9 @@
 
     if (info) {
       info.innerHTML = `
-        <div><strong>Nội dung:</strong> 50 từ vựng gốc khác nhau (bắt buộc học kèm toàn bộ Word Family) + Từ nối định hướng.</div>
-        <div style="margin-top:6px;"><strong>Thời gian cần để hoàn thành:</strong> khoảng <strong>${t.estMinutes} phút</strong> (gồm Học thẻ → Test 1 ghép từ → Test 2 ngữ cảnh → Test cuối dịch bài 2 cột AI chấm).</div>
-        <div style="margin-top:6px;"><strong>Yêu cầu kỷ luật:</strong> Tập trung 100%, không rời khỏi bài giữa chừng. Nếu không có thao tác quá <strong>10 phút</strong>, hệ thống tự thoát Task và <strong>khóa 30 phút</strong> mới được làm lại.</div>
+        <div><strong>Nội dung:</strong> Học 50 từ vựng gốc (kèm Word Family) ngay trên giao diện Flashcard chính.</div>
+        <div style="margin-top:6px;"><strong>Quy trình &amp; Thời lượng (~${t.estMinutes} phút):</strong> Bấm <strong>Đã thuộc đủ 50/50 từ</strong> → Tự mở Cửa sổ Bài Test gồm <strong>Test 1 ghép từ → Test 2 ngữ cảnh → Test cuối dịch bài AI</strong>.</div>
+        <div style="margin-top:6px;"><strong>Yêu cầu kỷ luật:</strong> Tập trung hoàn thành bài; nếu ngưng thao tác quá <strong>10 phút</strong> (hoặc rời tab quá 2 lần khi đang làm Test), Task sẽ bị <strong>khóa 30 phút</strong> mới được làm lại.</div>
         ${doneNote}
       `;
     }
@@ -593,6 +594,135 @@
     enterTaskWorkspace(t);
   }
 
+  function getTaskMasteredCount(task) {
+    if (!task || !Array.isArray(task.words)) return 0;
+    const amap = B()?.getAssessmentsMap?.() || {};
+    return task.words.reduce((acc, w) => acc + (amap[w.id] === 3 ? 1 : 0), 0);
+  }
+
+  function syncAssignedTaskScopes(extraTask = null) {
+    const ids = [...assignedUrlTaskIds];
+    if (extraTask && !ids.includes(extraTask.id)) ids.push(extraTask.id);
+    const list = ids.map(getTaskById).filter(Boolean);
+    B()?.setDynamicTaskScopes?.(list);
+  }
+
+  function updateTaskStudyBar() {
+    const bar = document.getElementById('task-study-bar');
+    if (!bar) return;
+    const scopeKey = B()?.getCurrentScopeKey?.() || '';
+    if (!scopeKey.startsWith('task_')) {
+      bar.style.display = 'none';
+      return;
+    }
+    const task = getTaskById(scopeKey) || activeTask;
+    if (!task) {
+      bar.style.display = 'none';
+      return;
+    }
+    const total = task.words.length || 50;
+    const masteredCount = getTaskMasteredCount(task);
+    const allReady = masteredCount >= total;
+    bar.style.display = 'flex';
+    const pill = document.getElementById('task-study-pill');
+    if (pill) pill.textContent = task.label.toUpperCase();
+    const statusEl = document.getElementById('task-study-status');
+    if (statusEl) {
+      statusEl.textContent = allReady
+        ? `✓ Đã thuộc ${masteredCount}/${total} từ — Sẵn sàng làm bài Test!`
+        : `Đã thuộc ${masteredCount} / ${total} từ (cần ${total}/${total} để mở Test)`;
+    }
+    const testBtn = document.getElementById('btn-task-to-test1');
+    if (testBtn) {
+      testBtn.disabled = false;
+      testBtn.classList.toggle('btn-primary', allReady);
+      testBtn.classList.toggle('btn-subtle', !allReady);
+      testBtn.textContent = allReady ? 'Làm bài Test (Test 1 → 2 → 3) →' : `Mở Test (${masteredCount}/${total})`;
+    }
+  }
+
+  function openTaskExamReadyModal(task) {
+    if (!task) return;
+    const modal = document.getElementById('modal-task-exam-ready');
+    if (!modal) return;
+    const pill = document.getElementById('exam-ready-task-pill');
+    const heading = document.getElementById('exam-ready-heading');
+    if (pill) pill.textContent = task.label.toUpperCase();
+    if (heading) heading.textContent = `Bạn đã học và bấm Đã thuộc đủ ${task.words.length}/${task.words.length} từ (${task.label})!`;
+    modal.classList.add('open');
+  }
+
+  function closeTaskExamReadyModal(event) {
+    if (event && event.target !== document.getElementById('modal-task-exam-ready')) return;
+    document.getElementById('modal-task-exam-ready')?.classList.remove('open');
+  }
+
+  function onClickStartTaskExam() {
+    const scopeKey = B()?.getCurrentScopeKey?.() || '';
+    const task = getTaskById(scopeKey) || activeTask;
+    if (!task) return;
+    if (getTaskLockRemainingMs(task.id) > 0) {
+      openTaskBriefModal(task.id);
+      return;
+    }
+    const total = task.words.length || 50;
+    const masteredCount = getTaskMasteredCount(task);
+    if (masteredCount < total) {
+      B()?.showToast?.(`Hãy học và bấm '3 - Đã thuộc' cho đủ ${total}/${total} từ của ${task.label} trước khi làm Test (hiện ${masteredCount}/${total}).`);
+      return;
+    }
+    activeTask = task;
+    confirmStartTaskExam();
+  }
+
+  function confirmStartTaskExam() {
+    const scopeKey = B()?.getCurrentScopeKey?.() || '';
+    const task = activeTask || getTaskById(scopeKey);
+    if (!task) return;
+    if (getTaskLockRemainingMs(task.id) > 0) {
+      closeTaskExamReadyModal();
+      openTaskBriefModal(task.id);
+      return;
+    }
+    activeTask = task;
+    closeTaskExamReadyModal();
+    startTest1();
+  }
+
+  function onScopeChanged(scopeKey) {
+    if (scopeKey && scopeKey.startsWith('task_')) {
+      const t = getTaskById(scopeKey);
+      if (t) {
+        if (!activeTask || activeTask.id !== t.id) {
+          activeTask = t;
+          activeStage = 0;
+          taskStartedAt = Date.now();
+          taskLeaveWarnings = 0;
+          taskTestPassed = false;
+          startIdleMonitor();
+        }
+      }
+    } else if (activeTask && activeStage === 0) {
+      stopIdleMonitor();
+      activeTask = null;
+    }
+    updateTaskStudyBar();
+  }
+
+  function onStudyAssessmentChanged(scopeKey, _assessments, _item, level) {
+    updateTaskStudyBar();
+    if (!scopeKey || !scopeKey.startsWith('task_')) return;
+    const task = getTaskById(scopeKey) || activeTask;
+    if (!task) return;
+    activeTask = task;
+    const total = task.words.length || 50;
+    const masteredCount = getTaskMasteredCount(task);
+    if (level === 3 && activeStage === 0 && masteredCount >= total && examReadyPromptShownForTaskId !== task.id) {
+      examReadyPromptShownForTaskId = task.id;
+      openTaskExamReadyModal(task);
+    }
+  }
+
   function enterTaskWorkspace(task) {
     activeTask = task;
     activeStage = 0;
@@ -611,47 +741,50 @@
     taskLeaveWarnings = 0;
     lastTaskLeaveAt = 0;
     taskTestPassed = false;
+    examReadyPromptShownForTaskId = null;
     document.getElementById('task-leave-warn-banner')?.remove();
+    closeStudentTasksModal();
 
-    const studyScreen = document.getElementById('screen-study');
-    const taskScreen = document.getElementById('screen-task');
-    if (studyScreen) {
-      studyScreen.classList.remove('active');
-      studyScreen.style.display = 'none';
-    }
-    if (taskScreen) {
-      taskScreen.style.display = 'block';
-      taskScreen.classList.add('active');
-    }
-
-    const badge = document.getElementById('task-active-badge');
-    const theme = document.getElementById('task-active-theme');
-    if (badge) badge.textContent = task.label.toUpperCase();
-    if (theme) theme.textContent = `${task.theme} · 50 từ (+ Word Family)`;
+    // Load 50 words of this Task directly inside the unified main #screen-study UI!
+    syncAssignedTaskScopes(task);
+    B()?.activateTaskScope?.(task.id);
 
     startIdleMonitor();
-    renderTaskStage();
+    updateTaskStudyBar();
+
+    const total = task.words.length || 50;
+    const masteredCount = getTaskMasteredCount(task);
+    if (masteredCount >= total) {
+      examReadyPromptShownForTaskId = task.id;
+      openTaskExamReadyModal(task);
+    } else {
+      B()?.showToast?.(`Đã mở ${task.label} (${masteredCount}/${total} từ đã thuộc). Học xong 50 từ để làm Test kết thúc!`);
+    }
   }
 
   function exitTaskWorkspace(confirmExit = false) {
+    const wasInExam = activeStage >= 1;
+    const examModal = document.getElementById('screen-task');
+    if (examModal) {
+      examModal.classList.remove('open', 'active', 'exam-no-copy');
+    }
+    B()?.syncExamLock?.(false);
+
+    if (wasInExam && !taskTestPassed && confirmExit) {
+      // Returned from Exam modal back onto Task study deck
+      activeStage = 0;
+      updateTaskStudyBar();
+      B()?.showToast('Đã tạm thoát bài Test, quay lại ôn thẻ Task.');
+      return;
+    }
+
     stopIdleMonitor();
     activeTask = null;
     activeStage = 0;
     taskTestPassed = false;
-    B()?.syncExamLock?.(false);
-    const studyScreen = document.getElementById('screen-study');
-    const taskScreen = document.getElementById('screen-task');
-    if (taskScreen) {
-      taskScreen.classList.remove('active', 'exam-no-copy');
-      taskScreen.style.display = 'none';
-    }
-    if (studyScreen) {
-      studyScreen.style.display = 'block';
-      studyScreen.classList.add('active');
-    }
-    if (confirmExit) {
-      B()?.showToast('Đã quay lại màn hình học từ vựng chính.');
-    }
+    B()?.loadMainScope?.('paraphrase');
+    if (confirmExit) B()?.showToast('Đã quay lại màn hình học từ vựng chính.');
+    updateTaskStudyBar();
   }
 
   function bumpIdleActivity() {
@@ -682,13 +815,13 @@
       const container = document.getElementById('task-stage-container');
       if (activeStage === 1) t1SelectedLeft = null;
       if (container) container.style.setProperty('visibility', 'hidden');
-      if (host && container) {
+      if (container && container.parentNode) {
         let banner = document.getElementById('task-leave-warn-banner');
         if (!banner) {
           banner = document.createElement('div');
           banner.id = 'task-leave-warn-banner';
           banner.className = 'task-lock-banner';
-          host.insertBefore(banner, container);
+          container.parentNode.insertBefore(banner, container);
         }
         banner.textContent = 'Cảnh báo (lần 1/2): Đã phát hiện rời màn hình khi đang làm Test! Còn 1 lần thử cuối — rời thêm lần nữa sẽ bị khóa Task 30 phút.';
       }
@@ -771,6 +904,10 @@
       if (badge) {
         badge.textContent = `Tập trung · ${formatMmSs(idleMs)} / 10:00`;
       }
+      const studyIdle = document.getElementById('task-study-idle-badge');
+      if (studyIdle) {
+        studyIdle.textContent = `${formatMmSs(idleMs)} / 10:00`;
+      }
       if (idleMs >= IDLE_LIMIT_MS) {
         lockAndExitActiveTask('Ngưng thao tác quá 10 phút — Task bị khóa 30 phút!');
       }
@@ -805,17 +942,29 @@
     const isTestNow = activeStage >= 1 && !taskTestPassed;
     if (isTestNow && B()?.syncExamLock?.(true, activeTask.label) === false) {
       activeStage = 0;
+      document.getElementById('screen-task')?.classList.remove('open', 'active', 'exam-no-copy');
       return;
     }
     if (!isTestNow) {
       B()?.syncExamLock?.(false);
     }
-    document.getElementById('screen-task')?.classList.toggle('exam-no-copy', isTestNow);
+    const examModal = document.getElementById('screen-task');
+    if (examModal) {
+      if (activeStage >= 1) {
+        examModal.classList.add('open', 'active');
+        const badge = document.getElementById('task-active-badge');
+        const theme = document.getElementById('task-active-theme');
+        if (badge) badge.textContent = activeTask.label.toUpperCase();
+        if (theme) theme.textContent = `${activeTask.theme} · Bài Test kết thúc`;
+      } else {
+        examModal.classList.remove('open', 'active');
+      }
+      examModal.classList.toggle('exam-no-copy', isTestNow);
+    }
     updateStepPills();
-    if (activeStage === 0) renderLearnStage();
-    else if (activeStage === 1) renderTest1Stage();
+    if (activeStage === 1) renderTest1Stage();
     else if (activeStage === 2) renderTest2Stage();
-    else renderFinalTranslationStage();
+    else if (activeStage === 3) renderFinalTranslationStage();
   }
 
   // =========================================================
@@ -922,7 +1071,9 @@
   // STAGE 1: TEST 1 — 10 MINI MATCHING BOARDS x 5 PAIRS
   // =========================================================
   function startTest1() {
-    if (!activeTask || viewedWordIds.size < activeTask.words.length) return;
+    if (!activeTask) return;
+    const total = activeTask.words.length || 50;
+    if (getTaskMasteredCount(activeTask) < total) return;
     activeStage = 1;
     t1BoardIndex = 0;
     t1Mistakes = 0;
@@ -1518,6 +1669,7 @@
     if (sTasksBtn) {
       sTasksBtn.style.display = assignedUrlTaskIds.length > 0 ? 'inline-flex' : 'none';
     }
+    syncAssignedTaskScopes();
     if (urlCheckedForUid !== account.id && assignedUrlTaskIds.length > 0) {
       urlCheckedForUid = account.id;
       if (assignedUrlTaskIds.length === 1) {
@@ -1532,9 +1684,16 @@
     urlCheckedForUid = null;
     const sTasksBtn = document.getElementById('btn-open-student-tasks');
     if (sTasksBtn) sTasksBtn.style.display = 'none';
-    if (activeTask) exitTaskWorkspace(false);
+    stopIdleMonitor();
+    activeTask = null;
+    activeStage = 0;
+    taskTestPassed = false;
+    B()?.syncExamLock?.(false);
+    document.getElementById('screen-task')?.classList.remove('open', 'active', 'exam-no-copy');
+    updateTaskStudyBar();
     closeStudentTasksModal();
     closeTaskBriefModal();
+    closeTaskExamReadyModal();
     closeTaskSummaryModal();
   }
 
@@ -1708,6 +1867,13 @@
     closeTaskBriefModal,
     openTaskSummaryModal,
     closeTaskSummaryModal,
+    openTaskExamReadyModal,
+    closeTaskExamReadyModal,
+    onClickStartTaskExam,
+    confirmStartTaskExam,
+    updateTaskStudyBar,
+    onScopeChanged,
+    onStudyAssessmentChanged,
     startPendingTask,
     exitTaskWorkspace,
     stepLearnCard,

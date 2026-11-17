@@ -126,8 +126,67 @@
   let swCategory = 'all';
   let swQuery = '';
 
+  let dynamicTaskScopes = [];
+  let wordLookupCache = null;
+
+  function getWordLookup() {
+    if (wordLookupCache) return wordLookupCache;
+    const map = {};
+    [
+      ...(APP_DATA.file1_paraphrase_1500 || []),
+      ...(APP_DATA.file2_families_3500 || []),
+      ...(APP_DATA.signal_words || []),
+    ].forEach((item) => {
+      if (item && item.id) map[item.id] = item;
+    });
+    wordLookupCache = map;
+    return map;
+  }
+
+  function resolveTaskItems(taskObj) {
+    if (!taskObj || !Array.isArray(taskObj.words)) return [];
+    const lookup = getWordLookup();
+    return taskObj.words.map((w) => {
+      const base = lookup[w.id];
+      if (base) {
+        return w.wordFamily ? { ...base, wordFamily: w.wordFamily } : base;
+      }
+      return {
+        id: w.id,
+        lemma: w.lemma,
+        ipa: w.ipa,
+        pos: w.pos,
+        meaning: w.meaning,
+        synonyms: w.synonyms || [],
+        antonyms: w.antonyms || [],
+        example: w.example || '',
+        wordFamily: w.wordFamily || [],
+      };
+    });
+  }
+
+  function getAllScopes() {
+    return [...SCOPES, ...dynamicTaskScopes];
+  }
+
+  function setDynamicTaskScopes(tasksList) {
+    const arr = Array.isArray(tasksList) ? tasksList : [];
+    dynamicTaskScopes = arr.map((t) => ({
+      key: t.id,
+      name: `${t.label}: ${t.theme}`,
+      isTask: true,
+      getList: () => resolveTaskItems(t),
+    }));
+    populateScopeSelect();
+  }
+
+  function activateTaskScope(taskId) {
+    onlyDueReview = false;
+    loadScope(taskId);
+  }
+
   function getScopeDef(key) {
-    return SCOPES.find(s => s.key === key) || SCOPES[0];
+    return getAllScopes().find(s => s.key === key) || SCOPES[0];
   }
 
   function escapeHtml(str) {
@@ -202,7 +261,7 @@
       const raw = localStorage.getItem(getUserStorageKey());
       if (!raw) return;
       const st = JSON.parse(raw);
-      if (st.currentScopeKey && SCOPES.some(s => s.key === st.currentScopeKey)) {
+      if (st.currentScopeKey && getAllScopes().some(s => s.key === st.currentScopeKey)) {
         currentScopeKey = st.currentScopeKey;
       }
       if (st.assessments && typeof st.assessments === 'object') assessments = st.assessments;
@@ -1317,10 +1376,16 @@
   function populateScopeSelect() {
     const sel = document.getElementById('study-scope-select');
     if (!sel) return;
-    sel.innerHTML = SCOPES.map(it =>
+    let html = SCOPES.map(it =>
       `<option value="${it.key}">${escapeHtml(it.name)}</option>`
     ).join('');
-    sel.value = currentScopeKey;
+    if (dynamicTaskScopes.length > 0) {
+      html += `<optgroup label="Bộ từ Task được giao">${dynamicTaskScopes.map(it =>
+        `<option value="${escapeHtml(it.key)}">${escapeHtml(it.name)}</option>`
+      ).join('')}</optgroup>`;
+    }
+    sel.innerHTML = html;
+    sel.value = getAllScopes().some(s => s.key === currentScopeKey) ? currentScopeKey : SCOPES[0].key;
   }
 
   function applyFilterAndBuildDeck(preserveWordId = null, options = {}) {
@@ -1362,6 +1427,7 @@
     currentScopeKey = getScopeDef(scopeKey).key;
     const sel = document.getElementById('study-scope-select');
     if (sel) sel.value = currentScopeKey;
+    window.TasksModule?.onScopeChanged?.(currentScopeKey);
     applyFilterAndBuildDeck();
     saveState();
   }
@@ -1564,8 +1630,14 @@
       if (progressBar) progressBar.style.width = '100%';
       const btnPrev = document.getElementById('btn-prev-card');
       if (btnPrev) btnPrev.disabled = (currentCardIndex <= 0);
+      const finExamBtn = document.getElementById('btn-finished-task-exam');
+      if (finExamBtn) finExamBtn.style.display = currentScopeKey.startsWith('task_') ? 'inline-flex' : 'none';
+      window.TasksModule?.updateTaskStudyBar?.();
       return;
     }
+    const finExamBtn = document.getElementById('btn-finished-task-exam');
+    if (finExamBtn) finExamBtn.style.display = 'none';
+    window.TasksModule?.updateTaskStudyBar?.();
 
     scene.style.display = 'block';
     finishedBox.style.display = 'none';
@@ -2383,6 +2455,7 @@
     updateStudyStreakUI();
     updateVocabMasteryUI();
     updateLeaderboardUI();
+    window.TasksModule?.onStudyAssessmentChanged?.(currentScopeKey, assessments, item, level);
     scheduleCloudPush();
   }
 
@@ -2919,8 +2992,7 @@
         studyScreen.style.display = 'none';
       }
       if (taskScreen) {
-        taskScreen.classList.remove('active');
-        taskScreen.style.display = 'none';
+        taskScreen.classList.remove('active', 'open');
       }
       if (teacherScreen) {
         teacherScreen.style.display = 'flex';
@@ -2931,8 +3003,7 @@
         teacherScreen.classList.remove('active');
         teacherScreen.style.display = 'none';
       }
-      const inTask = taskScreen && taskScreen.classList.contains('active');
-      if (!inTask && studyScreen) {
+      if (studyScreen) {
         studyScreen.style.display = 'block';
         studyScreen.classList.add('active');
       }
@@ -3729,6 +3800,11 @@
     getPreferredAccent: () => preferredAccent,
     speakText: speakTextWithAccent,
     markMasteredBatch,
+    setDynamicTaskScopes,
+    activateTaskScope,
+    loadMainScope: (scopeKey) => loadScope(scopeKey || SCOPES[0].key),
+    getAssessmentsMap: () => assessments,
+    getCurrentScopeKey: () => currentScopeKey,
     saveAndSync: () => {
       saveState();
       syncPushCurrentUser(false);

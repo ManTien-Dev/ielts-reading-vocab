@@ -2388,10 +2388,81 @@ main.app-main:has(#screen-study.active) {
   font-family: ui-monospace, monospace;
 }
 
-#screen-task {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 14px 20px 36px;
+/* Unified Task Study Banner inside main #screen-study */
+.task-study-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 7px 12px;
+  border-radius: 13px;
+  background: linear-gradient(155deg, #f2f9f0 0%, #ffffff 70%);
+  border: 1.5px solid #c6dfc0;
+  margin-bottom: 8px;
+}
+[data-theme="dark"] .task-study-bar {
+  background: linear-gradient(155deg, #1b2b1e 0%, #151e18 75%);
+  border-color: #36563b;
+}
+.task-study-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.task-study-bar-status {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--text-bright);
+}
+.task-study-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.task-idle-mini {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-family: ui-monospace, monospace;
+}
+.btn-sm-task {
+  padding: 5px 12px !important;
+  font-size: 12.5px !important;
+  border-radius: 999px !important;
+}
+
+/* Task Final 3-Stage Exam Overlay Modal */
+#screen-task.task-exam-overlay {
+  max-width: none;
+  margin: 0;
+  padding: 16px;
+  z-index: 900;
+}
+#modal-task-summary {
+  z-index: 960;
+}
+.task-exam-dialog {
+  width: min(1080px, 96vw) !important;
+  max-width: 1080px !important;
+  max-height: 92vh !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+.task-exam-dialog > .modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+.task-exam-dialog .task-topbar {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 .task-topbar {
   display: flex;

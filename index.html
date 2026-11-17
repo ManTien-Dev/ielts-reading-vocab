@@ -241,6 +241,16 @@
 
         <!-- CENTER COLUMN: 3D FLASHCARD + NAV CONTROLS (always hugs directly below card) -->
         <div class="study-center-col">
+        <div class="task-study-bar" id="task-study-bar" style="display:none;">
+          <div class="task-study-bar-info">
+            <span class="tip-pill" id="task-study-pill" style="margin:0;">TASK 1</span>
+            <span class="task-study-bar-status" id="task-study-status">Đã thuộc 0 / 50 từ</span>
+          </div>
+          <div class="task-study-bar-actions">
+            <span class="task-idle-mini" id="task-study-idle-badge" title="Không thao tác quá 10 phút sẽ khóa 30 phút">00:00 / 10:00</span>
+            <button type="button" class="btn btn-primary btn-sm-task" id="btn-task-to-test1" onclick="TasksModule.onClickStartTaskExam()">Làm Test kết thúc</button>
+          </div>
+        </div>
         <!-- 3D Flashcard Container -->
         <div class="fc-scene" id="fc-scene" onclick="flipCurrentCard(event)">
           <div class="card-progress-bar">
@@ -332,6 +342,7 @@
             <div class="fc-finished-title">Bạn đã hoàn thành lượt thẻ này!</div>
             <div class="fc-finished-desc">Tất cả các thẻ trong danh sách đã được bạn xem qua. Bạn có thể ôn lại từ đầu hoặc lọc riêng các từ chưa thuộc.</div>
             <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+              <button class="btn btn-primary" id="btn-finished-task-exam" style="display:none;" onclick="TasksModule.onClickStartTaskExam()">Làm bài Test kết thúc Task →</button>
               <button class="btn btn-primary" onclick="restartScopeStudy()">Ôn tập lại từ đầu</button>
               <button class="btn" onclick="activateUnmasteredOnly()">Chỉ ôn từ chưa thuộc</button>
             </div>
@@ -452,27 +463,6 @@
     </section>
 
     <!-- Màn hình Làm Task theo Link Giáo viên giao -->
-    <section class="screen" id="screen-task" aria-label="Bài luyện tập Task" style="display:none;">
-      <div class="task-topbar">
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <button type="button" class="btn-subtle" id="btn-task-exit" onclick="TasksModule.exitTaskWorkspace(true)">← Thoát Task</button>
-          <span class="tip-pill" id="task-active-badge" style="margin-right:0;">TASK 1</span>
-          <span id="task-active-theme" style="font-size:13.5px; font-weight:700; color:var(--text-bright);"></span>
-        </div>
-        <div class="task-steps-nav" id="task-steps-nav">
-          <span class="task-step-pill active" id="task-pill-0">1. Học 50 từ</span>
-          <span class="task-step-pill" id="task-pill-1">2. Test 1 (Ghép từ)</span>
-          <span class="task-step-pill" id="task-pill-2">3. Test 2 (Ngữ cảnh)</span>
-          <span class="task-step-pill" id="task-pill-3">4. Test cuối (Dịch bài)</span>
-        </div>
-        <div class="task-idle-badge" id="task-idle-badge" title="Không thao tác quá 10 phút sẽ tự thoát và khóa 30 phút">
-          Tập trung · 00:00 / 10:00
-        </div>
-      </div>
-
-      <div id="task-stage-container"></div>
-    </section>
-
     <!-- Màn hình Dành Riêng Cho Giáo Viên: Siêu gọn - Chỉ Quản lý Lớp & Giao Task -->
     <section class="screen" id="screen-teacher" aria-label="Bảng quản lý giáo viên" style="display:none;">
       <div class="teacher-panel">
@@ -798,6 +788,54 @@
           <button type="button" class="btn-subtle" onclick="TasksModule.closeTaskBriefModal()">Để sau</button>
           <button type="button" class="btn btn-primary" id="btn-start-task" onclick="TasksModule.startPendingTask()">Bắt đầu làm Task</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NHẮC LÀM BÀI TEST KẾT THÚC TASK SAU KHI THUỘC ĐỦ 50 TỪ -->
+  <div class="modal-overlay" id="modal-task-exam-ready" onclick="TasksModule.closeTaskExamReadyModal(event)">
+    <div class="modal-card" style="max-width:480px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="tip-pill" id="exam-ready-task-pill" style="margin:0;">TASK 1</span>
+          <div class="modal-title" style="font-size:16px;">Hoàn thành 50/50 từ vựng!</div>
+        </div>
+        <button class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="TasksModule.closeTaskExamReadyModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding:18px 22px 22px; text-align:center;">
+        <img src="assets/images/panda_leaderboard.jpg" alt="" class="celebrate-panda-img" style="width:82px; height:82px; margin-bottom:10px;">
+        <div style="font-size:16px; font-weight:800; color:var(--text-bright);" id="exam-ready-heading">Bạn đã học và bấm Đã thuộc đủ 50 từ!</div>
+        <p style="font-size:13.5px; color:var(--text-muted); line-height:1.55; margin:8px 0 18px;" id="exam-ready-desc">
+          Bước cuối để hoàn tất Task: vượt qua <strong>Test 1 (Ghép từ) → Test 2 (Ngữ cảnh) → Test cuối (Dịch bài AI)</strong>. Chú ý không rời tab khi làm bài nhé!
+        </p>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+          <button type="button" class="btn-subtle" onclick="TasksModule.closeTaskExamReadyModal()">Ôn thêm chút nữa</button>
+          <button type="button" class="btn btn-primary" id="btn-confirm-open-task-exam" onclick="TasksModule.confirmStartTaskExam()">Bắt đầu làm Test 1 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BÀI TEST KẾT THÚC TASK (TEST 1 -> TEST 2 -> TEST CUỐI DỊCH AI) -->
+  <div class="modal-overlay task-exam-overlay" id="screen-task" aria-label="Bài Test kết thúc Task">
+    <div class="modal-card task-exam-dialog" onclick="event.stopPropagation()">
+      <div class="task-topbar">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn-subtle" id="btn-task-exit" onclick="TasksModule.exitTaskWorkspace(true)">← Thoát Test</button>
+          <span class="tip-pill" id="task-active-badge" style="margin-right:0;">TASK 1</span>
+          <span id="task-active-theme" style="font-size:13.5px; font-weight:700; color:var(--text-bright);"></span>
+        </div>
+        <div class="task-steps-nav" id="task-steps-nav">
+          <span class="task-step-pill active" id="task-pill-1">1. Test 1 (Ghép từ)</span>
+          <span class="task-step-pill" id="task-pill-2">2. Test 2 (Ngữ cảnh)</span>
+          <span class="task-step-pill" id="task-pill-3">3. Test cuối (Dịch bài AI)</span>
+        </div>
+        <div class="task-idle-badge" id="task-idle-badge" title="Không thao tác quá 10 phút sẽ tự thoát và khóa 30 phút">
+          Tập trung · 00:00 / 10:00
+        </div>
+      </div>
+      <div class="modal-body" style="padding:14px 20px 20px;">
+        <div id="task-stage-container"></div>
       </div>
     </div>
   </div>
