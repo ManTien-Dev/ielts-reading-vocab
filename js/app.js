@@ -1978,10 +1978,11 @@
     if (gateEl) gateEl.style.display = 'none';
     if (shellEl) shellEl.style.display = 'block';
 
-    const nameEl = document.getElementById('header-user-name');
     const idEl = document.getElementById('header-user-id');
-    if (nameEl) nameEl.textContent = account.name;
-    if (idEl) idEl.textContent = account.id;
+    if (idEl) {
+      idEl.textContent = account.id;
+      idEl.title = `${account.name} (${account.id})`;
+    }
 
     loadState();
     populateScopeSelect();
