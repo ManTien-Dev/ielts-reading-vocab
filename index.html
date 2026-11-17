@@ -773,7 +773,7 @@
 
   <!-- MODAL: THÔNG BÁO TRƯỚC KHI VÀO TASK -->
   <div class="modal-overlay" id="modal-task-brief" onclick="TasksModule.closeTaskBriefModal(event)">
-    <div class="modal-card" style="max-width:540px;" onclick="event.stopPropagation()">
+    <div class="modal-card" style="max-width:640px;" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:8px;">
           <span class="tip-pill" id="brief-task-pill" style="margin-right:0;">TASK 1</span>
@@ -794,18 +794,18 @@
 
   <!-- MODAL: NHẮC LÀM BÀI TEST KẾT THÚC TASK SAU KHI THUỘC ĐỦ 50 TỪ -->
   <div class="modal-overlay" id="modal-task-exam-ready" onclick="TasksModule.closeTaskExamReadyModal(event)">
-    <div class="modal-card" style="max-width:480px;" onclick="event.stopPropagation()">
+    <div class="modal-card" style="max-width:560px;" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:8px;">
           <span class="tip-pill" id="exam-ready-task-pill" style="margin:0;">TASK 1</span>
-          <div class="modal-title" style="font-size:16px;">Hoàn thành 50/50 từ vựng!</div>
+          <div class="modal-title" style="font-size:18px;">Hoàn thành 50/50 từ vựng!</div>
         </div>
         <button class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="TasksModule.closeTaskExamReadyModal()">✕</button>
       </div>
-      <div class="modal-body" style="padding:18px 22px 22px; text-align:center;">
-        <img src="assets/images/panda_leaderboard.jpg" alt="" class="celebrate-panda-img" style="width:82px; height:82px; margin-bottom:10px;">
-        <div style="font-size:16px; font-weight:800; color:var(--text-bright);" id="exam-ready-heading">Bạn đã học và bấm Đã thuộc đủ 50 từ!</div>
-        <p style="font-size:13.5px; color:var(--text-muted); line-height:1.55; margin:8px 0 18px;" id="exam-ready-desc">
+      <div class="modal-body" style="padding:20px 24px 24px; text-align:center;">
+        <img src="assets/images/panda_leaderboard.jpg" alt="" class="celebrate-panda-img" style="width:86px; height:86px; margin-bottom:12px;">
+        <div style="font-size:20px; font-weight:850; color:var(--text-bright); line-height:1.35;" id="exam-ready-heading">Bạn đã học và bấm Đã thuộc đủ 50 từ!</div>
+        <p style="font-size:16.5px; color:var(--text-muted); line-height:1.6; margin:10px 0 20px;" id="exam-ready-desc">
           Bước cuối để hoàn tất Task: vượt qua <strong>Test 1 (Ghép từ) → Test 2 (Ngữ cảnh) → Test cuối (Dịch bài AI)</strong>. Chú ý không rời tab khi làm bài nhé!
         </p>
         <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
@@ -864,7 +864,7 @@
         <div class="task-lock-banner" id="cheat-warn-msg" style="margin-bottom:14px;">
           Phát hiện bạn vừa chuyển tab hoặc rời khỏi màn hình bài kiểm tra! Bài kiểm tra đã tạm ẩn để đảm bảo công bằng.
         </div>
-        <div style="font-size:14px; color:var(--text); line-height:1.55; margin-bottom:18px;">
+        <div style="font-size:16.5px; color:var(--text); line-height:1.6; margin-bottom:18px;">
           Vui lòng đóng hộp thoại này để quay lại thử nốt <strong>1 lần nữa</strong>. Nếu bạn chuyển tab hoặc rời màn hình thêm lần thứ 2, hệ thống sẽ tự động <strong>tính sai / khóa bài</strong> ngay lập tức!
         </div>
         <div style="display:flex; justify-content:flex-end;">
@@ -886,7 +886,7 @@
         <div class="task-lock-banner" id="multitab-block-msg" style="margin-bottom:14px;">
           Phát hiện bạn đang làm bài kiểm tra ở một tab/cửa sổ khác. Tab này đã bị khóa và che nội dung để tránh lộ đáp án!
         </div>
-        <div style="font-size:14px; color:var(--text); line-height:1.55; margin-bottom:18px;">
+        <div style="font-size:16.5px; color:var(--text); line-height:1.6; margin-bottom:18px;">
           Vui lòng <strong>đóng tab này</strong> và quay lại tab đang làm bài chính. Trong khi bài kiểm tra chưa kết thúc, không thể mở xem từ vựng hay làm bài song song trên tab khác.
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px;">

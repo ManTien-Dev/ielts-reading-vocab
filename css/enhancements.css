@@ -1302,9 +1302,9 @@ main.app-main:has(#screen-study.active) {
   right: 20px;
   bottom: 20px;
   z-index: 95;
-  max-width: 340px;
+  max-width: 390px;
   width: calc(100vw - 32px);
-  padding: 13px 15px;
+  padding: 15px 18px;
   border-radius: 16px;
   background: var(--card-bg);
   border: 1.5px solid #d97706;
@@ -1323,7 +1323,7 @@ main.app-main:has(#screen-study.active) {
   display: flex;
 }
 .anki-rem-title {
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 850;
   color: #b45309;
   display: flex;
@@ -1334,8 +1334,8 @@ main.app-main:has(#screen-study.active) {
   color: #f6cc7f;
 }
 .anki-rem-desc {
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 15px;
+  line-height: 1.5;
   color: var(--text);
 }
 .anki-rem-actions {
@@ -2412,7 +2412,7 @@ main.app-main:has(#screen-study.active) {
   flex-wrap: wrap;
 }
 .task-study-bar-status {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 750;
   color: var(--text-bright);
 }
@@ -2719,13 +2719,13 @@ main.app-main:has(#screen-study.active) {
   font-weight: 700;
 }
 .task-notice-box {
-  padding: 13px 15px;
-  border-radius: 12px;
+  padding: 16px 20px;
+  border-radius: 14px;
   background: rgba(82, 136, 62, 0.09);
   border: 1px solid rgba(82, 136, 62, 0.28);
-  font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 12px;
+  font-size: 16.5px;
+  line-height: 1.65;
+  margin-bottom: 14px;
 }
 .passage-hl-legend {
   display: flex;
@@ -2777,13 +2777,15 @@ main.app-main:has(#screen-study.active) {
   background: rgba(239, 68, 68, 0.06);
 }
 .task-lock-banner {
-  padding: 13px 15px;
-  border-radius: 12px;
+  padding: 16px 20px;
+  border-radius: 14px;
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.38);
   color: #b91c1c;
-  font-weight: 700;
-  margin-bottom: 12px;
+  font-size: 17px;
+  line-height: 1.55;
+  font-weight: 750;
+  margin-bottom: 14px;
 }
 [data-theme="dark"] .task-lock-banner { color: #fecaca; }
 [data-theme="dark"] .task-meaning-main { color: #b7dfc4 !important; }
@@ -2979,13 +2981,33 @@ body.is-multitab-blocked #app-shell {
   opacity: 0.78;
 }
 
-/* Toast placed at top-center so it never overlaps flip controls or modal footers */
+/* Large crisp Toast notifications + Finished Deck + Recall feedback */
 .toast-notice {
   top: 14px !important;
   bottom: auto !important;
   z-index: 9500 !important;
-  max-width: min(92vw, 460px);
+  max-width: min(94vw, 620px) !important;
+  padding: 13px 26px !important;
+  border-radius: 16px !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  line-height: 1.45 !important;
   text-align: center;
+}
+.cheat-warn-card {
+  max-width: 580px !important;
+}
+.recall-feedback {
+  font-size: 16px !important;
+  line-height: 1.55 !important;
+}
+.fc-finished-title {
+  font-size: 23px !important;
+}
+.fc-finished-desc {
+  font-size: 16.5px !important;
+  line-height: 1.55 !important;
+  max-width: 480px !important;
 }
 
 /* Auto-hide floating Anki reminder behind any open modal, Task screen, or Teacher view */
