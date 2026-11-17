@@ -1376,6 +1376,14 @@
   function populateScopeSelect() {
     const sel = document.getElementById('study-scope-select');
     if (!sel) return;
+    const inTaskScope = Boolean(currentScopeKey && currentScopeKey.startsWith('task_') && dynamicTaskScopes.length > 0);
+    if (inTaskScope) {
+      sel.innerHTML = dynamicTaskScopes.map(it =>
+        `<option value="${escapeHtml(it.key)}">${escapeHtml(it.name)}</option>`
+      ).join('');
+      sel.value = dynamicTaskScopes.some(s => s.key === currentScopeKey) ? currentScopeKey : dynamicTaskScopes[0].key;
+      return;
+    }
     let html = SCOPES.map(it =>
       `<option value="${it.key}">${escapeHtml(it.name)}</option>`
     ).join('');
@@ -1425,6 +1433,7 @@
   function loadScope(scopeKey) {
     cancelPendingAdvance();
     currentScopeKey = getScopeDef(scopeKey).key;
+    populateScopeSelect();
     const sel = document.getElementById('study-scope-select');
     if (sel) sel.value = currentScopeKey;
     window.TasksModule?.onScopeChanged?.(currentScopeKey);
@@ -3827,11 +3836,37 @@
     TASK_LOCKS_KEY_BASE,
   };
 
+  function applyOneTimeStudentResetEpoch() {
+    const EPOCH_KEY = 'ielts_reset_thanhngoc_epoch_20261117_2105';
+    const TARGET_UID = 'thanhngoc';
+    try {
+      if (localStorage.getItem(EPOCH_KEY)) return;
+      const toRemove = [
+        `${STORAGE_KEY_BASE}_${TARGET_UID}`,
+        `${STREAK_KEY_BASE}_${TARGET_UID}`,
+        `${TASK_PROGRESS_KEY_BASE}${TARGET_UID}`,
+        `${TASK_LOCKS_KEY_BASE}${TARGET_UID}`,
+      ];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith(`${TIMER_KEY_BASE}${TARGET_UID}_`) || k.startsWith(`${DAILY_WORDS_BASE}${TARGET_UID}_`)) {
+          toRemove.push(k);
+        }
+      }
+      toRemove.forEach((k) => {
+        try { localStorage.removeItem(k); } catch (_) {}
+      });
+      localStorage.setItem(EPOCH_KEY, String(Date.now()));
+    } catch (_) {}
+  }
+
   function mountPandaWidgetFrames() {
     // Styled directly via CSS pastel botanical card themes & circular mascot lockups
   }
 
   // Init cleanly on load
+  applyOneTimeStudentResetEpoch();
   mountPandaWidgetFrames();
   restoreAuthSession();
 })();
