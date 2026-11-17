@@ -3643,11 +3643,13 @@
     const msg = toastMsg || 'Không được dán (paste) khi kiểm tra — hãy tự nhập trực tiếp!';
     ['paste', 'drop', 'copy', 'cut', 'contextmenu'].forEach((evt) => {
       el.addEventListener(evt, (e) => {
+        if (currentUser?.role === 'teacher' || window.TasksModule?.getExamState?.().isPreview) return;
         e.preventDefault();
         if (evt === 'paste' || evt === 'drop') showToast(msg);
       });
     });
     el.addEventListener('beforeinput', (e) => {
+      if (currentUser?.role === 'teacher' || window.TasksModule?.getExamState?.().isPreview) return;
       if (e.inputType === 'insertFromPaste' || e.inputType === 'insertFromDrop') {
         e.preventDefault();
         showToast(msg);
