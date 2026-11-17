@@ -793,9 +793,9 @@
       if (myEntry) {
         userCardEl.innerHTML = `
           <span class="board-rank user-rank">#${myEntry.rank}</span>
-          <div class="board-info">
+          <div class="board-info" style="display:flex;align-items:baseline;gap:4px;" title="${escapeHtml(currentUser.name)} · Hôm nay: ${myEntry.todayMins}p">
             <span class="board-name user-name">${escapeHtml(currentUser.name)}</span>
-            <span class="board-meta">· ${myEntry.todayMins}p hôm nay</span>
+            <span class="board-meta" style="white-space:nowrap;flex-shrink:0;">· ${myEntry.periodMins}p</span>
           </div>
           <span class="board-score user-score">${myEntry.mastered} từ</span>
         `;
@@ -804,9 +804,9 @@
         const mastered = getUserMasteredCount(currentUser.id);
         userCardEl.innerHTML = `
           <span class="board-rank user-rank">GV</span>
-          <div class="board-info">
+          <div class="board-info" style="display:flex;align-items:baseline;gap:4px;" title="${escapeHtml(currentUser.name)} · Hôm nay: ${mins.todayMins}p">
             <span class="board-name user-name">${escapeHtml(currentUser.name)}</span>
-            <span class="board-meta">· ${mins.todayMins}p hôm nay</span>
+            <span class="board-meta" style="white-space:nowrap;flex-shrink:0;">· ${mins.todayMins}p</span>
           </div>
           <span class="board-score user-score">${mastered} từ</span>
         `;
