@@ -1,0 +1,33 @@
+HƯỚNG DẪN BẬT TỰ ĐỘNG ĐỒNG BỘ GIỜ HỌC ONLINE (MIỄN PHÍ 100%)
+(Dùng khi đẩy web lên GitHub Pages để cả 10 học viên học trên các máy khác nhau)
+
+Vì GitHub Pages chỉ chứa file web tĩnh (HTML/JS), web cần nối vào 1 file Google Sheet của bạn
+để làm kho lưu giờ học chung. Cài đặt chỉ mất 2 phút, làm 1 lần dùng vĩnh viễn:
+
+BƯỚC 1: Tạo Google Sheet
+- Vào https://sheets.new để tạo 1 bảng tính trống mới (đặt tên tùy ý, vd: "Theo Doi Hoc Vocab").
+
+BƯỚC 2: Dán mã đồng bộ
+- Trên thanh menu của Google Sheet, chọn: Tiện ích mở rộng (Extensions) -> Apps Script.
+- Xóa toàn bộ đoạn `function myFunction() {}` mặc định.
+- Mở file `sync/google_apps_script.gs` trong thư mục này, copy toàn bộ dán vào Apps Script.
+- Nhấn Lưu (Ctrl + S).
+
+BƯỚC 3: Xuất bản thành đường link Web App
+- Bấm nút màu xanh "Triển khai" (Deploy) góc trên bên phải -> "Tùy chọn triển khai mới" (New deployment).
+- Nhấn biểu tượng bánh răng cạnh "Chọn loại" -> chọn "Ứng dụng web" (Web app).
+- Ở mục "Thực thi dưới dạng" (Execute as): chọn "Tôi" (Me).
+- Ở mục "Ai có quyền truy cập" (Who has access): chọn "Bất kỳ ai" (Anyone).
+- Bấm "Triển khai" (Deploy) -> cấp quyền cho tài khoản Google của bạn (nếu hiện cảnh báo chưa xác minh: bấm Nâng cao -> Chuyển tới dự án...).
+- Copy đường link "Ứng dụng web" (URL có dạng: https://script.google.com/macros/s/.../exec).
+
+BƯỚC 4: Dán link vào web và đẩy lên GitHub
+- Mở file `data/accounts.js` bằng Notepad hoặc VS Code.
+- Dán link vừa copy vào dòng:
+  window.APP_SYNC_URL = 'https://script.google.com/macros/s/.../exec';
+- Lưu lại và đẩy thư mục web lên GitHub!
+
+Từ lúc này trở đi:
+- Học viên học bằng điện thoại hay laptop ở nhà đều tự động đồng bộ giờ học & số từ đã thuộc lên Google Sheet của bạn.
+- Bảng Thi Đua trên web tự động cập nhật thứ hạng cả lớp theo thời gian thực.
+- Bạn chỉ cần mở file Google Sheet đó là thấy bảng thống kê giờ học của cả lớp!
