@@ -629,15 +629,15 @@
     const statusEl = document.getElementById('task-study-status');
     if (statusEl) {
       statusEl.textContent = allReady
-        ? `✓ Đã thuộc ${masteredCount}/${total} từ — Sẵn sàng làm bài Test!`
-        : `Đã thuộc ${masteredCount} / ${total} từ (cần ${total}/${total} để mở Test)`;
+        ? `✓ Đã thuộc ${masteredCount} / ${total} từ!`
+        : `Đã thuộc ${masteredCount} / ${total} từ`;
     }
     const testBtn = document.getElementById('btn-task-to-test1');
     if (testBtn) {
       testBtn.disabled = false;
       testBtn.classList.toggle('btn-primary', allReady);
       testBtn.classList.toggle('btn-subtle', !allReady);
-      testBtn.textContent = allReady ? 'Làm bài Test (Test 1 → 2 → 3) →' : `Mở Test (${masteredCount}/${total})`;
+      testBtn.textContent = allReady ? 'Làm Test →' : `Mở Test (${masteredCount}/${total})`;
     }
   }
 

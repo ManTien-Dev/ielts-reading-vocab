@@ -2388,18 +2388,18 @@ main.app-main:has(#screen-study.active) {
   font-family: ui-monospace, monospace;
 }
 
-/* Unified Task Study Banner inside main #screen-study */
+/* Unified Task Study Pill inside .app-header (keeps main Flashcard center column 100% identical in height & alignment) */
 .task-study-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 7px 12px;
-  border-radius: 13px;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 8px 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
   background: linear-gradient(155deg, #f2f9f0 0%, #ffffff 70%);
   border: 1.5px solid #c6dfc0;
-  margin-bottom: 8px;
+  margin: 0;
 }
 [data-theme="dark"] .task-study-bar {
   background: linear-gradient(155deg, #1b2b1e 0%, #151e18 75%);
@@ -2409,28 +2409,44 @@ main.app-main:has(#screen-study.active) {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .task-study-bar-status {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 750;
   color: var(--text-bright);
+  white-space: nowrap;
 }
 .task-study-bar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 .task-idle-mini {
   font-size: 11.5px;
   font-weight: 700;
   color: var(--text-muted);
   font-family: ui-monospace, monospace;
+  white-space: nowrap;
 }
 .btn-sm-task {
-  padding: 5px 12px !important;
+  padding: 4px 11px !important;
   font-size: 12.5px !important;
   border-radius: 999px !important;
+  white-space: nowrap;
+}
+@media (max-width: 1120px) {
+  header.app-header {
+    flex-wrap: wrap;
+    gap: 6px 10px;
+  }
+  .task-study-bar {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+    border-radius: 12px;
+    flex-wrap: wrap;
+  }
 }
 
 /* Task Final 3-Stage Exam Overlay Modal */
