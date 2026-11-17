@@ -2540,6 +2540,21 @@ main.app-main:has(#screen-study.active) {
   background: transparent;
   user-select: none;
 }
+button.task-step-pill {
+  cursor: pointer;
+  font-family: inherit;
+  line-height: inherit;
+  outline: none;
+  transition: all 0.15s ease;
+}
+button.task-step-pill:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+button.task-step-pill.active:hover {
+  color: #ffffff;
+}
 .task-exam-header-row {
   display: flex;
   align-items: center;

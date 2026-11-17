@@ -244,6 +244,12 @@
             <div class="teacher-task-title">${esc(t.label)}${badgeHtml}</div>
             <div class="teacher-task-sub">${esc(t.theme)} · 50 từ</div>
             ${subStatusHtml}
+            <div style="margin-top:7px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;" onclick="event.stopPropagation()">
+              <span style="font-size:11.5px; color:var(--text-muted); font-weight:700;">Xem Test:</span>
+              <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(1, '${esc(t.id)}')">Test 1</button>
+              <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(2, '${esc(t.id)}')">Test 2</button>
+              <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(3, '${esc(t.id)}')">Test 3</button>
+            </div>
           </div>
         </label>
       `;
@@ -676,7 +682,8 @@
     }
     const total = task.words.length || 50;
     const masteredCount = getTaskMasteredCount(task);
-    if (masteredCount < total) {
+    const isTeacher = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
+    if (!isTeacher && masteredCount < total) {
       B()?.showToast?.(`Hãy học và bấm '3 - Đã thuộc' cho đủ ${total}/${total} từ của ${task.label} trước khi làm Test (hiện ${masteredCount}/${total}).`);
       return;
     }
@@ -946,14 +953,18 @@
   }
 
   function updateStepPills() {
-    const badge = document.getElementById('task-current-step-badge');
-    if (!badge) return;
-    if (activeStage === 1) {
-      badge.textContent = 'TEST 1 (Ghép từ)';
-    } else if (activeStage === 2) {
-      badge.textContent = 'TEST 2 (Ngữ cảnh)';
-    } else if (activeStage === 3) {
-      badge.textContent = 'TEST 3 (Dịch bài AI)';
+    const nav = document.getElementById('task-steps-nav');
+    if (!nav) return;
+    const isTeacher = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
+    if (isTeacher) {
+      nav.innerHTML = `
+        <button type="button" class="task-step-pill ${activeStage === 1 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(1)" title="Xem Test 1">TEST 1 (Ghép từ)</button>
+        <button type="button" class="task-step-pill ${activeStage === 2 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(2)" title="Xem Test 2">TEST 2 (Ngữ cảnh)</button>
+        <button type="button" class="task-step-pill ${activeStage === 3 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(3)" title="Xem Test 3">TEST 3 (Dịch bài AI)</button>
+      `;
+    } else {
+      const stageText = activeStage === 1 ? 'TEST 1 (Ghép từ)' : activeStage === 2 ? 'TEST 2 (Ngữ cảnh)' : 'TEST 3 (Dịch bài AI)';
+      nav.innerHTML = `<span class="task-step-pill active" id="task-current-step-badge">${stageText}</span>`;
     }
   }
 
@@ -997,8 +1008,11 @@
   function parseUrlPreviewStage(account) {
     try {
       const sp = new URLSearchParams(window.location.search || '');
-      if (sp.get('adminTest')) return 1;
-      if (account?.role === 'teacher' && sp.get('test')) return 1;
+      const rawAdmin = sp.get('adminTest');
+      if (rawAdmin) return Math.max(1, Math.min(3, Number(rawAdmin) || 1));
+      if (account?.role === 'teacher' && sp.get('test')) {
+        return Math.max(1, Math.min(3, Number(sp.get('test')) || 1));
+      }
       return 0;
     } catch (_) {
       return 0;
@@ -1017,6 +1031,7 @@
     activeTask = t;
     isPreviewTestMode = true;
     taskTestPassed = false;
+    taskStartedAt = Date.now();
     taskLeaveWarnings = 0;
     lastTaskLeaveAt = 0;
     t1BoardIndex = 0;
@@ -1024,8 +1039,12 @@
     t1WrongWordIds = new Set();
     initTest2State(t);
     document.getElementById('task-leave-warn-banner')?.remove();
-    activeStage = 1;
-    setupT1Board();
+
+    const targetStage = Math.max(1, Math.min(3, Number(_stage) || 1));
+    activeStage = targetStage;
+    if (activeStage === 1) {
+      setupT1Board();
+    }
     renderTaskStage();
   }
 

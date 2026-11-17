@@ -537,8 +537,12 @@
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:12px; padding:8px 12px; border-radius:12px; background:var(--bg-soft); border:1px solid var(--card-border);">
-          <span style="font-size:13px; font-weight:700; color:var(--text-muted);">Chế độ Test (theo Task đầu đang tick, mặc định Task 1):</span>
-          <button type="button" class="btn btn-primary btn-sm-task" id="btn-teacher-test-1" onclick="TasksModule.openAdminTestPreview(1)">Chế độ Test (Test 1 → 2 → 3)</button>
+          <span style="font-size:13px; font-weight:700; color:var(--text-muted);">Xem trước nội dung Test (theo Task đang tick):</span>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary btn-sm-task" id="btn-teacher-test-1" onclick="TasksModule.openAdminTestPreview(1)" title="Xem Test 1">Test 1 (Ghép từ)</button>
+            <button type="button" class="btn btn-primary btn-sm-task" id="btn-teacher-test-2" onclick="TasksModule.openAdminTestPreview(2)" title="Xem Test 2">Test 2 (Ngữ cảnh &amp; Paraphrase)</button>
+            <button type="button" class="btn btn-primary btn-sm-task" id="btn-teacher-test-3" onclick="TasksModule.openAdminTestPreview(3)" title="Xem Test 3">Test 3 (Dịch bài AI)</button>
+          </div>
         </div>
 
         <div class="teacher-task-dash-grid" id="teacher-dash-task-grid"></div>
@@ -904,12 +908,12 @@
     </div>
   </div>
 
-  <script src="data/accounts.js?v=20261117j"></script>
-  <script src="data/vocab_data.js?v=20261117j"></script>
-  <script src="data/tasks_data.js?v=20261117j"></script>
-  <script src="data/ipa_dict.js?v=20261117j"></script>
-  <script src="js/motion.js?v=20261117j"></script>
-  <script src="js/app.js?v=20261117j"></script>
-  <script src="js/tasks.js?v=20261117j"></script>
+  <script src="data/accounts.js?v=20261117k"></script>
+  <script src="data/vocab_data.js?v=20261117k"></script>
+  <script src="data/tasks_data.js?v=20261117k"></script>
+  <script src="data/ipa_dict.js?v=20261117k"></script>
+  <script src="js/motion.js?v=20261117k"></script>
+  <script src="js/app.js?v=20261117k"></script>
+  <script src="js/tasks.js?v=20261117k"></script>
 </body>
 </html>
