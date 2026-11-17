@@ -38,6 +38,7 @@
   let taskLeaveWarnings = 0;
   let lastTaskLeaveAt = 0;
   let taskTestPassed = false;
+  let isPreviewTestMode = false;
   let lockCountdownTimer = null;
   let examReadyPromptShownForTaskId = null;
 
@@ -770,6 +771,15 @@
     }
     B()?.syncExamLock?.(false);
 
+    if (isPreviewTestMode) {
+      isPreviewTestMode = false;
+      activeTask = null;
+      activeStage = 0;
+      taskTestPassed = false;
+      if (confirmExit) B()?.showToast('Đã đóng chế độ Test thử.');
+      return;
+    }
+
     if (wasInExam && !taskTestPassed && confirmExit) {
       // Returned from Exam modal back onto Task study deck
       activeStage = 0;
@@ -804,7 +814,7 @@
   }
 
   function handleTaskTabLeave(customReason) {
-    if (!activeTask || activeStage < 1 || taskTestPassed) return;
+    if (!activeTask || activeStage < 1 || taskTestPassed || isPreviewTestMode) return;
     if (document.getElementById('modal-cheat-warn')?.classList.contains('open')) return;
     const now = Date.now();
     if (now - lastTaskLeaveAt < 800) return;
@@ -928,18 +938,20 @@
   }
 
   function updateStepPills() {
-    for (let i = 0; i <= 3; i++) {
+    for (let i = 1; i <= 3; i++) {
       const el = document.getElementById(`task-pill-${i}`);
       if (!el) continue;
       el.classList.toggle('active', activeStage === i);
-      el.classList.toggle('done', activeStage > i);
+      el.classList.toggle('done', !isPreviewTestMode && activeStage > i);
+      el.style.cursor = isPreviewTestMode ? 'pointer' : '';
+      el.title = isPreviewTestMode ? `Bấm để nhảy nhanh sang Test ${i}` : '';
     }
   }
 
   function renderTaskStage() {
     if (!activeTask) return;
     bindTaskNoCopyOnce();
-    const isTestNow = activeStage >= 1 && !taskTestPassed;
+    const isTestNow = activeStage >= 1 && !taskTestPassed && !isPreviewTestMode;
     if (isTestNow && B()?.syncExamLock?.(true, activeTask.label) === false) {
       activeStage = 0;
       document.getElementById('screen-task')?.classList.remove('open', 'active', 'exam-no-copy');
@@ -955,7 +967,11 @@
         const badge = document.getElementById('task-active-badge');
         const theme = document.getElementById('task-active-theme');
         if (badge) badge.textContent = activeTask.label.toUpperCase();
-        if (theme) theme.textContent = `${activeTask.theme} · Bài Test kết thúc`;
+        if (theme) {
+          theme.textContent = isPreviewTestMode
+            ? `${activeTask.theme} · CHẾ ĐỘ TEST THỬ (Không lưu/khóa điểm)`
+            : `${activeTask.theme} · Bài Test kết thúc`;
+        }
       } else {
         examModal.classList.remove('open', 'active');
       }
@@ -965,6 +981,54 @@
     if (activeStage === 1) renderTest1Stage();
     else if (activeStage === 2) renderTest2Stage();
     else if (activeStage === 3) renderFinalTranslationStage();
+  }
+
+  function parseUrlPreviewStage(account) {
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      const adminStage = parseInt(sp.get('adminTest') || '0', 10);
+      if (adminStage >= 1 && adminStage <= 3) return adminStage;
+      if (account?.role === 'teacher') {
+        const tStage = parseInt(sp.get('test') || '0', 10);
+        if (tStage >= 1 && tStage <= 3) return tStage;
+      }
+      return 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function openAdminTestPreview(stage = 1, taskId = null) {
+    const tid = normalizeTaskId(taskId)
+      || Array.from(teacherSelectedIds)[0]
+      || activeTask?.id
+      || assignedUrlTaskIds[0]
+      || 'task_01';
+    const t = getTaskById(tid);
+    if (!t) return;
+    stopIdleMonitor();
+    activeTask = t;
+    isPreviewTestMode = true;
+    taskTestPassed = false;
+    taskLeaveWarnings = 0;
+    lastTaskLeaveAt = 0;
+    t1BoardIndex = 0;
+    t1Mistakes = 0;
+    t1WrongWordIds = new Set();
+    t2Index = 0;
+    t2Correct = 0;
+    t2Answered = false;
+    t2WrongRecords = [];
+    document.getElementById('task-leave-warn-banner')?.remove();
+    const s = Math.min(3, Math.max(1, Number(stage) || 1));
+    activeStage = s;
+    if (s === 1) setupT1Board();
+    renderTaskStage();
+  }
+
+  function jumpPreviewStage(stage) {
+    if (!isPreviewTestMode || !activeTask) return;
+    openAdminTestPreview(stage, activeTask.id);
   }
 
   function speakWord(text, accent) {
@@ -1485,7 +1549,12 @@
       `).join('');
 
       let masteryNote = '';
-      if (g.passed) {
+      if (g.passed && isPreviewTestMode) {
+        masteryNote = `
+          <div style="margin-top:10px; padding:12px 14px; border-radius:10px; background:rgba(82,136,62,0.16); border:1px solid rgba(82,136,62,0.35); color:var(--text-bright);">
+            <div style="font-weight:800;">✓ Đạt Test thử ${esc(activeTask.label)}! (Chế độ Test thử — không ghi nhận điểm hay mở khóa từ vào tài khoản học viên.)</div>
+          </div>`;
+      } else if (g.passed) {
         taskTestPassed = true;
         stopIdleMonitor();
         B()?.syncExamLock?.(false);
@@ -1538,7 +1607,7 @@
         `;
       }
 
-      if (g.passed) {
+      if (g.passed && !isPreviewTestMode) {
         setTimeout(() => openTaskSummaryModal(activeTask?.id), 180);
       }
     } catch (err) {
@@ -1562,18 +1631,27 @@
 
   function onUserEntered(account) {
     assignedUrlTaskIds = parseUrlAssignedTasks();
+    const previewStage = parseUrlPreviewStage(account);
     const sTasksBtn = document.getElementById('btn-open-student-tasks');
     if (!account) return;
     if (account.role === 'teacher') {
       urlCheckedForUid = account.id;
       if (sTasksBtn) sTasksBtn.style.display = 'none';
       renderTeacherDashboard();
+      if (previewStage > 0) {
+        openAdminTestPreview(previewStage, assignedUrlTaskIds[0] || 'task_01');
+      }
       return;
     }
     if (sTasksBtn) {
       sTasksBtn.style.display = assignedUrlTaskIds.length > 0 ? 'inline-flex' : 'none';
     }
     syncAssignedTaskScopes();
+    if (urlCheckedForUid !== account.id && previewStage > 0) {
+      urlCheckedForUid = account.id;
+      openAdminTestPreview(previewStage, assignedUrlTaskIds[0] || 'task_01');
+      return;
+    }
     if (urlCheckedForUid !== account.id && assignedUrlTaskIds.length > 0) {
       urlCheckedForUid = account.id;
       if (assignedUrlTaskIds.length === 1) {
@@ -1586,6 +1664,7 @@
 
   function onUserLogout() {
     urlCheckedForUid = null;
+    isPreviewTestMode = false;
     const sTasksBtn = document.getElementById('btn-open-student-tasks');
     if (sTasksBtn) sTasksBtn.style.display = 'none';
     stopIdleMonitor();
@@ -1789,12 +1868,14 @@
     nextTest2Question,
     retryTest2,
     startFinalTranslation,
+    openAdminTestPreview,
+    jumpPreviewStage,
     submitTranslationForAi,
     onUserEntered,
     onUserLogout,
     onCloudMerged,
     getExamState: () => ({
-      active: Boolean(activeTask && activeStage >= 1 && !taskTestPassed),
+      active: Boolean(activeTask && activeStage >= 1 && !taskTestPassed && !isPreviewTestMode),
       label: activeTask?.label || 'Test Task',
     }),
     handleExternalTabIntrusion,

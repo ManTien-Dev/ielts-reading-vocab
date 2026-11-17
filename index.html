@@ -10,9 +10,9 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261117g">
-  <link rel="stylesheet" href="css/motion.css?v=20261117g">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261117g">
+  <link rel="stylesheet" href="css/style.css?v=20261117h">
+  <link rel="stylesheet" href="css/motion.css?v=20261117h">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261117h">
 </head>
 <body>
 
@@ -531,9 +531,16 @@
           </div>
         </div>
 
-        <div class="task-link-box" style="margin-top:0; margin-bottom:12px;">
+        <div class="task-link-box" style="margin-top:0; margin-bottom:10px;">
           <input type="text" class="task-link-input" id="teacher-dash-link-preview" readonly placeholder="Tick ít nhất 1 Task bên dưới để tạo link...">
           <button type="button" class="btn btn-primary" onclick="TasksModule.copyTeacherTaskLink()">Copy Link Task</button>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; padding:8px 12px; border-radius:12px; background:var(--bg-soft); border:1px solid var(--card-border);">
+          <span style="font-size:13px; font-weight:750; color:var(--text-muted);">Chế độ Test thử (theo Task đang tick, mặc định Task 1):</span>
+          <button type="button" class="btn-subtle btn-sm-task" id="btn-teacher-test-1" onclick="TasksModule.openAdminTestPreview(1)">Test thử Test 1 (Ghép từ)</button>
+          <button type="button" class="btn-subtle btn-sm-task" id="btn-teacher-test-2" onclick="TasksModule.openAdminTestPreview(2)">Test thử Test 2 (Ngữ cảnh)</button>
+          <button type="button" class="btn-subtle btn-sm-task" id="btn-teacher-test-3" onclick="TasksModule.openAdminTestPreview(3)">Test thử Test 3 (Dịch bài AI)</button>
         </div>
 
         <div class="teacher-task-dash-grid" id="teacher-dash-task-grid"></div>
@@ -831,9 +838,9 @@
           <span id="task-active-theme" style="font-size:13.5px; font-weight:700; color:var(--text-bright);"></span>
         </div>
         <div class="task-steps-nav" id="task-steps-nav">
-          <span class="task-step-pill active" id="task-pill-1">1. Test 1 (Ghép từ)</span>
-          <span class="task-step-pill" id="task-pill-2">2. Test 2 (Ngữ cảnh)</span>
-          <span class="task-step-pill" id="task-pill-3">3. Test cuối (Dịch bài AI)</span>
+          <span class="task-step-pill active" id="task-pill-1" onclick="TasksModule.jumpPreviewStage(1)">1. Test 1 (Ghép từ)</span>
+          <span class="task-step-pill" id="task-pill-2" onclick="TasksModule.jumpPreviewStage(2)">2. Test 2 (Ngữ cảnh)</span>
+          <span class="task-step-pill" id="task-pill-3" onclick="TasksModule.jumpPreviewStage(3)">3. Test cuối (Dịch bài AI)</span>
         </div>
         <div class="task-idle-badge" id="task-idle-badge" title="Không thao tác quá 10 phút sẽ tự thoát và khóa 30 phút">
           Tập trung · 00:00 / 10:00
@@ -901,12 +908,12 @@
     </div>
   </div>
 
-  <script src="data/accounts.js?v=20261117g"></script>
-  <script src="data/vocab_data.js?v=20261117g"></script>
-  <script src="data/tasks_data.js?v=20261117g"></script>
-  <script src="data/ipa_dict.js?v=20261117g"></script>
-  <script src="js/motion.js?v=20261117g"></script>
-  <script src="js/app.js?v=20261117g"></script>
-  <script src="js/tasks.js?v=20261117g"></script>
+  <script src="data/accounts.js?v=20261117h"></script>
+  <script src="data/vocab_data.js?v=20261117h"></script>
+  <script src="data/tasks_data.js?v=20261117h"></script>
+  <script src="data/ipa_dict.js?v=20261117h"></script>
+  <script src="js/motion.js?v=20261117h"></script>
+  <script src="js/app.js?v=20261117h"></script>
+  <script src="js/tasks.js?v=20261117h"></script>
 </body>
 </html>
