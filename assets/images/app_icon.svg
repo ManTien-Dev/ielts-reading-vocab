@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#3c7d3f"/>
+      <stop offset="100%" stop-color="#1e4d23"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="20" y1="14" x2="44" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#d9a13b"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#bg)"/>
+  <rect x="3.5" y="3.5" width="57" height="57" rx="14.5" stroke="#8dc276" stroke-opacity="0.4" stroke-width="1.5"/>
+  <!-- Botanical Sprout -->
+  <path d="M32 22 C32 13, 41 10, 44 12 C42 18, 36 22, 32 22 Z" fill="#a7e38c"/>
+  <path d="M32 22 C32 14, 24 11, 21 13 C23 19, 28 22, 32 22 Z" fill="url(#gold)"/>
+  <!-- Open Vocabulary Book -->
+  <path d="M13 24.5 C19 22, 26.5 23, 32 26.5 L32 49 C26.5 45.5, 19 44.5, 13 47 Z" fill="#f6f9f0" stroke="#183d1c" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M51 24.5 C45 22, 37.5 23, 32 26.5 L32 49 C37.5 45.5, 45 44.5, 51 47 Z" fill="#eaf2df" stroke="#183d1c" stroke-width="1.8" stroke-linejoin="round"/>
+  <line x1="17.5" y1="30" x2="27" y2="31.5" stroke="#466b37" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="17.5" y1="36" x2="26.5" y2="37.3" stroke="#466b37" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="37" y1="31.5" x2="46.5" y2="30" stroke="#466b37" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="37.5" y1="37.3" x2="46.5" y2="36" stroke="#d9a13b" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Gold Bookmark Ribbon -->
+  <path d="M37 25 L41 24.5 L41 34 L39 32.2 L37 34 Z" fill="#e5a93c"/>
+</svg>

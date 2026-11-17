@@ -51,52 +51,18 @@
     ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
   });
 
-  // Thanh chọn chuyển vị trí khi tab, kích thước cửa sổ hoặc kỹ năng thay đổi.
-  const navs = [...document.querySelectorAll('.segmented-nav')];
-  const updateNav = nav => {
-    if (getComputedStyle(nav).display === 'none') return;
-    const selected = nav.querySelector('.segmented-item.active');
-    if (!selected) return;
-    const x = `${selected.offsetLeft}px`;
-    const width = `${selected.offsetWidth}px`;
-    if (nav.style.getPropertyValue('--motion-indicator-x') !== x) nav.style.setProperty('--motion-indicator-x', x);
-    if (nav.style.getPropertyValue('--motion-indicator-w') !== width) nav.style.setProperty('--motion-indicator-w', width);
-  };
-  navs.forEach(nav => {
-    nav.classList.add('motion-nav');
-    new MutationObserver(() => requestAnimationFrame(() => updateNav(nav)))
-      .observe(nav, { attributes: true, attributeFilter: ['style', 'class'], subtree: true });
-    updateNav(nav);
-  });
-  window.addEventListener('resize', () => navs.forEach(updateNav), { passive: true });
-
   const screens = document.querySelectorAll('.screen');
   screens.forEach(screen => {
     let wasActive = screen.classList.contains('active');
     new MutationObserver(() => {
-    const isActive = screen.classList.contains('active');
-    if (!isActive || wasActive || !motion.enabled) { wasActive = isActive; return; }
-    wasActive = true;
-    screen.classList.remove('motion-screen-enter');
-    void screen.offsetWidth;
-    screen.classList.add('motion-screen-enter');
+      const isActive = screen.classList.contains('active');
+      if (!isActive || wasActive || !motion.enabled) { wasActive = isActive; return; }
+      wasActive = true;
+      screen.classList.remove('motion-screen-enter');
+      void screen.offsetWidth;
+      screen.classList.add('motion-screen-enter');
     }).observe(screen, { attributes: true, attributeFilter: ['class'] });
   });
-
-  // Chỉ cho các thẻ nội dung xuất hiện khi chúng đi vào vùng nhìn.
-  if (motion.enabled && 'IntersectionObserver' in window) {
-    const reveal = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('motion-revealed');
-        reveal.unobserve(entry.target);
-      });
-    }, { threshold: .1 });
-    document.querySelectorAll('.hub-card, .skill-hero-card').forEach(card => {
-      card.classList.add('motion-reveal');
-      reveal.observe(card);
-    });
-  }
 
   // Vuốt ngang trên thẻ để chuyển từ, vẫn giữ cuộn dọc ở mặt sau.
   const cardScene = document.getElementById('fc-scene');
@@ -117,37 +83,4 @@
     if (dx < 0) window.nextCard?.();
     else window.prevCard?.();
   }, { passive: false });
-
-  // Hướng dẫn ngắn cho lần mở đầu; cờ hoàn thành chỉ lưu khi người học đóng.
-  const ONBOARDING_KEY = 'ielts_onboarding_seen_v1';
-  try {
-    if (!localStorage.getItem(ONBOARDING_KEY)) {
-      const dialog = document.getElementById('onboarding-dialog');
-      const steps = [
-        ['Học bằng thẻ', 'Chạm thẻ để xem nghĩa. Dùng phím 1, 2, 3 để tự đánh giá sau khi lật thẻ.'],
-        ['Luyện theo ngữ cảnh', 'Sang Đoán nghĩa để tìm manh mối trong câu, rồi trao đổi với trợ giảng AI.'],
-        ['Lưu tiến độ', 'Bài làm và tiến độ được lưu trên thiết bị này. Bạn có thể đổi giao diện trong Tùy chọn.']
-      ];
-      if (dialog) {
-        let index = 0;
-        const title = dialog.querySelector('[data-onboarding-title]');
-        const body = dialog.querySelector('[data-onboarding-body]');
-        const counter = dialog.querySelector('[data-onboarding-counter]');
-        const next = dialog.querySelector('[data-onboarding-next]');
-        const render = () => {
-          title.textContent = steps[index][0];
-          body.textContent = steps[index][1];
-          counter.textContent = `${index + 1} / ${steps.length}`;
-          next.textContent = index === steps.length - 1 ? 'Bắt đầu học' : 'Tiếp tục';
-        };
-        render();
-        next.addEventListener('click', () => {
-          if (index < steps.length - 1) { index++; render(); }
-          else dialog.close();
-        });
-        dialog.addEventListener('close', () => localStorage.setItem(ONBOARDING_KEY, '1'), { once: true });
-        setTimeout(() => { if (!dialog.open) dialog.showModal(); }, 700);
-      }
-    }
-  } catch (_) { /* Chế độ riêng tư có thể chặn lưu trữ. */ }
 })();
