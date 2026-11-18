@@ -576,6 +576,71 @@
     } catch (e) {}
   }
 
+  const STUDY_IDLE_LOGOUT_MS = 10 * 60 * 1000;
+  const STUDY_IDLE_WARN_MS = 9 * 60 * 1000;
+  let lastStudyActivityAt = Date.now();
+  let studyIdleCheckTimer = null;
+  let studyIdleWarnShown = false;
+  let studyIdleEventsBound = false;
+
+  function bumpStudyIdleActivity() {
+    lastStudyActivityAt = Date.now();
+    studyIdleWarnShown = false;
+  }
+
+  function handleStudyIdleTimeoutLogout() {
+    if (!currentUser || isTeacherUser()) return;
+    if (window.TasksModule?.getActiveTask?.() || window.TasksModule?.getExamState?.().active) return;
+    stopStudyIdleMonitor();
+    logoutCurrentAccount();
+    showToast('Đã tự động đăng xuất do không hoạt động quá 10 phút!');
+  }
+
+  function evaluateStudyIdleTimeout() {
+    if (!currentUser || isTeacherUser()) return false;
+    if (window.TasksModule?.getActiveTask?.() || window.TasksModule?.getExamState?.().active) {
+      lastStudyActivityAt = Date.now();
+      return false;
+    }
+    const idleMs = Date.now() - lastStudyActivityAt;
+    if (idleMs >= STUDY_IDLE_LOGOUT_MS) {
+      handleStudyIdleTimeoutLogout();
+      return true;
+    }
+    if (!studyIdleWarnShown && idleMs >= STUDY_IDLE_WARN_MS) {
+      studyIdleWarnShown = true;
+      showToast('Bạn chưa thao tác 9 phút — hệ thống sẽ tự đăng xuất sau 1 phút nữa nếu không hoạt động!');
+    }
+    return false;
+  }
+
+  function startStudyIdleMonitor() {
+    stopStudyIdleMonitor();
+    if (!currentUser || isTeacherUser()) return;
+    lastStudyActivityAt = Date.now();
+    studyIdleWarnShown = false;
+    if (!studyIdleEventsBound) {
+      studyIdleEventsBound = true;
+      ['pointerdown', 'keydown', 'touchstart', 'scroll', 'input', 'change'].forEach((evt) => {
+        document.addEventListener(evt, bumpStudyIdleActivity, { passive: true });
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && currentUser && !isTeacherUser()) {
+          evaluateStudyIdleTimeout();
+        }
+      });
+    }
+    studyIdleCheckTimer = setInterval(evaluateStudyIdleTimeout, 2000);
+  }
+
+  function stopStudyIdleMonitor() {
+    if (studyIdleCheckTimer) {
+      clearInterval(studyIdleCheckTimer);
+      studyIdleCheckTimer = null;
+    }
+    studyIdleWarnShown = false;
+  }
+
   function startTimer() {
     if (!currentUser || isTeacherUser()) {
       timerRunning = false;
@@ -596,6 +661,7 @@
         pauseTimer();
         return;
       }
+      if (evaluateStudyIdleTimeout()) return;
       timerElapsedSeconds++;
       todayStudySeconds++;
 
@@ -3387,6 +3453,7 @@
       applyFilterAndBuildDeck(null, { speak: autoSpeakOnEnter });
       loadStudyTimerState();
       startTimer();
+      startStudyIdleMonitor();
       updateLeaderboardUI();
       updateStudyStreakUI();
       updateCloudSyncBadge();
@@ -3435,6 +3502,7 @@
 
   function logoutCurrentAccount() {
     teacherPreviewStudy = false;
+    stopStudyIdleMonitor();
     if (cloudPullTimer) {
       clearInterval(cloudPullTimer);
       cloudPullTimer = null;
@@ -3973,6 +4041,8 @@
     TASK_PROGRESS_KEY_BASE,
     TASK_LOCKS_KEY_BASE,
     TEACHER_UNLOCK_KEY_BASE,
+    evaluateStudyIdleTimeout,
+    _setLastStudyActivityAtForTest: (ts) => { lastStudyActivityAt = Number(ts) || Date.now(); },
   };
 
   function applyOneTimeStudentResetEpoch() {
