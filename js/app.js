@@ -1174,53 +1174,22 @@
       }
     };
 
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'unlock_student',
-        id: acct?.id || prev?.id || studentId,
-        name: acct?.name || prev?.name || studentId,
-        unlockedAtTs: effectiveUnlockAt,
-      }),
-    }).then(parseJsonSafe).then(async (res) => {
-      const serverConfirmedUnlock = Boolean(res && res.ok && res.action === 'unlock_student' && Number(res.teacherUnlockedAt || 0) > 0);
-      if (!serverConfirmedUnlock) {
-        if (prev && prev.syncData && typeof prev.syncData === 'object') {
-          const fallbackPayload = {
-            id: acct?.id || prev?.id || studentId,
-            name: acct?.name || prev?.name || studentId,
-            todayMins: Number(prev.todayMins || 0),
-            weekMins: Number(prev.weekMins || 0),
-            monthMins: Number(prev.monthMins || 0),
-            mastered: Number(prev.mastered || 0),
-            streak: Number(prev.streak || 0),
-            syncData: {
-              ...prev.syncData,
-              taskLocks: {},
-              teacherUnlockedAt: effectiveUnlockAt,
-            },
-          };
-          const fbRes = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(fallbackPayload),
-          }).then(parseJsonSafe).catch(() => null);
-          if (!fbRes || !fbRes.ok) {
-            revertFailedUnlock('Lỗi: Google Sheet từ chối lệnh mở khóa (Apps Script cũ hoặc lỗi mạng). Hãy dán sync/google_apps_script.gs & Triển khai New version!');
-            return false;
-          }
-          cloudGasVersion = 1;
-          showToast('Apps Script trên Google Sheet là bản cũ (đã mở khóa dự phòng) — hãy dán sync/google_apps_script.gs & Triển khai New version để ổn định!');
-        } else {
-          revertFailedUnlock('Lỗi: Không mở khóa được trên Google Sheet! Hãy cập nhật sync/google_apps_script.gs & Triển khai New version.');
-          return false;
-        }
-      } else {
-        cloudGasVersion = 2;
-      }
+    const buildCompatPayload = () => ({
+      id: acct?.id || prev?.id || studentId,
+      name: acct?.name || prev?.name || studentId,
+      todayMins: Number(prev.todayMins || 0),
+      weekMins: Number(prev.weekMins || 0),
+      monthMins: Number(prev.monthMins || 0),
+      mastered: Number(prev.mastered || 0),
+      streak: Number(prev.streak || 0),
+      syncData: {
+        ...prev.syncData,
+        taskLocks: {},
+        teacherUnlockedAt: effectiveUnlockAt,
+      },
+    });
 
-      const serverUnlock = Number(res?.teacherUnlockedAt || effectiveUnlockAt);
+    const finalizeUnlockSuccess = (serverUnlock) => {
       try {
         const curLocal = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0);
         if (serverUnlock > curLocal) {
@@ -1240,8 +1209,60 @@
         window.TasksModule?.renderTeacherDashboard?.();
       }
       return true;
+    };
+
+    // Sheet chạy Apps Script bản trước (chưa có gasVersion >= 2): gửi thẳng payload đồng bộ chuẩn như trước đây (1 click ăn ngay)
+    if (cloudGasVersion === 1 && prev && prev.syncData && typeof prev.syncData === 'object') {
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(buildCompatPayload()),
+      }).then(parseJsonSafe).then((fbRes) => {
+        if (!fbRes || !fbRes.ok) {
+          revertFailedUnlock('Lỗi kết nối Google Sheet khi mở khóa — vui lòng bấm Mở khóa lại.');
+          return false;
+        }
+        return finalizeUnlockSuccess(effectiveUnlockAt);
+      }).catch(() => {
+        revertFailedUnlock('Lỗi kết nối Google Sheet khi mở khóa — vui lòng thử lại.');
+        return false;
+      });
+    }
+
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'unlock_student',
+        id: acct?.id || prev?.id || studentId,
+        name: acct?.name || prev?.name || studentId,
+        unlockedAtTs: effectiveUnlockAt,
+      }),
+    }).then(parseJsonSafe).then(async (res) => {
+      const serverConfirmedUnlock = Boolean(res && res.ok && res.action === 'unlock_student' && Number(res.teacherUnlockedAt || 0) > 0);
+      if (!serverConfirmedUnlock) {
+        if (prev && prev.syncData && typeof prev.syncData === 'object') {
+          const fbRes = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(buildCompatPayload()),
+          }).then(parseJsonSafe).catch(() => null);
+          if (!fbRes || !fbRes.ok) {
+            revertFailedUnlock('Lỗi gửi lệnh mở khóa lên Google Sheet — vui lòng thử lại.');
+            return false;
+          }
+          cloudGasVersion = 1;
+        } else {
+          revertFailedUnlock('Không gửi được lệnh mở khóa lên Google Sheet — vui lòng thử lại.');
+          return false;
+        }
+      } else {
+        cloudGasVersion = 2;
+      }
+
+      return finalizeUnlockSuccess(Number(res?.teacherUnlockedAt || effectiveUnlockAt));
     }).catch(() => {
-      revertFailedUnlock('Lỗi kết nối tới Google Apps Script — học viên chưa được mở khóa trên Sheet!');
+      revertFailedUnlock('Lỗi kết nối tới Google Sheet — vui lòng thử lại.');
       return false;
     });
   }

@@ -489,14 +489,10 @@
     const esc = bridge.escapeHtml || ((x) => String(x));
     const statusEl = document.getElementById('teacher-sync-status');
     const syncTime = bridge.getLastCloudSyncTime?.();
-    const gasVer = Number(bridge.getCloudGasVersion?.() || 0);
     if (statusEl) {
-      const baseStatus = syncTime
+      statusEl.textContent = syncTime
         ? `Cập nhật lúc ${syncTime} · Theo dõi tự động giờ học, từ đã thuộc & Task`
         : 'Theo dõi giờ học, chuỗi ngày, từ đã thuộc & kết quả Task của cả lớp';
-      statusEl.textContent = (gasVer === 1 && bridge.getSyncUrl?.())
-        ? `${baseStatus} · ⚠️ Google Apps Script trên Sheet đang là bản cũ (hãy cập nhật sync/google_apps_script.gs & Triển khai New version để mở khóa ổn định!)`
-        : baseStatus;
     }
 
     const tbody = document.getElementById('teacher-dashboard-tbody');
