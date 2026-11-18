@@ -987,12 +987,12 @@
     const isTeacher = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
     if (isTeacher) {
       nav.innerHTML = `
-        <button type="button" class="task-step-pill ${activeStage === 1 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(1)" title="Xem Test 1">Test 1 · Ghép từ</button>
-        <button type="button" class="task-step-pill ${activeStage === 2 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(2)" title="Xem Test 2">Test 2 · Ngữ cảnh</button>
-        <button type="button" class="task-step-pill ${activeStage === 3 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(3)" title="Xem Test cuối">Test cuối · Dịch AI</button>
+        <button type="button" class="task-step-pill ${activeStage === 1 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(1)" title="Xem Test 1">Test 1</button>
+        <button type="button" class="task-step-pill ${activeStage === 2 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(2)" title="Xem Test 2">Test 2</button>
+        <button type="button" class="task-step-pill ${activeStage === 3 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(3)" title="Xem Test 3">Test 3</button>
       `;
     } else {
-      const stageText = activeStage === 1 ? 'Test 1 · Ghép từ' : activeStage === 2 ? 'Test 2 · Ngữ cảnh' : 'Test cuối · Dịch AI';
+      const stageText = activeStage === 1 ? 'Test 1' : activeStage === 2 ? 'Test 2' : 'Test 3';
       nav.innerHTML = `<span class="task-step-pill active" id="task-current-step-badge">${stageText}</span>`;
     }
   }
@@ -1399,7 +1399,7 @@
           </p>
           ${mistakesHtml}
           ${passed
-            ? `<button type="button" class="btn btn-primary" style="font-size:16px; padding:12px 26px;" onclick="TasksModule.startFinalTranslation()">Vào Test cuối (Dịch bài AI) →</button>`
+            ? `<button type="button" class="btn btn-primary" style="font-size:16px; padding:12px 26px;" onclick="TasksModule.startFinalTranslation()">Vào Test 3 →</button>`
             : `<button type="button" class="btn btn-primary" style="font-size:16px; padding:12px 26px;" onclick="TasksModule.retryTest2()">Làm lại Test 2</button>`}
         </div>
       `;
