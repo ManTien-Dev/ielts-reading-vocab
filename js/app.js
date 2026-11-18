@@ -829,7 +829,7 @@
     } catch (_) {}
 
     return {
-      resetEpoch: 2026111807,
+      resetEpoch: 2026111816,
       timerByDay,
       wordsByDay,
       streakDays,
@@ -1037,7 +1037,7 @@
         const uid = getScopedUid(st.id);
         if (!uid) return;
         // Bỏ qua dữ liệu cloud cũ trước mốc reset 2026-11-18 của thanhngoc để hiển thị sạch sẽ 0 từ / 0 phút / 0 ngày
-        if (uid === 'thanhngoc' && Number(st.syncData?.resetEpoch || 0) < 2026111807) {
+        if (uid === 'thanhngoc' && Number(st.syncData?.resetEpoch || 0) < 2026111816) {
           thanhngocCloudNeedsReset = true;
           nextCache[uid] = {
             ...st,
@@ -1047,7 +1047,7 @@
             mastered: 0,
             streak: 0,
             syncData: {
-              resetEpoch: 2026111807,
+              resetEpoch: 2026111816,
               teacherUnlockedAt: 0,
               timerByDay: {},
               wordsByDay: {},
@@ -4124,6 +4124,26 @@
     examHeartbeatTimer = setInterval(() => evaluateMultiTabGuard(false), 1200);
   })();
 
+  function resetWordAssessments(wordIds) {
+    if (!currentUser || !Array.isArray(wordIds) || wordIds.length === 0) return 0;
+    let cleared = 0;
+    wordIds.forEach((wid) => {
+      if (!wid) return;
+      if (assessments[wid] !== undefined) cleared++;
+      delete assessments[wid];
+      delete srsData[wid];
+    });
+    currentCardIndex = 0;
+    scopePositions[currentScopeKey] = 0;
+    isCardFlipped = false;
+    applyFilterAndBuildDeck();
+    saveState();
+    updateVocabMasteryUI();
+    updateLeaderboardUI();
+    scheduleCloudPush();
+    return cleared;
+  }
+
   function markMasteredBatch(wordIds) {
     if (!currentUser || !Array.isArray(wordIds) || wordIds.length === 0) return 0;
     const now = Date.now();
@@ -4169,6 +4189,7 @@
     getPreferredAccent: () => preferredAccent,
     speakText: speakTextWithAccent,
     markMasteredBatch,
+    resetWordAssessments,
     setDynamicTaskScopes,
     activateTaskScope,
     loadMainScope: (scopeKey) => loadScope(scopeKey || SCOPES[0].key),
@@ -4201,7 +4222,7 @@
   };
 
   function applyOneTimeStudentResetEpoch() {
-    const EPOCH_KEY = 'ielts_reset_thanhngoc_clean_20261118_v5';
+    const EPOCH_KEY = 'ielts_reset_thanhngoc_clean_20261118_v6';
     const TARGET_UID = 'thanhngoc';
     try {
       if (localStorage.getItem(EPOCH_KEY)) return;

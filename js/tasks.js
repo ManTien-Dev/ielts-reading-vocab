@@ -757,6 +757,18 @@
     confirmStartTaskExam();
   }
 
+  function resetActiveTaskStudy() {
+    const scopeKey = B()?.getCurrentScopeKey?.() || '';
+    const task = activeTask || getTaskById(scopeKey);
+    if (!task || !Array.isArray(task.words)) return;
+    const ids = task.words.map((w) => w.id).filter(Boolean);
+    examReadyPromptShownForTaskId = null;
+    B()?.resetWordAssessments?.(ids);
+    closeTaskExamReadyModal();
+    updateTaskStudyBar();
+    B()?.showToast?.(`Đã làm mới ${ids.length} từ của ${task.label} về 0/${ids.length} — học từng từ rồi làm Test nhé!`);
+  }
+
   function confirmStartTaskExam() {
     const scopeKey = B()?.getCurrentScopeKey?.() || '';
     const task = activeTask || getTaskById(scopeKey);
@@ -1204,8 +1216,13 @@
       return `<button type="button" class="task-match-btn ${matched ? 'is-matched' : ''}" id="t1-right-${esc(p.id)}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT1Right('${esc(p.id)}')">${esc(p.meaning)}</button>`;
     }).join('');
 
+    const t1Pct = Math.round(((t1BoardIndex + (t1MatchedIds.size / Math.max(1, pairs.length))) / 10) * 100);
+
     container.innerHTML = `
       <div class="task-card-panel">
+        <div class="task-stage-progress" aria-hidden="true">
+          <div class="task-stage-progress-fill" style="width:${t1Pct}%;"></div>
+        </div>
         <div class="task-exam-header-row">
           <div class="task-exam-title-group">
             <h2 class="task-exam-title">Ghép từ · Bảng ${t1BoardIndex + 1} / 10</h2>
@@ -1214,6 +1231,10 @@
             <span class="task-err-pill ${t1Mistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t1-err-cnt">${t1Mistakes}</strong></span>
             <span class="recall-stage-pill">${t1MatchedIds.size} / ${pairs.length} cặp</span>
           </div>
+        </div>
+        <div class="task-match-head">
+          <span>Từ vựng gốc (English)</span>
+          <span>Nghĩa tiếng Việt</span>
         </div>
         <div class="task-match-wrap">
           <div class="task-match-col">${leftHtml}</div>
@@ -1542,8 +1563,13 @@
         return `<button type="button" class="task-match-btn ${matched ? 'is-matched' : ''}" id="t2-para-right-${esc(p.id)}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaRight('${esc(p.id)}')">${esc(p.right)}</button>`;
       }).join('');
 
+      const paraPct = Math.round(((t2ParaBoardIndex + (t2ParaMatchedIds.size / Math.max(1, curBoard.length))) / Math.max(1, t2ParaBoards.length)) * 100);
+
       container.innerHTML = `
         <div class="task-card-panel">
+          <div class="task-stage-progress" aria-hidden="true">
+            <div class="task-stage-progress-fill" style="width:${paraPct}%;"></div>
+          </div>
           <div class="task-exam-header-row">
             <div class="task-exam-title-group">
               <h2 class="task-exam-title">Nối cụm từ tương đương · Bảng ${t2ParaBoardIndex + 1} / ${t2ParaBoards.length}</h2>
@@ -1552,6 +1578,10 @@
               <span class="task-err-pill ${t2ParaMistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t2-err-cnt">${t2ParaMistakes}</strong></span>
               <span class="recall-stage-pill">${t2ParaMatchedIds.size} / ${curBoard.length} cặp</span>
             </div>
+          </div>
+          <div class="task-match-head">
+            <span>Từ vựng trong Task</span>
+            <span>Paraphrase thường gặp trong Reading</span>
           </div>
           <div class="task-match-wrap">
             <div class="task-match-col">${leftHtml}</div>
@@ -1599,19 +1629,27 @@
 
     const q = qs[t2Index];
     const typeLabel = q.type === 'word_family' ? 'Word Family' : 'Ngữ cảnh';
+    const mcqPct = Math.round(((t2Index + (t2Answered ? 1 : 0)) / Math.max(1, qs.length)) * 100);
+    const formattedQText = q.qText
+      ? esc(q.qText).replace(/______/g, '<span class="task-blank-pill">______</span>')
+      : '';
+    const letters = ['A', 'B', 'C', 'D'];
 
     container.innerHTML = `
       <div class="task-card-panel">
+        <div class="task-stage-progress" aria-hidden="true">
+          <div class="task-stage-progress-fill" style="width:${mcqPct}%;"></div>
+        </div>
         <div class="task-exam-header-row">
           <h2 class="task-exam-title">${typeLabel} · Câu ${t2Index + 1} / ${qs.length}</h2>
           <div class="task-stat-pills">
             <span class="recall-stage-pill">Đúng ${t2Correct} / ${totalT2}</span>
           </div>
         </div>
-        <div style="font-size:22px; font-weight:750; color:var(--text-bright); line-height:1.5; margin-bottom:16px;">${esc(q.prompt)}</div>
-        ${q.qText ? `<div style="padding:20px 24px; border-radius:16px; background:var(--bg-soft); border:1px solid var(--card-border); margin-bottom:16px; font-size:20px; line-height:1.68;">${esc(q.qText)}</div>` : ''}
+        <div style="font-size:21px; font-weight:750; color:var(--text-bright); line-height:1.5; margin-bottom:14px;">${esc(q.prompt)}</div>
+        ${formattedQText ? `<div class="task-q-sentence">${formattedQText}</div>` : ''}
         <div class="task-q-opts" id="task-t2-opts">
-          ${q.options.map((opt, idx) => `<button type="button" class="task-q-opt" data-opt-idx="${idx}" onclick="TasksModule.answerTest2(${idx})">${esc(opt)}</button>`).join('')}
+          ${q.options.map((opt, idx) => `<button type="button" class="task-q-opt" data-opt-idx="${idx}" onclick="TasksModule.answerTest2(${idx})"><span class="task-q-opt-key">${letters[idx] || idx + 1}</span><span>${esc(opt)}</span></button>`).join('')}
         </div>
         <div id="task-t2-explain" style="display:none; margin-top:18px; font-size:18px;" class="task-notice-box"></div>
         <div style="display:flex; justify-content:flex-end; margin-top:auto; padding-top:18px;">
@@ -2821,6 +2859,7 @@
     closeTaskExamReadyModal,
     onClickStartTaskExam,
     confirmStartTaskExam,
+    resetActiveTaskStudy,
     updateTaskStudyBar,
     canActivateTaskScope,
     onScopeChanged,
