@@ -2901,6 +2901,114 @@ button.task-step-pill.active:hover {
   border-color: #dc2626;
   background: rgba(239, 68, 68, 0.16);
 }
+/* Test 2 Drag & Drop (Left = Drop Container, Right = Draggable Paraphrase Chip) */
+.t2-dropzone {
+  justify-content: space-between;
+  gap: 12px;
+}
+.t2-dropzone > * {
+  pointer-events: none;
+}
+.t2-drop-word {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.t2-drop-slot {
+  flex-shrink: 0;
+  max-width: 52%;
+  padding: 5px 11px;
+  border-radius: 10px;
+  border: 1.5px dashed rgba(82, 136, 62, 0.42);
+  background: rgba(82, 136, 62, 0.05);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.t2-drop-slot.is-filled {
+  border-style: solid;
+  border-color: rgba(47, 107, 50, 0.45);
+  background: rgba(82, 136, 62, 0.16);
+  color: #164e23;
+  font-size: 14px;
+  font-weight: 800;
+}
+[data-theme="dark"] .t2-drop-slot.is-filled {
+  color: #bfe8cb;
+  background: rgba(130, 184, 146, 0.22);
+}
+.t2-dropzone.is-matched {
+  opacity: 0.9;
+}
+.t2-dropzone.is-drop-over {
+  border-color: #2f6b32 !important;
+  border-style: dashed !important;
+  background: rgba(82, 136, 62, 0.15) !important;
+  box-shadow: 0 0 0 3px rgba(47, 107, 50, 0.22) !important;
+  transform: scale(1.01);
+}
+.t2-drag-card {
+  gap: 12px;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.t2-drag-card:not(:disabled):active,
+.t2-drag-card.is-dragging {
+  cursor: grabbing;
+  opacity: 0.55;
+  transform: scale(0.98);
+  border-style: dashed;
+}
+.t2-drag-grip {
+  color: var(--text-muted);
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+.t2-touch-ghost {
+  position: fixed;
+  z-index: 100005;
+  pointer-events: none;
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: #2f6b32;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+  transform: translate(-50%, -50%);
+  max-width: 78vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 640px) {
+  .t2-dropzone {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 12px !important;
+  }
+  .t2-drop-slot {
+    max-width: 100%;
+    font-size: 11.5px;
+    padding: 3px 8px;
+  }
+  .t2-drag-card {
+    gap: 6px;
+    padding: 10px 12px !important;
+  }
+  .t2-drag-grip {
+    font-size: 13px;
+  }
+}
 .task-q-opts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

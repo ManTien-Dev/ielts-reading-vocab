@@ -36,6 +36,8 @@
   let t2ParaBoardIndex = 0;
   let t2ParaShuffledRight = [];
   let t2ParaSelectedLeft = null;
+  let t2ParaSelectedRight = null;
+  let t2DraggingRightId = null;
   let t2ParaMatchedIds = new Set();
   let t2ParaFailedIds = new Set();
   let t2ParaMistakes = 0;
@@ -1330,6 +1332,8 @@
   function setupT2ParaBoard() {
     const pairs = t2ParaBoards[t2ParaBoardIndex] || [];
     t2ParaSelectedLeft = null;
+    t2ParaSelectedRight = null;
+    t2DraggingRightId = null;
     t2ParaMatchedIds = new Set();
     t2ParaShuffledRight = pairs.slice().sort(() => Math.random() - 0.5);
   }
@@ -1573,22 +1577,18 @@
   }
 
   // =========================================================
-  // STAGE 2: TEST 2 — PARAPHRASE MATCHING (6 PAIRS) + CONTEXT (6 QS)
+  // STAGE 2: TEST 2 — DRAG & DROP PARAPHRASE MATCHING + CONTEXT (6 QS)
   // =========================================================
-  function pickT2ParaLeft(id) {
-    if (t2ParaMatchedIds.has(id)) return;
-    t2ParaSelectedLeft = id;
-    renderTest2Stage();
-  }
-
-  function pickT2ParaRight(rightId) {
-    if (!t2ParaSelectedLeft || t2ParaMatchedIds.has(rightId)) return;
-    if (t2ParaSelectedLeft === rightId) {
+  function attemptT2PairMatch(leftId, rightId, viaDrop = false) {
+    if (!leftId || !rightId || t2ParaMatchedIds.has(leftId) || t2ParaMatchedIds.has(rightId)) return;
+    t2ParaSelectedLeft = null;
+    t2ParaSelectedRight = null;
+    t2DraggingRightId = null;
+    if (leftId === rightId) {
       t2ParaMatchedIds.add(rightId);
       if (!t2ParaFailedIds.has(rightId)) {
         t2Correct++;
       }
-      t2ParaSelectedLeft = null;
       const curBoard = t2ParaBoards[t2ParaBoardIndex] || [];
       if (t2ParaMatchedIds.size >= curBoard.length) {
         if (t2ParaBoardIndex < t2ParaBoards.length - 1) {
@@ -1604,10 +1604,10 @@
     }
 
     t2ParaMistakes++;
-    t2ParaFailedIds.add(t2ParaSelectedLeft);
+    t2ParaFailedIds.add(leftId);
     const curBoard = t2ParaBoards[t2ParaBoardIndex] || [];
     const chosenPair = curBoard.find((p) => p.id === rightId);
-    const targetPair = curBoard.find((p) => p.id === t2ParaSelectedLeft);
+    const targetPair = curBoard.find((p) => p.id === leftId);
     if (targetPair && !t2WrongRecords.some((r) => r.prompt === `Paraphrase: ${targetPair.left}`)) {
       t2WrongRecords.push({
         prompt: `Paraphrase: ${targetPair.left}`,
@@ -1616,10 +1616,145 @@
         explain: targetPair.explain || '',
       });
     }
-    const el = document.getElementById(`t2-para-right-${rightId}`);
-    el?.classList.add('is-err');
-    t2ParaSelectedLeft = null;
+    const rightEl = document.getElementById(`t2-para-right-${rightId}`);
+    const leftEl = document.getElementById(`t2-para-left-${leftId}`);
+    rightEl?.classList.add('is-err');
+    if (viaDrop) leftEl?.classList.add('is-err');
     setTimeout(() => renderTest2Stage(), 260);
+  }
+
+  function pickT2ParaLeft(id) {
+    if (t2ParaMatchedIds.has(id)) return;
+    if (t2ParaSelectedRight) {
+      attemptT2PairMatch(id, t2ParaSelectedRight, false);
+      return;
+    }
+    t2ParaSelectedLeft = (t2ParaSelectedLeft === id) ? null : id;
+    renderTest2Stage();
+  }
+
+  function pickT2ParaRight(rightId) {
+    if (t2ParaMatchedIds.has(rightId)) return;
+    if (t2ParaSelectedLeft) {
+      attemptT2PairMatch(t2ParaSelectedLeft, rightId, false);
+      return;
+    }
+    t2ParaSelectedRight = (t2ParaSelectedRight === rightId) ? null : rightId;
+    renderTest2Stage();
+  }
+
+  function onT2DragStart(event, rightId) {
+    if (t2ParaMatchedIds.has(rightId)) {
+      event.preventDefault();
+      return;
+    }
+    t2DraggingRightId = rightId;
+    t2ParaSelectedLeft = null;
+    t2ParaSelectedRight = null;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', rightId);
+    }
+    event.currentTarget?.classList?.add('is-dragging');
+  }
+
+  function onT2DragEnd(event) {
+    t2DraggingRightId = null;
+    event.currentTarget?.classList?.remove('is-dragging');
+    document.querySelectorAll('.t2-dropzone.is-drop-over').forEach((el) => el.classList.remove('is-drop-over'));
+  }
+
+  function onT2DragOver(event, leftId) {
+    if (t2ParaMatchedIds.has(leftId)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    event.currentTarget?.classList?.add('is-drop-over');
+  }
+
+  function onT2DragLeave(event) {
+    event.currentTarget?.classList?.remove('is-drop-over');
+  }
+
+  function onT2Drop(event, leftId) {
+    event.preventDefault();
+    event.currentTarget?.classList?.remove('is-drop-over');
+    if (t2ParaMatchedIds.has(leftId)) return;
+    const droppedId = event.dataTransfer?.getData('text/plain') || t2DraggingRightId;
+    if (!droppedId) return;
+    attemptT2PairMatch(leftId, droppedId, true);
+  }
+
+  function bindT2TouchDrag() {
+    document.querySelectorAll('.t2-drag-card:not(:disabled)').forEach((card) => {
+      if (card.dataset.touchDragBound === '1') return;
+      card.dataset.touchDragBound = '1';
+      let startX = 0;
+      let startY = 0;
+      let dragging = false;
+      let ghost = null;
+      let rightId = '';
+
+      card.addEventListener('touchstart', (e) => {
+        if (!e.touches || e.touches.length !== 1) return;
+        rightId = card.dataset.rightId || '';
+        if (!rightId || t2ParaMatchedIds.has(rightId)) return;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        dragging = false;
+      }, { passive: true });
+
+      card.addEventListener('touchmove', (e) => {
+        if (!e.touches || e.touches.length !== 1 || !rightId) return;
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        if (!dragging && Math.hypot(dx, dy) > 10) {
+          dragging = true;
+          card.classList.add('is-dragging');
+          ghost = document.createElement('div');
+          ghost.className = 't2-touch-ghost';
+          ghost.textContent = card.textContent?.replace('⋮⋮', '').trim() || '';
+          document.body.appendChild(ghost);
+        }
+        if (dragging) {
+          e.preventDefault();
+          const x = e.touches[0].clientX;
+          const y = e.touches[0].clientY;
+          if (ghost) {
+            ghost.style.left = `${x}px`;
+            ghost.style.top = `${y}px`;
+          }
+          document.querySelectorAll('.t2-dropzone.is-drop-over').forEach((dz) => dz.classList.remove('is-drop-over'));
+          const hit = document.elementFromPoint(x, y)?.closest?.('.t2-dropzone:not(:disabled)');
+          if (hit) hit.classList.add('is-drop-over');
+        }
+      }, { passive: false });
+
+      const finishTouch = (e) => {
+        if (!dragging) {
+          rightId = '';
+          return;
+        }
+        e.preventDefault();
+        card.classList.remove('is-dragging');
+        const t = e.changedTouches && e.changedTouches[0];
+        const hit = t ? document.elementFromPoint(t.clientX, t.clientY)?.closest?.('.t2-dropzone:not(:disabled)') : null;
+        document.querySelectorAll('.t2-dropzone.is-drop-over').forEach((dz) => dz.classList.remove('is-drop-over'));
+        if (ghost) {
+          ghost.remove();
+          ghost = null;
+        }
+        const leftId = hit?.dataset?.leftId || '';
+        const draggedId = rightId;
+        dragging = false;
+        rightId = '';
+        if (leftId && draggedId) {
+          attemptT2PairMatch(leftId, draggedId, true);
+        }
+      };
+
+      card.addEventListener('touchend', finishTouch, { passive: false });
+      card.addEventListener('touchcancel', finishTouch, { passive: false });
+    });
   }
 
   function renderTest2Stage() {
@@ -1635,12 +1770,13 @@
       const leftHtml = curBoard.map((p) => {
         const matched = t2ParaMatchedIds.has(p.id);
         const active = t2ParaSelectedLeft === p.id;
-        return `<button type="button" class="task-match-btn ${matched ? 'is-matched' : ''} ${active ? 'is-active' : ''}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaLeft('${esc(p.id)}')">${esc(p.left)}</button>`;
+        return `<button type="button" class="task-match-btn t2-dropzone ${matched ? 'is-matched' : ''} ${active ? 'is-active' : ''}" id="t2-para-left-${esc(p.id)}" data-left-id="${esc(p.id)}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaLeft('${esc(p.id)}')" ondragover="TasksModule.onT2DragOver(event, '${esc(p.id)}')" ondragleave="TasksModule.onT2DragLeave(event)" ondrop="TasksModule.onT2Drop(event, '${esc(p.id)}')"><span class="t2-drop-word">${esc(p.left)}</span><span class="t2-drop-slot ${matched ? 'is-filled' : ''}">${matched ? `✓ ${esc(p.right)}` : 'Thả vào đây'}</span></button>`;
       }).join('');
 
       const rightHtml = t2ParaShuffledRight.map((p) => {
         const matched = t2ParaMatchedIds.has(p.id);
-        return `<button type="button" class="task-match-btn ${matched ? 'is-matched' : ''}" id="t2-para-right-${esc(p.id)}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaRight('${esc(p.id)}')">${esc(p.right)}</button>`;
+        const rightActive = t2ParaSelectedRight === p.id;
+        return `<button type="button" class="task-match-btn t2-drag-card ${matched ? 'is-matched' : ''} ${rightActive ? 'is-active' : ''}" id="t2-para-right-${esc(p.id)}" data-right-id="${esc(p.id)}" draggable="${matched ? 'false' : 'true'}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaRight('${esc(p.id)}')" ondragstart="TasksModule.onT2DragStart(event, '${esc(p.id)}')" ondragend="TasksModule.onT2DragEnd(event)"><span class="t2-drag-grip" aria-hidden="true">⋮⋮</span><span>${esc(p.right)}</span></button>`;
       }).join('');
 
       const paraPct = Math.round(((t2ParaBoardIndex + (t2ParaMatchedIds.size / Math.max(1, curBoard.length))) / Math.max(1, t2ParaBoards.length)) * 100);
@@ -1664,8 +1800,8 @@
             </div>
           </div>
           <div class="task-match-head">
-            <span>Từ vựng trong Task</span>
-            <span>Paraphrase thường gặp trong Reading</span>
+            <span>Từ vựng trong Task (Hộp chứa)</span>
+            <span>Paraphrase thường gặp (Kéo vào cột trái)</span>
           </div>
           <div class="task-match-wrap">
             <div class="task-match-col">${leftHtml}</div>
@@ -1673,6 +1809,7 @@
           </div>
         </div>
       `;
+      bindT2TouchDrag();
       return;
     }
 
@@ -3104,6 +3241,11 @@
     openAdminTestPreview,
     pickT2ParaLeft,
     pickT2ParaRight,
+    onT2DragStart,
+    onT2DragEnd,
+    onT2DragOver,
+    onT2DragLeave,
+    onT2Drop,
     switchT3Tab,
     submitTranslationForAi,
     promptGeminiApiKey,
