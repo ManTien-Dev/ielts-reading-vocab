@@ -2920,7 +2920,9 @@ button.task-step-pill.active:hover {
   .translation-workspace .english-passage {
     font-size: 16.5px;
     line-height: 1.68;
-    text-align: left;
+    text-align: justify;
+    hyphens: auto;
+    -webkit-hyphens: auto;
   }
   .translation-workspace .translation-input,
   .translation-workspace .summary-input {
@@ -2959,6 +2961,7 @@ button.task-step-pill.active:hover {
   color: var(--text-bright);
   white-space: pre-line;
   text-align: justify;
+  text-justify: inter-word;
 }
 .t3-tabs-bar {
   display: flex;
