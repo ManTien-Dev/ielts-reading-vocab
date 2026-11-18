@@ -2754,8 +2754,7 @@
           ],
           "antonyms": [
             "auditory",
-            "verbal",
-            "non-visual"
+            "verbal"
           ],
           "wordFamily": [
             {
@@ -2998,6 +2997,7 @@
           "pos": "Danh từ",
           "meaning": "Vỏ não hoặc lớp vỏ ngoài của mô thực vật/thận",
           "synonyms": [
+            "outer brain",
             "cerebral outer layer",
             "brain region",
             "outer tissue"
@@ -3420,9 +3420,9 @@
           "meaning": "Cảm giác thể chất do giác quan tiếp nhận",
           "synonyms": [
             "feeling",
-            "perception",
             "sensory impression",
-            "excitement"
+            "excitement",
+            "sensory feeling"
           ],
           "antonyms": [
             "numbness",
@@ -3747,7 +3747,7 @@
           "antonyms": [
             "harmless",
             "benign",
-            "non-toxic"
+            "safe"
           ],
           "wordFamily": [
             {
@@ -4257,7 +4257,6 @@
           ],
           "antonyms": [
             "published",
-            "released",
             "in print"
           ],
           "wordFamily": [],
@@ -4975,7 +4974,7 @@
           "options": [
             "extinct",
             "extinctions",
-            "extinctive",
+            "extinguished",
             "extinction"
           ],
           "answer": "extinction",
@@ -5406,9 +5405,7 @@
             "cultivation-related"
           ],
           "antonyms": [
-            "urban",
-            "industrial",
-            "manufacturing"
+            "urban"
           ],
           "wordFamily": [],
           "example": "The story began about 30 years ago, a handful of families migrated from the Guntur district of Andhra Pradesh, southeast India, into Punukula, a community of around 900 people farming plots of between two and 10 acres.",
@@ -5429,11 +5426,7 @@
             "agronomy",
             "crop production"
           ],
-          "antonyms": [
-            "industry",
-            "urbanization",
-            "hunter-gatherer lifestyle"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The Northwest Territories that would later become Illinois, Indiana, Michigan and Ohio were rich in timber, minerals, and fertile land for farming, but it took weeks to reach these things.",
           "linkedIds": [
@@ -5454,9 +5447,8 @@
             "practical"
           ],
           "antonyms": [
-            "non-technical",
             "general",
-            "layman's"
+            "everyday"
           ],
           "wordFamily": [
             {
@@ -5552,7 +5544,6 @@
           ],
           "antonyms": [
             "rural",
-            "countryside",
             "agricultural"
           ],
           "wordFamily": [
@@ -5632,10 +5623,7 @@
             "insecticides",
             "agrochemicals"
           ],
-          "antonyms": [
-            "natural predators",
-            "organic methods"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Not to be left behind are the disease-spreading pests, about 100 species of which have become immune to a variety of insecticides now in use.",
           "linkedIds": [
@@ -5760,8 +5748,7 @@
           ],
           "antonyms": [
             "urban",
-            "metropolitan",
-            "city"
+            "metropolitan"
           ],
           "wordFamily": [],
           "example": "The countryside is no longer the place to see wildlife, according to Chris Barnes.",
@@ -5833,10 +5820,7 @@
             "destructive insect",
             "parasite"
           ],
-          "antonyms": [
-            "beneficial organism",
-            "pollinator"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a pest as a central factor in the study (often paraphrased as 'vermin').",
           "linkedIds": [
@@ -5880,8 +5864,8 @@
           ],
           "antonyms": [
             "finite",
-            "non-renewable",
-            "exhaustible"
+            "exhaustible",
+            "non-renewable"
           ],
           "wordFamily": [
             {
@@ -6302,8 +6286,7 @@
           ],
           "antonyms": [
             "extinction",
-            "absence",
-            "non-existence"
+            "absence"
           ],
           "wordFamily": [
             {
@@ -7649,7 +7632,7 @@
           "pText": "",
           "options": [
             "rurality",
-            "ruralize",
+            "non-rural",
             "rural",
             "rurally"
           ],
@@ -8204,8 +8187,7 @@
           ],
           "antonyms": [
             "lower",
-            "bottom",
-            "beneath"
+            "bottom"
           ],
           "wordFamily": [],
           "example": "From 1932 to 1939, Preston moved away from Sydney and lived with her husband at Berowra, on the upper reaches of the Hawkesbury River.",
@@ -8560,10 +8542,7 @@
             "Muscovite",
             "from Russia"
           ],
-          "antonyms": [
-            "non-Russian",
-            "foreign"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "non-russian",
@@ -8640,8 +8619,10 @@
           "pos": "Tính từ",
           "meaning": "Thứ mười tám; thường gặp nhất trong cụm 'eighteenth century'",
           "synonyms": [
-            "18th",
-            "1700s-era"
+            "georgian era",
+            "eighteenth-century",
+            "the 1700s",
+            "18th"
           ],
           "antonyms": [],
           "wordFamily": [],
@@ -8706,7 +8687,6 @@
             "myth"
           ],
           "antonyms": [
-            "non-fiction",
             "fact",
             "reality",
             "truth"
@@ -8808,10 +8788,7 @@
             "guiding principle",
             "metaphysics"
           ],
-          "antonyms": [
-            "pragmatism without theory",
-            "aimlessness"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "philosopher",
@@ -8877,10 +8854,7 @@
             "craftshop",
             "seminar"
           ],
-          "antonyms": [
-            "mass-production plant",
-            "domestic home"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a workshop as a central factor in the study (often paraphrased as 'studio').",
           "linkedIds": [
@@ -8930,8 +8904,10 @@
           "pos": "Tính từ",
           "meaning": "Thứ mười bảy",
           "synonyms": [
-            "17th",
-            "1600s-era"
+            "stuart period",
+            "seventeenth-century",
+            "the 1600s",
+            "17th"
           ],
           "antonyms": [],
           "wordFamily": [],
@@ -9116,6 +9092,7 @@
           "pos": "Động từ",
           "meaning": "Thừa hưởng",
           "synonyms": [
+            "acquire genetically",
             "receive genetically",
             "derive from parents",
             "succeed to"
@@ -9145,6 +9122,7 @@
           "pos": "Tính từ",
           "meaning": "Thuộc về tổ tiên, đời trước",
           "synonyms": [
+            "hereditary",
             "inherited from ancestors",
             "ancient",
             "early",
@@ -9174,10 +9152,7 @@
             "ancestral",
             "tribal"
           ],
-          "antonyms": [
-            "homogeneous",
-            "assimilated"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "ethnicity",
@@ -9271,8 +9246,7 @@
           ],
           "antonyms": [
             "cure",
-            "treatment",
-            "neglect"
+            "treatment"
           ],
           "wordFamily": [
             {
@@ -9491,10 +9465,7 @@
             "transport craft",
             "carrier"
           ],
-          "antonyms": [
-            "pedestrian",
-            "foot travel"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Almost all other production electric cars were withdrawn from the market and were in some cases seen to have been destroyed by their manufactures.",
           "linkedIds": [
@@ -9514,10 +9485,7 @@
             "instrument",
             "mechanism"
           ],
-          "antonyms": [
-            "manual effort",
-            "human skill"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "What does the device tell us about ancient Greek culture?",
           "linkedIds": [
@@ -10463,8 +10431,7 @@
           ],
           "antonyms": [
             "practical",
-            "commercial",
-            "non-academic"
+            "vocational"
           ],
           "wordFamily": [
             {
@@ -10842,7 +10809,7 @@
           "antonyms": [
             "barren land",
             "desert",
-            "fauna"
+            "wasteland"
           ],
           "wordFamily": [
             {
@@ -10872,7 +10839,6 @@
           ],
           "antonyms": [
             "maximum",
-            "peak",
             "utmost"
           ],
           "wordFamily": [],
@@ -11206,10 +11172,7 @@
             "Pacific Islander",
             "Austronesian-related"
           ],
-          "antonyms": [
-            "European",
-            "mainland-origin"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Researchers observed a polynesian difference between the experimental and control groups (often paraphrased as 'Pacific Islander').",
           "linkedIds": [
@@ -11472,10 +11435,7 @@
             "sightseeing",
             "hospitality"
           ],
-          "antonyms": [
-            "isolation",
-            "local-only use"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "tourist",
@@ -11513,10 +11473,7 @@
             "trajectory",
             "way"
           ],
-          "antonyms": [
-            "destination",
-            "standstill"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "rerouted",
@@ -12187,10 +12144,7 @@
             "broadcasting",
             "journalism"
           ],
-          "antonyms": [
-            "scientific literature",
-            "empirical data"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "multimedia",
@@ -12857,8 +12811,8 @@
           "qText": "The Lake Mungo remains offer the archeologists the evidence of graphic ______ of human activities around.",
           "pText": "",
           "options": [
-            "illustrs",
-            "illustred",
+            "illustrate",
+            "illustrated",
             "illustration",
             "illustrations"
           ],
@@ -13564,8 +13518,7 @@
           "antonyms": [
             "physical",
             "manual",
-            "emotional",
-            "anti-intellectual"
+            "emotional"
           ],
           "wordFamily": [],
           "example": "Some of the mental skills trained by video games include: following instructions, problem solving, logic, hand-eye coordination, fine motor and spatial skills.",
@@ -13928,7 +13881,7 @@
           "synonyms": [
             "liter",
             "metric unit of volume",
-            "1,000 millilitres"
+            "fluid volume"
           ],
           "antonyms": [],
           "wordFamily": [
@@ -14022,10 +13975,7 @@
             "android",
             "machine"
           ],
-          "antonyms": [
-            "human",
-            "living organism"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "robotic",
@@ -14898,10 +14848,7 @@
             "landmass",
             "mainland"
           ],
-          "antonyms": [
-            "island",
-            "ocean"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "continental",
@@ -14971,10 +14918,7 @@
             "agrochemical",
             "pest-control agent"
           ],
-          "antonyms": [
-            "organic farming",
-            "biological control"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Not to be left behind are the disease-spreading pests, about 100 species of which have become immune to a variety of insecticides now in use.",
           "linkedIds": [
@@ -15564,10 +15508,10 @@
           "qText": "Even there is a certain proportion of violence in most video games; scientists and psychologists see its benefits of children’s ______ abilities.",
           "pText": "",
           "options": [
-            "intellectued",
-            "intellectuing",
+            "intellect",
+            "intellectually",
             "intellectual",
-            "intellectus"
+            "intellectuals"
           ],
           "answer": "intellectual",
           "explain": "Đáp án \"intellectual\" phù hợp cả nghĩa \"Thuộc về trí tuệ, tư duy học thuật\" và cấu trúc ngữ pháp của câu."
@@ -16085,11 +16029,7 @@
             "on the face",
             "physiognomic"
           ],
-          "antonyms": [
-            "bodily",
-            "verbal",
-            "vocal"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Researchers observed a facial difference between the experimental and control groups (often paraphrased as 'on the face').",
           "linkedIds": [
@@ -16561,11 +16501,7 @@
             "appendage",
             "branch"
           ],
-          "antonyms": [
-            "torso",
-            "trunk",
-            "core"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Yawning apparently activates undamaged, unconsciously controlled connections between the brain and the motor system, causing the paralyzed limb to move.",
           "linkedIds": [
@@ -16811,6 +16747,7 @@
           "pos": "Danh từ",
           "meaning": "Ngành hóa học hoặc thành phần/phản ứng hóa học",
           "synonyms": [
+            "molecular science",
             "chemical science",
             "chemical composition"
           ],
@@ -16948,12 +16885,10 @@
           "synonyms": [
             "post",
             "rod",
-            "geographical",
-            "magnetic extreme"
+            "geographical pole",
+            "magnetic pole"
           ],
-          "antonyms": [
-            "equator"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a pole as a central factor in the study (often paraphrased as 'post').",
           "linkedIds": [
@@ -16993,8 +16928,8 @@
           "pos": "Danh từ",
           "meaning": "Ki-lô-mét",
           "synonyms": [
-            "1,000 metres",
-            "km"
+            "distance unit",
+            "metric distance"
           ],
           "antonyms": [],
           "wordFamily": [
@@ -17051,7 +16986,7 @@
             "attractive"
           ],
           "antonyms": [
-            "non-magnetic"
+            "demagnetized"
           ],
           "wordFamily": [
             {
@@ -17119,13 +17054,9 @@
           "pos": "Danh từ",
           "meaning": "Khí oxy",
           "synonyms": [
-            "O2",
             "breathable gas"
           ],
-          "antonyms": [
-            "oxygen-free",
-            "anaerobic condition"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified an oxygen as a central factor in the study (often paraphrased as 'breathable gas').",
           "linkedIds": [
@@ -18159,8 +18090,8 @@
           "pText": "",
           "options": [
             "randomly",
-            "randoms",
-            "randomed",
+            "randomness",
+            "randomize",
             "random"
           ],
           "answer": "random",
@@ -18172,8 +18103,8 @@
           "qText": "Presenting the ______ in the culture and commerce of art galleries and science centres worldwide.",
           "pText": "",
           "options": [
-            "mixtured",
-            "mixturing",
+            "mix",
+            "mixed",
             "mixture",
             "mixtures"
           ],
@@ -18631,7 +18562,6 @@
           ],
           "antonyms": [
             "ignorance",
-            "neglect",
             "denial",
             "anonymity"
           ],
@@ -18791,9 +18721,8 @@
             "philological"
           ],
           "antonyms": [
-            "non-verbal",
-            "visual",
-            "musical"
+            "non-linguistic",
+            "non-verbal"
           ],
           "wordFamily": [
             {
@@ -20222,8 +20151,7 @@
           ],
           "antonyms": [
             "autonomy",
-            "independence",
-            "neglect"
+            "independence"
           ],
           "wordFamily": [
             {
@@ -20921,8 +20849,8 @@
           "options": [
             "integration",
             "integral",
-            "integrs",
-            "integred"
+            "integrate",
+            "integrated"
           ],
           "answer": "integration",
           "explain": "Đáp án \"integration\" phù hợp cả nghĩa \"Tích hợp, kết hợp hài hòa vào một hệ thống chung hoặc hòa nhập xã hội\" và cấu trúc ngữ pháp của câu."
@@ -21417,13 +21345,12 @@
           "pos": "Danh từ",
           "meaning": "Nhà kinh tế học, chuyên gia nghiên cứu và dự báo các quy luật kinh tế",
           "synonyms": [
+            "financial expert",
             "economic analyst",
             "financial theorist",
             "policy expert"
           ],
-          "antonyms": [
-            "layperson"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "economically",
@@ -22795,6 +22722,7 @@
           "pos": "Danh từ",
           "meaning": "Lớp học, không gian giảng dạy trực tiếp tại trường",
           "synonyms": [
+            "learning space",
             "school setting",
             "lecture hall",
             "learning environment"
@@ -23544,9 +23472,9 @@
           "qText": "What is probably the most well-known fair-trade ______?",
           "pText": "",
           "options": [
-            "commods",
-            "commoded",
-            "commoding",
+            "commodities",
+            "commodify",
+            "commodification",
             "commodity"
           ],
           "answer": "commodity",
@@ -23558,10 +23486,10 @@
           "qText": "Sacks held little skepticism when borrowing other theories and findings in describing reasons and ______ for phenomena he depicts in the book.",
           "pText": "",
           "options": [
-            "notioning",
+            "notional",
             "notion",
             "notions",
-            "notioned"
+            "notionally"
           ],
           "answer": "notion",
           "explain": "Đáp án \"notion\" phù hợp cả nghĩa \"Quan niệm, ý niệm hoặc giả thuyết được nhiều người hình dung\" và cấu trúc ngữ pháp của câu."
@@ -24379,7 +24307,7 @@
           "id": "f1_713",
           "lemma": "mature",
           "ipa": "/mətʃˈʊr/",
-          "pos": "Động từ",
+          "pos": "Tính từ · Động từ",
           "meaning": "Chín muồi, trưởng thành, phát triển hoàn chỉnh",
           "synonyms": [
             "ripen",
@@ -24438,7 +24366,6 @@
           "antonyms": [
             "invasive",
             "exotic",
-            "introduced",
             "foreign"
           ],
           "wordFamily": [],
@@ -24634,9 +24561,7 @@
             "synaptic"
           ],
           "antonyms": [
-            "muscular",
-            "skeletal",
-            "peripheral"
+            "non-neural"
           ],
           "wordFamily": [],
           "example": "Researchers observed a neural difference between the experimental and control groups (often paraphrased as 'neurological').",
@@ -24711,11 +24636,7 @@
             "family-related",
             "inherited"
           ],
-          "antonyms": [
-            "offspring",
-            "filial",
-            "peer-based"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "parent",
@@ -25179,7 +25100,6 @@
           ],
           "antonyms": [
             "hardship",
-            "neglect",
             "detriment",
             "suffering"
           ],
@@ -26000,10 +25920,10 @@
           "qText": "Had a ______ sustained by his own capital.",
           "pText": "",
           "options": [
-            "labing",
+            "laboratory",
             "lab",
             "labs",
-            "labed"
+            "laboratories"
           ],
           "answer": "lab",
           "explain": "Đáp án \"lab\" phù hợp cả nghĩa \"Phòng thí nghiệm\" và cấu trúc ngữ pháp của câu."
@@ -26014,9 +25934,9 @@
           "qText": "The ______ people had been brutally killed by the European colonists.",
           "pText": "",
           "options": [
-            "indigen",
-            "indigened",
-            "indigening",
+            "indigenously",
+            "non-indigenous",
+            "indigeneity",
             "indigenous"
           ],
           "answer": "indigenous",
@@ -26058,8 +25978,8 @@
           "options": [
             "rhythm",
             "rhythms",
-            "rhythmed",
-            "rhythming"
+            "rhythmic",
+            "rhythmically"
           ],
           "answer": "rhythm",
           "explain": "Đáp án \"rhythm\" phù hợp cả nghĩa \"Nhịp điệu âm nhạc/ngôn ngữ hoặc nhịp sinh học chu kỳ\" và cấu trúc ngữ pháp của câu."
@@ -26487,11 +26407,7 @@
             "therapeutic",
             "objective"
           ],
-          "antonyms": [
-            "non-clinical",
-            "subclinical",
-            "subjective"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "clinic",
@@ -27758,7 +27674,6 @@
           ],
           "antonyms": [
             "popular",
-            "favoured",
             "sought-after"
           ],
           "wordFamily": [],
@@ -29143,15 +29058,12 @@
           "pos": "Danh từ",
           "meaning": "Hình nón (toán học), quả nón thông hoặc tế bào nón cảm nhận màu sắc trong mắt",
           "synonyms": [
+            "tapered shape",
             "funnel shape",
             "seed-bearing structure",
             "photoreceptor cell"
           ],
-          "antonyms": [
-            "sphere",
-            "cube",
-            "cylinder"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a cone as a central factor in the study (often paraphrased as 'funnel shape').",
           "linkedIds": [
@@ -29445,6 +29357,7 @@
           "pos": "Danh từ",
           "meaning": "Du lịch sinh thái có trách nhiệm nhằm bảo tồn thiên nhiên và hỗ trợ cộng đồng địa phương",
           "synonyms": [
+            "green travel",
             "sustainable tourism",
             "nature-based travel",
             "green tourism"
@@ -29564,9 +29477,7 @@
             "stargazer",
             "cosmologist"
           ],
-          "antonyms": [
-            "astrologer"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "astronomical",
@@ -29588,6 +29499,7 @@
           "pos": "Danh từ",
           "meaning": "Lá phổi, cơ quan hô hấp",
           "synonyms": [
+            "breathing organ",
             "pulmonary organ",
             "respiratory organ"
           ],
@@ -29755,10 +29667,7 @@
             "estuary",
             "alluvial fan"
           ],
-          "antonyms": [
-            "headwaters",
-            "source"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a delta as a central factor in the study (often paraphrased as 'river mouth').",
           "linkedIds": [
@@ -29824,13 +29733,12 @@
           "pos": "Danh từ",
           "meaning": "Thuốc kháng sinh",
           "synonyms": [
+            "antimicrobial drug",
             "antibacterial drug",
             "antimicrobial medicine",
             "penicillin-type drug"
           ],
-          "antonyms": [
-            "probiotic"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified an antibiotic as a central factor in the study (often paraphrased as 'antibacterial drug').",
           "linkedIds": [
@@ -30057,13 +29965,12 @@
           "pos": "Danh từ",
           "meaning": "Phân tử",
           "synonyms": [
+            "tiny particle",
             "chemical particle",
             "compound unit",
             "molecular structure"
           ],
-          "antonyms": [
-            "atom"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a molecule as a central factor in the study (often paraphrased as 'chemical particle').",
           "linkedIds": [
@@ -30871,7 +30778,7 @@
           "qText": "Scientists have yet to determine the cue for Chusquea ubietifolia's ______ rhythm.",
           "pText": "",
           "options": [
-            "seasonings",
+            "seasonally",
             "seasonality",
             "seasonal",
             "season"
@@ -30885,8 +30792,8 @@
           "qText": "Deserts, mountains and Arctic regions are examples of environments that are both ecologically and culturally ______.",
           "pText": "",
           "options": [
-            "fragiles",
-            "fragiled",
+            "fragilely",
+            "frailty",
             "fragile",
             "fragility"
           ],
@@ -30899,10 +30806,10 @@
           "qText": "Retreat of glacier tongues as a result of change in annual ______ conditions.",
           "pText": "",
           "options": [
-            "atmosphering",
+            "atmosphere",
             "atmospheric",
-            "atmosphers",
-            "atmosphered"
+            "atmospheres",
+            "atmospherically"
           ],
           "answer": "atmospheric",
           "explain": "Đáp án \"atmospheric\" phù hợp cả nghĩa \"Thuộc về khí quyển hoặc áp suất không khí\" và cấu trúc ngữ pháp của câu."
@@ -30929,7 +30836,7 @@
           "options": [
             "elder",
             "elders",
-            "eldered",
+            "eldest",
             "elderly"
           ],
           "answer": "elderly",
@@ -31435,10 +31342,7 @@
             "pharmaceutical",
             "remedy"
           ],
-          "antonyms": [
-            "placebo",
-            "non-drug therapy"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "medical",
@@ -31649,7 +31553,6 @@
             "probing"
           ],
           "antonyms": [
-            "neglect",
             "stagnation",
             "ignorance"
           ],
@@ -32273,8 +32176,7 @@
           ],
           "antonyms": [
             "original",
-            "permanent fixture",
-            "retain"
+            "permanent fixture"
           ],
           "wordFamily": [
             {
@@ -32458,12 +32360,7 @@
             "rigid",
             "stiff"
           ],
-          "antonyms": [
-            "masonry",
-            "metallic",
-            "stone",
-            "flexible"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Researchers observed a wooden difference between the experimental and control groups (often paraphrased as 'timber').",
           "linkedIds": [
@@ -32575,7 +32472,6 @@
           "antonyms": [
             "majority",
             "bulk",
-            "most",
             "mainstream"
           ],
           "wordFamily": [
@@ -32629,7 +32525,6 @@
             "investigation"
           ],
           "antonyms": [
-            "neglect",
             "superficial glance",
             "oversight"
           ],
@@ -32887,11 +32782,7 @@
             "diary",
             "log"
           ],
-          "antonyms": [
-            "tabloid",
-            "hearsay",
-            "unpublished note"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "journalist",
@@ -33429,9 +33320,9 @@
           "pText": "",
           "options": [
             "elsewhere",
-            "elsewheres",
-            "elsewhered",
-            "elsewhering"
+            "anywhere",
+            "nowhere",
+            "everywhere"
           ],
           "answer": "elsewhere",
           "explain": "Đáp án \"elsewhere\" phù hợp cả nghĩa \"Ở một nơi khác, ngoài phạm vi đang xét đến\" và cấu trúc ngữ pháp của câu."
@@ -33443,8 +33334,8 @@
           "pText": "",
           "options": [
             "cinemas",
-            "cinemaed",
-            "cinemaing",
+            "cinematic",
+            "cinematography",
             "cinema"
           ],
           "answer": "cinema",
@@ -34014,11 +33905,7 @@
             "mineral lattice",
             "quartz"
           ],
-          "antonyms": [
-            "amorphous solid",
-            "liquid",
-            "gas"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "multi-crystal",
@@ -34348,11 +34235,7 @@
             "digital innovation",
             "equipment"
           ],
-          "antonyms": [
-            "low-tech",
-            "manual method",
-            "traditional craft"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "It was known as simplex technology, operating on the same principles as a walkie-talkie, which required that a user press a button, meaning that only one person at a time could talk.",
           "linkedIds": [
@@ -34750,10 +34633,7 @@
             "online"
           ],
           "antonyms": [
-            "analogue",
-            "physical",
-            "printed",
-            "offline"
+            "analogue"
           ],
           "wordFamily": [
             {
@@ -35207,8 +35087,9 @@
           "pos": "Tính từ",
           "meaning": "Thuộc về châu Á hoặc người châu Á",
           "synonyms": [
-            "of Asia",
             "East",
+            "of Asia",
+            "East Asian",
             "South Asian",
             "Asiatic"
           ],
@@ -35238,10 +35119,7 @@
             "trace element",
             "crystal"
           ],
-          "antonyms": [
-            "organic matter",
-            "vitamin"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a mineral as a central factor in the study (often paraphrased as 'ore').",
           "linkedIds": [
@@ -35258,14 +35136,9 @@
           "synonyms": [
             "foliage",
             "frond",
-            "blade",
-            "petal"
+            "blade"
           ],
-          "antonyms": [
-            "root",
-            "stem",
-            "trunk"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a leaf as a central factor in the study (often paraphrased as 'foliage').",
           "linkedIds": [
@@ -35853,7 +35726,7 @@
             "proceeds"
           ],
           "answer": "proceed",
-          "explain": "Đáp án \"procedures\" phù hợp cả nghĩa \"Tiếp tục tiến hành một quy trình hoặc di chuyển thẳng về phía trước\" và cấu trúc ngữ pháp của câu."
+          "explain": "Đáp án \"proceed\" phù hợp cả nghĩa \"Tiếp tục tiến hành một quy trình hoặc di chuyển thẳng về phía trước\" và cấu trúc ngữ pháp của câu."
         },
         {
           "type": "word_family",
@@ -35875,9 +35748,9 @@
           "qText": "Prior to the start of MIRTP the Makete district was almost ______ during the rainy season.",
           "pText": "",
           "options": [
-            "inaccesss",
-            "inaccessed",
-            "inaccessing",
+            "inaccessibility",
+            "inaccessibly",
+            "accessible",
             "inaccessible"
           ],
           "answer": "inaccessible",
@@ -35898,18 +35771,18 @@
           "explain": "Đáp án \"convey\" phù hợp cả nghĩa \"Truyền đạt thông điệp/cảm xúc hoặc vận chuyển vật chất/tín hiệu\" và cấu trúc ngữ pháp của câu."
         },
         {
-          "type": "word_family",
-          "prompt": "Chọn đúng từ / biến thể Word Family mang nghĩa \"Ở nước ngoài hoặc ra nước ngoài\" để hoàn thành câu:",
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa / paraphrase chuẩn IELTS Reading cho từ in đậm/chỗ trống mang nghĩa \"Ở nước ngoài\":",
           "qText": "The apple industry is now facing a lot of competition from ______.",
           "pText": "",
           "options": [
-            "abroads",
-            "abroaded",
-            "abroading",
-            "abroad"
+            "overseas",
+            "locally",
+            "inland",
+            "domestically"
           ],
-          "answer": "abroad",
-          "explain": "Đáp án \"abroad\" phù hợp cả nghĩa \"Ở nước ngoài hoặc ra nước ngoài\" và cấu trúc ngữ pháp của câu."
+          "answer": "overseas",
+          "explain": "IELTS Reading thường paraphrase \"from abroad\" thành \"from overseas\"."
         },
         {
           "type": "word_family",
@@ -35919,8 +35792,8 @@
           "options": [
             "asian",
             "asians",
-            "asianed",
-            "asianing"
+            "asia",
+            "pan-asian"
           ],
           "answer": "asian",
           "explain": "Đáp án \"asian\" phù hợp cả nghĩa \"Thuộc về châu Á hoặc người châu Á\" và cấu trúc ngữ pháp của câu."
@@ -36563,10 +36436,7 @@
             "coordinate mesh",
             "power system"
           ],
-          "antonyms": [
-            "off-grid",
-            "unstructured layout"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a grid as a central factor in the study (often paraphrased as 'network').",
           "linkedIds": [
@@ -36610,11 +36480,7 @@
             "drug-related",
             "pharmacological"
           ],
-          "antonyms": [
-            "herbal",
-            "natural",
-            "traditional remedy"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Researchers observed a pharmaceutical difference between the experimental and control groups (often paraphrased as 'medicinal').",
           "linkedIds": [
@@ -36854,9 +36720,9 @@
             "oral"
           ],
           "antonyms": [
-            "non-verbal",
             "visual",
-            "physical"
+            "physical",
+            "unspoken"
           ],
           "wordFamily": [
             {
@@ -37335,7 +37201,7 @@
           "pos": "Danh từ",
           "meaning": "Nguyên tố nitơ / khí nitơ",
           "synonyms": [
-            "N2",
+            "inert gas",
             "nitrogenous compound",
             "atmospheric nitrogen"
           ],
@@ -37507,11 +37373,7 @@
             "ground substance",
             "fine particles"
           ],
-          "antonyms": [
-            "liquid",
-            "solid block",
-            "whole grain"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a powder as a central factor in the study (often paraphrased as 'dust').",
           "linkedIds": [
@@ -38220,10 +38082,10 @@
           "qText": "How to increase the ______ when making a better choice?",
           "pText": "",
           "options": [
-            "happied",
+            "happier",
             "happiness",
-            "unhappiness",
-            "happi"
+            "happiest",
+            "happily"
           ],
           "answer": "happiness",
           "explain": "Đáp án \"happiness\" phù hợp cả nghĩa \"Hạnh phúc, sự mãn nguyện trong cuộc sống\" và cấu trúc ngữ pháp của câu."
@@ -38662,7 +38524,6 @@
           ],
           "antonyms": [
             "misdirection",
-            "neglect",
             "autonomy"
           ],
           "wordFamily": [],
@@ -39589,10 +39450,7 @@
             "healer",
             "GP"
           ],
-          "antonyms": [
-            "patient",
-            "layperson"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a physician as a central factor in the study (often paraphrased as 'medical doctor').",
           "linkedIds": [
@@ -39834,9 +39692,9 @@
             "topographic"
           ],
           "antonyms": [
-            "temporal",
-            "chronological",
-            "universal"
+            "non-geographical",
+            "universal",
+            "borderless"
           ],
           "wordFamily": [
             {
@@ -39880,11 +39738,7 @@
             "geothermal",
             "magmatic"
           ],
-          "antonyms": [
-            "sedimentary",
-            "stable",
-            "non-volcanic"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Researchers observed a volcanic difference between the experimental and control groups (often paraphrased as 'igneous').",
           "linkedIds": [
@@ -39961,8 +39815,7 @@
           "antonyms": [
             "certain",
             "definite",
-            "conclusive",
-            "guaranteed"
+            "conclusive"
           ],
           "wordFamily": [],
           "example": "Researchers observed a uncertain difference between the experimental and control groups (often paraphrased as 'unsure').",
@@ -40025,10 +39878,7 @@
             "level",
             "score"
           ],
-          "antonyms": [
-            "unclassified",
-            "uniform quality"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a grade as a central factor in the study (often paraphrased as 'rank').",
           "linkedIds": [
@@ -40649,7 +40499,7 @@
             "expert",
             "inexpert",
             "experts",
-            "experted"
+            "expertise"
           ],
           "answer": "expert",
           "explain": "Trong họ từ của 'expertise', dạng từ 'expert' (Danh từ · Tính từ) phù hợp ngữ pháp và ngữ nghĩa câu."
@@ -41061,7 +40911,6 @@
           "antonyms": [
             "peaceful",
             "gentle",
-            "non-violent",
             "mild"
           ],
           "wordFamily": [
@@ -41390,7 +41239,6 @@
             "repair"
           ],
           "antonyms": [
-            "neglect",
             "deterioration",
             "abandonment"
           ],
@@ -41536,8 +41384,7 @@
           ],
           "antonyms": [
             "non-interference",
-            "laissez-faire",
-            "neglect"
+            "laissez-faire"
           ],
           "wordFamily": [
             {
@@ -42334,9 +42181,9 @@
             "phonic"
           ],
           "antonyms": [
-            "visual",
             "silent",
-            "mute"
+            "mute",
+            "soundless"
           ],
           "wordFamily": [
             {
@@ -42466,7 +42313,6 @@
           ],
           "antonyms": [
             "improvisation",
-            "neglect",
             "unpreparedness"
           ],
           "wordFamily": [],
@@ -44489,7 +44335,7 @@
           "id": "f1_1136",
           "lemma": "non",
           "ipa": "/nˈɑːn/",
-          "pos": "Tính từ",
+          "pos": "Phó từ",
           "meaning": "Tiền tố/yếu tố ghép mang nghĩa phủ định 'không'",
           "synonyms": [
             "not",
@@ -44762,7 +44608,6 @@
           "antonyms": [
             "independence",
             "lack of connection",
-            "inverse",
             "no link"
           ],
           "wordFamily": [],
@@ -44874,8 +44719,9 @@
           "pos": "Động từ",
           "meaning": "Vay mượn",
           "synonyms": [
-            "adopt",
             "loan",
+            "adopt",
+            "take on loan",
             "appropriate",
             "take from"
           ],
@@ -45505,7 +45351,7 @@
             "exceptional",
             "exceptionally",
             "exceptions",
-            "exceptioned"
+            "exception"
           ],
           "answer": "exceptional",
           "explain": "Trong họ từ của 'exception', dạng từ 'exceptional' (Tính từ) phù hợp ngữ pháp và ngữ nghĩa câu."
@@ -46051,13 +45897,11 @@
           "pos": "Tính từ",
           "meaning": "Thuộc về Canada",
           "synonyms": [
+            "north american",
             "of Canada",
             "Canada-based"
           ],
-          "antonyms": [
-            "foreign",
-            "non-Canadian"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Earlier this year, Sun Life of Canada, an insurance company, announced that it was offering redundancy to all its British employees aged 50 or over “to bring in new blood”.",
           "linkedIds": [
@@ -46372,6 +46216,7 @@
           "pos": "Danh từ",
           "meaning": "Hình tam giác",
           "synonyms": [
+            "three-sided figure",
             "three-sided shape",
             "geometric figure",
             "triangular motif"
@@ -46609,8 +46454,7 @@
           ],
           "antonyms": [
             "minus",
-            "less",
-            "below"
+            "less"
           ],
           "wordFamily": [],
           "example": "Researchers observed a plus difference between the experimental and control groups (often paraphrased as 'in addition to').",
@@ -46688,11 +46532,7 @@
             "stray",
             "deviate"
           ],
-          "antonyms": [
-            "stay fixed",
-            "remain anchored",
-            "stabilize"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a drift as a central factor in the study (often paraphrased as 'shift').",
           "linkedIds": [
@@ -47367,7 +47207,6 @@
           "antonyms": [
             "legal",
             "lawful",
-            "permitted",
             "authorized"
           ],
           "wordFamily": [],
@@ -47876,7 +47715,7 @@
             "unfamiliar",
             "unfamiliarity",
             "unfamiliarly",
-            "unfamiliarised"
+            "familiar"
           ],
           "answer": "unfamiliar",
           "explain": "Đáp án \"unfamiliar\" phù hợp cả nghĩa \"Xa lạ, chưa quen biết\" và cấu trúc ngữ pháp của câu."
@@ -47889,7 +47728,7 @@
           "options": [
             "epidemic",
             "epidemics",
-            "epidemical",
+            "epidemiological",
             "epidemiology"
           ],
           "answer": "epidemic",
@@ -48330,9 +48169,7 @@
             "operating physician",
             "medical specialist"
           ],
-          "antonyms": [
-            "patient"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a surgeon as a central factor in the study (often paraphrased as 'surgical doctor').",
           "linkedIds": [
@@ -48929,10 +48766,7 @@
             "dietary supplement",
             "essential nutrient"
           ],
-          "antonyms": [
-            "toxin",
-            "deficiency"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a vitamin as a central factor in the study (often paraphrased as 'micronutrient').",
           "linkedIds": [
@@ -49130,10 +48964,7 @@
             "three-dimensional",
             "geographic"
           ],
-          "antonyms": [
-            "temporal",
-            "non-spatial"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "Researchers observed a spatial difference between the experimental and control groups (often paraphrased as 'space-related').",
           "linkedIds": [
@@ -49520,8 +49351,7 @@
           ],
           "antonyms": [
             "gradual",
-            "long-term",
-            "slowly"
+            "long-term"
           ],
           "wordFamily": [],
           "example": "Researchers observed a overnight difference between the experimental and control groups (often paraphrased as 'through the night').",
@@ -49589,10 +49419,7 @@
             "producer",
             "computing unit"
           ],
-          "antonyms": [
-            "consumer",
-            "end-user"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a processor as a central factor in the study (often paraphrased as 'manufacturer').",
           "linkedIds": [
@@ -50729,7 +50556,6 @@
           "antonyms": [
             "related",
             "linked",
-            "associated",
             "correlated"
           ],
           "wordFamily": [],
@@ -50967,7 +50793,6 @@
             "natural"
           ],
           "antonyms": [
-            "counter-intuitive",
             "analytical",
             "deliberate",
             "logical"
@@ -51018,7 +50843,7 @@
           "id": "f1_1380",
           "lemma": "obscure",
           "ipa": "/əbskjˈʊr/",
-          "pos": "Động từ",
+          "pos": "Tính từ · Động từ",
           "meaning": "Mơ hồ, ít được biết đến (tính từ) hoặc che khuất, làm lu mờ (động từ)",
           "synonyms": [
             "unclear",
@@ -51227,6 +51052,7 @@
           "pos": "Danh từ",
           "meaning": "Đơn thuốc hoặc thuốc phải kê đơn",
           "synonyms": [
+            "medical order",
             "doctor's order",
             "medical directive",
             "prescribed drug"
@@ -51352,9 +51178,7 @@
             "liquid refreshment",
             "potable"
           ],
-          "antonyms": [
-            "solid food"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a beverage as a central factor in the study (often paraphrased as 'drink').",
           "linkedIds": [
@@ -51689,6 +51513,7 @@
           "pos": "Tính từ",
           "meaning": "Thuộc về thể tích/khối",
           "synonyms": [
+            "three-dimensional",
             "three-dimensional volume",
             "cubed"
           ],
@@ -51791,10 +51616,7 @@
             "study guide",
             "primer"
           ],
-          "antonyms": [
-            "primary source",
-            "hands-on practice"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "The report identified a textbook as a central factor in the study (often paraphrased as 'coursebook').",
           "linkedIds": [
@@ -52917,10 +52739,7 @@
             "brain-related",
             "nervous-system"
           ],
-          "antonyms": [
-            "muscular",
-            "psychological-only"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "neurology",
@@ -53548,8 +53367,7 @@
           ],
           "antonyms": [
             "omission",
-            "exclusion",
-            "neglect"
+            "exclusion"
           ],
           "wordFamily": [],
           "example": "The report identified a coverage as a central factor in the study (often paraphrased as 'reporting').",
@@ -53843,10 +53661,7 @@
             "charged particle",
             "electrolyte"
           ],
-          "antonyms": [
-            "neutral atom",
-            "molecule"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "It may be significant that the concentration of positively charged particles is greater than normal in these winds.",
           "linkedIds": [
@@ -54023,7 +53838,7 @@
           "id": "f1_1478",
           "lemma": "retail",
           "ipa": "/rˈiːtˌeɪl/",
-          "pos": "Tính từ",
+          "pos": "Tính từ · Danh từ",
           "meaning": "Thuộc về bán lẻ",
           "synonyms": [
             "consumer-facing",
@@ -54031,9 +53846,7 @@
             "commercial sales"
           ],
           "antonyms": [
-            "wholesale",
-            "manufacturing",
-            "industrial"
+            "wholesale"
           ],
           "wordFamily": [
             {
@@ -54224,8 +54037,7 @@
             "estuarine"
           ],
           "antonyms": [
-            "inland",
-            "riverine-only"
+            "non-tidal"
           ],
           "wordFamily": [],
           "example": "Researchers observed a tidal difference between the experimental and control groups (often paraphrased as 'tide-driven').",
@@ -54765,8 +54577,8 @@
           "options": [
             "neurology",
             "neurologically",
-            "neurologys",
-            "neurologyed"
+            "neurological",
+            "neurologist"
           ],
           "answer": "neurology",
           "explain": "Trong họ từ của 'neurological', dạng từ 'neurology' (Tính từ) phù hợp ngữ pháp và ngữ nghĩa câu."
@@ -55292,6 +55104,7 @@
           "pos": "Danh từ",
           "meaning": "Tấn",
           "synonyms": [
+            "heavy weight",
             "metric unit of weight",
             "large quantity"
           ],
@@ -55803,7 +55616,6 @@
           "pos": "Danh từ · Động từ",
           "meaning": "Nước, nguồn nước · tưới nước",
           "synonyms": [
-            "H2O",
             "freshwater",
             "aquatic resource",
             "irrigate"
@@ -56920,10 +56732,10 @@
           "prompt": "Chọn đúng từ / biến thể Word Family mang nghĩa \"Không / phi học phí hoặc sự giảng dạy trực tiếp\" (Danh từ) để hoàn thành câu:",
           "qText": "Long-term field observations highlighted significant ______ within the local ecosystem.",
           "options": [
-            "intuitioning",
+            "intuitive",
             "intuition",
             "intuitions",
-            "intuitioned"
+            "intuitively"
           ],
           "answer": "intuition",
           "explain": "Trong họ từ của 'tuition', dạng từ 'intuition' (Danh từ) phù hợp ngữ pháp và ngữ nghĩa câu."
@@ -56933,8 +56745,8 @@
           "prompt": "Chọn đúng từ / biến thể Word Family mang nghĩa \"Động từ chia ngôi số ít: tạo ra, sản xuất, khiến cho\" (Động từ) để hoàn thành câu:",
           "qText": "Independent researchers plan to ______ new evidence using modern analytical methods.",
           "options": [
-            "makinged",
-            "makinging",
+            "make",
+            "maker",
             "makings",
             "making"
           ],
@@ -57577,7 +57389,7 @@
           "pos": "Danh từ",
           "meaning": "Ngày, ban ngày, thời kỳ",
           "synonyms": [
-            "24-hour period",
+            "full diurnal cycle",
             "daytime",
             "era",
             "present times"
@@ -60227,7 +60039,7 @@
             "the globe",
             "planet",
             "soil",
-            "excavate"
+            "ground"
           ],
           "antonyms": [],
           "wordFamily": [
@@ -64260,7 +64072,7 @@
           "synonyms": [
             "depart",
             "abandon",
-            "remain",
+            "vacate",
             "result in"
           ],
           "antonyms": [],
@@ -65434,9 +65246,9 @@
           "prompt": "Chọn đúng từ / biến thể Word Family mang nghĩa \"Biến thể từ gốc rise\" (Động từ · Danh từ) để hoàn thành câu:",
           "qText": "Independent researchers plan to ______ new evidence using modern analytical methods.",
           "options": [
-            "risens",
-            "risened",
-            "risening",
+            "rise",
+            "rises",
+            "rising",
             "risen"
           ],
           "answer": "risen",
@@ -65447,9 +65259,9 @@
           "prompt": "Chọn đúng từ / biến thể Word Family mang nghĩa \"Biến thể từ gốc eat\" (Động từ) để hoàn thành câu:",
           "qText": "Independent researchers plan to ______ new evidence using modern analytical methods.",
           "options": [
-            "eatens",
-            "eatened",
-            "eatening",
+            "eat",
+            "eats",
+            "eating",
             "eaten"
           ],
           "answer": "eaten",
@@ -66034,7 +65846,7 @@
           "id": "f2_327",
           "lemma": "sun",
           "ipa": "/sˈʌn/",
-          "pos": "Danh từ",
+          "pos": "Động từ",
           "meaning": "Mặt trời, ánh nắng",
           "synonyms": [
             "solar star",
@@ -66052,7 +65864,7 @@
           "id": "f2_328",
           "lemma": "bee",
           "ipa": "/bˈiː/",
-          "pos": "Động từ",
+          "pos": "Danh từ",
           "meaning": "Con ong",
           "synonyms": [
             "pollinator",
@@ -66192,7 +66004,7 @@
           "id": "f2_335",
           "lemma": "ancient",
           "ipa": "/ˈeɪntʃənt/",
-          "pos": "Động từ",
+          "pos": "Tính từ",
           "meaning": "Cổ đại, lâu đời",
           "synonyms": [
             "archaic",
@@ -66377,7 +66189,7 @@
           "id": "f2_345",
           "lemma": "data",
           "ipa": "/dˈeɪtə/",
-          "pos": "Động từ",
+          "pos": "Danh từ",
           "meaning": "Dữ liệu, số liệu",
           "synonyms": [
             "figures",
@@ -66395,7 +66207,7 @@
           "id": "f2_346",
           "lemma": "disease",
           "ipa": "/dɪzˈiːz/",
-          "pos": "Động từ",
+          "pos": "Danh từ",
           "meaning": "Bệnh tật, dịch bệnh",
           "synonyms": [
             "illness",
@@ -66755,7 +66567,7 @@
           "id": "f2_368",
           "lemma": "feature",
           "ipa": "/fˈiːtʃər/",
-          "pos": "Tính từ",
+          "pos": "Danh từ",
           "meaning": "Đặc điểm, nét đặc trưng; bao gồm/nổi bật",
           "synonyms": [
             "characteristic",
@@ -66773,7 +66585,7 @@
           "id": "f2_369",
           "lemma": "next",
           "ipa": "/nˈekst/",
-          "pos": "Động từ",
+          "pos": "Tính từ",
           "meaning": "Tiếp theo, kế tiếp, bên cạnh",
           "synonyms": [
             "subsequent",
@@ -66869,7 +66681,7 @@
           "id": "f2_376",
           "lemma": "river",
           "ipa": "/rˈɪvər/",
-          "pos": "Động từ",
+          "pos": "Danh từ",
           "meaning": "Dòng sông",
           "synonyms": [
             "waterway",
@@ -66912,7 +66724,7 @@
           "id": "f2_380",
           "lemma": "supply",
           "ipa": "/səplˈaɪ/",
-          "pos": "Trạng từ",
+          "pos": "Danh từ",
           "meaning": "Nguồn cung; cung cấp",
           "synonyms": [
             "provision",
@@ -66989,7 +66801,7 @@
           "id": "f2_384",
           "lemma": "ant",
           "ipa": "/ˈænt/",
-          "pos": "Động từ",
+          "pos": "Danh từ",
           "meaning": "Con kiến",
           "synonyms": [
             "insect",
@@ -67484,9 +67296,9 @@
           "qText": "Long-term field observations highlighted significant ______ within the local ecosystem.",
           "options": [
             "sector",
-            "dissector",
-            "sects",
-            "sected"
+            "sectors",
+            "section",
+            "sectional"
           ],
           "answer": "sector",
           "explain": "Trong họ từ của 'section', dạng từ 'sector' (Danh từ) phù hợp ngữ pháp và ngữ nghĩa câu."
@@ -67937,7 +67749,7 @@
           "id": "f2_393",
           "lemma": "image",
           "ipa": "/ˈɪmədʒ/",
-          "pos": "Tính từ",
+          "pos": "Danh từ",
           "meaning": "Hình ảnh, biểu tượng, hình dung",
           "synonyms": [
             "visual",
@@ -68214,7 +68026,7 @@
           "id": "f2_405",
           "lemma": "carbon",
           "ipa": "/kˈɑːrbən/",
-          "pos": "Động từ",
+          "pos": "Danh từ",
           "meaning": "Cacbon, khí thải cacbon",
           "synonyms": [
             "emissions",
@@ -68343,7 +68155,7 @@
           "synonyms": [
             "monthly period",
             "calendar unit",
-            "30-day span"
+            "calendar period"
           ],
           "antonyms": [],
           "wordFamily": [],
@@ -68874,7 +68686,7 @@
           "id": "f2_445",
           "lemma": "text",
           "ipa": "/tˈekst/",
-          "pos": "Động từ",
+          "pos": "Danh từ",
           "meaning": "Văn bản, bài viết, giáo trình",
           "synonyms": [
             "passage",
@@ -69938,7 +69750,7 @@
           "id": "f2_460",
           "lemma": "due",
           "ipa": "/dˈuː/",
-          "pos": "Động từ",
+          "pos": "Tính từ",
           "meaning": "Do bởi (due to); đến hạn; thích đáng",
           "synonyms": [
             "attributable to",
@@ -70550,7 +70362,7 @@
           "id": "f2_502",
           "lemma": "feed",
           "ipa": "/fˈiːd/",
-          "pos": "Tính từ",
+          "pos": "Động từ",
           "meaning": "Cho ăn, nuôi dưỡng; cung cấp dữ liệu/nhiên liệu",
           "synonyms": [
             "nourish",
@@ -70633,7 +70445,7 @@
           "id": "f2_509",
           "lemma": "green",
           "ipa": "/ɡrˈiːn/",
-          "pos": "Trạng từ",
+          "pos": "Danh từ · Tính từ",
           "meaning": "Xanh lá; thân thiện môi trường; non nớt",
           "synonyms": [
             "eco-friendly",
@@ -70948,7 +70760,7 @@
           "id": "f2_533",
           "lemma": "dolphin",
           "ipa": "/dˈɑːlfən/",
-          "pos": "Động từ",
+          "pos": "Danh từ",
           "meaning": "Cá heo",
           "synonyms": [
             "marine mammal",
@@ -71336,8 +71148,8 @@
           "options": [
             "drawn",
             "drawings",
-            "drawns",
-            "drawned"
+            "draw",
+            "drawing"
           ],
           "answer": "drawn",
           "explain": "Trong họ từ của 'draw', dạng từ 'drawn' (Động từ · Danh từ) phù hợp ngữ pháp và ngữ nghĩa câu."
