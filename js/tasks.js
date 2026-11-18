@@ -1630,7 +1630,98 @@
     renderTest2Stage();
   }
 
+  function cleanupT2FloatingDrag() {
+    document.querySelectorAll('.t2-floating-block').forEach((el) => el.remove());
+    document.querySelectorAll('.t2-dropzone.is-drop-over').forEach((el) => el.classList.remove('is-drop-over'));
+    document.querySelectorAll('.t2-drag-card.is-source-lifted').forEach((el) => el.classList.remove('is-source-lifted'));
+  }
+
+  function bindT2PointerDrag() {
+    cleanupT2FloatingDrag();
+    document.querySelectorAll('.t2-drag-card:not(:disabled)').forEach((card) => {
+      if (card.dataset.ptrDragBound === '1') return;
+      card.dataset.ptrDragBound = '1';
+
+      card.addEventListener('pointerdown', (e) => {
+        if (e.button && e.button !== 0) return;
+        const rightId = card.dataset.rightId || '';
+        if (!rightId || t2ParaMatchedIds.has(rightId)) return;
+
+        const rect = card.getBoundingClientRect();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const offX = startX - rect.left;
+        const offY = startY - rect.top;
+        let dragging = false;
+        let ghost = null;
+        let activeDropEl = null;
+
+        const onMove = (mv) => {
+          const dx = mv.clientX - startX;
+          const dy = mv.clientY - startY;
+          if (!dragging && Math.hypot(dx, dy) > 4) {
+            dragging = true;
+            t2DraggingRightId = rightId;
+            t2ParaSelectedLeft = null;
+            t2ParaSelectedRight = null;
+            card.classList.add('is-source-lifted');
+            ghost = document.createElement('div');
+            ghost.className = 't2-floating-block';
+            ghost.style.width = `${rect.width}px`;
+            ghost.style.minHeight = `${rect.height}px`;
+            ghost.style.left = `${mv.clientX - offX}px`;
+            ghost.style.top = `${mv.clientY - offY}px`;
+            ghost.innerHTML = card.innerHTML;
+            document.body.appendChild(ghost);
+          }
+          if (dragging && ghost) {
+            ghost.style.left = `${mv.clientX - offX}px`;
+            ghost.style.top = `${mv.clientY - offY}px`;
+            const hit = document.elementFromPoint(mv.clientX, mv.clientY)?.closest?.('.t2-dropzone:not(:disabled)') || null;
+            if (activeDropEl && activeDropEl !== hit) {
+              activeDropEl.classList.remove('is-drop-over');
+            }
+            activeDropEl = hit;
+            if (activeDropEl) activeDropEl.classList.add('is-drop-over');
+          }
+        };
+
+        const cleanupListeners = () => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+          window.removeEventListener('pointercancel', onCancel);
+        };
+
+        const onCancel = () => {
+          cleanupListeners();
+          t2DraggingRightId = null;
+          cleanupT2FloatingDrag();
+        };
+
+        const onUp = (up) => {
+          cleanupListeners();
+          if (!dragging) return;
+          up.preventDefault();
+          const hit = document.elementFromPoint(up.clientX, up.clientY)?.closest?.('.t2-dropzone:not(:disabled)') || activeDropEl;
+          const leftId = hit?.dataset?.leftId || '';
+          card.dataset.suppressClickUntil = String(Date.now() + 180);
+          t2DraggingRightId = null;
+          cleanupT2FloatingDrag();
+          if (leftId) {
+            attemptT2PairMatch(leftId, rightId, true);
+          }
+        };
+
+        window.addEventListener('pointermove', onMove, { passive: true });
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onCancel);
+      });
+    });
+  }
+
   function pickT2ParaRight(rightId) {
+    const el = document.getElementById(`t2-para-right-${rightId}`);
+    if (el && Number(el.dataset.suppressClickUntil || 0) > Date.now()) return;
     if (t2ParaMatchedIds.has(rightId)) return;
     if (t2ParaSelectedLeft) {
       attemptT2PairMatch(t2ParaSelectedLeft, rightId, false);
@@ -1640,123 +1731,16 @@
     renderTest2Stage();
   }
 
-  function onT2DragStart(event, rightId) {
-    if (t2ParaMatchedIds.has(rightId)) {
-      event.preventDefault();
-      return;
-    }
-    t2DraggingRightId = rightId;
-    t2ParaSelectedLeft = null;
-    t2ParaSelectedRight = null;
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', rightId);
-    }
-    event.currentTarget?.classList?.add('is-dragging');
-  }
-
-  function onT2DragEnd(event) {
-    t2DraggingRightId = null;
-    event.currentTarget?.classList?.remove('is-dragging');
-    document.querySelectorAll('.t2-dropzone.is-drop-over').forEach((el) => el.classList.remove('is-drop-over'));
-  }
-
-  function onT2DragOver(event, leftId) {
-    if (t2ParaMatchedIds.has(leftId)) return;
-    event.preventDefault();
-    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-    event.currentTarget?.classList?.add('is-drop-over');
-  }
-
-  function onT2DragLeave(event) {
-    event.currentTarget?.classList?.remove('is-drop-over');
-  }
-
-  function onT2Drop(event, leftId) {
-    event.preventDefault();
-    event.currentTarget?.classList?.remove('is-drop-over');
-    if (t2ParaMatchedIds.has(leftId)) return;
-    const droppedId = event.dataTransfer?.getData('text/plain') || t2DraggingRightId;
-    if (!droppedId) return;
-    attemptT2PairMatch(leftId, droppedId, true);
-  }
-
-  function bindT2TouchDrag() {
-    document.querySelectorAll('.t2-drag-card:not(:disabled)').forEach((card) => {
-      if (card.dataset.touchDragBound === '1') return;
-      card.dataset.touchDragBound = '1';
-      let startX = 0;
-      let startY = 0;
-      let dragging = false;
-      let ghost = null;
-      let rightId = '';
-
-      card.addEventListener('touchstart', (e) => {
-        if (!e.touches || e.touches.length !== 1) return;
-        rightId = card.dataset.rightId || '';
-        if (!rightId || t2ParaMatchedIds.has(rightId)) return;
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        dragging = false;
-      }, { passive: true });
-
-      card.addEventListener('touchmove', (e) => {
-        if (!e.touches || e.touches.length !== 1 || !rightId) return;
-        const dx = e.touches[0].clientX - startX;
-        const dy = e.touches[0].clientY - startY;
-        if (!dragging && Math.hypot(dx, dy) > 10) {
-          dragging = true;
-          card.classList.add('is-dragging');
-          ghost = document.createElement('div');
-          ghost.className = 't2-touch-ghost';
-          ghost.textContent = card.textContent?.replace('⋮⋮', '').trim() || '';
-          document.body.appendChild(ghost);
-        }
-        if (dragging) {
-          e.preventDefault();
-          const x = e.touches[0].clientX;
-          const y = e.touches[0].clientY;
-          if (ghost) {
-            ghost.style.left = `${x}px`;
-            ghost.style.top = `${y}px`;
-          }
-          document.querySelectorAll('.t2-dropzone.is-drop-over').forEach((dz) => dz.classList.remove('is-drop-over'));
-          const hit = document.elementFromPoint(x, y)?.closest?.('.t2-dropzone:not(:disabled)');
-          if (hit) hit.classList.add('is-drop-over');
-        }
-      }, { passive: false });
-
-      const finishTouch = (e) => {
-        if (!dragging) {
-          rightId = '';
-          return;
-        }
-        e.preventDefault();
-        card.classList.remove('is-dragging');
-        const t = e.changedTouches && e.changedTouches[0];
-        const hit = t ? document.elementFromPoint(t.clientX, t.clientY)?.closest?.('.t2-dropzone:not(:disabled)') : null;
-        document.querySelectorAll('.t2-dropzone.is-drop-over').forEach((dz) => dz.classList.remove('is-drop-over'));
-        if (ghost) {
-          ghost.remove();
-          ghost = null;
-        }
-        const leftId = hit?.dataset?.leftId || '';
-        const draggedId = rightId;
-        dragging = false;
-        rightId = '';
-        if (leftId && draggedId) {
-          attemptT2PairMatch(leftId, draggedId, true);
-        }
-      };
-
-      card.addEventListener('touchend', finishTouch, { passive: false });
-      card.addEventListener('touchcancel', finishTouch, { passive: false });
-    });
-  }
+  function onT2DragStart(event, rightId) { event?.preventDefault?.(); }
+  function onT2DragEnd() { cleanupT2FloatingDrag(); }
+  function onT2DragOver(event) { event?.preventDefault?.(); }
+  function onT2DragLeave() {}
+  function onT2Drop(event) { event?.preventDefault?.(); }
 
   function renderTest2Stage() {
     const container = document.getElementById('task-stage-container');
     if (!container || !activeTask) return;
+    cleanupT2FloatingDrag();
     const esc = B()?.escapeHtml || ((x) => String(x));
     if (t2ParaBoards.length === 0 && t2ContextQs.length === 0) {
       initTest2State(activeTask);
@@ -1767,13 +1751,13 @@
       const leftHtml = curBoard.map((p) => {
         const matched = t2ParaMatchedIds.has(p.id);
         const active = t2ParaSelectedLeft === p.id;
-        return `<button type="button" class="task-match-btn t2-dropzone ${matched ? 'is-matched' : ''} ${active ? 'is-active' : ''}" id="t2-para-left-${esc(p.id)}" data-left-id="${esc(p.id)}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaLeft('${esc(p.id)}')" ondragover="TasksModule.onT2DragOver(event, '${esc(p.id)}')" ondragleave="TasksModule.onT2DragLeave(event)" ondrop="TasksModule.onT2Drop(event, '${esc(p.id)}')"><span class="t2-drop-word">${esc(p.left)}</span><span class="t2-drop-slot ${matched ? 'is-filled' : ''}">${matched ? `✓ ${esc(p.right)}` : 'Thả vào đây'}</span></button>`;
+        return `<button type="button" class="task-match-btn t2-dropzone ${matched ? 'is-matched' : ''} ${active ? 'is-active' : ''}" id="t2-para-left-${esc(p.id)}" data-left-id="${esc(p.id)}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaLeft('${esc(p.id)}')"><span class="t2-drop-word">${esc(p.left)}</span><span class="t2-drop-slot ${matched ? 'is-filled' : ''}">${matched ? `✓ ${esc(p.right)}` : 'Thả vào đây'}</span></button>`;
       }).join('');
 
       const rightHtml = t2ParaShuffledRight.map((p) => {
         const matched = t2ParaMatchedIds.has(p.id);
         const rightActive = t2ParaSelectedRight === p.id;
-        return `<button type="button" class="task-match-btn t2-drag-card ${matched ? 'is-matched' : ''} ${rightActive ? 'is-active' : ''}" id="t2-para-right-${esc(p.id)}" data-right-id="${esc(p.id)}" draggable="${matched ? 'false' : 'true'}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaRight('${esc(p.id)}')" ondragstart="TasksModule.onT2DragStart(event, '${esc(p.id)}')" ondragend="TasksModule.onT2DragEnd(event)"><span class="t2-drag-grip" aria-hidden="true">⋮⋮</span><span>${esc(p.right)}</span></button>`;
+        return `<button type="button" class="task-match-btn t2-drag-card ${matched ? 'is-matched' : ''} ${rightActive ? 'is-active' : ''}" id="t2-para-right-${esc(p.id)}" data-right-id="${esc(p.id)}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaRight('${esc(p.id)}')"><span class="t2-drag-grip" aria-hidden="true">⋮⋮</span><span>${esc(p.right)}</span></button>`;
       }).join('');
 
       const paraPct = Math.round(((t2ParaBoardIndex + (t2ParaMatchedIds.size / Math.max(1, curBoard.length))) / Math.max(1, t2ParaBoards.length)) * 100);
@@ -1798,15 +1782,15 @@
           </div>
           <div class="task-match-head">
             <span>Từ vựng trong Task (Hộp chứa)</span>
-            <span>Paraphrase thường gặp (Kéo vào cột trái)</span>
+            <span>Paraphrase thường gặp (Kéo sang trái)</span>
           </div>
-          <div class="task-match-wrap">
+          <div class="task-match-wrap is-t2-dnd">
             <div class="task-match-col">${leftHtml}</div>
             <div class="task-match-col">${rightHtml}</div>
           </div>
         </div>
       `;
-      bindT2TouchDrag();
+      bindT2PointerDrag();
       return;
     }
 

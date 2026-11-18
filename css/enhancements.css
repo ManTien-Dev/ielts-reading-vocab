@@ -2901,10 +2901,24 @@ button.task-step-pill.active:hover {
   border-color: #dc2626;
   background: rgba(239, 68, 68, 0.16);
 }
-/* Test 2 Drag & Drop (Left = Drop Container, Right = Draggable Paraphrase Chip) */
+/* Test 2 Drag & Drop (Left = Drop Container, Right = Whole Block Transfer) */
+@keyframes t2BlockSnapIn {
+  0% { transform: scale(0.86) translateX(18px); opacity: 0.35; }
+  70% { transform: scale(1.03) translateX(0); opacity: 1; }
+  100% { transform: scale(1) translateX(0); opacity: 1; }
+}
+@keyframes t2WrongShake {
+  0%, 100% { transform: translateX(0); }
+  22% { transform: translateX(-6px); }
+  45% { transform: translateX(6px); }
+  70% { transform: translateX(-4px); }
+}
+.task-match-wrap.is-t2-dnd .task-match-col:last-child {
+  justify-content: flex-start;
+}
 .t2-dropzone {
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
 }
 .t2-dropzone > * {
   pointer-events: none;
@@ -2915,54 +2929,82 @@ button.task-step-pill.active:hover {
 }
 .t2-drop-slot {
   flex-shrink: 0;
-  max-width: 52%;
-  padding: 5px 11px;
-  border-radius: 10px;
-  border: 1.5px dashed rgba(82, 136, 62, 0.42);
-  background: rgba(82, 136, 62, 0.05);
+  max-width: 54%;
+  padding: 7px 14px;
+  border-radius: 12px;
+  border: 1.5px dashed rgba(82, 136, 62, 0.38);
+  background: rgba(82, 136, 62, 0.04);
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: all 0.16s ease;
 }
 .t2-drop-slot.is-filled {
-  border-style: solid;
-  border-color: rgba(47, 107, 50, 0.45);
-  background: rgba(82, 136, 62, 0.16);
-  color: #164e23;
-  font-size: 14px;
+  border: 1.5px solid #52883e;
+  background: var(--card-bg);
+  color: #1b5426;
+  padding: 9px 16px;
+  font-size: 16.5px;
   font-weight: 800;
+  box-shadow: 0 4px 14px rgba(47, 107, 50, 0.14);
+  animation: t2BlockSnapIn 0.26s cubic-bezier(0.2, 0.9, 0.25, 1.05);
 }
 [data-theme="dark"] .t2-drop-slot.is-filled {
   color: #bfe8cb;
-  background: rgba(130, 184, 146, 0.22);
+  background: rgba(34, 54, 39, 0.95);
+  border-color: #659e6d;
 }
 .t2-dropzone.is-matched {
-  opacity: 0.9;
+  opacity: 1;
+  background: rgba(82, 136, 62, 0.11);
+  border-color: rgba(82, 136, 62, 0.45);
 }
 .t2-dropzone.is-drop-over {
   border-color: #2f6b32 !important;
   border-style: dashed !important;
-  background: rgba(82, 136, 62, 0.15) !important;
+  background: rgba(82, 136, 62, 0.14) !important;
   box-shadow: 0 0 0 3px rgba(47, 107, 50, 0.22) !important;
-  transform: scale(1.01);
+  transform: scale(1.012);
+}
+.t2-dropzone.is-drop-over .t2-drop-slot:not(.is-filled) {
+  border-color: #2f6b32;
+  background: rgba(82, 136, 62, 0.14);
+  color: #1b5426;
 }
 .t2-drag-card {
+  flex: 0 0 auto !important;
+  min-height: 70px;
   gap: 12px;
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
-.t2-drag-card:not(:disabled):active,
-.t2-drag-card.is-dragging {
-  cursor: grabbing;
-  opacity: 0.55;
-  transform: scale(0.98);
-  border-style: dashed;
+.t2-drag-card:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(47, 107, 50, 0.12);
+}
+.t2-drag-card.is-source-lifted {
+  opacity: 0.18 !important;
+  border-style: dashed !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: scale(0.98) !important;
+}
+.t2-drag-card.is-source-lifted > * {
+  opacity: 0;
+}
+.t2-drag-card.is-matched {
+  display: none !important;
+}
+.t2-drag-card.is-err,
+.t2-dropzone.is-err {
+  animation: t2WrongShake 0.3s ease;
 }
 .t2-drag-grip {
   color: var(--text-muted);
@@ -2972,22 +3014,42 @@ button.task-step-pill.active:hover {
   opacity: 0.65;
   flex-shrink: 0;
 }
-.t2-touch-ghost {
+.t2-floating-block {
   position: fixed;
   z-index: 100005;
   pointer-events: none;
-  padding: 10px 18px;
-  border-radius: 14px;
-  background: #2f6b32;
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 800;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
-  transform: translate(-50%, -50%);
-  max-width: 78vw;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 26px;
+  border-radius: 16px;
+  border: 2px solid #2f6b32;
+  background: var(--card-bg);
+  color: var(--text-bright);
+  font-size: 21px;
+  font-weight: 750;
+  line-height: 1.38;
+  box-shadow: 0 18px 42px rgba(47, 107, 50, 0.24), 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: scale(1.03) rotate(1deg);
+  transition: transform 0.08s ease;
+  box-sizing: border-box;
+}
+[data-theme="dark"] .t2-floating-block {
+  background: #1f2b22;
+  border-color: #7cc086;
+}
+@media (max-width: 1366px), (max-height: 780px) {
+  .t2-drag-card {
+    min-height: 60px;
+  }
+  .t2-floating-block {
+    padding: 13px 18px;
+    font-size: 18px;
+  }
+  .t2-drop-slot.is-filled {
+    font-size: 15px;
+    padding: 7px 13px;
+  }
 }
 @media (max-width: 640px) {
   .t2-dropzone {
@@ -2996,17 +3058,23 @@ button.task-step-pill.active:hover {
     gap: 6px;
     padding: 10px 12px !important;
   }
-  .t2-drop-slot {
+  .t2-drop-slot,
+  .t2-drop-slot.is-filled {
     max-width: 100%;
-    font-size: 11.5px;
-    padding: 3px 8px;
+    font-size: 12px;
+    padding: 4px 9px;
   }
   .t2-drag-card {
+    min-height: 54px;
     gap: 6px;
     padding: 10px 12px !important;
   }
   .t2-drag-grip {
     font-size: 13px;
+  }
+  .t2-floating-block {
+    padding: 10px 14px;
+    font-size: 15.5px;
   }
 }
 .task-q-opts {
