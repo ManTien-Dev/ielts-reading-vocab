@@ -51,6 +51,7 @@
   let isPreviewTestMode = false;
   let lockCountdownTimer = null;
   let examReadyPromptShownForTaskId = null;
+  let lastPreviewSummaryRecord = null;
 
   const B = () => window.__VOCAB_BRIDGE__;
 
@@ -1200,6 +1201,7 @@
     stopIdleMonitor();
     activeTask = t;
     isPreviewTestMode = true;
+    lastPreviewSummaryRecord = null;
     taskTestPassed = false;
     taskStartedAt = Date.now();
     taskLeaveWarnings = 0;
@@ -1609,6 +1611,9 @@
       }).join('');
 
       const paraPct = Math.round(((t2ParaBoardIndex + (t2ParaMatchedIds.size / Math.max(1, curBoard.length))) / Math.max(1, t2ParaBoards.length)) * 100);
+      const teacherMcqBtn = isTeacherOrBypassed()
+        ? `<button type="button" class="btn-subtle" id="btn-teacher-t2-mcq-preview" style="padding:5px 11px; font-size:12.5px;" onclick="TasksModule.jumpToT2McqPreview()">Xem 6 câu A/B/C/D →</button>`
+        : '';
 
       container.innerHTML = `
         <div class="task-card-panel">
@@ -1622,6 +1627,7 @@
             <div class="task-stat-pills">
               <span class="task-err-pill ${t2ParaMistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t2-err-cnt">${t2ParaMistakes}</strong></span>
               <span class="recall-stage-pill">${t2ParaMatchedIds.size} / ${curBoard.length} cặp</span>
+              ${teacherMcqBtn}
             </div>
           </div>
           <div class="task-match-head">
@@ -1679,6 +1685,9 @@
       ? esc(q.qText).replace(/______/g, '<span class="task-blank-pill">______</span>')
       : '';
     const letters = ['A', 'B', 'C', 'D'];
+    const teacherBackParaBtn = (isTeacherOrBypassed() && t2ParaBoards.length > 0)
+      ? `<button type="button" class="btn-subtle" id="btn-teacher-t2-para-preview" style="padding:5px 11px; font-size:12.5px;" onclick="TasksModule.jumpToT2ParaPreview()">← Về Nối cụm từ</button>`
+      : '';
 
     container.innerHTML = `
       <div class="task-card-panel">
@@ -1689,6 +1698,7 @@
           <h2 class="task-exam-title">${typeLabel} · Câu ${t2Index + 1} / ${qs.length}</h2>
           <div class="task-stat-pills">
             <span class="recall-stage-pill">Đúng ${t2Correct} / ${totalT2}</span>
+            ${teacherBackParaBtn}
           </div>
         </div>
         <div style="font-size:21px; font-weight:750; color:var(--text-bright); line-height:1.5; margin-bottom:14px;">${esc(q.prompt)}</div>
@@ -1743,6 +1753,21 @@
   function nextTest2Question() {
     t2Index++;
     t2Answered = false;
+    renderTest2Stage();
+  }
+
+  function jumpToT2McqPreview() {
+    if (!activeTask || !isTeacherOrBypassed()) return;
+    t2ParaDone = true;
+    t2Index = 0;
+    t2Answered = false;
+    renderTest2Stage();
+  }
+
+  function jumpToT2ParaPreview() {
+    if (!activeTask || !isTeacherOrBypassed()) return;
+    t2ParaDone = false;
+    setupT2ParaBoard();
     renderTest2Stage();
   }
 
@@ -2563,9 +2588,29 @@
 
       let masteryNote = '';
       if (g.passed && isTeacherSession) {
+        const durationSec = Math.max(1, Math.round((Date.now() - (taskStartedAt || Date.now())) / 1000));
+        const totalT1 = activeTask.words?.length || 50;
+        const t1AccuracyPct = Math.max(0, Math.round(((totalT1 - Math.min(totalT1, t1Mistakes)) / totalT1) * 100));
+        const totalT2 = (t2ParaPairs.length + t2ContextQs.length) || getTaskTest2Total(activeTask);
+        lastPreviewSummaryRecord = {
+          taskId: activeTask.id,
+          status: 'completed',
+          test1Mistakes: t1Mistakes,
+          test1AccuracyPct: t1AccuracyPct,
+          test2Score: t2Correct,
+          test2Total: totalT2,
+          translationScore: g.score,
+          durationSec,
+          linkedCount: activeTask.linkedIds.length,
+          newlyMarked: activeTask.linkedIds.length,
+          updatedAt: Date.now(),
+        };
         masteryNote = `
           <div style="margin-top:14px; padding:14px 16px; border-radius:12px; background:rgba(82,136,62,0.16); border:1px solid rgba(82,136,62,0.35); color:var(--text-bright); font-size:15.5px;">
-            <div style="font-weight:800;">✓ Đạt Test thử ${esc(activeTask.label)}!</div>
+            <div style="font-weight:800;">✓ Đạt Test thử ${esc(activeTask.label)}! (Chế độ xem thử không lưu điểm vào báo cáo lớp)</div>
+            <div style="margin-top:10px;">
+              <button type="button" class="btn btn-primary" onclick="TasksModule.openTaskSummaryModal('${esc(activeTask.id)}', true)">Xem Bảng Thống Kê Hoàn Thành (Preview)</button>
+            </div>
           </div>`;
       } else if (g.passed) {
         taskTestPassed = true;
@@ -2635,8 +2680,8 @@
 
       switchT3Tab('grade');
 
-      if (g.passed && !isTeacherSession) {
-        setTimeout(() => openTaskSummaryModal(activeTask?.id), 180);
+      if (g.passed) {
+        setTimeout(() => openTaskSummaryModal(activeTask?.id, isTeacherSession), 180);
       }
     } catch (err) {
       if (out) {
@@ -2733,7 +2778,7 @@
     return `${m} phút ${String(r).padStart(2, '0')} giây`;
   }
 
-  function openTaskSummaryModal(focusTaskId = null) {
+  function openTaskSummaryModal(focusTaskId = null, previewStudentSummary = false) {
     const bridge = B();
     const esc = bridge?.escapeHtml || ((x) => String(x));
     const titleEl = document.getElementById('task-summary-modal-title');
@@ -2741,7 +2786,7 @@
     const bodyEl = document.getElementById('task-summary-body');
     if (!bodyEl) return;
 
-    if (bridge?.isTeacherUser?.()) {
+    if (bridge?.isTeacherUser?.() && !previewStudentSummary) {
       if (titleEl) titleEl.textContent = 'Bảng Thống Kê Task Cả Lớp';
       if (subEl) subEl.textContent = 'Theo dõi số Task hoàn thành, điểm Test và điểm Dịch AI của từng học viên';
       const students = bridge.getStudentAccounts?.() || [];
@@ -2785,12 +2830,18 @@
       return;
     }
 
-    // Student Task Summary View
-    const prog = loadTaskProgress();
+    // Student Task Summary View (or Teacher Post-Test Preview)
+    const prog = previewStudentSummary ? {} : loadTaskProgress();
     const allTasks = getTasksList();
-    const doneList = allTasks
-      .map((t) => ({ task: t, rec: prog[t.id] }))
-      .filter((x) => x.rec && x.rec.status === 'completed');
+    const focusTask = focusTaskId ? getTaskById(focusTaskId) : null;
+    const focusRec = (previewStudentSummary && lastPreviewSummaryRecord && (!focusTask || lastPreviewSummaryRecord.taskId === focusTask.id))
+      ? lastPreviewSummaryRecord
+      : (focusTask ? prog[focusTask.id] : null);
+    const doneList = (previewStudentSummary && focusTask && focusRec?.status === 'completed')
+      ? [{ task: focusTask, rec: focusRec }]
+      : allTasks
+          .map((t) => ({ task: t, rec: prog[t.id] }))
+          .filter((x) => x.rec && x.rec.status === 'completed');
 
     const totalDone = doneList.length;
     const avgScore = totalDone
@@ -2801,12 +2852,9 @@
       doneList.flatMap((x) => x.task.linkedIds || [])
     ).size;
 
-    const focusTask = focusTaskId ? getTaskById(focusTaskId) : null;
-    const focusRec = focusTask ? prog[focusTask.id] : null;
-
     if (titleEl) {
       titleEl.textContent = (focusTask && focusRec?.status === 'completed')
-        ? `Hoàn Thành ${focusTask.label} — Bảng Thống Kê`
+        ? `Hoàn Thành ${focusTask.label} — Bảng Thống Kê${previewStudentSummary ? ' (Bản Preview Học Viên)' : ''}`
         : 'Bảng Thống Kê Tiến Độ Task';
     }
     if (subEl) {
@@ -2919,6 +2967,8 @@
     proceedToTest2FromT1,
     answerTest2,
     nextTest2Question,
+    jumpToT2McqPreview,
+    jumpToT2ParaPreview,
     retryTest2,
     startFinalTranslation,
     openAdminTestPreview,
