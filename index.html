@@ -10,9 +10,9 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261119d">
-  <link rel="stylesheet" href="css/motion.css?v=20261119d">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261119d">
+  <link rel="stylesheet" href="css/style.css?v=20261119e">
+  <link rel="stylesheet" href="css/motion.css?v=20261119e">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261119e">
 </head>
 <body>
 
@@ -89,6 +89,7 @@
         <span class="tip-pill" id="task-study-pill" style="margin:0;">TASK 1</span>
         <span class="task-study-bar-status" id="task-study-status">Đã thuộc 0 / 50 từ</span>
         <span class="task-idle-mini" id="task-study-idle-badge" title="Không thao tác quá 10 phút sẽ khóa 30 phút">00:00 / 10:00</span>
+        <span class="task-deadline-mini" id="task-study-deadline-badge" style="display:none;" title="Thời hạn làm Task còn lại"></span>
       </div>
       <div class="task-study-bar-actions">
         <button type="button" class="btn btn-primary btn-sm-task" id="btn-task-to-test1" onclick="TasksModule.onClickStartTaskExam()">Mở Test (0/50)</button>
@@ -532,6 +533,24 @@
           </div>
         </div>
 
+        <div class="teacher-deadline-row">
+          <label for="teacher-task-deadline-preset" class="teacher-deadline-label">Thời hạn Task (tùy chọn):</label>
+          <select class="scope-select" id="teacher-task-deadline-preset" onchange="TasksModule.onTeacherDeadlinePresetChange()">
+            <option value="0">Không giới hạn thời gian</option>
+            <option value="30">30 phút (từ lúc gửi)</option>
+            <option value="60">1 giờ (từ lúc gửi)</option>
+            <option value="120">2 giờ (từ lúc gửi)</option>
+            <option value="360">6 giờ (từ lúc gửi)</option>
+            <option value="720">12 giờ (từ lúc gửi)</option>
+            <option value="1440">24 giờ (1 ngày)</option>
+            <option value="2880">48 giờ (2 ngày)</option>
+            <option value="4320">72 giờ (3 ngày)</option>
+            <option value="custom">Chọn ngày giờ đóng cụ thể...</option>
+          </select>
+          <input type="datetime-local" class="task-link-input teacher-deadline-custom" id="teacher-task-deadline-custom" style="display:none;" onchange="TasksModule.updateTeacherLinkPreview()">
+          <span class="teacher-deadline-hint" id="teacher-task-deadline-hint">Học viên có thể làm bất kỳ lúc nào</span>
+        </div>
+
         <div class="task-link-box" style="margin-top:0; margin-bottom:10px;">
           <input type="text" class="task-link-input" id="teacher-dash-link-preview" readonly placeholder="Tick ít nhất 1 Task bên dưới để tạo link...">
           <button type="button" class="btn btn-primary" onclick="TasksModule.copyTeacherTaskLink()">Copy Link Task</button>
@@ -799,8 +818,9 @@
       <div class="modal-body" style="padding:16px 22px 20px;">
         <div class="task-notice-box" id="brief-task-info"></div>
         <div class="task-lock-banner" id="brief-task-lock" style="display:none;"></div>
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
           <button type="button" class="btn-subtle" onclick="TasksModule.closeTaskBriefModal()">Để sau</button>
+          <button type="button" class="btn btn-primary" id="btn-view-expired-result" style="display:none;" onclick="TasksModule.viewExpiredTaskResult()">Xem kết quả bài làm →</button>
           <button type="button" class="btn btn-primary" id="btn-start-task" onclick="TasksModule.startPendingTask()">Bắt đầu làm Task</button>
         </div>
       </div>
@@ -845,6 +865,7 @@
           <span class="task-step-pill active" id="task-current-step-badge">Test 1</span>
         </div>
         <div class="task-topbar-actions">
+          <div class="task-deadline-badge" id="task-exam-deadline-badge" style="display:none;" title="Thời hạn làm Task còn lại"></div>
           <div class="task-idle-badge" id="task-idle-badge" title="Không thao tác quá 10 phút sẽ tự thoát và khóa 30 phút">
             00:00 / 10:00
           </div>
@@ -936,12 +957,12 @@
     </div>
   </div>
 
-  <script src="data/accounts.js?v=20261119d"></script>
-  <script src="data/vocab_data.js?v=20261119d"></script>
-  <script src="data/tasks_data.js?v=20261119d"></script>
-  <script src="data/ipa_dict.js?v=20261119d"></script>
-  <script src="js/motion.js?v=20261119d"></script>
-  <script src="js/app.js?v=20261119d"></script>
-  <script src="js/tasks.js?v=20261119d"></script>
+  <script src="data/accounts.js?v=20261119e"></script>
+  <script src="data/vocab_data.js?v=20261119e"></script>
+  <script src="data/tasks_data.js?v=20261119e"></script>
+  <script src="data/ipa_dict.js?v=20261119e"></script>
+  <script src="js/motion.js?v=20261119e"></script>
+  <script src="js/app.js?v=20261119e"></script>
+  <script src="js/tasks.js?v=20261119e"></script>
 </body>
 </html>

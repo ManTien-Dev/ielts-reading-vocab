@@ -2377,6 +2377,67 @@ main.app-main:has(#screen-study.active) {
   align-items: center;
   margin-top: 8px;
 }
+.teacher-deadline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg-soft);
+  border: 1px solid var(--card-border);
+}
+.teacher-deadline-label {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--text-bright);
+  white-space: nowrap;
+}
+.teacher-deadline-custom {
+  max-width: 225px;
+  min-width: 185px;
+  flex: 0 1 auto;
+}
+.teacher-deadline-hint {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.task-deadline-mini,
+.task-deadline-badge {
+  font-size: 12px;
+  font-weight: 750;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(245, 158, 11, 0.13);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #b45309;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+[data-theme="dark"] .task-deadline-mini,
+[data-theme="dark"] .task-deadline-badge {
+  color: #fcd34d;
+}
+.task-deadline-mini.is-urgent,
+.task-deadline-badge.is-urgent {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #b91c1c;
+}
+[data-theme="dark"] .task-deadline-mini.is-urgent,
+[data-theme="dark"] .task-deadline-badge.is-urgent {
+  color: #fca5a5;
+}
+.task-lock-banner.is-info-ended {
+  background: rgba(34, 150, 90, 0.12);
+  border-color: rgba(34, 150, 90, 0.35);
+  color: #166534;
+}
+[data-theme="dark"] .task-lock-banner.is-info-ended {
+  color: #86efac;
+}
 .task-link-input {
   flex: 1;
   padding: 10px 12px;

@@ -4489,6 +4489,7 @@
         MASTER_COOLDOWN_KEY_BASE,
         RECALL_ACTIVE_KEY_BASE,
         'ielts_active_task_exam_',
+        'ielts_task_deadlines_',
         'ielts_teacher_sent_tasks_',
         'ielts_trans_draft_',
         'ielts_task_draft_',

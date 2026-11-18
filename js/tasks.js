@@ -10,6 +10,7 @@
   const LOCAL_AI_KEY_STORAGE = 'ielts_gemini_local_key_v1';
   const TEACHER_SENT_TASKS_KEY = 'ielts_teacher_sent_tasks_v1';
   const ACTIVE_TASK_EXAM_KEY_BASE = 'ielts_active_task_exam_';
+  const TASK_DEADLINE_KEY_BASE = 'ielts_task_deadlines_';
 
   let teacherSelectedIds = new Set();
   let teacherFilterPendingOnly = false;
@@ -203,6 +204,116 @@
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
+  function formatDeadlineRemaining(ms) {
+    const totalSec = Math.max(0, Math.ceil(ms / 1000));
+    const d = Math.floor(totalSec / 86400);
+    const h = Math.floor((totalSec % 86400) / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (d > 0) return `${d} ngày ${String(h).padStart(2, '0')}g${String(m).padStart(2, '0')}p`;
+    if (h > 0) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function formatDeadlineTimestamp(ts) {
+    if (!ts) return '';
+    try {
+      const d = new Date(ts);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mo = String(d.getMonth() + 1).padStart(2, '0');
+      return `${hh}:${mm} ${dd}/${mo}`;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function loadTaskDeadlines() {
+    const uid = getScopedStorageUid();
+    if (!uid) return {};
+    try {
+      return JSON.parse(localStorage.getItem(`${TASK_DEADLINE_KEY_BASE}${uid}`) || '{}') || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function saveTaskDeadlines(map) {
+    const uid = getScopedStorageUid();
+    if (!uid || !map || typeof map !== 'object') return;
+    try {
+      localStorage.setItem(`${TASK_DEADLINE_KEY_BASE}${uid}`, JSON.stringify(map));
+    } catch (_) {}
+  }
+
+  function recordUrlTaskDeadlines(taskIds) {
+    if (!Array.isArray(taskIds) || !taskIds.length) return;
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      const rawDl = Number(sp.get('deadline') || sp.get('due') || 0);
+      if (!Number.isFinite(rawDl) || rawDl <= 1e11) return;
+      const issuedAt = Math.max(0, Number(sp.get('issued') || 0));
+      const map = loadTaskDeadlines();
+      let changed = false;
+      taskIds.forEach((tid) => {
+        const prev = map[tid];
+        if (!prev || typeof prev !== 'object') {
+          map[tid] = { deadlineAt: rawDl, issuedAt };
+          changed = true;
+        } else {
+          const prevDl = Number(prev.deadlineAt || 0);
+          const prevIssued = Number(prev.issuedAt || 0);
+          if (issuedAt > prevIssued) {
+            map[tid] = { deadlineAt: rawDl, issuedAt };
+            changed = true;
+          } else if (prevDl <= 0 || rawDl < prevDl) {
+            map[tid] = { deadlineAt: rawDl, issuedAt: prevIssued };
+            changed = true;
+          }
+        }
+      });
+      if (changed) saveTaskDeadlines(map);
+    } catch (_) {}
+  }
+
+  function getTaskDeadlineInfo(taskId) {
+    if (!taskId) return { hasDeadline: false, deadlineAt: 0, remainingMs: 0, expired: false, formattedAt: '' };
+    const map = loadTaskDeadlines();
+    let deadlineAt = Number(map?.[taskId]?.deadlineAt || 0);
+    if (deadlineAt <= 0 && assignedUrlTaskIds.includes(taskId)) {
+      try {
+        const sp = new URLSearchParams(window.location.search || '');
+        const rawDl = Number(sp.get('deadline') || sp.get('due') || 0);
+        if (Number.isFinite(rawDl) && rawDl > 1e11) deadlineAt = rawDl;
+      } catch (_) {}
+    }
+    if (deadlineAt <= 0) {
+      return { hasDeadline: false, deadlineAt: 0, remainingMs: 0, expired: false, formattedAt: '' };
+    }
+    const rem = Math.max(0, deadlineAt - Date.now());
+    return {
+      hasDeadline: true,
+      deadlineAt,
+      remainingMs: rem,
+      expired: rem <= 0,
+      formattedAt: formatDeadlineTimestamp(deadlineAt),
+    };
+  }
+
+  function getTaskExpiryState(taskId) {
+    const dl = getTaskDeadlineInfo(taskId);
+    const prog = loadTaskProgress()[taskId];
+    const completed = Boolean(prog && prog.status === 'completed');
+    const expired = Boolean(dl.hasDeadline && dl.expired);
+    return {
+      ...dl,
+      completed,
+      canStart: !expired,
+      canViewResultOnly: Boolean(expired && completed),
+    };
+  }
+
   function parseUrlAssignedTasks() {
     try {
       const sp = new URLSearchParams(window.location.search || '');
@@ -345,21 +456,65 @@
     updateTeacherLinkPreview();
   }
 
+  function computeSelectedDeadlineMs(nowTs = Date.now()) {
+    const preset = document.getElementById('teacher-task-deadline-preset')?.value || '0';
+    if (preset === '0') return 0;
+    if (preset === 'custom') {
+      const raw = document.getElementById('teacher-task-deadline-custom')?.value || '';
+      if (!raw) return 0;
+      const ts = new Date(raw).getTime();
+      return (Number.isFinite(ts) && ts > nowTs) ? ts : 0;
+    }
+    const mins = Number(preset || 0);
+    return (Number.isFinite(mins) && mins > 0) ? (nowTs + mins * 60 * 1000) : 0;
+  }
+
+  function onTeacherDeadlinePresetChange() {
+    const presetEl = document.getElementById('teacher-task-deadline-preset');
+    const customEl = document.getElementById('teacher-task-deadline-custom');
+    if (presetEl && customEl) {
+      const isCustom = presetEl.value === 'custom';
+      customEl.style.display = isCustom ? 'inline-block' : 'none';
+      if (isCustom && !customEl.value) {
+        const dt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        const pad = (n) => String(n).padStart(2, '0');
+        customEl.value = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+      }
+    }
+    updateTeacherLinkPreview();
+  }
+
   function updateTeacherLinkPreview() {
     const ids = [...teacherSelectedIds].sort();
     const cntEl = document.getElementById('teacher-dash-sel-count');
     if (cntEl) cntEl.textContent = `Đã chọn: ${ids.length} Task`;
+    const nowTs = Date.now();
+    const deadlineMs = computeSelectedDeadlineMs(nowTs);
+    const hintEl = document.getElementById('teacher-task-deadline-hint');
+    if (hintEl) {
+      if (deadlineMs > 0) {
+        hintEl.textContent = `Đóng lúc ${formatDeadlineTimestamp(deadlineMs)} (hết giờ không làm lại được)`;
+      } else if (document.getElementById('teacher-task-deadline-preset')?.value === 'custom') {
+        hintEl.textContent = 'Hãy chọn thời điểm đóng ở tương lai';
+      } else {
+        hintEl.textContent = 'Học viên có thể làm bất kỳ lúc nào';
+      }
+    }
     const base = window.location.href.split('?')[0].split('#')[0];
-    const url = ids.length === 0
+    let url = ids.length === 0
       ? ''
       : (ids.length === 1
         ? `${base}?task=${encodeURIComponent(ids[0])}`
         : `${base}?tasks=${ids.map(encodeURIComponent).join(',')}`);
+    if (url && deadlineMs > 0) {
+      url += `&deadline=${deadlineMs}&issued=${nowTs}`;
+    }
     const inp = document.getElementById('teacher-dash-link-preview');
     if (inp) inp.value = url;
   }
 
   function copyTeacherTaskLink() {
+    updateTeacherLinkPreview();
     const inp = document.getElementById('teacher-dash-link-preview');
     const url = inp?.value?.trim() || '';
     if (!url) {
@@ -652,17 +807,37 @@
       : getTasksList();
 
     grid.innerHTML = listToShow.map((t) => {
-      const done = progress[t.id]?.status === 'completed';
+      const exp = getTaskExpiryState(t.id);
+      const done = exp.completed;
       const lockRem = getTaskLockRemainingMs(t.id);
-      const statusText = done
-        ? `✓ Hoàn thành (${progress[t.id].translationScore ?? '--'}/10)`
-        : (lockRem > 0 ? `Khóa ${formatMmSs(lockRem)}` : `${t.theme} · ~${t.estMinutes}p`);
-      const clsState = done ? 'is-done' : (lockRem > 0 ? 'is-locked' : '');
+      let statusText = `${t.theme} · ~${t.estMinutes}p`;
+      let clsState = '';
+      let subCls = '';
+
+      if (exp.expired && !done) {
+        statusText = `⏰ Task đã kết thúc (Hết hạn lúc ${exp.formattedAt})`;
+        clsState = 'is-locked';
+        subCls = 'task-text-err';
+      } else if (exp.expired && done) {
+        statusText = `✓ Hoàn thành (${progress[t.id].translationScore ?? '--'}/10) · Hết hạn (Chỉ xem kết quả)`;
+        clsState = 'is-done';
+        subCls = 'task-text-ok';
+      } else if (done) {
+        statusText = `✓ Hoàn thành (${progress[t.id].translationScore ?? '--'}/10)` + (exp.hasDeadline ? ` · Còn ${formatDeadlineRemaining(exp.remainingMs)}` : '');
+        clsState = 'is-done';
+        subCls = 'task-text-ok';
+      } else if (lockRem > 0) {
+        statusText = `Khóa ${formatMmSs(lockRem)}`;
+        clsState = 'is-locked';
+        subCls = 'task-text-err';
+      } else if (exp.hasDeadline) {
+        statusText = `${t.theme} · Còn ${formatDeadlineRemaining(exp.remainingMs)}`;
+      }
       return `
         <button type="button" class="teacher-task-item ${clsState}" style="text-align:left;" onclick="TasksModule.closeStudentTasksModal(); TasksModule.openTaskBriefModal('${esc(t.id)}')">
           <div>
             <div class="teacher-task-title">${esc(t.label)}</div>
-            <div class="teacher-task-sub ${done ? 'task-text-ok' : (lockRem > 0 ? 'task-text-err' : '')}">${esc(statusText)}</div>
+            <div class="teacher-task-sub ${subCls}">${esc(statusText)}</div>
           </div>
         </button>
       `;
@@ -687,8 +862,12 @@
     if (theme) theme.textContent = t.theme;
 
     const progress = loadTaskProgress()[t.id];
+    const exp = getTaskExpiryState(t.id);
     const doneNote = progress?.status === 'completed'
-      ? `<div class="task-text-ok" style="margin-top:8px; font-weight:700;">✓ Bạn đã hoàn thành Task này (Test 3 dịch bài: ${progress.translationScore}/10). Có thể làm lại để ôn tập.</div>`
+      ? `<div class="task-text-ok" style="margin-top:8px; font-weight:700;">✓ Bạn đã hoàn thành Task này (Test 3 dịch bài: ${progress.translationScore}/10).${exp.expired ? ' Đã hết thời hạn — chỉ có thể xem lại kết quả.' : ' Còn hạn: có thể làm lại để ôn tập.'}</div>`
+      : '';
+    const deadlineLine = exp.hasDeadline
+      ? `<div id="brief-deadline-line" style="margin-top:6px; font-weight:700; color:${exp.expired ? '#dc2626' : 'var(--accent)'};">${exp.expired ? `⏰ Đã hết hạn lúc ${esc(exp.formattedAt)}` : `⏱ Thời hạn: còn ${esc(formatDeadlineRemaining(exp.remainingMs))} (đóng lúc ${esc(exp.formattedAt)})`}</div>`
       : '';
 
     if (info) {
@@ -696,6 +875,7 @@
         <div><strong>Nội dung:</strong> Học 50 từ vựng gốc (kèm Word Family) ngay trên giao diện Flashcard chính.</div>
         <div style="margin-top:6px;"><strong>Quy trình &amp; Thời lượng (~${t.estMinutes} phút):</strong> Bấm <strong>Đã thuộc đủ 50/50 từ</strong> → Tự mở Cửa sổ Bài Test gồm <strong>Test 1 ghép từ → Test 2 kéo thả &amp; ngữ cảnh → Test 3 dịch bài</strong>.</div>
         <div style="margin-top:6px;"><strong>Yêu cầu kỷ luật:</strong> Tập trung hoàn thành bài; nếu ngưng thao tác quá <strong>10 phút</strong> (hoặc rời tab quá 2 lần khi đang làm Test), Task sẽ bị <strong>khóa 30 phút</strong> mới được làm lại.</div>
+        ${deadlineLine}
         ${doneNote}
       `;
     }
@@ -738,6 +918,52 @@
     if (!pendingTaskId) return;
     const lockEl = document.getElementById('brief-task-lock');
     const startBtn = document.getElementById('btn-start-task');
+    const viewBtn = document.getElementById('btn-view-expired-result');
+    const dlLine = document.getElementById('brief-deadline-line');
+    const exp = getTaskExpiryState(pendingTaskId);
+
+    if (dlLine && exp.hasDeadline) {
+      dlLine.style.color = exp.expired ? '#dc2626' : 'var(--accent)';
+      dlLine.textContent = exp.expired
+        ? `⏰ Đã hết hạn lúc ${exp.formattedAt}`
+        : `⏱ Thời hạn: còn ${formatDeadlineRemaining(exp.remainingMs)} (đóng lúc ${exp.formattedAt})`;
+    }
+
+    if (!isTeacherOrBypassed() && exp.expired) {
+      if (lockEl) {
+        lockEl.style.display = 'flex';
+        lockEl.style.alignItems = 'center';
+        lockEl.style.justifyContent = 'space-between';
+        lockEl.style.gap = '10px';
+        lockEl.style.flexWrap = 'wrap';
+        if (exp.completed) {
+          lockEl.classList.add('is-info-ended');
+          lockEl.innerHTML = `<span>⏰ Task đã hết thời hạn làm bài (${exp.formattedAt}). Bạn đã hoàn thành — không thể làm lại nữa, chỉ có thể xem lại kết quả.</span>`;
+        } else {
+          lockEl.classList.remove('is-info-ended');
+          lockEl.innerHTML = `<span>⏰ Task đã kết thúc! Đã hết thời hạn làm bài (${exp.formattedAt}) — bạn chưa hoàn thành nên không thể vào làm hay xem kết quả.</span>`;
+        }
+      }
+      if (startBtn) {
+        if (exp.completed) {
+          startBtn.style.display = 'none';
+        } else {
+          startBtn.style.display = 'inline-flex';
+          startBtn.disabled = true;
+          startBtn.textContent = 'Task đã kết thúc';
+        }
+      }
+      if (viewBtn) viewBtn.style.display = exp.completed ? 'inline-flex' : 'none';
+      return;
+    }
+
+    if (lockEl) lockEl.classList.remove('is-info-ended');
+    if (viewBtn) viewBtn.style.display = 'none';
+    if (startBtn) {
+      startBtn.style.display = 'inline-flex';
+      startBtn.textContent = 'Bắt đầu làm Task';
+    }
+
     const remMs = getTaskLockRemainingMs(pendingTaskId);
     if (remMs > 0) {
       if (lockEl) {
@@ -746,13 +972,25 @@
         lockEl.style.justifyContent = 'space-between';
         lockEl.style.gap = '10px';
         lockEl.style.flexWrap = 'wrap';
-        lockEl.innerHTML = `<span>Task đang tạm khóa do ngưng thao tác quá 10 phút. Vui lòng quay lại sau ${formatMmSs(remMs)}.</span><button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.checkTaskUnlockNow()">Kiểm tra mở khóa</button>`;
+        lockEl.innerHTML = `<span>Task đang tạm khóa do vi phạm kỷ luật. Vui lòng quay lại sau ${formatMmSs(remMs)}.</span><button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.checkTaskUnlockNow()">Kiểm tra mở khóa</button>`;
       }
       if (startBtn) startBtn.disabled = true;
     } else {
       if (lockEl) lockEl.style.display = 'none';
       if (startBtn) startBtn.disabled = false;
     }
+  }
+
+  function viewExpiredTaskResult() {
+    const tid = pendingTaskId;
+    if (!tid) return;
+    const exp = getTaskExpiryState(tid);
+    if (!exp.completed && !isTeacherOrBypassed()) {
+      B()?.showToast?.('Task đã kết thúc! Bạn chưa hoàn thành nên không thể xem kết quả.');
+      return;
+    }
+    closeTaskBriefModal();
+    openTaskSummaryModal(tid, false);
   }
 
   function closeTaskBriefModal(event) {
@@ -767,9 +1005,19 @@
   // =========================================================
   function startPendingTask() {
     if (!pendingTaskId) return;
-    if (!isTeacherOrBypassed() && getTaskLockRemainingMs(pendingTaskId) > 0) {
-      updateBriefLockUI();
-      return;
+    if (!isTeacherOrBypassed()) {
+      const exp = getTaskExpiryState(pendingTaskId);
+      if (exp.expired) {
+        updateBriefLockUI();
+        B()?.showToast?.(exp.completed
+          ? 'Task đã hết hạn — không thể làm lại nữa, hãy bấm Xem kết quả bài làm.'
+          : 'Task đã kết thúc! Hết thời hạn làm bài.');
+        return;
+      }
+      if (getTaskLockRemainingMs(pendingTaskId) > 0) {
+        updateBriefLockUI();
+        return;
+      }
     }
     const t = getTaskById(pendingTaskId);
     if (!t) return;
@@ -821,6 +1069,17 @@
       testBtn.classList.toggle('btn-primary', allReady);
       testBtn.classList.toggle('btn-subtle', !allReady);
       testBtn.textContent = allReady ? 'Làm Test →' : `Mở Test (${masteredCount}/${total})`;
+    }
+    const dlBadge = document.getElementById('task-study-deadline-badge');
+    if (dlBadge) {
+      const dl = !isTeacherOrBypassed() ? getTaskDeadlineInfo(task.id) : { hasDeadline: false };
+      if (dl.hasDeadline) {
+        dlBadge.style.display = 'inline-block';
+        dlBadge.classList.toggle('is-urgent', dl.remainingMs <= 5 * 60 * 1000);
+        dlBadge.textContent = dl.expired ? 'Hết giờ' : `Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
+      } else {
+        dlBadge.style.display = 'none';
+      }
     }
   }
 
@@ -876,10 +1135,19 @@
     const scopeKey = B()?.getCurrentScopeKey?.() || '';
     const task = activeTask || getTaskById(scopeKey);
     if (!task) return;
-    if (!isTeacherOrBypassed() && getTaskLockRemainingMs(task.id) > 0) {
-      closeTaskExamReadyModal();
-      openTaskBriefModal(task.id);
-      return;
+    if (!isTeacherOrBypassed()) {
+      const exp = getTaskExpiryState(task.id);
+      if (exp.expired) {
+        closeTaskExamReadyModal();
+        exitTaskWorkspace(false);
+        openTaskBriefModal(task.id);
+        return;
+      }
+      if (getTaskLockRemainingMs(task.id) > 0) {
+        closeTaskExamReadyModal();
+        openTaskBriefModal(task.id);
+        return;
+      }
     }
     activeTask = task;
     closeTaskExamReadyModal();
@@ -890,6 +1158,14 @@
     const t = getTaskById(taskId);
     if (!t) return false;
     if (isTeacherOrBypassed()) return true;
+    const exp = getTaskExpiryState(t.id);
+    if (exp.expired) {
+      B()?.showToast?.(exp.completed
+        ? `${t.label} đã hết hạn — chỉ có thể xem lại kết quả!`
+        : `${t.label} đã kết thúc (hết thời hạn làm bài)!`);
+      openTaskBriefModal(t.id);
+      return false;
+    }
     const remMs = getTaskLockRemainingMs(t.id);
     if (remMs > 0) {
       B()?.showToast?.(`${t.label} đang tạm khóa (${formatMmSs(remMs)}) — vui lòng đợi hết khóa hoặc nhờ giáo viên mở khóa!`);
@@ -903,7 +1179,7 @@
     if (scopeKey && scopeKey.startsWith('task_')) {
       const t = getTaskById(scopeKey);
       if (t) {
-        if (!isTeacherOrBypassed() && getTaskLockRemainingMs(t.id) > 0) {
+        if (!isTeacherOrBypassed() && (getTaskExpiryState(t.id).expired || getTaskLockRemainingMs(t.id) > 0)) {
           stopIdleMonitor();
           activeTask = null;
           activeStage = 0;
@@ -945,6 +1221,16 @@
   }
 
   function enterTaskWorkspace(task) {
+    if (!isTeacherOrBypassed()) {
+      const exp = getTaskExpiryState(task?.id);
+      if (exp.expired) {
+        B()?.showToast?.(exp.completed
+          ? `${task.label} đã hết hạn — chỉ có thể xem lại kết quả!`
+          : `${task.label} đã kết thúc (hết thời hạn làm bài)!`);
+        openTaskBriefModal(task.id);
+        return;
+      }
+    }
     activeTask = task;
     activeStage = 0;
     learnIndex = 0;
@@ -1206,6 +1492,30 @@
         stopIdleMonitor();
         return;
       }
+      const exp = getTaskExpiryState(activeTask.id);
+      if (exp.hasDeadline) {
+        const remText = exp.expired ? 'Hết giờ' : `Còn ${formatDeadlineRemaining(exp.remainingMs)}`;
+        const urgent = exp.expired || exp.remainingMs <= 5 * 60 * 1000;
+        ['task-study-deadline-badge', 'task-exam-deadline-badge'].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.style.display = 'inline-block';
+            el.classList.toggle('is-urgent', urgent);
+            el.textContent = remText;
+          }
+        });
+        if (exp.expired) {
+          const expiredId = activeTask.id;
+          clearActiveExamSession();
+          stopIdleMonitor();
+          exitTaskWorkspace(false);
+          B()?.showToast?.(exp.completed
+            ? 'Đã hết thời hạn làm bài! Chỉ có thể xem lại kết quả.'
+            : '⏰ Đã hết thời hạn — Task đã kết thúc!');
+          openTaskBriefModal(expiredId);
+          return;
+        }
+      }
       const idleMs = Date.now() - lastActivityAt;
       const badge = document.getElementById('task-idle-badge');
       if (badge) {
@@ -1276,6 +1586,17 @@
             : activeTask.theme;
         }
         if (idleBadge) idleBadge.style.display = isBypassed ? 'none' : '';
+        const examDlBadge = document.getElementById('task-exam-deadline-badge');
+        if (examDlBadge) {
+          const dl = !isBypassed ? getTaskDeadlineInfo(activeTask.id) : { hasDeadline: false };
+          if (dl.hasDeadline) {
+            examDlBadge.style.display = 'inline-block';
+            examDlBadge.classList.toggle('is-urgent', dl.remainingMs <= 5 * 60 * 1000);
+            examDlBadge.textContent = dl.expired ? 'Hết giờ' : `Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
+          } else {
+            examDlBadge.style.display = 'none';
+          }
+        }
       } else {
         examModal.classList.remove('open', 'active');
       }
@@ -1346,6 +1667,13 @@
   // =========================================================
   function startTest1() {
     if (!activeTask) return;
+    if (!isTeacherOrBypassed() && getTaskExpiryState(activeTask.id).expired) {
+      const expiredId = activeTask.id;
+      clearActiveExamSession();
+      exitTaskWorkspace(false);
+      openTaskBriefModal(expiredId);
+      return;
+    }
     const total = activeTask.words.length || 50;
     if (!isTeacherOrBypassed() && getTaskMasteredCount(activeTask) < total) return;
     if (!isTeacherOrBypassed()) {
@@ -2952,6 +3280,7 @@
 
   function onUserEntered(account) {
     assignedUrlTaskIds = parseUrlAssignedTasks();
+    recordUrlTaskDeadlines(assignedUrlTaskIds);
     const previewStage = parseUrlPreviewStage(account);
     const sTasksBtn = document.getElementById('btn-open-student-tasks');
     if (!account) return;
@@ -2993,6 +3322,12 @@
     }
     const curScope = B()?.getCurrentScopeKey?.() || '';
     const curTask = curScope.startsWith('task_') ? getTaskById(curScope) : null;
+    if (curTask && !isTeacherOrBypassed() && getTaskExpiryState(curTask.id).expired) {
+      syncAssignedTaskScopes();
+      B()?.loadMainScope?.('paraphrase');
+      openTaskBriefModal(curTask.id);
+      return;
+    }
     if (curTask && !isTeacherOrBypassed() && getTaskLockRemainingMs(curTask.id) > 0) {
       syncAssignedTaskScopes();
       B()?.loadMainScope?.('paraphrase');
@@ -3117,6 +3452,14 @@
     const focusRec = (previewStudentSummary && lastPreviewSummaryRecord && (!focusTask || lastPreviewSummaryRecord.taskId === focusTask.id))
       ? lastPreviewSummaryRecord
       : (focusTask ? prog[focusTask.id] : null);
+    if (focusTask && !previewStudentSummary && !isTeacherOrBypassed() && (!focusRec || focusRec.status !== 'completed')) {
+      const exp = getTaskExpiryState(focusTask.id);
+      if (exp.expired) {
+        B()?.showToast?.('Task đã kết thúc! Bạn chưa hoàn thành nên không thể xem kết quả.');
+        openTaskBriefModal(focusTask.id);
+        return;
+      }
+    }
     const doneList = (previewStudentSummary && focusTask && focusRec?.status === 'completed')
       ? [{ task: focusTask, rec: focusRec }]
       : allTasks
@@ -3205,10 +3548,11 @@
       </div>
     `;
 
+    const inActiveExamModal = Boolean(document.getElementById('screen-task')?.classList.contains('open'));
     bodyEl.innerHTML = `
       ${focusHtml}
       <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap;">
-        <button type="button" class="btn-subtle" style="font-size:15.5px; padding:11px 20px;" onclick="TasksModule.closeTaskSummaryModal()">← Xem lại bài làm</button>
+        <button type="button" class="btn-subtle" style="font-size:15.5px; padding:11px 20px;" onclick="TasksModule.closeTaskSummaryModal()">${inActiveExamModal ? '← Xem lại bài làm' : 'Đóng'}</button>
         <button type="button" class="btn btn-primary" style="font-size:15.5px; padding:11px 22px;" onclick="TasksModule.closeTaskSummaryModal(); TasksModule.exitTaskWorkspace(false);">Về màn hình từ vựng chính →</button>
       </div>
     `;
@@ -3337,6 +3681,8 @@
     toggleTeacherTask,
     selectTeacherTaskRange,
     clearTeacherTaskSelection,
+    onTeacherDeadlinePresetChange,
+    updateTeacherLinkPreview,
     copyTeacherTaskLink,
     saveLocalGeminiKey,
     openStudentTasksModal,
@@ -3344,6 +3690,9 @@
     openTaskBriefModal,
     closeTaskBriefModal,
     checkTaskUnlockNow,
+    viewExpiredTaskResult,
+    getTaskDeadlineInfo,
+    getTaskExpiryState,
     openTaskSummaryModal,
     closeTaskSummaryModal,
     openTaskExamReadyModal,
