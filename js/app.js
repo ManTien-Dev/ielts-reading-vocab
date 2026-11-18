@@ -3142,7 +3142,10 @@
     failRecallCheck(item, 'Chưa chính xác!');
   }
 
+  let suppressSwipeClickUntil = 0;
+
   function flipCurrentCard(event) {
+    if (event && event.currentTarget?.id === 'fc-scene' && Date.now() < suppressSwipeClickUntil) return;
     if (event && event.currentTarget?.id === 'fc-scene' && event.target.closest('button')) return;
     if (currentScopeList.length === 0 || currentCardIndex >= currentScopeList.length) return;
     isCardFlipped = !isCardFlipped;
@@ -4587,6 +4590,44 @@
     }
   }
 
+  function bindMobileFlashcardSwipe() {
+    const scene = document.getElementById('fc-scene');
+    if (!scene || scene.dataset.swipeBound === '1') return;
+    scene.dataset.swipeBound = '1';
+    let startX = 0;
+    let startY = 0;
+    let startAt = 0;
+    let tracking = false;
+
+    scene.addEventListener('touchstart', (e) => {
+      if (!e.touches || e.touches.length !== 1) {
+        tracking = false;
+        return;
+      }
+      if (e.target && e.target.closest('button, input, textarea, select')) {
+        tracking = false;
+        return;
+      }
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      startAt = Date.now();
+      tracking = true;
+    }, { passive: true });
+
+    scene.addEventListener('touchend', (e) => {
+      if (!tracking || !e.changedTouches || e.changedTouches.length === 0) return;
+      tracking = false;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      const dt = Date.now() - startAt;
+      if (dt < 650 && Math.abs(dx) >= 52 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+        suppressSwipeClickUntil = Date.now() + 360;
+        if (dx < 0) nextCard();
+        else prevCard();
+      }
+    }, { passive: true });
+  }
+
   function mountPandaWidgetFrames() {
     // Styled directly via CSS pastel botanical card themes & circular mascot lockups
   }
@@ -4599,5 +4640,6 @@
   // Init cleanly on load
   applyOneTimeClassResetEpoch();
   mountPandaWidgetFrames();
+  bindMobileFlashcardSwipe();
   restoreAuthSession();
 })();
