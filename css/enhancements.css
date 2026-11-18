@@ -2460,19 +2460,35 @@ main.app-main:has(#screen-study.active) {
   z-index: 960;
 }
 .task-exam-dialog {
-  width: min(1320px, 96vw) !important;
-  max-width: 1320px !important;
+  width: min(1420px, 98vw) !important;
+  max-width: 1420px !important;
   max-height: 94vh !important;
   display: flex;
   flex-direction: column;
   overflow: hidden !important;
   padding: 0 !important;
-  border-radius: 22px !important;
+  border-radius: 20px !important;
 }
 .task-exam-dialog > .modal-body {
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
   padding: 20px 26px 26px !important;
+}
+.task-exam-dialog:has(.translation-workspace) {
+  height: 94vh !important;
+}
+.task-exam-dialog > .modal-body:has(.translation-workspace) {
+  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+}
+#task-stage-container:has(.translation-workspace) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .task-exam-dialog .task-topbar {
   border-radius: 0;
@@ -2764,45 +2780,56 @@ button.task-step-pill.active:hover {
   background: rgba(239, 68, 68, 0.18);
 }
 
-/* Clean 2-Column Translation Workspace with Dedicated Result Tab */
+/* Flush Split-Pane 2-Column Translation Workspace (Single Clean Scrollbar) */
 .translation-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 22px;
-  align-items: stretch;
-}
-@media (max-width: 960px) {
-  .translation-workspace { grid-template-columns: 1fr; }
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  background: var(--card-bg);
 }
 .translation-workspace .practice-paper {
-  background: var(--card-bg);
-  border: 1.5px solid var(--card-border);
-  border-radius: 20px;
-  padding: 24px 26px;
-  box-shadow: var(--card-shadow);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
-@media (min-width: 961px) {
-  .translation-workspace .english-paper {
-    position: sticky;
-    top: 10px;
-    max-height: calc(94vh - 120px);
-    overflow-y: auto;
-  }
+.translation-workspace .english-paper {
+  padding: 20px 28px 26px;
+  border-right: 1.5px solid var(--card-border);
+  overflow-y: auto;
+  height: 100%;
+}
+.translation-workspace .writing-paper {
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+}
+@media (max-width: 960px) {
+  .task-exam-dialog:has(.translation-workspace) { height: auto !important; }
+  .task-exam-dialog > .modal-body:has(.translation-workspace) { overflow-y: auto !important; }
+  .translation-workspace { grid-template-columns: 1fr; height: auto; }
+  .translation-workspace .english-paper { border-right: none; border-bottom: 1.5px solid var(--card-border); height: auto; max-height: 45vh; }
+  .translation-workspace .writing-paper { height: auto; overflow: visible; }
 }
 .paper-eyebrow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 800;
   letter-spacing: 0.2px;
   color: var(--accent);
   padding-bottom: 12px;
   border-bottom: 1px solid var(--card-border);
   margin-bottom: 16px;
+  flex-shrink: 0;
 }
 .english-passage {
   font-size: 18.5px;
@@ -2813,54 +2840,83 @@ button.task-step-pill.active:hover {
 }
 .t3-tabs-bar {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 14px;
+  align-items: stretch;
+  gap: 24px;
+  padding: 0 26px;
+  height: 48px;
   border-bottom: 1px solid var(--card-border);
-  margin-bottom: 16px;
+  background: var(--bg-soft);
+  flex-shrink: 0;
 }
 .t3-tab-btn {
-  padding: 9px 18px;
-  border-radius: 9999px;
-  border: 1.5px solid var(--card-border);
-  background: var(--bg-soft);
+  padding: 0 4px;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--text-muted);
   font-family: inherit;
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 750;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.14s ease;
+  transition: color 0.14s ease, border-color 0.14s ease;
 }
 .t3-tab-btn:hover {
-  border-color: #84b175;
   color: var(--text-bright);
 }
 .t3-tab-btn.active {
-  background: #2f6b32;
-  border-color: #2f6b32;
-  color: #ffffff;
+  background: transparent;
+  border-bottom-color: #2f6b32;
+  color: #265022;
+}
+[data-theme="dark"] .t3-tab-btn.active {
+  color: #a3d9a5;
+  border-bottom-color: #7cc47f;
 }
 .t3-tab-score-badge {
-  padding: 2px 8px;
+  padding: 2px 9px;
   border-radius: 999px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 800;
-  background: rgba(255, 255, 255, 0.22);
-}
-.t3-tab-btn:not(.active) .t3-tab-score-badge {
   background: rgba(82, 136, 62, 0.16);
   color: #265022;
 }
-.t3-tab-btn:not(.active) .t3-tab-score-badge.is-fail {
+.t3-tab-score-badge.is-fail {
   background: rgba(220, 38, 38, 0.14);
   color: #b91c1c;
 }
+#t3-pane-write {
+  flex: 1;
+  min-height: 0;
+  padding: 18px 26px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+.t3-trans-field {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.t3-sum-field {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+#t3-pane-grade {
+  flex: 1;
+  min-height: 0;
+  padding: 20px 26px 24px;
+  overflow-y: auto;
+}
 .translation-input, .summary-input {
   width: 100%;
-  padding: 16px 18px;
+  padding: 14px 18px;
   border-radius: 14px;
   border: 1.5px solid var(--card-border);
   background: var(--bg-soft);
@@ -2868,11 +2924,18 @@ button.task-step-pill.active:hover {
   font-family: inherit;
   font-size: 17.5px;
   line-height: 1.65;
-  resize: vertical;
-  margin: 6px 0 16px;
+  resize: none;
+  margin: 6px 0 0;
 }
-.translation-input { min-height: 270px; }
-.summary-input { min-height: 112px; }
+.translation-input {
+  flex: 1;
+  min-height: 150px;
+  height: 100%;
+}
+.summary-input {
+  min-height: 102px;
+  height: 104px;
+}
 .writing-label {
   display: flex;
   justify-content: space-between;
@@ -2880,6 +2943,7 @@ button.task-step-pill.active:hover {
   font-size: 16px;
   font-weight: 750;
   color: var(--text-bright);
+  flex-shrink: 0;
 }
 .ai-grade-box {
   margin-top: 0;

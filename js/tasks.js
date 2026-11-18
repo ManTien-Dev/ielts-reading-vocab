@@ -1492,7 +1492,7 @@
     const gradePane = document.getElementById('t3-pane-grade');
     const btnWrite = document.getElementById('t3-tab-btn-write');
     const btnGrade = document.getElementById('t3-tab-btn-grade');
-    if (writePane) writePane.style.display = isGrade ? 'none' : 'block';
+    if (writePane) writePane.style.display = isGrade ? 'none' : 'flex';
     if (gradePane) gradePane.style.display = isGrade ? 'block' : 'none';
     if (btnWrite) btnWrite.classList.toggle('active', !isGrade);
     if (btnGrade) btnGrade.classList.toggle('active', isGrade);
@@ -1536,20 +1536,24 @@
           </div>
 
           <div id="t3-pane-write">
-            <label class="writing-label" for="task-trans-input">
-              <span>01. Dịch toàn đoạn</span>
-              <span id="task-trans-wc" style="color:var(--text-muted); font-size:14px;">0 từ</span>
-            </label>
-            <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Nhập bản dịch tiếng Việt...">${esc(savedDraft.trans || '')}</textarea>
+            <div class="t3-trans-field">
+              <label class="writing-label" for="task-trans-input">
+                <span>01. Dịch toàn đoạn</span>
+                <span id="task-trans-wc" style="color:var(--text-muted); font-size:14.5px;">0 từ</span>
+              </label>
+              <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Nhập bản dịch tiếng Việt...">${esc(savedDraft.trans || '')}</textarea>
+            </div>
 
-            <label class="writing-label" for="task-summary-input">
-              <span>02. Tóm tắt ý chính (1–3 câu)</span>
-              <span id="task-sum-wc" style="color:var(--text-muted); font-size:14px;">0 từ</span>
-            </label>
-            <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Tóm tắt ý chính đoạn văn...">${esc(savedDraft.summary || '')}</textarea>
+            <div class="t3-sum-field">
+              <label class="writing-label" for="task-summary-input">
+                <span>02. Tóm tắt ý chính (1–3 câu)</span>
+                <span id="task-sum-wc" style="color:var(--text-muted); font-size:14.5px;">0 từ</span>
+              </label>
+              <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Tóm tắt ý chính đoạn văn...">${esc(savedDraft.summary || '')}</textarea>
+            </div>
 
-            <div style="display:flex; justify-content:flex-end; margin-top:4px;">
-              <button type="button" class="btn btn-primary" id="btn-submit-ai-grade" style="font-size:16.5px; padding:12px 26px;" onclick="TasksModule.submitTranslationForAi()">
+            <div style="display:flex; justify-content:flex-end; flex-shrink:0;">
+              <button type="button" class="btn btn-primary" id="btn-submit-ai-grade" style="font-size:16.5px; padding:11px 26px;" onclick="TasksModule.submitTranslationForAi()">
                 Nộp &amp; AI chấm
               </button>
             </div>

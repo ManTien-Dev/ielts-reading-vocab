@@ -733,6 +733,7 @@
     } catch (_) {}
 
     return {
+      resetEpoch: 2026111807,
       timerByDay,
       wordsByDay,
       streakDays,
@@ -902,13 +903,34 @@
       const nextCache = {};
       data.students.forEach(st => {
         const uid = getScopedUid(st.id);
-        if (uid) nextCache[uid] = st;
+        if (!uid) return;
+        // Bỏ qua dữ liệu cloud cũ trước mốc reset 2026-11-18 của thanhngoc để hiển thị sạch sẽ 0 từ / 0 phút / 0 ngày
+        if (uid === 'thanhngoc' && Number(st.syncData?.resetEpoch || 0) < 2026111807) {
+          nextCache[uid] = {
+            ...st,
+            todayMins: 0,
+            weekMins: 0,
+            monthMins: 0,
+            mastered: 0,
+            streak: 0,
+            syncData: { resetEpoch: 2026111807, timerByDay: {}, wordsByDay: {}, streakDays: [], assessments: {}, srsData: {}, scopePositions: {}, taskProgress: {}, taskLocks: {} },
+          };
+          return;
+        }
+        nextCache[uid] = st;
       });
       cloudClassCache = nextCache;
 
       if (currentUser) {
         const mine = cloudClassCache[getScopedUid(currentUser.id)];
-        if (mine) mergeCloudEntryIntoLocal(currentUser.id, mine);
+        if (mine) {
+          if (getScopedUid(currentUser.id) === 'thanhngoc' && !localStorage.getItem('ielts_thanhngoc_cloud_reset_pushed_2026111807')) {
+            localStorage.setItem('ielts_thanhngoc_cloud_reset_pushed_2026111807', '1');
+            syncPushCurrentUser(false);
+          } else {
+            mergeCloudEntryIntoLocal(currentUser.id, mine);
+          }
+        }
       }
 
       const now = new Date();
