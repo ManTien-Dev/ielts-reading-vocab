@@ -765,6 +765,7 @@
   let cloudPullTimer = null;
   let cloudPushDebounce = null;
   let lastCloudSyncTime = '';
+  let cloudGasVersion = 0;
   let initialCloudPullSettled = true;
 
   function getSyncUrl() {
@@ -1030,6 +1031,7 @@
       if (!res.ok) return;
       const data = await res.json();
       if (!data || !data.ok || !Array.isArray(data.students)) return;
+      cloudGasVersion = Number(data.gasVersion || 1);
 
       let thanhngocCloudNeedsReset = false;
       const nextCache = {};
@@ -1119,7 +1121,11 @@
       maxLockOrigin > 0 ? (maxLockOrigin + 1) : 0
     );
 
+    let prevLocalUnlock = null;
+    let prevLocalLocks = null;
     try {
+      prevLocalUnlock = localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`);
+      prevLocalLocks = localStorage.getItem(`${TASK_LOCKS_KEY_BASE}${scoped}`);
       localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(effectiveUnlockAt));
       localStorage.setItem(`${TASK_LOCKS_KEY_BASE}${scoped}`, '{}');
     } catch (_) {}
@@ -1138,64 +1144,106 @@
 
     const acct = getAccountsList().find((a) => getScopedUid(a.id) === scoped);
     const url = getSyncUrl();
-    if (url) {
-      fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'unlock_student',
-          id: acct?.id || prev?.id || studentId,
-          name: acct?.name || prev?.name || studentId,
-          unlockedAtTs: effectiveUnlockAt,
-        }),
-      }).then(r => r.ok ? r.json() : null).then(res => {
-        if (!res || !res.ok) return;
-        const serverConfirmedUnlock = res.action === 'unlock_student' && Number(res.teacherUnlockedAt || 0) > 0;
-        const serverUnlock = Number(res.teacherUnlockedAt || effectiveUnlockAt);
-        if (!serverConfirmedUnlock) {
-          if (prev && prev.syncData && typeof prev.syncData === 'object') {
-            const fallbackPayload = {
-              id: acct?.id || prev?.id || studentId,
-              name: acct?.name || prev?.name || studentId,
-              todayMins: Number(prev.todayMins || 0),
-              weekMins: Number(prev.weekMins || 0),
-              monthMins: Number(prev.monthMins || 0),
-              mastered: Number(prev.mastered || 0),
-              streak: Number(prev.streak || 0),
-              syncData: {
-                ...prev.syncData,
-                taskLocks: {},
-                teacherUnlockedAt: effectiveUnlockAt,
-              },
-            };
-            fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify(fallbackPayload),
-            }).catch(() => {});
+    if (!url) return Promise.resolve(true);
+
+    const revertFailedUnlock = (msg) => {
+      try {
+        if (prevLocalUnlock === null) localStorage.removeItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`);
+        else localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, prevLocalUnlock);
+        if (prevLocalLocks === null) localStorage.removeItem(`${TASK_LOCKS_KEY_BASE}${scoped}`);
+        else localStorage.setItem(`${TASK_LOCKS_KEY_BASE}${scoped}`, prevLocalLocks);
+      } catch (_) {}
+      if (prev && typeof prev === 'object') {
+        cloudClassCache[scoped] = prev;
+      } else {
+        delete cloudClassCache[scoped];
+      }
+      if (isTeacherUser()) {
+        window.TasksModule?.renderTeacherDashboard?.();
+      }
+      showToast(msg || 'Không gửi được lệnh mở khóa lên Google Sheet! Hãy kiểm tra kết nối hoặc triển khai lại Apps Script.');
+    };
+
+    const parseJsonSafe = async (resp) => {
+      if (!resp || !resp.ok) return null;
+      try {
+        const txt = await resp.text();
+        return JSON.parse(txt);
+      } catch (_) {
+        return null;
+      }
+    };
+
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'unlock_student',
+        id: acct?.id || prev?.id || studentId,
+        name: acct?.name || prev?.name || studentId,
+        unlockedAtTs: effectiveUnlockAt,
+      }),
+    }).then(parseJsonSafe).then(async (res) => {
+      const serverConfirmedUnlock = Boolean(res && res.ok && res.action === 'unlock_student' && Number(res.teacherUnlockedAt || 0) > 0);
+      if (!serverConfirmedUnlock) {
+        if (prev && prev.syncData && typeof prev.syncData === 'object') {
+          const fallbackPayload = {
+            id: acct?.id || prev?.id || studentId,
+            name: acct?.name || prev?.name || studentId,
+            todayMins: Number(prev.todayMins || 0),
+            weekMins: Number(prev.weekMins || 0),
+            monthMins: Number(prev.monthMins || 0),
+            mastered: Number(prev.mastered || 0),
+            streak: Number(prev.streak || 0),
+            syncData: {
+              ...prev.syncData,
+              taskLocks: {},
+              teacherUnlockedAt: effectiveUnlockAt,
+            },
+          };
+          const fbRes = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(fallbackPayload),
+          }).then(parseJsonSafe).catch(() => null);
+          if (!fbRes || !fbRes.ok) {
+            revertFailedUnlock('Lỗi: Google Sheet từ chối lệnh mở khóa (Apps Script cũ hoặc lỗi mạng). Hãy dán sync/google_apps_script.gs & Triển khai New version!');
+            return false;
           }
-          showToast('Apps Script trên Google Sheet chưa cập nhật bản mới (unlock_student) — hãy dán sync/google_apps_script.gs & Triển khai New version!');
-        }
-        try {
-          const curLocal = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0);
-          if (serverUnlock > curLocal) {
-            localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(serverUnlock));
-          }
-        } catch (_) {}
-        if (cloudClassCache[scoped]?.syncData) {
-          cloudClassCache[scoped].syncData.taskLocks = {};
-          cloudClassCache[scoped].syncData.teacherUnlockedAt = Math.max(
-            Number(cloudClassCache[scoped].syncData.teacherUnlockedAt || 0),
-            serverUnlock
-          );
+          cloudGasVersion = 1;
+          showToast('Apps Script trên Google Sheet là bản cũ (đã mở khóa dự phòng) — hãy dán sync/google_apps_script.gs & Triển khai New version để ổn định!');
         } else {
-          syncPullClassData();
+          revertFailedUnlock('Lỗi: Không mở khóa được trên Google Sheet! Hãy cập nhật sync/google_apps_script.gs & Triển khai New version.');
+          return false;
         }
-        if (isTeacherUser()) {
-          window.TasksModule?.renderTeacherDashboard?.();
+      } else {
+        cloudGasVersion = 2;
+      }
+
+      const serverUnlock = Number(res?.teacherUnlockedAt || effectiveUnlockAt);
+      try {
+        const curLocal = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0);
+        if (serverUnlock > curLocal) {
+          localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(serverUnlock));
         }
-      }).catch(() => {});
-    }
+      } catch (_) {}
+      if (cloudClassCache[scoped]?.syncData) {
+        cloudClassCache[scoped].syncData.taskLocks = {};
+        cloudClassCache[scoped].syncData.teacherUnlockedAt = Math.max(
+          Number(cloudClassCache[scoped].syncData.teacherUnlockedAt || 0),
+          serverUnlock
+        );
+      } else {
+        syncPullClassData();
+      }
+      if (isTeacherUser()) {
+        window.TasksModule?.renderTeacherDashboard?.();
+      }
+      return true;
+    }).catch(() => {
+      revertFailedUnlock('Lỗi kết nối tới Google Apps Script — học viên chưa được mở khóa trên Sheet!');
+      return false;
+    });
   }
 
   function syncPushCurrentUser(useKeepalive = false) {
@@ -4240,6 +4288,7 @@
     getClassRankedEntries,
     computeConsecutiveStreakForUser,
     getLastCloudSyncTime: () => lastCloudSyncTime,
+    getCloudGasVersion: () => cloudGasVersion,
     syncPullClassData,
     unlockStudentCloudLocks,
     TASK_PROGRESS_KEY_BASE,

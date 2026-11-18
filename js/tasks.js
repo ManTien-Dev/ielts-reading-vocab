@@ -417,11 +417,19 @@
     const bridge = B();
     if (!bridge?.isTeacherUser?.() || !studentId) return;
     const nowTs = Date.now();
-    bridge.unlockStudentCloudLocks?.(studentId, nowTs);
     const acct = (bridge.getStudentAccounts?.() || []).find((a) => bridge.getScopedUid(a.id) === bridge.getScopedUid(studentId));
     const displayName = acct?.name || studentId;
+    const p = bridge.unlockStudentCloudLocks?.(studentId, nowTs);
     renderTeacherDashboard();
-    bridge.showToast?.(`Đã mở khóa Task cho học viên ${displayName}!`);
+    if (p && typeof p.then === 'function') {
+      p.then((ok) => {
+        if (ok) {
+          bridge.showToast?.(`Đã mở khóa Task cho học viên ${displayName}!`);
+        }
+      });
+    } else {
+      bridge.showToast?.(`Đã mở khóa Task cho học viên ${displayName}!`);
+    }
   }
 
   function formatCsvCell(val) {
@@ -475,10 +483,14 @@
     const esc = bridge.escapeHtml || ((x) => String(x));
     const statusEl = document.getElementById('teacher-sync-status');
     const syncTime = bridge.getLastCloudSyncTime?.();
+    const gasVer = Number(bridge.getCloudGasVersion?.() || 0);
     if (statusEl) {
-      statusEl.textContent = syncTime
+      const baseStatus = syncTime
         ? `Cập nhật lúc ${syncTime} · Theo dõi tự động giờ học, từ đã thuộc & Task`
         : 'Theo dõi giờ học, chuỗi ngày, từ đã thuộc & kết quả Task của cả lớp';
+      statusEl.textContent = (gasVer === 1 && bridge.getSyncUrl?.())
+        ? `${baseStatus} · ⚠️ Google Apps Script trên Sheet đang là bản cũ (hãy cập nhật sync/google_apps_script.gs & Triển khai New version để mở khóa ổn định!)`
+        : baseStatus;
     }
 
     const tbody = document.getElementById('teacher-dashboard-tbody');

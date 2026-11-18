@@ -218,7 +218,7 @@ function doGet(e) {
         syncData: syncData
       });
     }
-    return jsonOut_({ ok: true, students: students, serverTime: new Date().toISOString() });
+    return jsonOut_({ ok: true, gasVersion: 2, students: students, serverTime: new Date().toISOString() });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   }
