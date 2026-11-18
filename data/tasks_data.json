@@ -19,7 +19,7 @@
             "adjust",
             "modify",
             "acclimatize",
-            "tailor"
+            "suit"
           ],
           "antonyms": [
             "remain rigid",
@@ -107,7 +107,7 @@
             "hereditary",
             "inherited",
             "DNA-based",
-            "chromosomal"
+            "innate"
           ],
           "antonyms": [
             "environmental",
@@ -373,9 +373,8 @@
           ],
           "antonyms": [
             "superficial",
-            "secondary",
-            "peripheral",
-            "minor"
+            "minor",
+            "trivial"
           ],
           "wordFamily": [
             {
@@ -443,14 +442,14 @@
           "pos": "Danh từ",
           "meaning": "Năng suất lao động/sản xuất hoặc sức sản sinh sinh học của đại dương/đất đai",
           "synonyms": [
-            "output",
-            "efficiency",
             "yield",
+            "efficiency",
+            "output rate",
             "fertility"
           ],
           "antonyms": [
             "inefficiency",
-            "unproductivity",
+            "low yield",
             "barrenness"
           ],
           "wordFamily": [
@@ -511,12 +510,12 @@
           "synonyms": [
             "examine",
             "investigate",
+            "scrutinize",
             "evaluate"
           ],
           "antonyms": [
             "ignore",
-            "overlook",
-            "generalize"
+            "overlook"
           ],
           "wordFamily": [
             {
@@ -566,6 +565,7 @@
           "meaning": "Thị giác/khả năng nhìn hoặc tầm nhìn chiến lược/viễn cảnh tương lai",
           "synonyms": [
             "eyesight",
+            "visual range",
             "foresight",
             "outlook"
           ],
@@ -596,12 +596,13 @@
           "synonyms": [
             "better",
             "higher-grade",
+            "higher-quality",
             "pre-eminent"
           ],
           "antonyms": [
             "inferior",
             "substandard",
-            "worse"
+            "lower-quality"
           ],
           "wordFamily": [],
           "example": "Humans possessed superior binocular vision and sophisticated projectile weaponry, whereas wolves possessed unparalleled olfactory acuity and predatory endurance.",
@@ -617,9 +618,10 @@
           "pos": "Tính từ",
           "meaning": "Thuộc về khảo cổ học, dựa trên di vật khai quật được",
           "synonyms": [
-            "prehistoric",
-            "excavation-based",
-            "ancient-artifact"
+            "excavated",
+            "ancient-artifact",
+            "historic-site",
+            "dig-based"
           ],
           "antonyms": [],
           "wordFamily": [
@@ -652,10 +654,10 @@
           "synonyms": [
             "prevail over",
             "control",
-            "overshadow"
+            "predominate",
+            "outweigh"
           ],
           "antonyms": [
-            "submit",
             "trail behind",
             "play a minor role"
           ],
@@ -693,12 +695,13 @@
           "synonyms": [
             "separate",
             "discrete",
+            "clear-cut",
             "unmistakable"
           ],
           "antonyms": [
             "identical",
             "merged",
-            "indistinguishable"
+            "overlapping"
           ],
           "wordFamily": [
             {
@@ -744,6 +747,7 @@
           "synonyms": [
             "viewpoint",
             "standpoint",
+            "attitude",
             "angle"
           ],
           "antonyms": [],
@@ -763,7 +767,8 @@
           "synonyms": [
             "advantageous",
             "helpful",
-            "favorable"
+            "favorable",
+            "positive"
           ],
           "antonyms": [
             "harmful",
@@ -795,14 +800,15 @@
           "pos": "Tính từ",
           "meaning": "Năng động, nhiệt huyết hoặc luôn vận động, biến đổi liên tục",
           "synonyms": [
-            "energetic",
             "ever-changing",
+            "energetic",
+            "active",
             "adaptable"
           ],
           "antonyms": [
             "static",
-            "stagnant",
-            "rigid"
+            "unchanging",
+            "stagnant"
           ],
           "wordFamily": [],
           "example": "While this narrative appeals to our intuition, evolutionary biologists now propose a far more dynamic model of reciprocal adaptation.",
@@ -820,7 +826,8 @@
           "synonyms": [
             "similarity",
             "equivalent",
-            "counterpart"
+            "counterpart",
+            "correspondence"
           ],
           "antonyms": [
             "contrast",
@@ -849,12 +856,12 @@
           "synonyms": [
             "substance",
             "compound",
-            "agent",
-            "toxin"
+            "toxin",
+            "synthetic substance"
           ],
           "antonyms": [
-            "natural",
-            "organic compound"
+            "biological agent",
+            "natural substance"
           ],
           "wordFamily": [
             {
@@ -884,14 +891,11 @@
           "meaning": "Thuộc về môi trường, sinh thái",
           "synonyms": [
             "ecological",
-            "green",
-            "eco-friendly",
-            "habitat-related"
+            "habitat-related",
+            "ecosystem-based",
+            "natural-world"
           ],
-          "antonyms": [
-            "economic",
-            "industrial"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "environmentally",
@@ -931,8 +935,8 @@
           "synonyms": [
             "endure",
             "persist",
-            "outlive",
-            "remain alive"
+            "remain alive",
+            "outlive"
           ],
           "antonyms": [
             "perish",
@@ -974,7 +978,7 @@
           "antonyms": [
             "deplete",
             "exhaust",
-            "destroy permanently"
+            "use up"
           ],
           "wordFamily": [],
           "example": "Later investigations sought to regenerate the underlying causes of this trend (often paraphrased as 'renew').",
@@ -994,10 +998,7 @@
             "pest",
             "pollinator"
           ],
-          "antonyms": [
-            "mammal",
-            "vertebrate"
-          ],
+          "antonyms": [],
           "wordFamily": [],
           "example": "More specifically, it started with the predatory yellow citrus ant Oeco-phylla smaragdina, which has been polishing off pests in the orange groves of southern China for at least 1,700 years.",
           "linkedIds": [
@@ -1037,13 +1038,12 @@
           "synonyms": [
             "contamination",
             "emissions",
-            "environmental damage",
-            "waste"
+            "waste",
+            "pollutants"
           ],
           "antonyms": [
             "purity",
-            "cleanliness",
-            "conservation"
+            "cleanliness"
           ],
           "wordFamily": [
             {
@@ -1097,12 +1097,9 @@
             "response",
             "reflex",
             "feedback",
-            "chemical change"
+            "counteraction"
           ],
-          "antonyms": [
-            "inaction",
-            "indifference"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "react",
@@ -1129,13 +1126,12 @@
           "pos": "Danh từ",
           "meaning": "Hóa thạch hoặc nằm trong cụm cố định 'fossil fuels'",
           "synonyms": [
+            "ancient remains",
             "prehistoric remains",
-            "ancient trace",
-            "fossil fuel"
+            "petrified remains",
+            "ancient trace"
           ],
-          "antonyms": [
-            "renewable energy"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "non-fossil",
@@ -1157,14 +1153,11 @@
           "meaning": "Lớp, tầng",
           "synonyms": [
             "stratum",
+            "sheet",
             "coating",
-            "level",
-            "sheet"
+            "blanket"
           ],
-          "antonyms": [
-            "core",
-            "uniform mass"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "multi-layered",
@@ -1210,7 +1203,7 @@
             "discharge",
             "release",
             "exhaust",
-            "greenhouse gas"
+            "fumes"
           ],
           "antonyms": [
             "absorption",
@@ -1260,13 +1253,13 @@
           "synonyms": [
             "viable",
             "eco-friendly",
-            "long-lasting",
-            "maintainable"
+            "renewable",
+            "long-lasting"
           ],
           "antonyms": [
             "unsustainable",
-            "depleting",
-            "short-lived"
+            "short-lived",
+            "exhaustible"
           ],
           "wordFamily": [
             {
@@ -1302,14 +1295,14 @@
           "meaning": "Tái chế, xử lý lại để sử dụng",
           "synonyms": [
             "reprocess",
-            "reuse",
             "reclaim",
-            "salvage"
+            "salvage",
+            "remanufacture"
           ],
           "antonyms": [
             "discard",
             "dispose of",
-            "waste"
+            "throw away"
           ],
           "wordFamily": [],
           "example": "Later investigations sought to recycle the underlying causes of this trend (often paraphrased as 'reprocess').",
@@ -1360,8 +1353,7 @@
             "train"
           ],
           "antonyms": [
-            "leave wild",
-            "untame"
+            "leave wild"
           ],
           "wordFamily": [],
           "example": "Later investigations sought to domesticate the underlying causes of this trend (often paraphrased as 'tame').",
@@ -1431,7 +1423,7 @@
           "antonyms": [
             "destruction",
             "exploitation",
-            "neglect"
+            "degradation"
           ],
           "wordFamily": [
             {
@@ -1467,9 +1459,9 @@
           "pos": "Danh từ",
           "meaning": "Điôxit",
           "synonyms": [
-            "CO2",
             "carbon gas",
-            "chemical compound"
+            "oxide gas",
+            "exhaust gas"
           ],
           "antonyms": [],
           "wordFamily": [],
@@ -1563,15 +1555,12 @@
           "pos": "Danh từ",
           "meaning": "Sự vận chuyển, giao thông",
           "synonyms": [
-            "transit",
             "conveyance",
-            "freight",
-            "public travel"
+            "shipping",
+            "transit",
+            "transfer"
           ],
-          "antonyms": [
-            "immobility",
-            "stationary state"
-          ],
+          "antonyms": [],
           "wordFamily": [
             {
               "form": "transportation",
@@ -1636,8 +1625,8 @@
           ],
           "antonyms": [
             "reliable",
-            "valid",
-            "foolproof"
+            "accurate",
+            "dependable"
           ],
           "wordFamily": [],
           "example": "Researchers observed a unreliable difference between the experimental and control groups (often paraphrased as 'untrustworthy').",
@@ -1654,8 +1643,8 @@
           "synonyms": [
             "forecast",
             "anticipate",
-            "project",
-            "foresee"
+            "foresee",
+            "estimate"
           ],
           "antonyms": [
             "occur unexpectedly",
@@ -2297,7 +2286,7 @@
           "options": [
             "biologist",
             "biology",
-            "biologs",
+            "biologically",
             "biological"
           ],
           "answer": "biological",
@@ -2468,8 +2457,8 @@
         {
           "id": "task_01_p16",
           "left": "archaeological",
-          "right": "prehistoric",
-          "explain": "IELTS Reading hay paraphrase 'archaeological' ↔ 'prehistoric' (Thuộc về khảo cổ học, dựa trên di vật khai quật được)."
+          "right": "excavated",
+          "explain": "IELTS Reading hay paraphrase 'archaeological' ↔ 'excavated' (Thuộc về khảo cổ học, dựa trên di vật khai quật được)."
         },
         {
           "id": "task_01_p17",
@@ -2510,14 +2499,14 @@
         {
           "id": "task_01_p23",
           "left": "chemical",
-          "right": "agent",
-          "explain": "IELTS Reading hay paraphrase 'chemical' ↔ 'agent' (Hóa chất, chất hóa học)."
+          "right": "substance",
+          "explain": "IELTS Reading hay paraphrase 'chemical' ↔ 'substance' (Hóa chất, chất hóa học)."
         },
         {
           "id": "task_01_p24",
           "left": "environmental",
-          "right": "green",
-          "explain": "IELTS Reading hay paraphrase 'environmental' ↔ 'green' (Thuộc về môi trường, sinh thái)."
+          "right": "natural-world",
+          "explain": "IELTS Reading hay paraphrase 'environmental' ↔ 'natural-world' (Thuộc về môi trường, sinh thái)."
         },
         {
           "id": "task_01_p25",
@@ -2552,8 +2541,8 @@
         {
           "id": "task_01_p30",
           "left": "reaction",
-          "right": "reflex",
-          "explain": "IELTS Reading hay paraphrase 'reaction' ↔ 'reflex' (Phản ứng)."
+          "right": "response",
+          "explain": "IELTS Reading hay paraphrase 'reaction' ↔ 'response' (Phản ứng)."
         },
         {
           "id": "task_01_p31",
@@ -2564,8 +2553,8 @@
         {
           "id": "task_01_p32",
           "left": "layer",
-          "right": "level",
-          "explain": "IELTS Reading hay paraphrase 'layer' ↔ 'level' (Lớp, tầng)."
+          "right": "stratum",
+          "explain": "IELTS Reading hay paraphrase 'layer' ↔ 'stratum' (Lớp, tầng)."
         },
         {
           "id": "task_01_p33",
@@ -2594,8 +2583,8 @@
         {
           "id": "task_01_p37",
           "left": "recycle",
-          "right": "reuse",
-          "explain": "IELTS Reading hay paraphrase 'recycle' ↔ 'reuse' (Tái chế, xử lý lại để sử dụng)."
+          "right": "reprocess",
+          "explain": "IELTS Reading hay paraphrase 'recycle' ↔ 'reprocess' (Tái chế, xử lý lại để sử dụng)."
         },
         {
           "id": "task_01_p38",
@@ -2624,8 +2613,8 @@
         {
           "id": "task_01_p42",
           "left": "dioxide",
-          "right": "greenhouse gas",
-          "explain": "IELTS Reading hay paraphrase 'dioxide' ↔ 'greenhouse gas' (Điôxit)."
+          "right": "carbon gas",
+          "explain": "IELTS Reading hay paraphrase 'dioxide' ↔ 'carbon gas' (Điôxit)."
         },
         {
           "id": "task_01_p43",
@@ -2648,8 +2637,8 @@
         {
           "id": "task_01_p46",
           "left": "transport",
-          "right": "freight",
-          "explain": "IELTS Reading hay paraphrase 'transport' ↔ 'freight' (Sự vận chuyển, giao thông)."
+          "right": "conveyance",
+          "explain": "IELTS Reading hay paraphrase 'transport' ↔ 'conveyance' (Sự vận chuyển, giao thông)."
         },
         {
           "id": "task_01_p47",
@@ -2666,8 +2655,8 @@
         {
           "id": "task_01_p49",
           "left": "predict",
-          "right": "project",
-          "explain": "IELTS Reading hay paraphrase 'predict' ↔ 'project' (Dự đoán, dự báo)."
+          "right": "forecast",
+          "explain": "IELTS Reading hay paraphrase 'predict' ↔ 'forecast' (Dự đoán, dự báo)."
         },
         {
           "id": "task_01_p50",

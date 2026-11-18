@@ -118,6 +118,33 @@ main.app-main:has(#screen-study.active) {
   #screen-study .fc-word { margin-bottom: 10px !important; }
   #screen-study .fc-flip-prompt { padding: 8px 14px !important; }
 }
+@media (min-width: 1200px) {
+  html:has(#screen-study.active),
+  body:has(#screen-study.active) {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    scrollbar-width: none;
+  }
+  body:has(#screen-study.active)::-webkit-scrollbar {
+    display: none;
+  }
+  body:has(#screen-study.active) > header.app-header {
+    flex: 0 0 auto;
+  }
+  main.app-main:has(#screen-study.active) {
+    flex: 1 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 4px 8px 6px !important;
+  }
+  body:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
+    height: clamp(305px, calc(100svh - 210px), 540px) !important;
+  }
+}
 .btn-deck-tool.is-active {
   background: #2f6b32 !important;
   border-color: #2f6b32 !important;

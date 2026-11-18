@@ -2655,17 +2655,20 @@
 
     if (isSignal) {
       const allSig = Array.isArray(APP_DATA?.signal_words) ? APP_DATA.signal_words : [];
-      const sameCat = shuffleArray(allSig.filter((x) => x.id !== item.id && x.category === item.category));
-      sameCat.slice(0, 4).forEach((x) => addOption(x.lemma, true));
+      const eqTerms = splitCsvItems(item.word_forms);
+      const eqNorms = new Set(eqTerms.map((w) => String(w || '').trim().toLowerCase()).filter(Boolean));
+      eqTerms.slice(0, 4).forEach((w) => addOption(w, true));
+      eqNorms.forEach((n) => used.add(n));
+      const collidesWithEq = (cand) => String(cand?.lemma || '').split('/').some((part) => eqNorms.has(part.trim().toLowerCase()));
 
       const catText = String(item.category || '').toLowerCase();
       const isContrastSide = catText.includes('tương phản') || catText.includes('nhượng bộ');
       const oppPool = shuffleArray(allSig.filter((x) => {
-        if (x.id === item.id || x.category === item.category) return false;
+        if (x.id === item.id || x.category === item.category || collidesWithEq(x)) return false;
         const c = String(x.category || '').toLowerCase();
         return isContrastSide ? (c.includes('bổ sung') || c.includes('nguyên nhân') || c.includes('kết luận')) : (c.includes('tương phản') || c.includes('nhượng bộ'));
       }));
-      const otherPool = shuffleArray(allSig.filter((x) => x.id !== item.id && x.category !== item.category));
+      const otherPool = shuffleArray(allSig.filter((x) => x.id !== item.id && x.category !== item.category && !collidesWithEq(x)));
       for (const cand of [...oppPool, ...otherPool]) {
         if (options.length >= 8) break;
         addOption(cand.lemma, false);
