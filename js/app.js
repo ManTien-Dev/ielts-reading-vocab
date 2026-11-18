@@ -17,6 +17,8 @@
   const TASK_PROGRESS_KEY_BASE = 'ielts_reading_task_progress_';
   const TASK_LOCKS_KEY_BASE = 'ielts_reading_task_locks_';
   const TEACHER_UNLOCK_KEY_BASE = 'ielts_teacher_unlocked_at_';
+  const CLASS_RESET_EPOCH = 2026111901;
+  const CLASS_LOCAL_RESET_KEY = 'ielts_reset_all_clean_20261119_v1';
 
   const SCOPES = [
     {
@@ -830,7 +832,7 @@
     } catch (_) {}
 
     return {
-      resetEpoch: 2026111816,
+      resetEpoch: CLASS_RESET_EPOCH,
       timerByDay,
       wordsByDay,
       streakDays,
@@ -1033,15 +1035,16 @@
       if (!data || !data.ok || !Array.isArray(data.students)) return;
       cloudGasVersion = Number(data.gasVersion || 1);
 
-      let thanhngocCloudNeedsReset = false;
+      let activeCloudNeedsReset = false;
+      const activeScopedUid = currentUser ? getScopedUid(currentUser.id) : '';
       const nextCache = {};
       data.students.forEach(st => {
         const uid = getScopedUid(st.id);
         if (!uid) return;
-        // Bỏ qua dữ liệu cloud cũ trước mốc reset 2026-11-18 của thanhngoc để hiển thị sạch sẽ 0 từ / 0 phút / 0 ngày
+        // Bỏ qua dữ liệu cloud cũ trước mốc reset toàn lớp để toàn bộ học viên & giáo viên bắt đầu sạch từ 0
         // nhưng vẫn bảo toàn teacherUnlockedAt nếu giáo viên vừa bấm mở khóa
-        if (uid === 'thanhngoc' && Number(st.syncData?.resetEpoch || 0) < 2026111816) {
-          thanhngocCloudNeedsReset = true;
+        if (Number(st.syncData?.resetEpoch || 0) < CLASS_RESET_EPOCH) {
+          if (activeScopedUid && uid === activeScopedUid) activeCloudNeedsReset = true;
           const preservedUnlockAt = Number(st.syncData?.teacherUnlockedAt || 0);
           nextCache[uid] = {
             ...st,
@@ -1051,7 +1054,7 @@
             mastered: 0,
             streak: 0,
             syncData: {
-              resetEpoch: 2026111816,
+              resetEpoch: CLASS_RESET_EPOCH,
               teacherUnlockedAt: preservedUnlockAt,
               timerByDay: {},
               wordsByDay: {},
@@ -1073,14 +1076,9 @@
       if (currentUser) {
         const activeUid = getScopedUid(currentUser.id);
         const mine = cloudClassCache[activeUid];
-        if (activeUid === 'thanhngoc') {
-          try { localStorage.setItem('ielts_thanhngoc_cloud_reset_pushed_2026111807', '1'); } catch (_) {}
-          if (thanhngocCloudNeedsReset) {
-            if (mine) mergeCloudEntryIntoLocal(currentUser.id, mine);
-            syncPushCurrentUser(false);
-          } else if (mine) {
-            mergeCloudEntryIntoLocal(currentUser.id, mine);
-          }
+        if (activeCloudNeedsReset && !isTeacherUser()) {
+          if (mine) mergeCloudEntryIntoLocal(currentUser.id, mine);
+          syncPushCurrentUser(false);
         } else if (mine) {
           mergeCloudEntryIntoLocal(currentUser.id, mine);
         }
@@ -4319,16 +4317,30 @@
     _setLastStudyActivityAtForTest: (ts) => { lastStudyActivityAt = Number(ts) || Date.now(); },
   };
 
-  function applyOneTimeStudentResetEpoch() {
-    const EPOCH_KEY = 'ielts_reset_thanhngoc_clean_20261118_v6';
-    const TARGET_UID = 'thanhngoc';
+  function applyOneTimeClassResetEpoch() {
+    const EPOCH_KEY = CLASS_LOCAL_RESET_KEY;
     try {
       if (localStorage.getItem(EPOCH_KEY)) return;
+      const wipePrefixes = [
+        STORAGE_KEY_BASE,
+        TIMER_KEY_BASE,
+        DAILY_WORDS_BASE,
+        STREAK_KEY_BASE,
+        TASK_PROGRESS_KEY_BASE,
+        TASK_LOCKS_KEY_BASE,
+        TEACHER_UNLOCK_KEY_BASE,
+        'ielts_teacher_sent_tasks_',
+        'ielts_trans_draft_',
+        'ielts_task_draft_',
+        'ielts_anki_reminder_dismissed',
+        'ielts_thanhngoc_cloud_reset_pushed_',
+        'ielts_reset_thanhngoc_clean_',
+      ];
       const toRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (!k) continue;
-        if (k.toLowerCase().includes(TARGET_UID) || k.startsWith('ielts_trans_draft_')) {
+        if (wipePrefixes.some((p) => k.startsWith(p))) {
           toRemove.push(k);
         }
       }
@@ -4370,7 +4382,7 @@
   });
 
   // Init cleanly on load
-  applyOneTimeStudentResetEpoch();
+  applyOneTimeClassResetEpoch();
   mountPandaWidgetFrames();
   restoreAuthSession();
 })();
