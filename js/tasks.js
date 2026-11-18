@@ -1125,20 +1125,38 @@
 
   function updateTaskStudyBar() {
     const bar = document.getElementById('task-study-bar');
+    const finWarnEl = document.getElementById('fc-finished-task-warn');
     if (!bar) return;
     const scopeKey = B()?.getCurrentScopeKey?.() || '';
     if (!scopeKey.startsWith('task_')) {
       bar.style.display = 'none';
+      if (finWarnEl) finWarnEl.style.display = 'none';
       return;
     }
     const task = getTaskById(scopeKey) || activeTask;
     if (!task) {
       bar.style.display = 'none';
+      if (finWarnEl) finWarnEl.style.display = 'none';
       return;
     }
     const total = task.words.length || 50;
     const masteredCount = getTaskMasteredCount(task);
     const allReady = masteredCount >= total;
+    const prog = loadTaskProgress()[task.id];
+    const isCompleted = Boolean(prog && prog.status === 'completed') || taskTestPassed;
+    if (finWarnEl) {
+      const esc = B()?.escapeHtml || ((x) => String(x));
+      if (!isCompleted && !isTeacherOrBypassed()) {
+        finWarnEl.style.display = 'block';
+        if (allReady) {
+          finWarnEl.innerHTML = `<strong>⚠️ Chưa hoàn thành ${esc(task.label)}!</strong> Bạn đã thuộc đủ ${total}/${total} từ — hãy bấm <strong>"Làm bài Test kết thúc Task →"</strong> bên dưới và vượt qua đủ <strong>Test 1 + Test 2 + Test 3</strong> thì Task mới được tính hoàn thành.`;
+        } else {
+          finWarnEl.innerHTML = `<strong>⚠️ Chưa hoàn thành ${esc(task.label)}!</strong> Xem hết lượt thẻ chưa tính xong Task. Bạn mới thuộc <strong>${masteredCount}/${total} từ</strong> (còn ${total - masteredCount} từ) — cần học thuộc đủ ${total}/${total} từ rồi làm bài <strong>Test kết thúc Task (Test 1 + Test 2 + Test 3)</strong>.`;
+        }
+      } else {
+        finWarnEl.style.display = 'none';
+      }
+    }
     bar.style.display = 'flex';
     const pill = document.getElementById('task-study-pill');
     if (pill) pill.textContent = task.label.toUpperCase();
@@ -1396,26 +1414,121 @@
     }
   }
 
+  function hasIncompleteActiveTask() {
+    if (isPreviewTestMode || isTeacherOrBypassed()) return false;
+    const scopeKey = B()?.getCurrentScopeKey?.() || '';
+    const task = activeTask || (scopeKey.startsWith('task_') ? getTaskById(scopeKey) : null);
+    if (!task) return false;
+    if (activeStage < 1 && scopeKey !== task.id) return false;
+    if (taskTestPassed) return false;
+    const prog = loadTaskProgress()[task.id];
+    if (prog && prog.status === 'completed') return false;
+    if (getTaskExpiryState(task.id).expired) return false;
+    return true;
+  }
+
+  function openTaskExitWarnModal(mode = 'exam') {
+    const warnModal = document.getElementById('modal-task-exit-warn');
+    if (!warnModal) return false;
+    const esc = B()?.escapeHtml || ((x) => String(x));
+    const pillEl = document.getElementById('task-exit-warn-pill');
+    const bannerEl = document.getElementById('task-exit-warn-banner');
+    const detailEl = document.getElementById('task-exit-warn-detail');
+    const confirmBtn = document.getElementById('btn-task-exit-confirm');
+    const goTestBtn = document.getElementById('btn-task-exit-go-test');
+    const stayBtn = document.getElementById('btn-task-exit-stay');
+
+    if (mode === 'study') {
+      const scopeKey = B()?.getCurrentScopeKey?.() || '';
+      const task = activeTask || getTaskById(scopeKey);
+      const total = task?.words?.length || 50;
+      const masteredCount = task ? getTaskMasteredCount(task) : 0;
+      const allReady = masteredCount >= total;
+      const taskLabel = task?.label || 'Task';
+      if (pillEl) {
+        pillEl.textContent = 'CHƯA LÀM BÀI TEST KẾT THÚC TASK!';
+        pillEl.style.background = '#d97706';
+        pillEl.style.borderColor = '#d97706';
+      }
+      if (bannerEl) {
+        bannerEl.innerHTML = allReady
+          ? `Bạn đã thuộc đủ <strong>${total}/${total}</strong> từ nhưng <strong>CHƯA làm bài Test kết thúc ${esc(taskLabel)}</strong>! Bắt buộc phải hoàn thành đủ <strong>Test 1 + Test 2 + Test 3</strong> thì hệ thống mới ghi nhận xong Task.`
+          : `Bạn mới thuộc <strong>${masteredCount}/${total}</strong> từ và <strong>CHƯA làm bài Test kết thúc ${esc(taskLabel)}</strong>! Học xong từ vựng bắt buộc phải thuộc đủ ${total}/${total} từ rồi làm bài Test (Test 1 + Test 2 + Test 3) mới được tính hoàn thành Task.`;
+      }
+      if (detailEl) {
+        detailEl.innerHTML = allReady
+          ? 'Hãy bấm <strong>"Làm bài Test kết thúc Task →"</strong> ngay để hoàn tất nhiệm vụ và lưu điểm bảng xếp hạng.'
+          : `Còn <strong>${Math.max(0, total - masteredCount)} từ</strong> chưa bấm "Đã thuộc". Nếu thoát lúc này, ${esc(taskLabel)} vẫn ở trạng thái <strong>chưa hoàn thành</strong>.`;
+      }
+      if (confirmBtn) {
+        confirmBtn.textContent = 'Vẫn thoát tạm (Chưa xong Task)';
+      }
+      if (goTestBtn) {
+        goTestBtn.style.display = allReady ? 'inline-flex' : 'none';
+      }
+      if (stayBtn) {
+        stayBtn.textContent = allReady ? 'Ở lại Task' : 'Quay lại hoàn thành Task';
+        stayBtn.className = allReady ? 'btn-subtle' : 'btn btn-primary';
+      }
+      warnModal.classList.add('open');
+      setTimeout(() => (allReady ? goTestBtn : stayBtn)?.focus(), 40);
+      return true;
+    }
+
+    if (pillEl) {
+      pillEl.textContent = 'CẢNH BÁO BỎ THI GIỮA CHỪNG';
+      pillEl.style.background = '#dc2626';
+      pillEl.style.borderColor = '#dc2626';
+    }
+    if (bannerEl) {
+      bannerEl.innerHTML = 'Bạn đang làm bài Test kết thúc Task! Nếu thoát ra lúc này, bài làm dở sẽ bị hủy và <strong>Task này sẽ bị khóa 30 phút</strong>.';
+    }
+    if (detailEl) {
+      detailEl.innerHTML = 'Bắt buộc phải hoàn thành đủ bài Test kết thúc Task (Test 1 + Test 2 + Test 3) mới được tính hoàn thành Task. Hệ thống không cho phép thoát tạm miễn phí giữa bài Test — chỉ Giáo viên mới có thể mở khóa sớm nếu bạn xác nhận thoát.';
+    }
+    if (confirmBtn) {
+      confirmBtn.textContent = 'Bỏ thi & Khóa Task 30 phút';
+    }
+    if (goTestBtn) {
+      goTestBtn.style.display = 'none';
+    }
+    if (stayBtn) {
+      stayBtn.textContent = 'Tiếp tục làm bài';
+      stayBtn.className = 'btn btn-primary';
+    }
+    warnModal.classList.add('open');
+    setTimeout(() => stayBtn?.focus(), 40);
+    return true;
+  }
+
   function dismissTaskExitWarn() {
     document.getElementById('modal-task-exit-warn')?.classList.remove('open');
   }
 
-  function confirmTaskExamAbort() {
+  function startTaskExamFromExitWarn() {
     dismissTaskExitWarn();
-    lockAndExitActiveTask('Tự ý thoát bài Test giữa chừng — Task bị khóa 30 phút!');
+    onClickStartTaskExam();
   }
 
-  function exitTaskWorkspace(confirmExit = false) {
-    const wasInExam = activeStage >= 1;
-    if (wasInExam && !taskTestPassed && confirmExit && !isTeacherOrBypassed()) {
-      const warnModal = document.getElementById('modal-task-exit-warn');
-      if (warnModal) {
-        warnModal.classList.add('open');
-        setTimeout(() => document.getElementById('btn-task-exit-stay')?.focus(), 40);
-        return;
-      }
+  function confirmTaskExamAbort() {
+    dismissTaskExitWarn();
+    if (activeStage >= 1) {
       lockAndExitActiveTask('Tự ý thoát bài Test giữa chừng — Task bị khóa 30 phút!');
       return;
+    }
+    exitTaskWorkspace(true, true);
+  }
+
+  function exitTaskWorkspace(confirmExit = false, forceStudyExit = false) {
+    const wasInExam = activeStage >= 1;
+    if (wasInExam && !taskTestPassed && confirmExit && !isTeacherOrBypassed()) {
+      if (openTaskExitWarnModal('exam')) return;
+      lockAndExitActiveTask('Tự ý thoát bài Test giữa chừng — Task bị khóa 30 phút!');
+      return;
+    }
+
+    if (!wasInExam && confirmExit && !forceStudyExit && hasIncompleteActiveTask()) {
+      if (openTaskExitWarnModal('study')) return;
     }
 
     dismissTaskExitWarn();
@@ -3807,6 +3920,8 @@
     exitTaskWorkspace,
     dismissTaskExitWarn,
     confirmTaskExamAbort,
+    startTaskExamFromExitWarn,
+    hasIncompleteActiveTask,
     speakWord,
     startTest1,
     pickT1Left,
@@ -3845,6 +3960,19 @@
     }),
     handleExternalTabIntrusion,
   };
+
+  if (!window.__taskBeforeUnloadBound) {
+    window.__taskBeforeUnloadBound = true;
+    window.addEventListener('beforeunload', (e) => {
+      if (!hasIncompleteActiveTask()) return;
+      const msg = activeStage >= 1
+        ? 'Bạn đang làm bài Test kết thúc Task! Nếu đóng hoặc tải lại tab lúc này, bài thi sẽ bị hủy và Task có thể bị khóa 30 phút.'
+        : 'Bạn chưa làm bài Test kết thúc Task! Bắt buộc phải hoàn thành Test 1 + Test 2 + Test 3 trước khi rời đi.';
+      e.preventDefault();
+      e.returnValue = msg;
+      return msg;
+    });
+  }
 
   // Run if app.js already restored auth session before tasks.js executed
   const existingUser = B()?.getCurrentUser?.();
