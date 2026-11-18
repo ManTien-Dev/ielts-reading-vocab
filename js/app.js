@@ -19,6 +19,7 @@
   const TEACHER_UNLOCK_KEY_BASE = 'ielts_teacher_unlocked_at_';
   const MASTER_COOLDOWN_KEY_BASE = 'ielts_master_cooldowns_';
   const RECALL_ACTIVE_KEY_BASE = 'ielts_recall_active_';
+  const REVIEW_OLD_SCOPE_KEY = '__old_vocab_review__';
   const CLASS_RESET_EPOCH = 2026111901;
   const CLASS_LOCAL_RESET_KEY = 'ielts_reset_all_clean_20261119_v1';
 
@@ -68,6 +69,7 @@
   let ankiReminderDismissed = false;
   let isAdvancing = false;
   let scopePositions = {}; // { scopeKey: wordId }
+  let customReviewState = null; // { words, returnToTaskId, title }
   let masterCooldowns = {}; // { wordId: expireTimestampMs }
   let cooldownTimer = null;
   let recallTargetItem = null;
@@ -215,6 +217,13 @@
   }
 
   function getScopeDef(key) {
+    if (key === REVIEW_OLD_SCOPE_KEY && customReviewState) {
+      return {
+        key: REVIEW_OLD_SCOPE_KEY,
+        name: customReviewState.title || 'Ôn tập từ vựng cũ',
+        getList: () => customReviewState.words || [],
+      };
+    }
     const found = getAllScopes().find(s => s.key === key);
     if (found) return found;
     if (key && key.startsWith('task_')) {
@@ -250,17 +259,32 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
   }
 
+  function startOldVocabReview(rawWords, targetTaskId, taskLabel = '') {
+    const resolved = resolveTaskItems({ words: Array.isArray(rawWords) ? rawWords : [] });
+    if (!resolved.length) return false;
+    onlyDueReview = false;
+    onlyUnmastered = false;
+    customReviewState = {
+      words: resolved,
+      returnToTaskId: targetTaskId || '',
+      title: taskLabel ? `Ôn từ cũ → ${taskLabel}` : 'Ôn tập từ vựng cũ',
+    };
+    loadScope(REVIEW_OLD_SCOPE_KEY);
+    showToast(`Cần ôn tập & bấm Đã thuộc đủ ${resolved.length} từ cũ trước khi vào ${taskLabel || 'Task'}!`);
+    return true;
+  }
+
   function saveState() {
     if (!currentUser) return;
     try {
       const cur = currentScopeList[currentCardIndex];
-      if (cur && !onlyUnmastered && !onlyDueReview) {
+      if (cur && !onlyUnmastered && !onlyDueReview && currentScopeKey !== REVIEW_OLD_SCOPE_KEY) {
         scopePositions[currentScopeKey] = cur.id;
       }
       const theme = document.documentElement.getAttribute('data-theme') || 'light';
       localStorage.setItem(THEME_STORAGE_KEY, theme);
       localStorage.setItem(getUserStorageKey(), JSON.stringify({
-        currentScopeKey,
+        currentScopeKey: currentScopeKey === REVIEW_OLD_SCOPE_KEY ? SCOPES[0].key : currentScopeKey,
         assessments,
         srsData,
         scopePositions,
@@ -1781,8 +1805,15 @@
         `<option value="${escapeHtml(it.key)}">${escapeHtml(it.name)}</option>`
       ).join('')}</optgroup>`;
     }
+    if (customReviewState && currentScopeKey === REVIEW_OLD_SCOPE_KEY) {
+      html = `<option value="${REVIEW_OLD_SCOPE_KEY}">${escapeHtml(customReviewState.title || 'Ôn tập từ vựng cũ')}</option>` + html;
+    }
     sel.innerHTML = html;
-    sel.value = getAllScopes().some(s => s.key === currentScopeKey) ? currentScopeKey : SCOPES[0].key;
+    if (customReviewState && currentScopeKey === REVIEW_OLD_SCOPE_KEY) {
+      sel.value = REVIEW_OLD_SCOPE_KEY;
+    } else {
+      sel.value = getAllScopes().some(s => s.key === currentScopeKey) ? currentScopeKey : SCOPES[0].key;
+    }
   }
 
   function applyFilterAndBuildDeck(preserveWordId = null, options = {}) {
@@ -2401,6 +2432,25 @@
   }
 
   function advanceDeckAfterAssess3() {
+    if (currentScopeKey === REVIEW_OLD_SCOPE_KEY && customReviewState) {
+      const now = Date.now();
+      const remaining = (customReviewState.words || []).filter((w) => assessments[w.id] !== 3 || isWordDueNow(w, now));
+      if (remaining.length === 0) {
+        const targetTid = customReviewState.returnToTaskId;
+        customReviewState = null;
+        loadScope(SCOPES[0].key);
+        showToast('✓ Đã ôn thuộc hết từ vựng cũ! Task mới đã sẵn sàng.');
+        if (targetTid) {
+          window.TasksModule?.openTaskBriefModal?.(targetTid);
+        }
+        return;
+      }
+      currentScopeList = remaining;
+      currentCardIndex = Math.min(currentCardIndex, remaining.length - 1);
+      updateVocabMasteryUI();
+      renderCurrentCard(1);
+      return;
+    }
     if (onlyDueReview || onlyUnmastered) {
       currentScopeList.splice(currentCardIndex, 1);
       updateVocabMasteryUI();
@@ -3776,6 +3826,7 @@
     recallSynOptions = [];
     recallSynSelected = new Set();
     scopePositions = {};
+    customReviewState = null;
     dynamicTaskScopes = [];
     displayedStreak = null;
   }
@@ -4446,6 +4497,9 @@
     activateTaskScope,
     loadMainScope: (scopeKey) => loadScope(scopeKey || SCOPES[0].key),
     getAssessmentsMap: () => assessments,
+    getSrsMap: () => srsData,
+    isWordDueNow,
+    startOldVocabReview,
     getCurrentScopeKey: () => currentScopeKey,
     saveAndSync: () => {
       saveState();

@@ -914,11 +914,64 @@
     });
   }
 
+  function getTaskNumberOrder(taskId) {
+    return Number(String(taskId || '').replace(/\D/g, '')) || 0;
+  }
+
+  function getOldWordsToReviewForTask(taskId) {
+    const taskNum = getTaskNumberOrder(taskId);
+    if (taskNum < 2) return [];
+    const bridge = B();
+    const amap = bridge?.getAssessmentsMap?.() || {};
+    const srs = bridge?.getSrsMap?.() || {};
+    const prog = loadTaskProgress();
+    const now = Date.now();
+    const seen = new Set();
+    const dueWords = [];
+
+    getTasksList().forEach((prevTask) => {
+      const prevNum = getTaskNumberOrder(prevTask.id);
+      if (prevNum <= 0 || prevNum >= taskNum) return;
+      const words = Array.isArray(prevTask.words) ? prevTask.words : [];
+      const prevCompleted = prog[prevTask.id]?.status === 'completed';
+      const prevStarted = prevCompleted || words.some((w) => w && (amap[w.id] > 0 || Boolean(srs[w.id])));
+      if (!prevStarted) return;
+
+      words.forEach((w) => {
+        if (!w || !w.id || seen.has(w.id)) return;
+        const lvl = Number(amap[w.id] || 0);
+        const st = srs[w.id];
+        const dueBySrs = Boolean(st && typeof st.dueAt === 'number' && st.dueAt <= now);
+        const isOldStarted = prevCompleted || lvl > 0 || Boolean(st);
+        if (isOldStarted && (lvl !== 3 || dueBySrs)) {
+          seen.add(w.id);
+          dueWords.push(w);
+        }
+      });
+    });
+
+    return dueWords;
+  }
+
+  function startPreTaskOldVocabReview() {
+    const tid = pendingTaskId;
+    if (!tid) return;
+    const t = getTaskById(tid);
+    const dueOld = getOldWordsToReviewForTask(tid);
+    if (!dueOld.length) {
+      updateBriefLockUI();
+      return;
+    }
+    closeTaskBriefModal();
+    B()?.startOldVocabReview?.(dueOld, tid, t?.label || tid);
+  }
+
   function updateBriefLockUI() {
     if (!pendingTaskId) return;
     const lockEl = document.getElementById('brief-task-lock');
     const startBtn = document.getElementById('btn-start-task');
     const viewBtn = document.getElementById('btn-view-expired-result');
+    const reviewBtn = document.getElementById('btn-review-old-before-task');
     const dlLine = document.getElementById('brief-deadline-line');
     const exp = getTaskExpiryState(pendingTaskId);
 
@@ -930,6 +983,7 @@
     }
 
     if (!isTeacherOrBypassed() && exp.expired) {
+      if (reviewBtn) reviewBtn.style.display = 'none';
       if (lockEl) {
         lockEl.style.display = 'flex';
         lockEl.style.alignItems = 'center';
@@ -959,6 +1013,7 @@
 
     if (lockEl) lockEl.classList.remove('is-info-ended');
     if (viewBtn) viewBtn.style.display = 'none';
+    if (reviewBtn) reviewBtn.style.display = 'none';
     if (startBtn) {
       startBtn.style.display = 'inline-flex';
       startBtn.textContent = 'Bắt đầu làm Task';
@@ -975,10 +1030,34 @@
         lockEl.innerHTML = `<span>Task đang tạm khóa do vi phạm kỷ luật. Vui lòng quay lại sau ${formatMmSs(remMs)}.</span><button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.checkTaskUnlockNow()">Kiểm tra mở khóa</button>`;
       }
       if (startBtn) startBtn.disabled = true;
-    } else {
-      if (lockEl) lockEl.style.display = 'none';
-      if (startBtn) startBtn.disabled = false;
+      return;
     }
+
+    if (!isTeacherOrBypassed()) {
+      const dueOld = getOldWordsToReviewForTask(pendingTaskId);
+      if (dueOld.length > 0) {
+        if (lockEl) {
+          lockEl.style.display = 'flex';
+          lockEl.style.alignItems = 'center';
+          lockEl.style.justifyContent = 'space-between';
+          lockEl.style.gap = '10px';
+          lockEl.style.flexWrap = 'wrap';
+          lockEl.innerHTML = `<span>📚 Yêu cầu ôn tập từ vựng cũ: Bạn còn <strong>${dueOld.length} từ cũ</strong> (thuộc các Task trước) chưa thuộc hết hoặc đến hạn ôn tập. Hãy ôn thuộc hết trước khi vào Task này!</span>`;
+        }
+        if (reviewBtn) {
+          reviewBtn.style.display = 'inline-flex';
+          reviewBtn.textContent = `Ôn tập ${dueOld.length} từ cũ ngay →`;
+        }
+        if (startBtn) {
+          startBtn.disabled = true;
+          startBtn.textContent = `Cần ôn ${dueOld.length} từ cũ trước`;
+        }
+        return;
+      }
+    }
+
+    if (lockEl) lockEl.style.display = 'none';
+    if (startBtn) startBtn.disabled = false;
   }
 
   function viewExpiredTaskResult() {
@@ -1016,6 +1095,12 @@
       }
       if (getTaskLockRemainingMs(pendingTaskId) > 0) {
         updateBriefLockUI();
+        return;
+      }
+      const dueOld = getOldWordsToReviewForTask(pendingTaskId);
+      if (dueOld.length > 0) {
+        updateBriefLockUI();
+        B()?.showToast?.(`Cần ôn thuộc hết ${dueOld.length} từ vựng cũ trước khi vào ${getTaskById(pendingTaskId)?.label || 'Task'}!`);
         return;
       }
     }
@@ -1172,6 +1257,12 @@
       openTaskBriefModal(t.id);
       return false;
     }
+    const dueOld = getOldWordsToReviewForTask(t.id);
+    if (dueOld.length > 0) {
+      B()?.showToast?.(`Cần ôn thuộc hết ${dueOld.length} từ cũ trước khi vào ${t.label}!`);
+      openTaskBriefModal(t.id);
+      return false;
+    }
     return true;
   }
 
@@ -1179,7 +1270,7 @@
     if (scopeKey && scopeKey.startsWith('task_')) {
       const t = getTaskById(scopeKey);
       if (t) {
-        if (!isTeacherOrBypassed() && (getTaskExpiryState(t.id).expired || getTaskLockRemainingMs(t.id) > 0)) {
+        if (!isTeacherOrBypassed() && (getTaskExpiryState(t.id).expired || getTaskLockRemainingMs(t.id) > 0 || getOldWordsToReviewForTask(t.id).length > 0)) {
           stopIdleMonitor();
           activeTask = null;
           activeStage = 0;
@@ -1227,6 +1318,12 @@
         B()?.showToast?.(exp.completed
           ? `${task.label} đã hết hạn — chỉ có thể xem lại kết quả!`
           : `${task.label} đã kết thúc (hết thời hạn làm bài)!`);
+        openTaskBriefModal(task.id);
+        return;
+      }
+      const dueOld = getOldWordsToReviewForTask(task?.id);
+      if (dueOld.length > 0) {
+        B()?.showToast?.(`Cần ôn thuộc hết ${dueOld.length} từ cũ trước khi vào ${task.label}!`);
         openTaskBriefModal(task.id);
         return;
       }
@@ -3693,6 +3790,8 @@
     viewExpiredTaskResult,
     getTaskDeadlineInfo,
     getTaskExpiryState,
+    getOldWordsToReviewForTask,
+    startPreTaskOldVocabReview,
     openTaskSummaryModal,
     closeTaskSummaryModal,
     openTaskExamReadyModal,

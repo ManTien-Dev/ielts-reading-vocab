@@ -1111,19 +1111,19 @@ main.app-main:has(#screen-study.active) {
   flex: 1;
 }
 .study-deck .widget-title {
-  font-size: 13px !important;
-  line-height: 1.2 !important;
+  font-size: 15px !important;
+  line-height: 1.25 !important;
   white-space: nowrap;
 }
 .study-deck .widget-subtitle {
-  font-size: 12px !important;
-  line-height: 1.2 !important;
+  font-size: 13.5px !important;
+  line-height: 1.25 !important;
   margin-top: 2px !important;
 }
 .study-deck .streak-badge {
-  font-size: 10.5px !important;
-  padding: 2px 5.5px !important;
-  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  padding: 3px 7px !important;
+  border-radius: 10px !important;
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -1175,10 +1175,10 @@ main.app-main:has(#screen-study.active) {
     gap: 8px;
   }
   #screen-study .timer-digits {
-    font-size: 25px !important;
+    font-size: 29px !important;
   }
   #screen-study .timer-status-text {
-    font-size: 12px !important;
+    font-size: 13.5px !important;
     margin-top: 0 !important;
     text-align: right;
   }
@@ -1186,16 +1186,16 @@ main.app-main:has(#screen-study.active) {
     margin-bottom: 6px !important;
   }
   #screen-study .btn-timer-ctrl {
-    padding: 5.5px 10px !important;
-    font-size: 13px !important;
+    padding: 6px 11px !important;
+    font-size: 14px !important;
   }
   #screen-study .board-list {
-    gap: 4px !important;
+    gap: 5px !important;
   }
   #screen-study .board-item,
   #screen-study .board-user-card {
-    padding: 4.5px 9px !important;
-    font-size: 13.5px !important;
+    padding: 5.5px 9.5px !important;
+    font-size: 14.5px !important;
   }
   #screen-study .board-info {
     display: flex !important;
@@ -1203,11 +1203,11 @@ main.app-main:has(#screen-study.active) {
     gap: 6px;
   }
   #screen-study .board-meta {
-    font-size: 11.5px !important;
-    opacity: 0.78;
+    font-size: 13px !important;
+    opacity: 0.84;
   }
   #screen-study .board-user-card {
-    margin-top: 5px !important;
+    margin-top: 6px !important;
   }
   #screen-study .vocab-stats-list {
     gap: 9px !important;
@@ -4703,14 +4703,37 @@ header.app-header {
   flex: 1;
 }
 #screen-study .board-name {
+  font-size: 14.5px !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 #screen-study .board-meta,
 #screen-study .board-score {
+  font-size: 13.5px !important;
   flex-shrink: 0;
   white-space: nowrap;
+}
+#screen-study .timer-mode-tab,
+#screen-study .board-tab-btn,
+#screen-study .btn-board-all,
+#screen-study .preset-btn {
+  font-size: 13px !important;
+}
+#screen-study .streak-footer-goal {
+  font-size: 13.5px !important;
+}
+#widget-vocab-progress .vocab-stat-row {
+  font-size: 14.5px !important;
+}
+#widget-vocab-progress .vocab-stat-value strong {
+  font-size: 15.5px !important;
+}
+#widget-vocab-progress .stat-pct {
+  font-size: 13px !important;
+}
+#widget-vocab-progress .due-review-row .btn-due-quick {
+  font-size: 13px !important;
 }
 
 /* Billfold Wallet Stacked Slips + Stitched Teal Pocket inside #widget-vocab-progress */
