@@ -10,9 +10,9 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261118s">
-  <link rel="stylesheet" href="css/motion.css?v=20261118s">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261118s">
+  <link rel="stylesheet" href="css/style.css?v=20261118t">
+  <link rel="stylesheet" href="css/motion.css?v=20261118t">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261118t">
 </head>
 <body>
 
@@ -844,8 +844,13 @@
         <div class="task-steps-nav" id="task-steps-nav">
           <span class="task-step-pill active" id="task-current-step-badge">Test 1</span>
         </div>
-        <div class="task-idle-badge" id="task-idle-badge" title="Không thao tác quá 10 phút sẽ tự thoát và khóa 30 phút">
-          00:00 / 10:00
+        <div class="task-topbar-actions">
+          <div class="task-idle-badge" id="task-idle-badge" title="Không thao tác quá 10 phút sẽ tự thoát và khóa 30 phút">
+            00:00 / 10:00
+          </div>
+          <button type="button" class="btn btn-primary btn-task-finish" id="btn-task-finish" onclick="TasksModule.finishTaskExam()" disabled title="Hoàn thành đủ Test 1, Test 2 và Test 3 để bấm Finish nộp bài">
+            Finish · Nộp bài (0/3)
+          </button>
         </div>
       </div>
       <div class="modal-body" style="padding:14px 20px 20px;">
@@ -910,12 +915,12 @@
     </div>
   </div>
 
-  <script src="data/accounts.js?v=20261118s"></script>
-  <script src="data/vocab_data.js?v=20261118s"></script>
-  <script src="data/tasks_data.js?v=20261118s"></script>
-  <script src="data/ipa_dict.js?v=20261118s"></script>
-  <script src="js/motion.js?v=20261118s"></script>
-  <script src="js/app.js?v=20261118s"></script>
-  <script src="js/tasks.js?v=20261118s"></script>
+  <script src="data/accounts.js?v=20261118t"></script>
+  <script src="data/vocab_data.js?v=20261118t"></script>
+  <script src="data/tasks_data.js?v=20261118t"></script>
+  <script src="data/ipa_dict.js?v=20261118t"></script>
+  <script src="js/motion.js?v=20261118t"></script>
+  <script src="js/app.js?v=20261118t"></script>
+  <script src="js/tasks.js?v=20261118t"></script>
 </body>
 </html>

@@ -52,6 +52,10 @@
   let lockCountdownTimer = null;
   let examReadyPromptShownForTaskId = null;
   let lastPreviewSummaryRecord = null;
+  let t1Completed = false;
+  let t2Completed = false;
+  let t3Completed = false;
+  let lastT3Grade = null;
 
   const B = () => window.__VOCAB_BRIDGE__;
 
@@ -917,6 +921,10 @@
     taskLeaveWarnings = 0;
     lastTaskLeaveAt = 0;
     taskTestPassed = false;
+    t1Completed = false;
+    t2Completed = false;
+    t3Completed = false;
+    lastT3Grade = null;
     examReadyPromptShownForTaskId = null;
     document.getElementById('task-leave-warn-banner')?.remove();
     closeStudentTasksModal();
@@ -1183,6 +1191,7 @@
       examModal.classList.toggle('exam-no-copy', isTestNow);
     }
     updateStepPills();
+    updateFinishButtonUI();
     if (activeStage === 1) renderTest1Stage();
     else if (activeStage === 2) renderTest2Stage();
     else if (activeStage === 3) renderFinalTranslationStage();
@@ -1215,6 +1224,10 @@
     isPreviewTestMode = true;
     lastPreviewSummaryRecord = null;
     taskTestPassed = false;
+    t1Completed = false;
+    t2Completed = false;
+    t3Completed = false;
+    lastT3Grade = null;
     taskStartedAt = Date.now();
     taskLeaveWarnings = 0;
     lastTaskLeaveAt = 0;
@@ -1244,6 +1257,11 @@
     const total = activeTask.words.length || 50;
     if (!isTeacherOrBypassed() && getTaskMasteredCount(activeTask) < total) return;
     activeStage = 1;
+    taskTestPassed = false;
+    t1Completed = false;
+    t2Completed = false;
+    t3Completed = false;
+    lastT3Grade = null;
     t1BoardIndex = 0;
     t1Mistakes = 0;
     t1WrongWordIds = new Set();
@@ -1476,6 +1494,7 @@
 
   function proceedToTest2FromT1() {
     if (!activeTask) return;
+    t1Completed = true;
     activeStage = 2;
     initTest2State(activeTask);
     B()?.showToast(`Xong Test 1 (${t1Mistakes} lỗi)! Chuyển sang Test 2.`);
@@ -1485,6 +1504,8 @@
   function renderTest1MistakeReviewStage() {
     const container = document.getElementById('task-stage-container');
     if (!container || !activeTask) return;
+    t1Completed = true;
+    updateFinishButtonUI();
     const esc = B()?.escapeHtml || ((x) => String(x));
     const wrongWords = (activeTask.words || []).filter((w) => t1WrongWordIds.has(w.id));
     if (wrongWords.length === 0) {
@@ -1661,6 +1682,8 @@
     if (t2Index >= qs.length) {
       const passThreshold = Math.max(1, Math.ceil(totalT2 * 0.66));
       const passed = t2Correct >= passThreshold;
+      t2Completed = passed;
+      updateFinishButtonUI();
       const mistakesHtml = t2WrongRecords.length > 0
         ? `<div id="task-t2-review-list" class="task-mistake-review-grid">
             ${t2WrongRecords.map((m, idx) => `
@@ -1790,6 +1813,8 @@
     taskLeaveWarnings = 0;
     lastTaskLeaveAt = 0;
     taskTestPassed = false;
+    t2Completed = false;
+    updateFinishButtonUI();
     document.getElementById('task-leave-warn-banner')?.remove();
     renderTest2Stage();
   }
@@ -2598,6 +2623,10 @@
         </div>
       `).join('');
 
+      t3Completed = Boolean(g.passed);
+      lastT3Grade = g.passed ? g : null;
+      updateFinishButtonUI();
+
       let masteryNote = '';
       if (g.passed && isTeacherSession) {
         const durationSec = Math.max(1, Math.round((Date.now() - (taskStartedAt || Date.now())) / 1000));
@@ -2625,38 +2654,24 @@
             </div>
           </div>`;
       } else if (g.passed) {
-        taskTestPassed = true;
-        stopIdleMonitor();
-        B()?.syncExamLock?.(false);
-        document.getElementById('screen-task')?.classList.remove('exam-no-copy');
-        document.getElementById('task-leave-warn-banner')?.remove();
-        const durationSec = Math.max(1, Math.round((Date.now() - (taskStartedAt || Date.now())) / 1000));
-        const totalT1 = activeTask.words?.length || 50;
-        const t1AccuracyPct = Math.max(0, Math.round(((totalT1 - Math.min(totalT1, t1Mistakes)) / totalT1) * 100));
-        const totalT2 = (t2ParaPairs.length + t2ContextQs.length) || getTaskTest2Total(activeTask);
-        const newlyMarked = B()?.markMasteredBatch?.(activeTask.linkedIds) || 0;
-        const prog = loadTaskProgress();
-        prog[activeTask.id] = {
-          status: 'completed',
-          test1Mistakes: t1Mistakes,
-          test1AccuracyPct: t1AccuracyPct,
-          test2Score: t2Correct,
-          test2Total: totalT2,
-          translationScore: g.score,
-          durationSec,
-          linkedCount: activeTask.linkedIds.length,
-          newlyMarked,
-          updatedAt: Date.now(),
-        };
-        saveTaskProgress(prog);
-        B()?.saveAndSync?.();
-        masteryNote = `
-          <div style="margin-top:14px; padding:14px 16px; border-radius:12px; background:rgba(82,136,62,0.16); border:1px solid rgba(82,136,62,0.35); color:var(--text-bright); font-size:15.5px;">
-            <div style="font-weight:800;">✓ Hoàn thành ${esc(activeTask.label)}! Đã tự động cập nhật Đã thuộc (+${newlyMarked} mục mới, tổng ${activeTask.linkedIds.length} từ/biến thể liên kết) vào bộ từ vựng chính.</div>
-            <div style="margin-top:10px;">
-              <button type="button" class="btn btn-primary" onclick="TasksModule.openTaskSummaryModal('${esc(activeTask.id)}')">Xem Bảng Thống Kê Task</button>
-            </div>
-          </div>`;
+        const all3Done = t1Completed && t2Completed && t3Completed;
+        if (all3Done) {
+          masteryNote = `
+            <div style="margin-top:14px; padding:14px 16px; border-radius:12px; background:rgba(82,136,62,0.16); border:1px solid rgba(82,136,62,0.35); color:var(--text-bright); font-size:15.5px;">
+              <div style="font-weight:800;">✓ Đạt đủ 3/3 phần Test (${esc(activeTask.label)})! Bấm nút <strong>Finish · Nộp bài</strong> ở góc trên hoặc nút bên dưới để hoàn tất nộp bài và xem Bảng Thống Kê.</div>
+              <div style="margin-top:10px;">
+                <button type="button" class="btn btn-primary" id="btn-t3-finish-inline" onclick="TasksModule.finishTaskExam()">Finish · Nộp bài &amp; Xem Tổng Kết ✓</button>
+              </div>
+            </div>`;
+        } else {
+          const missing = [];
+          if (!t1Completed) missing.push('Test 1');
+          if (!t2Completed) missing.push('Test 2');
+          masteryNote = `
+            <div style="margin-top:14px; padding:14px 16px; border-radius:12px; background:rgba(245,158,11,0.14); border:1px solid rgba(245,158,11,0.35); color:var(--text-bright); font-size:15.5px;">
+              <div style="font-weight:800;">✓ Test 3 đạt ${g.score.toFixed(1)}/10, nhưng bạn cần hoàn thành đủ: ${esc(missing.join(', '))} trước khi bấm Finish nộp bài.</div>
+            </div>`;
+        }
       }
 
       const tabBadge = document.getElementById('t3-tab-score-badge');
@@ -2692,8 +2707,8 @@
 
       switchT3Tab('grade');
 
-      if (g.passed) {
-        setTimeout(() => openTaskSummaryModal(activeTask?.id, isTeacherSession), 180);
+      if (g.passed && isTeacherSession) {
+        setTimeout(() => openTaskSummaryModal(activeTask?.id, true), 180);
       }
     } catch (err) {
       if (out) {
@@ -2771,6 +2786,11 @@
     activeTask = null;
     activeStage = 0;
     taskTestPassed = false;
+    t1Completed = false;
+    t2Completed = false;
+    t3Completed = false;
+    lastT3Grade = null;
+    lastPreviewSummaryRecord = null;
     B()?.syncExamLock?.(false);
     document.getElementById('screen-task')?.classList.remove('open', 'active', 'exam-no-copy');
     document.getElementById('task-stage-container')?.style.removeProperty('visibility');
@@ -2928,6 +2948,103 @@
     document.getElementById('modal-task-summary')?.classList.add('open');
   }
 
+  function updateFinishButtonUI() {
+    const btn = document.getElementById('btn-task-finish');
+    if (!btn) return;
+    if (isTeacherOrBypassed()) {
+      btn.disabled = false;
+      btn.textContent = 'Finish · Xem Preview';
+      btn.title = 'Xem trước màn hình Tổng kết hoàn thành Task (không lưu điểm vào lớp)';
+      return;
+    }
+    if (taskTestPassed) {
+      btn.disabled = false;
+      btn.textContent = 'Xem Tổng Kết ✓';
+      btn.title = 'Xem lại Bảng Thống Kê hoàn thành Task';
+      return;
+    }
+    const doneCount = (t1Completed ? 1 : 0) + (t2Completed ? 1 : 0) + (t3Completed ? 1 : 0);
+    const canFinish = t1Completed && t2Completed && t3Completed && Boolean(lastT3Grade?.passed);
+    btn.disabled = !canFinish;
+    btn.textContent = canFinish ? 'Finish · Nộp bài ✓' : `Finish · Nộp bài (${doneCount}/3)`;
+    const missing = [];
+    if (!t1Completed) missing.push('Test 1');
+    if (!t2Completed) missing.push('Test 2');
+    if (!t3Completed) missing.push('Test 3 (Đạt >= 6.0)');
+    btn.title = canFinish
+      ? 'Bấm để nộp bài hoàn thành Task và lưu điểm'
+      : `Cần hoàn thành đủ 3 bài Test trước khi bấm Finish (còn thiếu: ${missing.join(', ')})`;
+  }
+
+  function finishTaskExam() {
+    if (!activeTask) return;
+    if (isTeacherOrBypassed()) {
+      const durationSec = Math.max(1, Math.round((Date.now() - (taskStartedAt || Date.now())) / 1000));
+      const totalT1 = activeTask.words?.length || 50;
+      const t1AccuracyPct = Math.max(0, Math.round(((totalT1 - Math.min(totalT1, t1Mistakes)) / totalT1) * 100));
+      const totalT2 = (t2ParaPairs.length + t2ContextQs.length) || getTaskTest2Total(activeTask);
+      const previewScore = Number(lastT3Grade?.score || lastPreviewSummaryRecord?.translationScore || 8.5);
+      lastPreviewSummaryRecord = {
+        taskId: activeTask.id,
+        status: 'completed',
+        test1Mistakes: t1Mistakes,
+        test1AccuracyPct: t1AccuracyPct,
+        test2Score: t2Correct > 0 ? t2Correct : totalT2,
+        test2Total: totalT2,
+        translationScore: previewScore,
+        durationSec,
+        linkedCount: activeTask.linkedIds.length,
+        newlyMarked: activeTask.linkedIds.length,
+        updatedAt: Date.now(),
+      };
+      openTaskSummaryModal(activeTask.id, true);
+      return;
+    }
+
+    if (taskTestPassed) {
+      openTaskSummaryModal(activeTask.id, false);
+      return;
+    }
+
+    if (!t1Completed || !t2Completed || !t3Completed || !lastT3Grade?.passed) {
+      const missing = [];
+      if (!t1Completed) missing.push('Test 1');
+      if (!t2Completed) missing.push('Test 2');
+      if (!t3Completed) missing.push('Test 3 (Đạt >= 6.0)');
+      B()?.showToast?.(`Chưa thể Finish! Cần hoàn thành đủ cả 3 bài Test (còn thiếu: ${missing.join(', ')}).`);
+      updateFinishButtonUI();
+      return;
+    }
+
+    taskTestPassed = true;
+    stopIdleMonitor();
+    B()?.syncExamLock?.(false);
+    document.getElementById('screen-task')?.classList.remove('exam-no-copy');
+    document.getElementById('task-leave-warn-banner')?.remove();
+    const durationSec = Math.max(1, Math.round((Date.now() - (taskStartedAt || Date.now())) / 1000));
+    const totalT1 = activeTask.words?.length || 50;
+    const t1AccuracyPct = Math.max(0, Math.round(((totalT1 - Math.min(totalT1, t1Mistakes)) / totalT1) * 100));
+    const totalT2 = (t2ParaPairs.length + t2ContextQs.length) || getTaskTest2Total(activeTask);
+    const newlyMarked = B()?.markMasteredBatch?.(activeTask.linkedIds) || 0;
+    const prog = loadTaskProgress();
+    prog[activeTask.id] = {
+      status: 'completed',
+      test1Mistakes: t1Mistakes,
+      test1AccuracyPct: t1AccuracyPct,
+      test2Score: t2Correct,
+      test2Total: totalT2,
+      translationScore: lastT3Grade.score,
+      durationSec,
+      linkedCount: activeTask.linkedIds.length,
+      newlyMarked,
+      updatedAt: Date.now(),
+    };
+    saveTaskProgress(prog);
+    B()?.saveAndSync?.();
+    updateFinishButtonUI();
+    openTaskSummaryModal(activeTask.id, false);
+  }
+
   function closeTaskSummaryModal(event) {
     if (event && event.target !== document.getElementById('modal-task-summary')) return;
     document.getElementById('modal-task-summary')?.classList.remove('open');
@@ -2983,6 +3100,7 @@
     jumpToT2ParaPreview,
     retryTest2,
     startFinalTranslation,
+    finishTaskExam,
     openAdminTestPreview,
     pickT2ParaLeft,
     pickT2ParaRight,
