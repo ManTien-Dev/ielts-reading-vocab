@@ -32,6 +32,8 @@
   let t2Answered = false;
   let t2WrongRecords = [];
   let t2ParaPairs = [];
+  let t2ParaBoards = [];
+  let t2ParaBoardIndex = 0;
   let t2ParaShuffledRight = [];
   let t2ParaSelectedLeft = null;
   let t2ParaMatchedIds = new Set();
@@ -1146,12 +1148,20 @@
     renderTest1Stage();
   }
 
+  function setupT2ParaBoard() {
+    const pairs = t2ParaBoards[t2ParaBoardIndex] || [];
+    t2ParaSelectedLeft = null;
+    t2ParaMatchedIds = new Set();
+    t2ParaShuffledRight = pairs.slice().sort(() => Math.random() - 0.5);
+  }
+
   function initTest2State(task) {
     const qs = task?.test2Questions || [];
     const pairs = [];
     const usedL = new Set();
     const usedR = new Set();
 
+    // 1. Lấy các cặp paraphrase trọng tâm trong bài đọc trước
     qs.filter((q) => q.type === 'paraphrase').forEach((q) => {
       const m = String(q.prompt || '').match(/["“]([^"”]+)["”]\s*\??\s*$/);
       const left = (m ? m[1] : '').trim();
@@ -1159,7 +1169,7 @@
       if (!left || !right) return;
       const lKey = left.toLowerCase();
       const rKey = right.toLowerCase();
-      if (usedL.has(lKey) || usedR.has(rKey)) return;
+      if (lKey === rKey || usedL.has(lKey) || usedR.has(rKey)) return;
       usedL.add(lKey);
       usedR.add(rKey);
       pairs.push({
@@ -1170,33 +1180,42 @@
       });
     });
 
-    if (pairs.length < 6) {
-      (task?.words || []).forEach((w) => {
-        if (pairs.length >= 6) return;
-        const left = String(w.lemma || '').trim();
-        const syn = Array.isArray(w.synonyms) ? String(w.synonyms[0] || '').trim() : '';
-        if (!left || !syn) return;
-        const lKey = left.toLowerCase();
+    // 2. Bổ sung các cặp từ đồng nghĩa hay bị paraphrase nhất (chỉ lấy 1 từ đồng nghĩa tiêu biểu nhất/từ, không đáp án nhiễu) cho đủ 20 cặp (4 bảng x 5 cặp)
+    (task?.words || []).forEach((w) => {
+      if (pairs.length >= 20) return;
+      const left = String(w.lemma || '').trim();
+      const syns = Array.isArray(w.synonyms) ? w.synonyms : [];
+      const lKey = left.toLowerCase();
+      if (!left || usedL.has(lKey)) return;
+      for (const rawSyn of syns) {
+        const syn = String(rawSyn || '').trim();
         const rKey = syn.toLowerCase();
-        if (lKey === rKey || usedL.has(lKey) || usedR.has(rKey)) return;
-        usedL.add(lKey);
-        usedR.add(rKey);
-        pairs.push({
-          id: `p_${pairs.length}`,
-          left,
-          right: syn,
-          explain: `${left} đồng nghĩa / paraphrase với ${syn}`,
-        });
-      });
-    }
+        if (syn && rKey !== lKey && !usedL.has(rKey) && !usedR.has(rKey)) {
+          usedL.add(lKey);
+          usedR.add(rKey);
+          pairs.push({
+            id: `p_${pairs.length}`,
+            left,
+            right: syn,
+            explain: `${left} đồng nghĩa / paraphrase với ${syn}`,
+          });
+          break;
+        }
+      }
+    });
 
     t2ParaPairs = pairs;
-    t2ParaShuffledRight = pairs.slice().sort(() => Math.random() - 0.5);
+    t2ParaBoards = [];
+    for (let i = 0; i < pairs.length; i += 5) {
+      t2ParaBoards.push(pairs.slice(i, i + 5));
+    }
+    t2ParaBoardIndex = 0;
     t2ParaSelectedLeft = null;
     t2ParaMatchedIds = new Set();
     t2ParaFailedIds = new Set();
     t2ParaMistakes = 0;
-    t2ParaDone = pairs.length === 0;
+    t2ParaDone = t2ParaBoards.length === 0;
+    setupT2ParaBoard();
     t2ContextQs = qs.filter((q) => q.type !== 'paraphrase').slice(0, 6);
     if (t2ContextQs.length === 0 && pairs.length === 0) t2ContextQs = qs.slice();
     t2Index = 0;
@@ -1299,9 +1318,15 @@
         t2Correct++;
       }
       t2ParaSelectedLeft = null;
-      if (t2ParaMatchedIds.size >= t2ParaPairs.length) {
-        t2ParaDone = true;
-        B()?.showToast?.('Xong Ghép Paraphrase! Tiếp tục phần Ngữ cảnh.');
+      const curBoard = t2ParaBoards[t2ParaBoardIndex] || [];
+      if (t2ParaMatchedIds.size >= curBoard.length) {
+        if (t2ParaBoardIndex < t2ParaBoards.length - 1) {
+          t2ParaBoardIndex++;
+          setupT2ParaBoard();
+        } else {
+          t2ParaDone = true;
+          B()?.showToast?.('Xong Nối từ tương đương! Tiếp tục phần Ngữ cảnh.');
+        }
       }
       renderTest2Stage();
       return;
@@ -1309,8 +1334,9 @@
 
     t2ParaMistakes++;
     t2ParaFailedIds.add(t2ParaSelectedLeft);
-    const chosenPair = t2ParaPairs.find((p) => p.id === rightId);
-    const targetPair = t2ParaPairs.find((p) => p.id === t2ParaSelectedLeft);
+    const curBoard = t2ParaBoards[t2ParaBoardIndex] || [];
+    const chosenPair = curBoard.find((p) => p.id === rightId);
+    const targetPair = curBoard.find((p) => p.id === t2ParaSelectedLeft);
     if (targetPair && !t2WrongRecords.some((r) => r.prompt === `Paraphrase: ${targetPair.left}`)) {
       t2WrongRecords.push({
         prompt: `Paraphrase: ${targetPair.left}`,
@@ -1329,12 +1355,13 @@
     const container = document.getElementById('task-stage-container');
     if (!container || !activeTask) return;
     const esc = B()?.escapeHtml || ((x) => String(x));
-    if (t2ParaPairs.length === 0 && t2ContextQs.length === 0) {
+    if (t2ParaBoards.length === 0 && t2ContextQs.length === 0) {
       initTest2State(activeTask);
     }
 
-    if (!t2ParaDone && t2ParaPairs.length > 0) {
-      const leftHtml = t2ParaPairs.map((p) => {
+    if (!t2ParaDone && t2ParaBoards.length > 0) {
+      const curBoard = t2ParaBoards[t2ParaBoardIndex] || [];
+      const leftHtml = curBoard.map((p) => {
         const matched = t2ParaMatchedIds.has(p.id);
         const active = t2ParaSelectedLeft === p.id;
         return `<button type="button" class="task-match-btn ${matched ? 'is-matched' : ''} ${active ? 'is-active' : ''}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaLeft('${esc(p.id)}')">${esc(p.left)}</button>`;
@@ -1349,22 +1376,16 @@
         <div class="task-card-panel">
           <div class="task-exam-header-row">
             <div class="task-exam-title-group">
-              <h2 class="task-exam-title">Nối cụm từ tương đương</h2>
+              <h2 class="task-exam-title">Nối cụm từ tương đương · Bảng ${t2ParaBoardIndex + 1} / ${t2ParaBoards.length}</h2>
             </div>
             <div class="task-stat-pills">
               <span class="task-err-pill ${t2ParaMistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t2-err-cnt">${t2ParaMistakes}</strong></span>
-              <span class="recall-stage-pill">${t2ParaMatchedIds.size} / ${t2ParaPairs.length} cặp</span>
+              <span class="recall-stage-pill">${t2ParaMatchedIds.size} / ${curBoard.length} cặp</span>
             </div>
           </div>
           <div class="task-match-wrap">
-            <div class="task-match-col">
-              <div class="task-col-caption">Từ / Cụm gốc</div>
-              ${leftHtml}
-            </div>
-            <div class="task-match-col">
-              <div class="task-col-caption">Paraphrase tương ứng</div>
-              ${rightHtml}
-            </div>
+            <div class="task-match-col">${leftHtml}</div>
+            <div class="task-match-col">${rightHtml}</div>
           </div>
         </div>
       `;
