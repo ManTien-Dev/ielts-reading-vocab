@@ -9,6 +9,7 @@
   const LOCK_PENALTY_MS = 30 * 60 * 1000;
   const LOCAL_AI_KEY_STORAGE = 'ielts_gemini_local_key_v1';
   const TEACHER_SENT_TASKS_KEY = 'ielts_teacher_sent_tasks_v1';
+  const ACTIVE_TASK_EXAM_KEY_BASE = 'ielts_active_task_exam_';
 
   let teacherSelectedIds = new Set();
   let teacherFilterPendingOnly = false;
@@ -136,6 +137,45 @@
     try {
       localStorage.setItem(`${bridge.TASK_LOCKS_KEY_BASE}${uid}`, JSON.stringify(map));
     } catch (_) {}
+  }
+
+  function loadActiveExamSession() {
+    const uid = getScopedStorageUid();
+    if (!uid) return null;
+    try {
+      const raw = localStorage.getItem(`${ACTIVE_TASK_EXAM_KEY_BASE}${uid}`);
+      return raw ? (JSON.parse(raw) || null) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function saveActiveExamSession(sess) {
+    const uid = getScopedStorageUid();
+    if (!uid || !sess || typeof sess !== 'object') return;
+    try {
+      localStorage.setItem(`${ACTIVE_TASK_EXAM_KEY_BASE}${uid}`, JSON.stringify(sess));
+    } catch (_) {}
+  }
+
+  function clearActiveExamSession() {
+    const uid = getScopedStorageUid();
+    if (!uid) return;
+    try {
+      localStorage.removeItem(`${ACTIVE_TASK_EXAM_KEY_BASE}${uid}`);
+    } catch (_) {}
+  }
+
+  function persistActiveExamSnapshot() {
+    if (!activeTask || isTeacherOrBypassed()) return;
+    saveActiveExamSession({
+      taskId: activeTask.id,
+      startedAt: taskStartedAt || Date.now(),
+      stage: activeStage,
+      leaveWarnings: taskLeaveWarnings,
+      inExam: Boolean(activeStage >= 1 && !taskTestPassed),
+      updatedAt: Date.now(),
+    });
   }
 
   function getTaskLockRemainingMs(taskId) {
@@ -824,6 +864,8 @@
     if (!task || !Array.isArray(task.words)) return;
     const ids = task.words.map((w) => w.id).filter(Boolean);
     examReadyPromptShownForTaskId = null;
+    const savedExam = loadActiveExamSession();
+    if (savedExam && savedExam.taskId === task.id) clearActiveExamSession();
     B()?.resetWordAssessments?.(ids);
     closeTaskExamReadyModal();
     updateTaskStudyBar();
@@ -919,6 +961,29 @@
     taskStartedAt = Date.now();
     taskLeaveWarnings = 0;
     lastTaskLeaveAt = 0;
+    let reloadPenaltyNotice = '';
+    if (!isTeacherOrBypassed()) {
+      const savedExam = loadActiveExamSession();
+      if (savedExam && savedExam.taskId === task.id && (Date.now() - Number(savedExam.updatedAt || 0)) < LOCK_PENALTY_MS) {
+        taskStartedAt = Number(savedExam.startedAt) || taskStartedAt;
+        taskLeaveWarnings = Number(savedExam.leaveWarnings || 0);
+        if (savedExam.inExam) {
+          taskLeaveWarnings += 1;
+          if (taskLeaveWarnings >= 2) {
+            clearActiveExamSession();
+            lockAndExitActiveTask('Thoát/tải lại trang lần 2 khi đang làm Test — Task bị khóa 30 phút!');
+            return;
+          }
+          saveActiveExamSession({
+            ...savedExam,
+            leaveWarnings: taskLeaveWarnings,
+            inExam: false,
+            updatedAt: Date.now(),
+          });
+          reloadPenaltyNotice = `Phát hiện tải lại trang khi đang làm Test (${task.label}) — ghi nhận cảnh báo 1/2 (thêm 1 lần sẽ khóa Task 30 phút).`;
+        }
+      }
+    }
     taskTestPassed = false;
     t1Completed = false;
     t2Completed = false;
@@ -937,16 +1002,40 @@
 
     const total = task.words.length || 50;
     const masteredCount = getTaskMasteredCount(task);
+    if (reloadPenaltyNotice) {
+      B()?.showToast?.(reloadPenaltyNotice);
+    }
     if (masteredCount >= total) {
       examReadyPromptShownForTaskId = task.id;
       openTaskExamReadyModal(task);
-    } else {
+    } else if (!reloadPenaltyNotice) {
       B()?.showToast?.(`Đã mở ${task.label} (${masteredCount}/${total} từ đã thuộc). Học xong 50 từ để làm Test kết thúc!`);
     }
   }
 
+  function dismissTaskExitWarn() {
+    document.getElementById('modal-task-exit-warn')?.classList.remove('open');
+  }
+
+  function confirmTaskExamAbort() {
+    dismissTaskExitWarn();
+    lockAndExitActiveTask('Tự ý thoát bài Test giữa chừng — Task bị khóa 30 phút!');
+  }
+
   function exitTaskWorkspace(confirmExit = false) {
     const wasInExam = activeStage >= 1;
+    if (wasInExam && !taskTestPassed && confirmExit && !isTeacherOrBypassed()) {
+      const warnModal = document.getElementById('modal-task-exit-warn');
+      if (warnModal) {
+        warnModal.classList.add('open');
+        setTimeout(() => document.getElementById('btn-task-exit-stay')?.focus(), 40);
+        return;
+      }
+      lockAndExitActiveTask('Tự ý thoát bài Test giữa chừng — Task bị khóa 30 phút!');
+      return;
+    }
+
+    dismissTaskExitWarn();
     const examModal = document.getElementById('screen-task');
     if (examModal) {
       examModal.classList.remove('open', 'active', 'exam-no-copy');
@@ -963,10 +1052,10 @@
     }
 
     if (wasInExam && !taskTestPassed && confirmExit) {
-      // Returned from Exam modal back onto Task study deck
+      // Teacher/preview fallback return to study deck
       activeStage = 0;
       updateTaskStudyBar();
-      B()?.showToast('Đã tạm thoát bài Test, quay lại ôn thẻ Task.');
+      B()?.showToast('Đã đóng giao diện Test thử.');
       return;
     }
 
@@ -998,6 +1087,8 @@
   function lockAndExitActiveTask(toastMsg) {
     if (!activeTask || isTeacherOrBypassed()) return;
     const failedTaskId = activeTask.id;
+    dismissTaskExitWarn();
+    clearActiveExamSession();
     const locks = loadTaskLocks();
     locks[failedTaskId] = Date.now() + LOCK_PENALTY_MS;
     saveTaskLocks(locks);
@@ -1014,6 +1105,7 @@
     if (now - lastTaskLeaveAt < 800) return;
     lastTaskLeaveAt = now;
     taskLeaveWarnings += 1;
+    persistActiveExamSnapshot();
     if (taskLeaveWarnings === 1) {
       const host = document.getElementById('screen-task');
       const container = document.getElementById('task-stage-container');
@@ -1191,6 +1283,7 @@
     }
     updateStepPills();
     updateFinishButtonUI();
+    if (isTestNow) persistActiveExamSnapshot();
     if (activeStage === 1) renderTest1Stage();
     else if (activeStage === 2) renderTest2Stage();
     else if (activeStage === 3) renderFinalTranslationStage();
@@ -1255,6 +1348,15 @@
     if (!activeTask) return;
     const total = activeTask.words.length || 50;
     if (!isTeacherOrBypassed() && getTaskMasteredCount(activeTask) < total) return;
+    if (!isTeacherOrBypassed()) {
+      const savedExam = loadActiveExamSession();
+      if (savedExam && savedExam.taskId === activeTask.id && (Date.now() - Number(savedExam.updatedAt || 0)) < LOCK_PENALTY_MS) {
+        taskStartedAt = Number(savedExam.startedAt) || taskStartedAt || Date.now();
+        taskLeaveWarnings = Math.max(taskLeaveWarnings, Number(savedExam.leaveWarnings || 0));
+      } else if (!taskStartedAt) {
+        taskStartedAt = Date.now();
+      }
+    }
     activeStage = 1;
     taskTestPassed = false;
     t1Completed = false;
@@ -2866,6 +2968,29 @@
     if (sTasksBtn) {
       sTasksBtn.style.display = assignedUrlTaskIds.length > 0 ? 'inline-flex' : 'none';
     }
+    // Chống F5 / tải lại trang để reset giờ & xóa lỗi khi đang thi dở Test Task
+    if (!isTeacherOrBypassed()) {
+      const interruptedExam = loadActiveExamSession();
+      if (interruptedExam && interruptedExam.taskId && interruptedExam.inExam && (Date.now() - Number(interruptedExam.updatedAt || 0)) < LOCK_PENALTY_MS) {
+        const nextWarn = Number(interruptedExam.leaveWarnings || 0) + 1;
+        if (nextWarn >= 2) {
+          clearActiveExamSession();
+          const locks = loadTaskLocks();
+          locks[interruptedExam.taskId] = Date.now() + LOCK_PENALTY_MS;
+          saveTaskLocks(locks);
+          B()?.saveAndSync?.();
+          setTimeout(() => B()?.showToast?.('Phát hiện tải lại trang lần 2 khi đang làm Test — Task đã bị khóa 30 phút!'), 250);
+        } else {
+          saveActiveExamSession({
+            ...interruptedExam,
+            leaveWarnings: nextWarn,
+            inExam: false,
+            updatedAt: Date.now(),
+          });
+          setTimeout(() => B()?.showToast?.('Phát hiện tải lại trang khi đang làm Test — ghi nhận cảnh báo 1/2 (thêm 1 lần sẽ khóa Task 30 phút)!'), 250);
+        }
+      }
+    }
     const curScope = B()?.getCurrentScopeKey?.() || '';
     const curTask = curScope.startsWith('task_') ? getTaskById(curScope) : null;
     if (curTask && !isTeacherOrBypassed() && getTaskLockRemainingMs(curTask.id) > 0) {
@@ -2898,6 +3023,11 @@
   function onUserLogout() {
     urlCheckedForUid = null;
     isPreviewTestMode = false;
+    dismissTaskExitWarn();
+    const savedExam = loadActiveExamSession();
+    if (savedExam && savedExam.inExam) {
+      saveActiveExamSession({ ...savedExam, inExam: false, updatedAt: Date.now() });
+    }
     const sTasksBtn = document.getElementById('btn-open-student-tasks');
     if (sTasksBtn) sTasksBtn.style.display = 'none';
     stopIdleMonitor();
@@ -3154,6 +3284,7 @@
     }
 
     taskTestPassed = true;
+    clearActiveExamSession();
     stopIdleMonitor();
     B()?.syncExamLock?.(false);
     document.getElementById('screen-task')?.classList.remove('exam-no-copy');
@@ -3226,6 +3357,8 @@
     onStudyAssessmentChanged,
     startPendingTask,
     exitTaskWorkspace,
+    dismissTaskExitWarn,
+    confirmTaskExamAbort,
     speakWord,
     startTest1,
     pickT1Left,

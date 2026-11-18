@@ -17,6 +17,8 @@
   const TASK_PROGRESS_KEY_BASE = 'ielts_reading_task_progress_';
   const TASK_LOCKS_KEY_BASE = 'ielts_reading_task_locks_';
   const TEACHER_UNLOCK_KEY_BASE = 'ielts_teacher_unlocked_at_';
+  const MASTER_COOLDOWN_KEY_BASE = 'ielts_master_cooldowns_';
+  const RECALL_ACTIVE_KEY_BASE = 'ielts_recall_active_';
   const CLASS_RESET_EPOCH = 2026111901;
   const CLASS_LOCAL_RESET_KEY = 'ielts_reset_all_clean_20261119_v1';
 
@@ -321,6 +323,7 @@
     } catch (e) {
       console.warn('Load failed:', e);
     }
+    loadMasterCooldowns();
   }
 
   /* =========================================================
@@ -2418,11 +2421,94 @@
     document.getElementById('modal-reading-tip')?.classList.remove('open');
   }
 
+  function saveMasterCooldowns() {
+    if (!currentUser || isTeacherUser()) return;
+    try {
+      const now = Date.now();
+      const active = {};
+      Object.entries(masterCooldowns).forEach(([k, v]) => {
+        const ts = Number(v || 0);
+        if (ts > now) active[k] = ts;
+      });
+      const key = `${MASTER_COOLDOWN_KEY_BASE}${getScopedUid()}`;
+      if (Object.keys(active).length > 0) localStorage.setItem(key, JSON.stringify(active));
+      else localStorage.removeItem(key);
+    } catch (_) {}
+  }
+
+  function loadMasterCooldowns() {
+    masterCooldowns = {};
+    if (!currentUser || isTeacherUser()) return;
+    try {
+      const key = `${MASTER_COOLDOWN_KEY_BASE}${getScopedUid()}`;
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) || {};
+      const now = Date.now();
+      let any = false;
+      Object.entries(parsed).forEach(([k, v]) => {
+        const ts = Number(v || 0);
+        if (ts > now) {
+          masterCooldowns[k] = ts;
+          any = true;
+        }
+      });
+      if (any) ensureCooldownTicker();
+      else localStorage.removeItem(key);
+    } catch (_) {}
+  }
+
+  function setRecallActiveSession(item, stage = 1) {
+    if (!currentUser || isExamAntiCheatBypassed() || !item?.id) return;
+    try {
+      localStorage.setItem(`${RECALL_ACTIVE_KEY_BASE}${getScopedUid()}`, JSON.stringify({
+        itemId: item.id,
+        lemma: item.lemma || '',
+        stage,
+        startedAt: Date.now(),
+        deadlineAt: recallDeadlineAt || (Date.now() + 30000),
+      }));
+    } catch (_) {}
+  }
+
+  function clearRecallActiveSession() {
+    if (!currentUser) return;
+    try {
+      localStorage.removeItem(`${RECALL_ACTIVE_KEY_BASE}${getScopedUid()}`);
+    } catch (_) {}
+  }
+
+  function checkInterruptedRecallOnLoad() {
+    if (!currentUser || isExamAntiCheatBypassed()) return '';
+    const key = `${RECALL_ACTIVE_KEY_BASE}${getScopedUid()}`;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return '';
+      localStorage.removeItem(key);
+      const rec = JSON.parse(raw);
+      if (!rec || !rec.itemId) return '';
+      const penaltySec = 60;
+      masterCooldowns[rec.itemId] = Math.max(masterCooldowns[rec.itemId] || 0, Date.now() + penaltySec * 1000);
+      assessments[rec.itemId] = 1;
+      saveMasterCooldowns();
+      saveState();
+      ensureCooldownTicker();
+      const label = rec.lemma ? ` "${rec.lemma}"` : '';
+      return `Phát hiện tải lại trang khi đang Kiểm tra nhớ từ${label} — hạ về Chưa thuộc và khóa nút Đã thuộc ${penaltySec}s!`;
+    } catch (_) {
+      try { localStorage.removeItem(key); } catch (_) {}
+      return '';
+    }
+  }
+
   function getMasterCooldownRemainingSec(wordId) {
     const until = masterCooldowns[wordId] || 0;
     const diff = until - Date.now();
     if (diff <= 0) {
-      if (masterCooldowns[wordId]) delete masterCooldowns[wordId];
+      if (masterCooldowns[wordId]) {
+        delete masterCooldowns[wordId];
+        saveMasterCooldowns();
+      }
       return 0;
     }
     return Math.ceil(diff / 1000);
@@ -2441,6 +2527,7 @@
       if (!anyActive) {
         clearInterval(cooldownTimer);
         cooldownTimer = null;
+        saveMasterCooldowns();
       }
     }, 500);
   }
@@ -2730,11 +2817,13 @@
 
     updateRecallPromptAttempts(item);
     renderRecallSynGrid(false);
+    setRecallActiveSession(item, 2);
     recallDeadlineTimer = setInterval(updateRecallCountdownBadge, 250);
   }
 
   function failRecallCheck(item, reasonPrefix = 'Chưa chính xác!') {
     stopRecallInputTimer();
+    clearRecallActiveSession();
     recallSubmitted = true;
     recallAttemptsLeft = 0;
     updateRecallPromptAttempts(item);
@@ -2759,6 +2848,7 @@
     if (btnSubmit) btnSubmit.style.display = 'none';
 
     masterCooldowns[item.id] = Date.now() + rule.cooldownMs;
+    saveMasterCooldowns();
     ensureCooldownTicker();
     commitAssessment(item, 1);
     updateAssess3CooldownUI();
@@ -2824,11 +2914,23 @@
       fb.className = 'recall-feedback';
       fb.innerHTML = '';
     }
-    if (btnCancel) btnCancel.style.display = 'inline-flex';
+    if (btnCancel) {
+      btnCancel.style.display = 'inline-flex';
+      const abortPenaltySec = rule.strict ? 90 : 60;
+      btnCancel.textContent = isExamAntiCheatBypassed() ? 'Hủy' : `Bỏ bài (-${abortPenaltySec}s)`;
+    }
+    const btnCloseX = document.getElementById('btn-recall-close');
+    if (btnCloseX) {
+      const abortPenaltySec = rule.strict ? 90 : 60;
+      btnCloseX.title = isExamAntiCheatBypassed()
+        ? 'Đóng'
+        : `Thoát giữa chừng sẽ bị hạ về Chưa thuộc và khóa nút Đã thuộc ${abortPenaltySec}s`;
+    }
     if (btnSubmit) btnSubmit.style.display = 'inline-flex';
     if (btnReturn) btnReturn.style.display = 'none';
 
     updateRecallPromptAttempts(item);
+    setRecallActiveSession(item, 1);
     document.getElementById('fc-scene')?.style.setProperty('visibility', 'hidden');
     document.querySelector('#modal-recall-check .recall-check-card')?.style.removeProperty('visibility');
     document.getElementById('modal-recall-check')?.classList.add('open');
@@ -2836,9 +2938,38 @@
     setTimeout(() => inp?.focus(), 40);
   }
 
-  function closeRecallModal(event) {
-    if (event && event.target !== document.getElementById('modal-recall-check')) return;
+  function abortRecallCheck() {
+    const item = recallTargetItem;
+    if (!item || recallSubmitted) return;
+    const rule = getRecallRule(item);
+    const penaltySec = rule.strict ? 90 : 60;
     stopRecallInputTimer();
+    clearRecallActiveSession();
+    recallSubmitted = true;
+    recallAttemptsLeft = 0;
+    masterCooldowns[item.id] = Date.now() + penaltySec * 1000;
+    saveMasterCooldowns();
+    ensureCooldownTicker();
+    commitAssessment(item, 1);
+    updateAssess3CooldownUI();
+    closeRecallModal(null, true);
+    showToast(`Bỏ kiểm tra nhớ từ "${item.lemma}" giữa chừng — hạ về Chưa thuộc và khóa nút Đã thuộc ${penaltySec}s!`);
+  }
+
+  function closeRecallModal(event, forceSilent = false) {
+    if (event) {
+      if (event.target !== document.getElementById('modal-recall-check')) return;
+      if (!forceSilent && recallTargetItem && !recallSubmitted && currentUser && !isExamAntiCheatBypassed()) {
+        showToast('Đang Kiểm tra nhớ từ — hãy hoàn thành hoặc bấm Bỏ bài (phạt chờ 60s).');
+        return;
+      }
+    }
+    if (!forceSilent && !event && recallTargetItem && !recallSubmitted && currentUser && !isExamAntiCheatBypassed()) {
+      abortRecallCheck();
+      return;
+    }
+    stopRecallInputTimer();
+    clearRecallActiveSession();
     document.getElementById('modal-recall-check')?.classList.remove('open');
     document.querySelector('#modal-recall-check .recall-check-card')?.style.removeProperty('visibility');
     document.getElementById('fc-scene')?.style.removeProperty('visibility');
@@ -2935,11 +3066,13 @@
 
     if (isExactMatch) {
       stopRecallInputTimer();
+      clearRecallActiveSession();
       recallSubmitted = true;
       delete masterCooldowns[item.id];
+      saveMasterCooldowns();
       updateAssess3CooldownUI();
       commitAssessment(item, 3);
-      closeRecallModal();
+      closeRecallModal(null, true);
       showToast(`Chính xác! Đã thuộc "${item.lemma}".`);
       advanceDeckAfterAssess3();
       return;
@@ -3542,7 +3675,12 @@
     onlyUnmastered = false;
     onlyDueReview = false;
     ankiReminderDismissed = false;
+    masterCooldowns = {};
     localStorage.removeItem(getUserStorageKey());
+    try {
+      localStorage.removeItem(`${MASTER_COOLDOWN_KEY_BASE}${getScopedUid()}`);
+      localStorage.removeItem(`${RECALL_ACTIVE_KEY_BASE}${getScopedUid()}`);
+    } catch (_) {}
     closeMenuModal();
     applyFilterAndBuildDeck();
     updateLeaderboardUI();
@@ -3659,6 +3797,7 @@
     }
 
     loadState();
+    const interruptedRecallMsg = !isTeacherUser() ? checkInterruptedRecallOnLoad() : '';
     updateAutoSpeakUI();
     updateClassReportHeaderAndActions();
     syncAntiCopyClasses();
@@ -3684,6 +3823,9 @@
       updateStudyStreakUI();
       updateCloudSyncBadge();
       syncPullClassData();
+      if (interruptedRecallMsg) {
+        setTimeout(() => showToast(interruptedRecallMsg), 200);
+      }
     }
     if (cloudPullTimer) clearInterval(cloudPullTimer);
     cloudPullTimer = setInterval(() => {
@@ -3736,6 +3878,7 @@
     clearTimeout(cloudPushDebounce);
     window.TasksModule?.onUserLogout?.();
     if (currentUser) {
+      clearRecallActiveSession();
       pauseTimer();
       saveState();
       syncPushCurrentUser(true);
@@ -3743,7 +3886,7 @@
     initialCloudPullSettled = true;
     resetInMemoryStudyState();
     currentUser = null;
-    closeRecallModal();
+    closeRecallModal(null, true);
     closeCheatWarningModal();
     hideMultiTabBlockOverlay();
     syncAntiCopyClasses();
@@ -3823,7 +3966,21 @@
     if (document.getElementById('modal-cheat-warn')?.classList.contains('open')) return;
     if (document.getElementById('modal-multitab-block')?.classList.contains('open')) return;
     if (e.key === 'Escape' && document.querySelector('.modal-overlay.open')) {
-      closeRecallModal();
+      if (document.getElementById('modal-task-exit-warn')?.classList.contains('open')) {
+        window.TasksModule?.dismissTaskExitWarn?.();
+        return;
+      }
+      if (document.getElementById('modal-recall-check')?.classList.contains('open')) {
+        if (recallTargetItem && !recallSubmitted && !isExamAntiCheatBypassed()) {
+          showToast('Đang Kiểm tra nhớ từ — không thể bấm Esc để thoát.');
+          return;
+        }
+        closeRecallModal(null, true);
+        return;
+      }
+      if (document.getElementById('screen-task')?.classList.contains('open') && !isTeacherUser()) {
+        return;
+      }
       closeReadingTipModal();
       closeWordListModal();
       closeSignalWordsModal();
@@ -4329,6 +4486,9 @@
         TASK_PROGRESS_KEY_BASE,
         TASK_LOCKS_KEY_BASE,
         TEACHER_UNLOCK_KEY_BASE,
+        MASTER_COOLDOWN_KEY_BASE,
+        RECALL_ACTIVE_KEY_BASE,
+        'ielts_active_task_exam_',
         'ielts_teacher_sent_tasks_',
         'ielts_trans_draft_',
         'ielts_task_draft_',

@@ -10,9 +10,9 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261119c">
-  <link rel="stylesheet" href="css/motion.css?v=20261119c">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261119c">
+  <link rel="stylesheet" href="css/style.css?v=20261119d">
+  <link rel="stylesheet" href="css/motion.css?v=20261119d">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261119d">
 </head>
 <body>
 
@@ -638,7 +638,7 @@
           <span class="recall-stage-pill" id="recall-stage-badge">Test 1</span>
           <span class="recall-timer-badge" id="recall-timer-badge">30s</span>
         </div>
-        <button class="btn-icon-glass" style="width:34px; height:34px; font-size:1.1rem;" onclick="closeRecallModal()">✕</button>
+        <button class="btn-icon-glass" id="btn-recall-close" style="width:34px; height:34px; font-size:1.1rem;" onclick="closeRecallModal()" title="Thoát kiểm tra">✕</button>
       </div>
       <form class="modal-body" id="recall-check-form" onsubmit="submitRecallCheck(event)">
         <div class="recall-hint-box" id="recall-hint-box" style="display:none;">
@@ -893,6 +893,27 @@
     </div>
   </div>
 
+  <!-- MODAL: XÁC NHẬN THOÁT NGANG KHI ĐANG LÀM BÀI TEST TASK -->
+  <div class="modal-overlay cheat-warn-overlay" id="modal-task-exit-warn">
+    <div class="modal-card cheat-warn-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span class="tip-pill" style="background:#dc2626; color:#fff; border-color:#dc2626; margin:0;">CẢNH BÁO BỎ THI GIỮA CHỪNG</span>
+      </div>
+      <div class="modal-body" style="padding:18px 24px 22px;">
+        <div class="task-lock-banner" style="margin-bottom:14px;">
+          Bạn đang làm bài Test kết thúc Task! Nếu thoát ra lúc này, bài làm dở sẽ bị hủy và <strong>Task này sẽ bị khóa 30 phút</strong>.
+        </div>
+        <div style="font-size:15.5px; color:var(--text); line-height:1.6; margin-bottom:18px;">
+          Để chống gian lận xem lại thẻ giữa chừng hoặc reset thời gian làm bài, hệ thống không cho phép thoát tạm miễn phí. Chỉ Giáo viên mới có thể mở khóa sớm nếu bạn xác nhận thoát.
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn-subtle" id="btn-task-exit-confirm" style="color:#dc2626; border-color:rgba(220,38,38,0.35);" onclick="TasksModule.confirmTaskExamAbort()">Bỏ thi &amp; Khóa Task 30 phút</button>
+          <button type="button" class="btn btn-primary" id="btn-task-exit-stay" onclick="TasksModule.dismissTaskExitWarn()">Tiếp tục làm bài</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   </div><!-- /#app-shell -->
 
   <!-- MODAL: KHÓA ĐA TAB KHI ĐANG LÀM BÀI KIỂM TRA Ở TAB KHÁC -->
@@ -915,12 +936,12 @@
     </div>
   </div>
 
-  <script src="data/accounts.js?v=20261119c"></script>
-  <script src="data/vocab_data.js?v=20261119c"></script>
-  <script src="data/tasks_data.js?v=20261119c"></script>
-  <script src="data/ipa_dict.js?v=20261119c"></script>
-  <script src="js/motion.js?v=20261119c"></script>
-  <script src="js/app.js?v=20261119c"></script>
-  <script src="js/tasks.js?v=20261119c"></script>
+  <script src="data/accounts.js?v=20261119d"></script>
+  <script src="data/vocab_data.js?v=20261119d"></script>
+  <script src="data/tasks_data.js?v=20261119d"></script>
+  <script src="data/ipa_dict.js?v=20261119d"></script>
+  <script src="js/motion.js?v=20261119d"></script>
+  <script src="js/app.js?v=20261119d"></script>
+  <script src="js/tasks.js?v=20261119d"></script>
 </body>
 </html>
