@@ -185,12 +185,7 @@
 
     students.forEach((st) => {
       const uid = bridge.getScopedUid(st.id);
-      let tp = cache[uid]?.syncData?.taskProgress || null;
-      if (!tp) {
-        try {
-          tp = JSON.parse(localStorage.getItem(`${bridge.TASK_PROGRESS_KEY_BASE}${uid}`) || '{}') || {};
-        } catch (_) { tp = {}; }
-      }
+      const tp = readStudentTaskMap(bridge, cache, bridge.TASK_PROGRESS_KEY_BASE, uid);
       if (tp[taskId]?.status === 'completed') doneCount++;
       else missingNames.push(shortStudentName(st.name));
     });
@@ -361,14 +356,50 @@
   }
 
   function readStudentTaskMap(bridge, cache, keyBase, uid) {
-    const cacheKey = (keyBase === bridge.TASK_LOCKS_KEY_BASE) ? 'taskLocks' : 'taskProgress';
+    const isLocks = (keyBase === bridge.TASK_LOCKS_KEY_BASE);
+    const cacheKey = isLocks ? 'taskLocks' : 'taskProgress';
     const remote = cache?.[uid]?.syncData?.[cacheKey];
-    if (remote && typeof remote === 'object') return remote;
+    let local = {};
     try {
-      return JSON.parse(localStorage.getItem(`${keyBase}${uid}`) || '{}') || {};
-    } catch (_) {
-      return {};
+      local = JSON.parse(localStorage.getItem(`${keyBase}${uid}`) || '{}') || {};
+    } catch (_) {}
+
+    if (!isLocks) {
+      const merged = { ...(remote && typeof remote === 'object' ? remote : {}) };
+      Object.entries(local).forEach(([tid, rec]) => {
+        const prev = merged[tid];
+        if (rec && (!prev || (rec.updatedAt || 0) >= (prev.updatedAt || 0) || (rec.status === 'completed' && prev.status !== 'completed'))) {
+          merged[tid] = rec;
+        }
+      });
+      return merged;
     }
+
+    const remoteUnlock = Number(cache?.[uid]?.syncData?.teacherUnlockedAt || 0);
+    let localUnlock = 0;
+    try {
+      localUnlock = Number(localStorage.getItem(`${bridge.TEACHER_UNLOCK_KEY_BASE}${uid}`) || 0);
+    } catch (_) {}
+    const unlockAt = Math.max(remoteUnlock, localUnlock);
+    const merged = { ...(remote && typeof remote === 'object' ? remote : {}), ...local };
+    Object.keys(merged).forEach((tid) => {
+      const until = Number(merged[tid] || 0);
+      if (until <= 0 || (unlockAt > 0 && (until - LOCK_PENALTY_MS) <= unlockAt)) {
+        delete merged[tid];
+      }
+    });
+    return merged;
+  }
+
+  function unlockStudentTasks(studentId) {
+    const bridge = B();
+    if (!bridge?.isTeacherUser?.() || !studentId) return;
+    const nowTs = Date.now();
+    bridge.unlockStudentCloudLocks?.(studentId, nowTs);
+    const acct = (bridge.getStudentAccounts?.() || []).find((a) => bridge.getScopedUid(a.id) === bridge.getScopedUid(studentId));
+    const displayName = acct?.name || studentId;
+    renderTeacherDashboard();
+    bridge.showToast?.(`Đã mở khóa Task cho học viên ${displayName}!`);
   }
 
   function formatCsvCell(val) {
@@ -489,13 +520,16 @@
 
       tbody.innerHTML = enriched.map(({ item, streak, doneEntries, tl }, idx) => {
         const tags = doneEntries.map(([tid, v]) => `T${Number(tid.replace(/\D/g, '')) || tid} (${Number(v.translationScore || 0).toFixed(1)})`).join(', ');
-        const lockPills = Object.entries(tl)
-          .filter(([, until]) => Number(until || 0) > now)
-          .map(([tid, until]) => `<span class="teacher-lock-pill">Khóa T${Number(tid.replace(/\D/g, '')) || tid} (${formatMmSs(Number(until) - now)})</span>`)
-          .join('');
+        const activeLocks = Object.entries(tl).filter(([, until]) => Number(until || 0) > now);
         const taskSummary = doneEntries.length > 0
           ? `<strong>${doneEntries.length}/30</strong> · ${esc(tags)}`
           : '<span style="color:var(--text-muted);">Chưa xong Task</span>';
+        const statusCell = activeLocks.length > 0
+          ? `<div class="teacher-status-cell is-locked">
+              ${activeLocks.map(([tid, until]) => `<span class="teacher-lock-pill">Khóa T${Number(tid.replace(/\D/g, '')) || tid} (${formatMmSs(Number(until) - now)})</span>`).join('')}
+              <button type="button" class="btn-teacher-unlock" onclick="TasksModule.unlockStudentTasks('${esc(item.id)}')" title="Mở khóa cho học viên">Mở khóa</button>
+            </div>`
+          : '<span class="teacher-status-ok">Bình thường</span>';
 
         return `
           <tr>
@@ -506,10 +540,11 @@
             <td>${item.monthMins}p</td>
             <td>${streak} ngày</td>
             <td><strong>${item.mastered} từ</strong></td>
-            <td style="font-size:12.5px;">${taskSummary}${lockPills}</td>
+            <td style="font-size:12.5px;">${taskSummary}</td>
+            <td style="font-size:12.5px;">${statusCell}</td>
           </tr>
         `;
-      }).join('') || '<tr><td colspan="8" style="text-align:center;">Không tìm thấy học viên phù hợp.</td></tr>';
+      }).join('') || '<tr><td colspan="9" style="text-align:center;">Không tìm thấy học viên phù hợp.</td></tr>';
     }
 
     renderTeacherTasksGrid();
@@ -2430,6 +2465,7 @@
   window.TasksModule = {
     renderTeacherDashboard,
     refreshTeacherDashboard,
+    unlockStudentTasks,
     exportClassReportCsv,
     toggleTeacherPendingFilter,
     toggleTeacherTask,

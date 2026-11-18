@@ -16,6 +16,7 @@
   const STREAK_KEY_BASE = 'ielts_reading_streak_days';
   const TASK_PROGRESS_KEY_BASE = 'ielts_reading_task_progress_';
   const TASK_LOCKS_KEY_BASE = 'ielts_reading_task_locks_';
+  const TEACHER_UNLOCK_KEY_BASE = 'ielts_teacher_unlocked_at_';
 
   const SCOPES = [
     {
@@ -743,6 +744,7 @@
       currentScopeKey,
       taskProgress,
       taskLocks,
+      teacherUnlockedAt: Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0),
     };
   }
 
@@ -855,25 +857,56 @@
       } catch (_) {}
     }
 
-    if (sd.taskLocks && typeof sd.taskLocks === 'object') {
+    const LOCK_WINDOW_MS = 30 * 60 * 1000;
+    const cloudUnlockedAt = Number(sd.teacherUnlockedAt || 0);
+    let localUnlockedAt = 0;
+    try {
+      localUnlockedAt = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0);
+    } catch (_) {}
+    const effectiveUnlockAt = Math.max(cloudUnlockedAt, localUnlockedAt);
+    if (cloudUnlockedAt > localUnlockedAt) {
       try {
-        const tlKey = `${TASK_LOCKS_KEY_BASE}${scoped}`;
-        const localTl = JSON.parse(localStorage.getItem(tlKey) || '{}') || {};
-        let tlChanged = false;
+        localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(cloudUnlockedAt));
+      } catch (_) {}
+    }
+
+    try {
+      const tlKey = `${TASK_LOCKS_KEY_BASE}${scoped}`;
+      const localTl = JSON.parse(localStorage.getItem(tlKey) || '{}') || {};
+      let tlChanged = false;
+      const nowMs = Date.now();
+      let unlockedActiveLock = false;
+
+      // Xóa mọi khóa đã bị giáo viên mở khóa sau thời điểm phát sinh khóa
+      Object.entries(localTl).forEach(([tid, untilMs]) => {
+        const u = Number(untilMs || 0);
+        if (effectiveUnlockAt > 0 && (u - LOCK_WINDOW_MS) <= effectiveUnlockAt) {
+          if (u > nowMs) unlockedActiveLock = true;
+          delete localTl[tid];
+          tlChanged = true;
+        }
+      });
+
+      if (sd.taskLocks && typeof sd.taskLocks === 'object') {
         Object.entries(sd.taskLocks).forEach(([tid, untilMs]) => {
           const cloudUntil = Number(untilMs || 0);
+          if (effectiveUnlockAt > 0 && (cloudUntil - LOCK_WINDOW_MS) <= effectiveUnlockAt) return;
           const localUntil = Number(localTl[tid] || 0);
           if (cloudUntil > localUntil) {
             localTl[tid] = cloudUntil;
             tlChanged = true;
           }
         });
-        if (tlChanged) {
-          localStorage.setItem(tlKey, JSON.stringify(localTl));
-          changed = true;
+      }
+
+      if (tlChanged) {
+        localStorage.setItem(tlKey, JSON.stringify(localTl));
+        changed = true;
+        if (unlockedActiveLock && currentUser && getScopedUid(currentUser.id) === scoped) {
+          showToast('Giáo viên vừa mở khóa Task cho bạn!');
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
 
     if (changed && currentUser && getScopedUid(currentUser.id) === scoped) {
       updateTimerDisplay();
@@ -945,6 +978,46 @@
       }
     } catch (err) {
       console.warn('Cloud pull skipped:', err);
+    }
+  }
+
+  function unlockStudentCloudLocks(studentId, unlockedAtTs = Date.now()) {
+    const scoped = getScopedUid(studentId);
+    if (!scoped) return;
+    try {
+      localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(unlockedAtTs));
+      localStorage.setItem(`${TASK_LOCKS_KEY_BASE}${scoped}`, '{}');
+    } catch (_) {}
+
+    const prev = cloudClassCache[scoped] || {};
+    const prevSync = (prev.syncData && typeof prev.syncData === 'object') ? prev.syncData : buildUserSyncData(scoped);
+    const nextSync = {
+      ...prevSync,
+      taskLocks: {},
+      teacherUnlockedAt: unlockedAtTs,
+    };
+    const acct = getAccountsList().find((a) => getScopedUid(a.id) === scoped);
+    const mins = getUserPeriodMinutes(scoped);
+    const nextEntry = {
+      ...prev,
+      id: acct?.id || prev.id || studentId,
+      name: acct?.name || prev.name || studentId,
+      todayMins: prev.todayMins ?? mins.todayMins,
+      weekMins: prev.weekMins ?? mins.weekMins,
+      monthMins: prev.monthMins ?? mins.monthMins,
+      mastered: prev.mastered ?? getUserMasteredCount(scoped),
+      streak: prev.streak ?? computeConsecutiveStreakForUser(scoped),
+      syncData: nextSync,
+    };
+    cloudClassCache[scoped] = nextEntry;
+
+    const url = getSyncUrl();
+    if (url) {
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(nextEntry),
+      }).catch(() => {});
     }
   }
 
@@ -3896,8 +3969,10 @@
     computeConsecutiveStreakForUser,
     getLastCloudSyncTime: () => lastCloudSyncTime,
     syncPullClassData,
+    unlockStudentCloudLocks,
     TASK_PROGRESS_KEY_BASE,
     TASK_LOCKS_KEY_BASE,
+    TEACHER_UNLOCK_KEY_BASE,
   };
 
   function applyOneTimeStudentResetEpoch() {
