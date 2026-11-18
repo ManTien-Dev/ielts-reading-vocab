@@ -1190,13 +1190,21 @@
     t2ParaShuffledRight = pairs.slice().sort(() => Math.random() - 0.5);
   }
 
+  function hasStemOverlap(a, b) {
+    const w1 = String(a || '').toLowerCase().trim().split(/\s+/)[0] || '';
+    const w2 = String(b || '').toLowerCase().trim().split(/\s+/)[0] || '';
+    if (w1.length < 4 || w2.length < 4) return false;
+    const prefix = Math.min(5, Math.min(w1.length, w2.length));
+    return prefix >= 4 && w1.slice(0, prefix) === w2.slice(0, prefix);
+  }
+
   function initTest2State(task) {
     const qs = task?.test2Questions || [];
     const pairs = [];
     const usedL = new Set();
     const usedR = new Set();
 
-    // 1. Lấy các cặp paraphrase trọng tâm trong bài đọc trước
+    // 1. Lấy các cặp paraphrase trọng tâm trong bài đọc trước (tránh lộ gốc từ)
     qs.filter((q) => q.type === 'paraphrase').forEach((q) => {
       const m = String(q.prompt || '').match(/["“]([^"”]+)["”]\s*\??\s*$/);
       const left = (m ? m[1] : '').trim();
@@ -1204,7 +1212,7 @@
       if (!left || !right) return;
       const lKey = left.toLowerCase();
       const rKey = right.toLowerCase();
-      if (lKey === rKey || usedL.has(lKey) || usedR.has(rKey)) return;
+      if (lKey === rKey || usedL.has(lKey) || usedR.has(rKey) || hasStemOverlap(left, right)) return;
       usedL.add(lKey);
       usedR.add(rKey);
       pairs.push({
@@ -1215,7 +1223,7 @@
       });
     });
 
-    // 2. Bổ sung các cặp từ đồng nghĩa hay bị paraphrase nhất (chỉ lấy 1 từ đồng nghĩa tiêu biểu nhất/từ, không đáp án nhiễu) cho đủ 20 cặp (4 bảng x 5 cặp)
+    // 2. Bổ sung các cặp từ đồng nghĩa hay bị paraphrase nhất (chỉ lấy 1 từ đồng nghĩa khác gốc tiêu biểu nhất/từ, không đáp án nhiễu) cho đủ 20 cặp (4 bảng x 5 cặp)
     (task?.words || []).forEach((w) => {
       if (pairs.length >= 20) return;
       const left = String(w.lemma || '').trim();
@@ -1225,7 +1233,7 @@
       for (const rawSyn of syns) {
         const syn = String(rawSyn || '').trim();
         const rKey = syn.toLowerCase();
-        if (syn && rKey !== lKey && !usedL.has(rKey) && !usedR.has(rKey)) {
+        if (syn && rKey !== lKey && !usedL.has(rKey) && !usedR.has(rKey) && !hasStemOverlap(left, syn)) {
           usedL.add(lKey);
           usedR.add(rKey);
           pairs.push({

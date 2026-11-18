@@ -4672,7 +4672,7 @@
         },
         {
           "type": "word_family",
-          "prompt": "Chọn đúng từ / biến thể Word Family mang nghĩa \"Toàn thể nhân loại hoặc lòng nhân đạo; dạng số nhiều 'humanities' chỉ khối ngành khoa học nhân văn\" để hoàn thành câu:",
+          "prompt": "Chọn đúng từ / biến thể Word Family mang nghĩa \"Toàn thể nhân loại hoặc thuộc về con người\" để hoàn thành câu:",
           "qText": "Alien civilisations may be able to help the ______ race to overcome serious problems.",
           "pText": "",
           "options": [
@@ -9200,22 +9200,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"priority\" (Sự ưu tiên hàng đầu, mối quan tâm trước hết)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "top concern",
-            "prevention",
-            "workshop",
-            "artistic"
-          ],
-          "answer": "top concern",
-          "explain": "\"priority\" đồng nghĩa trực tiếp với \"top concern\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"wealthy\" (Giàu có, thuộc tầng lớp thượng lưu hoặc có tiềm lực tài chính mạnh)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"wealthy\" (Giàu có, thuộc tầng lớp thượng lưu hoặc có tiềm lực tài chính mạnh) để điền vào chỗ trống:",
+          "qText": "Food deserts are linked with lower local health outcomes, and they may be a driving force in the health disparities between lower-income and ______ people in the US.",
           "pText": "",
           "options": [
             "eighteenth",
@@ -9228,8 +9214,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"upper\" (Ở phía trên, tầng trên hoặc cấp cao hơn)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"upper\" (Ở phía trên, tầng trên hoặc cấp cao hơn) để điền vào chỗ trống:",
+          "qText": "Whatever commentators may think, managers of museums, art galleries and science centres worldwide are looking for artful ways to blend culture and commerce, and blockbuster exhibitions are at the ______ of the list.",
           "pText": "",
           "options": [
             "prominent",
@@ -9239,6 +9225,20 @@
           ],
           "answer": "top",
           "explain": "\"upper\" đồng nghĩa trực tiếp với \"top\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"priority\" (Sự ưu tiên hàng đầu, mối quan tâm trước hết)?",
+          "qText": "",
+          "pText": "",
+          "options": [
+            "top concern",
+            "prevention",
+            "workshop",
+            "artistic"
+          ],
+          "answer": "top concern",
+          "explain": "\"priority\" đồng nghĩa trực tiếp với \"top concern\"."
         }
       ],
       "passage": {
@@ -16448,8 +16448,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"mid\" (Ở giữa, luôn ghép nối với mốc thời gian như 'mid-1800s', 'mid-century')?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"mid\" (Ở giữa, luôn ghép nối với mốc thời gian như 'mid-1800s', 'mid-century') để điền vào chỗ trống:",
+          "qText": "When yawning you also stretch your facial muscles, tilt your head back, narrow or close your eyes, produce tears, salivate, open the Eustachian tubes of your ______ ear and perform many other, yet unspecified, cardiovascular and respiratory acts.",
           "pText": "",
           "options": [
             "compound",
@@ -25548,6 +25548,20 @@
         },
         {
           "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"clinical\" (Thuộc lâm sàng, y học điều trị trực tiếp bệnh nhân) để điền vào chỗ trống:",
+          "qText": "In fact, physicians practising during the Tang era had access to a wealth of pharmaceutical and ______ texts, their contents ranging from purely pragmatic advice to highly sophisticated theoretical considerations.",
+          "pText": "",
+          "options": [
+            "preference",
+            "medical",
+            "pose",
+            "remote"
+          ],
+          "answer": "medical",
+          "explain": "\"clinical\" đồng nghĩa trực tiếp với \"medical\"."
+        },
+        {
+          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"clever\" (Thông minh, khéo léo và sáng tạo trong cách giải quyết vấn đề)?",
           "qText": "",
           "pText": "",
@@ -25559,20 +25573,6 @@
           ],
           "answer": "ingenious",
           "explain": "\"clever\" đồng nghĩa trực tiếp với \"ingenious\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"clinical\" (Thuộc lâm sàng, y học điều trị trực tiếp bệnh nhân)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "preference",
-            "medical",
-            "pose",
-            "remote"
-          ],
-          "answer": "medical",
-          "explain": "\"clinical\" đồng nghĩa trực tiếp với \"medical\"."
         },
         {
           "type": "synonym",
@@ -27665,8 +27665,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"costly\" (Đắt đỏ, tốn kém)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"costly\" (Đắt đỏ, tốn kém) để điền vào chỗ trống:",
+          "qText": "Lackner argues that it is too ______ to adapt existing plants to capture carbon dioxide.",
           "pText": "",
           "options": [
             "atmospheric",
@@ -29889,6 +29889,20 @@
         },
         {
           "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"dimension\" (Kích thước đo đạc hoặc khía cạnh của một vấn đề) để điền vào chỗ trống:",
+          "qText": "Furthermore, the rich knowledge base about seabirds makes them a valuable resource as indicator species for ______ of change in the marine environment.",
+          "pText": "",
+          "options": [
+            "equivalent",
+            "measurement",
+            "tap",
+            "spin"
+          ],
+          "answer": "measurement",
+          "explain": "\"dimension\" đồng nghĩa trực tiếp với \"measurement\"."
+        },
+        {
+          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"accessible\" (Có thể tiếp cận về mặt vật lý, dễ mua/dùng, hoặc dễ hiểu)?",
           "qText": "",
           "pText": "",
@@ -29900,20 +29914,6 @@
           ],
           "answer": "reachable",
           "explain": "\"accessible\" đồng nghĩa trực tiếp với \"reachable\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"dimension\" (Kích thước đo đạc hoặc khía cạnh của một vấn đề)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "equivalent",
-            "measurement",
-            "tap",
-            "spin"
-          ],
-          "answer": "measurement",
-          "explain": "\"dimension\" đồng nghĩa trực tiếp với \"measurement\"."
         },
         {
           "type": "synonym",
@@ -34040,6 +34040,20 @@
         },
         {
           "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"mere\" (Chỉ là, vẻn vẹn, đơn thuần) để điền vào chỗ trống:",
+          "qText": "The ______ weight of the ice layer weighed down the surface of the earth below, leaving a deep indentation once it had melted, having caused the area around Hudson Bay to become thinner as the earth’s surface was pushed to the edges of the icesheet.",
+          "pText": "",
+          "options": [
+            "outer",
+            "spray",
+            "sheer",
+            "rational"
+          ],
+          "answer": "sheer",
+          "explain": "\"mere\" đồng nghĩa trực tiếp với \"sheer\"."
+        },
+        {
+          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"underestimate\" (Đánh giá thấp, ước lượng ít hơn thực tế)?",
           "qText": "",
           "pText": "",
@@ -34051,20 +34065,6 @@
           ],
           "answer": "undervalue",
           "explain": "\"underestimate\" đồng nghĩa trực tiếp với \"undervalue\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"mere\" (Chỉ là, vẻn vẹn, đơn thuần)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "outer",
-            "spray",
-            "sheer",
-            "rational"
-          ],
-          "answer": "sheer",
-          "explain": "\"mere\" đồng nghĩa trực tiếp với \"sheer\"."
         },
         {
           "type": "synonym",
@@ -36142,8 +36142,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"regional\" (Thuộc về một vùng miền hay địa phương cụ thể)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"regional\" (Thuộc về một vùng miền hay địa phương cụ thể) để điền vào chỗ trống:",
+          "qText": "The windmill brought William Kamkwamba instant ______ fame, but despite his accomplishment, he was still unable to return to school.",
           "pText": "",
           "options": [
             "underwater",
@@ -36156,8 +36156,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"guidance\" (Sự hướng dẫn/lời khuyên hoặc cơ chế dẫn đường trong không gian)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"guidance\" (Sự hướng dẫn/lời khuyên hoặc cơ chế dẫn đường trong không gian) để điền vào chỗ trống:",
+          "qText": "In fact, physicians practising during the Tang era had access to a wealth of pharmaceutical and medical texts, their contents ranging from purely pragmatic ______ to highly sophisticated theoretical considerations.",
           "pText": "",
           "options": [
             "fortunately",
@@ -36170,8 +36170,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"thereby\" (Nhờ đó, qua đó)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"thereby\" (Nhờ đó, qua đó) để điền vào chỗ trống:",
+          "qText": "______, cutting-edge food designers now harness crossmodal acoustics and chromatic visual cues to engineer healthier culinary products that require significantly lower sodium and refined sugar concentrations without diminishing consumer hedonic satisfaction.",
           "pText": "",
           "options": [
             "consequently",
@@ -38371,8 +38371,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"burden\" (Gánh nặng; cũng thường gặp dạng động từ 'be burdened with')?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"burden\" (Gánh nặng; cũng thường gặp dạng động từ 'be burdened with') để điền vào chỗ trống:",
+          "qText": "The burden of that stress, which is known as 'allostatic ______ or overload,' referring to the wear and tear that results from either too much stress or from inefficient management of internal balance, eg, not turning off the response when it is no longer needed, can damage small, developing brains and bodies.",
           "pText": "",
           "options": [
             "newly",
@@ -38382,6 +38382,20 @@
           ],
           "answer": "load",
           "explain": "\"burden\" đồng nghĩa trực tiếp với \"load\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"stressful\" (Gây căng thẳng, áp lực) để điền vào chỗ trống:",
+          "qText": "Just at the time when it became obvious that health-care resources could not possibly meet the demands being made upon them, people were ______ that their fundamental right to health-care be satisfied by the state.",
+          "pText": "",
+          "options": [
+            "likelihood",
+            "demanding",
+            "freely",
+            "newly"
+          ],
+          "answer": "demanding",
+          "explain": "\"stressful\" đồng nghĩa trực tiếp với \"demanding\"."
         },
         {
           "type": "synonym",
@@ -38396,20 +38410,6 @@
           ],
           "answer": "disregard",
           "explain": "\"neglect\" đồng nghĩa trực tiếp với \"disregard\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"stressful\" (Gây căng thẳng, áp lực)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "likelihood",
-            "demanding",
-            "freely",
-            "newly"
-          ],
-          "answer": "demanding",
-          "explain": "\"stressful\" đồng nghĩa trực tiếp với \"demanding\"."
         },
         {
           "type": "synonym",
@@ -40377,8 +40377,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"smooth\" (Phẳng mịn, trơn tru hoặc suôn sẻ không trở ngại)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"smooth\" (Phẳng mịn, trơn tru hoặc suôn sẻ không trở ngại) để điền vào chỗ trống:",
+          "qText": "______ if people were wobbling slightly, it activated a host of muscles in their legs, which in turn helped pump blood back to their hearts.",
           "pText": "",
           "options": [
             "dissolve",
@@ -40391,8 +40391,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"replicate\" (Tái tạo, mô phỏng lại hiệu ứng hoặc lặp lại thí nghiệm để kiểm chứng)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"replicate\" (Tái tạo, mô phỏng lại hiệu ứng hoặc lặp lại thí nghiệm để kiểm chứng) để điền vào chỗ trống:",
+          "qText": "A less specific variant of the argument is that the imitation of children is imperfect: they copy their parents’ speech, but never ______ it exactly.",
           "pText": "",
           "options": [
             "disagree",
@@ -44449,8 +44449,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"principal\" (Chính, chủ yếu, quan trọng nhất)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"principal\" (Chính, chủ yếu, quan trọng nhất) để điền vào chỗ trống:",
+          "qText": "In both mountains and deserts, slow-growing trees are often the ______ sources of fuel and water supplies may be limited or vulnerable to degradation through heavy use.",
           "pText": "",
           "options": [
             "main",
@@ -44460,6 +44460,34 @@
           ],
           "answer": "main",
           "explain": "\"principal\" đồng nghĩa trực tiếp với \"main\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"steady\" (Ổn định, đều đặn, vững vàng) để điền vào chỗ trống:",
+          "qText": "What is clear is that levels of willpower typically remain ______ over time (studies tracking individuals from early childhood to their adult years demonstrate a remarkable consistency in willpower abilities).",
+          "pText": "",
+          "options": [
+            "radar",
+            "optimum",
+            "fee",
+            "consistent"
+          ],
+          "answer": "consistent",
+          "explain": "\"steady\" đồng nghĩa trực tiếp với \"consistent\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"reflection\" (Sự suy ngẫm/chiêm nghiệm, sự phản ánh, hoặc sự phản chiếu ánh sáng) để điền vào chỗ trống:",
+          "qText": "It is ______ that during the plague in the 14th century, la bise may have stopped and was not revived again until 400 years later, after the French Revolution.",
+          "pText": "",
+          "options": [
+            "anti-social",
+            "simulate",
+            "thought",
+            "arid"
+          ],
+          "answer": "thought",
+          "explain": "\"reflection\" đồng nghĩa trực tiếp với \"thought\"."
         },
         {
           "type": "synonym",
@@ -44530,34 +44558,6 @@
           ],
           "answer": "disadvantage",
           "explain": "\"drawback\" đồng nghĩa trực tiếp với \"disadvantage\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"steady\" (Ổn định, đều đặn, vững vàng)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "radar",
-            "optimum",
-            "fee",
-            "consistent"
-          ],
-          "answer": "consistent",
-          "explain": "\"steady\" đồng nghĩa trực tiếp với \"consistent\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"reflection\" (Sự suy ngẫm/chiêm nghiệm, sự phản ánh, hoặc sự phản chiếu ánh sáng)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "anti-social",
-            "simulate",
-            "thought",
-            "arid"
-          ],
-          "answer": "thought",
-          "explain": "\"reflection\" đồng nghĩa trực tiếp với \"thought\"."
         },
         {
           "type": "synonym",
@@ -48440,8 +48440,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"neurological\" (Thuộc về hệ thần kinh và não bộ)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"neurological\" (Thuộc về hệ thần kinh và não bộ) để điền vào chỗ trống:",
+          "qText": "Rationally, we know these people's success did not depend on these products, so it seems our propensity to purchase products relates more to ______ programs that evolved to encourage imitation of those further up the social ladder.",
           "pText": "",
           "options": [
             "comfort",
@@ -48451,6 +48451,34 @@
           ],
           "answer": "neural",
           "explain": "\"neurological\" đồng nghĩa trực tiếp với \"neural\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"comfortably\" (Một cách thoải mái hoặc dư dả) để điền vào chỗ trống:",
+          "qText": "One solution that has been put forward is the long-term solution of designing cities and neighbourhoods so that car journeys are not necessary - all essential services being located within walking distance or ______ accessible by public transport.",
+          "pText": "",
+          "options": [
+            "immigrant",
+            "easily",
+            "comprehensive",
+            "ambitious"
+          ],
+          "answer": "easily",
+          "explain": "\"comfortably\" đồng nghĩa trực tiếp với \"easily\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"intake\" (Lượng nạp vào cơ thể hoặc số lượng tuyển sinh mới) để điền vào chỗ trống:",
+          "qText": "Furthermore, vertical agriculture incorporates narrow-spectrum LED illumination arrays that emit specific photosynthetic wavelengths—primarily blue and deep red—maximizing photosynthetic biomass conversion while dramatically reducing electricity ______ compared to full-spectrum incandescent lighting.",
+          "pText": "",
+          "options": [
+            "defend",
+            "charity",
+            "ambitious",
+            "consumption"
+          ],
+          "answer": "consumption",
+          "explain": "\"intake\" đồng nghĩa trực tiếp với \"consumption\"."
         },
         {
           "type": "synonym",
@@ -48479,34 +48507,6 @@
           ],
           "answer": "ease",
           "explain": "\"comfort\" đồng nghĩa trực tiếp với \"ease\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"comfortably\" (Một cách thoải mái hoặc dư dả)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "immigrant",
-            "easily",
-            "comprehensive",
-            "ambitious"
-          ],
-          "answer": "easily",
-          "explain": "\"comfortably\" đồng nghĩa trực tiếp với \"easily\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"intake\" (Lượng nạp vào cơ thể hoặc số lượng tuyển sinh mới)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "defend",
-            "charity",
-            "ambitious",
-            "consumption"
-          ],
-          "answer": "consumption",
-          "explain": "\"intake\" đồng nghĩa trực tiếp với \"consumption\"."
         }
       ],
       "passage": {
@@ -50288,6 +50288,20 @@
         },
         {
           "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"use\" (Sử dụng, tận dụng · công dụng, việc sử dụng) để điền vào chỗ trống:",
+          "qText": "Experts have a deeper understanding of their domains than novices do, and ______ higher -order principles to solve problems.",
+          "pText": "",
+          "options": [
+            "food",
+            "write",
+            "utilize",
+            "year"
+          ],
+          "answer": "utilize",
+          "explain": "\"use\" đồng nghĩa trực tiếp với \"utilize\"."
+        },
+        {
+          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"forever\" (Mãi mãi, vĩnh viễn không thể đảo ngược)?",
           "qText": "",
           "pText": "",
@@ -50397,20 +50411,6 @@
           ],
           "answer": "declaration",
           "explain": "\"announcement\" đồng nghĩa trực tiếp với \"declaration\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"use\" (Sử dụng, tận dụng · công dụng, việc sử dụng)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "food",
-            "write",
-            "utilize",
-            "year"
-          ],
-          "answer": "utilize",
-          "explain": "\"use\" đồng nghĩa trực tiếp với \"utilize\"."
         }
       ],
       "passage": {
@@ -52244,6 +52244,48 @@
         },
         {
           "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"help\" (Giúp đỡ, hỗ trợ, thúc đẩy · sự trợ giúp) để điền vào chỗ trống:",
+          "qText": "There are seven types of scholarship offered by Bramley College to enrolled international students to ______ with the costs of their courses.",
+          "pText": "",
+          "options": [
+            "play",
+            "life",
+            "assist",
+            "look"
+          ],
+          "answer": "assist",
+          "explain": "\"help\" đồng nghĩa trực tiếp với \"assist\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"see\" (Nhìn thấy, nhận thấy, xem xét) để điền vào chỗ trống:",
+          "qText": "The most extraordinary demonstration of the yawn-stretch linkage occurs in many people paralyzed on one side of their body because of brain damage caused by a stroke, the prominent British neurologist Sir Francis Walshe noted in 1923 that when these people yawn, they are startled and mystified to ______ that their otherwise paralyzed arm rises and flexes automatically in what neurologists term an 'associated response'.",
+          "pText": "",
+          "options": [
+            "suggest",
+            "come",
+            "accord",
+            "observe"
+          ],
+          "answer": "observe",
+          "explain": "\"see\" đồng nghĩa trực tiếp với \"observe\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"problem\" (Vấn đề, trở ngại, bài toán) để điền vào chỗ trống:",
+          "qText": "An ______ of current concern in tropical forest conservation is that of trying to estimate the minimum sustainable size of islands' of forest reserve in areas where large-scale felling is taking place.",
+          "pText": "",
+          "options": [
+            "brain",
+            "issue",
+            "grow",
+            "today"
+          ],
+          "answer": "issue",
+          "explain": "\"problem\" đồng nghĩa trực tiếp với \"issue\"."
+        },
+        {
+          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"brain\" (Não bộ, trí tuệ)?",
           "qText": "",
           "pText": "",
@@ -52297,48 +52339,6 @@
           ],
           "answer": "outcome",
           "explain": "\"result\" đồng nghĩa trực tiếp với \"outcome\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"help\" (Giúp đỡ, hỗ trợ, thúc đẩy · sự trợ giúp)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "play",
-            "life",
-            "assist",
-            "look"
-          ],
-          "answer": "assist",
-          "explain": "\"help\" đồng nghĩa trực tiếp với \"assist\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"see\" (Nhìn thấy, nhận thấy, xem xét)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "suggest",
-            "come",
-            "accord",
-            "observe"
-          ],
-          "answer": "observe",
-          "explain": "\"see\" đồng nghĩa trực tiếp với \"observe\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"problem\" (Vấn đề, trở ngại, bài toán)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "brain",
-            "issue",
-            "grow",
-            "today"
-          ],
-          "answer": "issue",
-          "explain": "\"problem\" đồng nghĩa trực tiếp với \"issue\"."
         },
         {
           "type": "synonym",
@@ -54149,6 +54149,104 @@
         },
         {
           "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"population\" (Dân số, quần thể (sinh vật) để điền vào chỗ trống:",
+          "qText": "All three are relatively isolated island communities, which leads to less genetic variation amongst ______.",
+          "pText": "",
+          "options": [
+            "light",
+            "point",
+            "inhabitants",
+            "sound"
+          ],
+          "answer": "inhabitants",
+          "explain": "\"population\" đồng nghĩa trực tiếp với \"inhabitants\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"term\" (Thuật ngữ, kỳ hạn, điều khoản · gọi là) để điền vào chỗ trống:",
+          "qText": "Modern dream science really begins at the end of the 19th century with Sigmund Feud, who theorized that dreams were the ______ of unconscious desires often stemming from childhood.",
+          "pText": "",
+          "options": [
+            "skill",
+            "fact",
+            "expression",
+            "control"
+          ],
+          "answer": "expression",
+          "explain": "\"term\" đồng nghĩa trực tiếp với \"expression\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"seem\" (Dường như, có vẻ như) để điền vào chỗ trống:",
+          "qText": "As would have been predicted by Robert Williams's work, all three groups ______ to be descended from the same ancestral (Paleo-lndian) population.",
+          "pText": "",
+          "options": [
+            "turn",
+            "appear",
+            "list",
+            "control"
+          ],
+          "answer": "appear",
+          "explain": "\"seem\" đồng nghĩa trực tiếp với \"appear\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"base\" (Nền tảng, cơ sở, chân đế · đặt cơ sở, dựa trên) để điền vào chỗ trống:",
+          "qText": "The Earth and Space ______, a registered charity, was established for the purposes of fostering such links through field research and by direct practical action.",
+          "pText": "",
+          "options": [
+            "foundation",
+            "seem",
+            "energy",
+            "turn"
+          ],
+          "answer": "foundation",
+          "explain": "\"base\" đồng nghĩa trực tiếp với \"foundation\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"material\" (Vật liệu, chất liệu, tài liệu · thuộc vật chất) để điền vào chỗ trống:",
+          "qText": "Whether Busby’s theory holds up or not remains to be seen, but investigating it can only help to clear up some of the doubts about this mysterious ______.",
+          "pText": "",
+          "options": [
+            "earth",
+            "turn",
+            "substance",
+            "list"
+          ],
+          "answer": "substance",
+          "explain": "\"material\" đồng nghĩa trực tiếp với \"substance\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"point\" (Điểm, luận điểm, thời điểm · chỉ ra) để điền vào chỗ trống:",
+          "qText": "A less specific variant of the ______ is that the imitation of children is imperfect: they copy their parents’ speech, but never reproduce it exactly.",
+          "pText": "",
+          "options": [
+            "start",
+            "move",
+            "argument",
+            "fish"
+          ],
+          "answer": "argument",
+          "explain": "\"point\" đồng nghĩa trực tiếp với \"argument\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"type\" (Loại, kiểu, chủng loại · đánh máy) để điền vào chỗ trống:",
+          "qText": "Intriguingly, one-third of male centenarians were in this ______, compared with only 15 per cent of women.",
+          "pText": "",
+          "options": [
+            "category",
+            "list",
+            "man",
+            "reason"
+          ],
+          "answer": "category",
+          "explain": "\"type\" đồng nghĩa trực tiếp với \"category\"."
+        },
+        {
+          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"health\" (Sức khỏe, y tế, tình trạng lành mạnh)?",
           "qText": "",
           "pText": "",
@@ -54191,34 +54289,6 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"population\" (Dân số, quần thể (sinh vật))?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "light",
-            "point",
-            "inhabitants",
-            "sound"
-          ],
-          "answer": "inhabitants",
-          "explain": "\"population\" đồng nghĩa trực tiếp với \"inhabitants\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"term\" (Thuật ngữ, kỳ hạn, điều khoản · gọi là)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "skill",
-            "fact",
-            "expression",
-            "control"
-          ],
-          "answer": "expression",
-          "explain": "\"term\" đồng nghĩa trực tiếp với \"expression\"."
-        },
-        {
-          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"power\" (Quyền lực, năng lượng/điện năng, khả năng · cấp năng lượng)?",
           "qText": "",
           "pText": "",
@@ -54230,76 +54300,6 @@
           ],
           "answer": "authority",
           "explain": "\"power\" đồng nghĩa trực tiếp với \"authority\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"seem\" (Dường như, có vẻ như)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "turn",
-            "appear",
-            "list",
-            "control"
-          ],
-          "answer": "appear",
-          "explain": "\"seem\" đồng nghĩa trực tiếp với \"appear\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"base\" (Nền tảng, cơ sở, chân đế · đặt cơ sở, dựa trên)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "foundation",
-            "seem",
-            "energy",
-            "turn"
-          ],
-          "answer": "foundation",
-          "explain": "\"base\" đồng nghĩa trực tiếp với \"foundation\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"material\" (Vật liệu, chất liệu, tài liệu · thuộc vật chất)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "earth",
-            "turn",
-            "substance",
-            "list"
-          ],
-          "answer": "substance",
-          "explain": "\"material\" đồng nghĩa trực tiếp với \"substance\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"point\" (Điểm, luận điểm, thời điểm · chỉ ra)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "start",
-            "move",
-            "argument",
-            "fish"
-          ],
-          "answer": "argument",
-          "explain": "\"point\" đồng nghĩa trực tiếp với \"argument\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"type\" (Loại, kiểu, chủng loại · đánh máy)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "category",
-            "list",
-            "man",
-            "reason"
-          ],
-          "answer": "category",
-          "explain": "\"type\" đồng nghĩa trực tiếp với \"category\"."
         }
       ],
       "passage": {
@@ -55969,8 +55969,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"head\" (Đầu, người đứng đầu, tiêu đề (heading) · dẫn đầu, hướng tới)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"head\" (Đầu, người đứng đầu, tiêu đề (heading) để điền vào chỗ trống:",
+          "qText": "Heehs, the mapping project ______, says that after his group gathers more",
           "pText": "",
           "options": [
             "industry",
@@ -55983,8 +55983,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"period\" (Giai đoạn, thời kỳ, tiết học)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"period\" (Giai đoạn, thời kỳ, tiết học) để điền vào chỗ trống:",
+          "qText": "In fact, physicians practising during the Tang ______ had access to a wealth of pharmaceutical and medical texts, their contents ranging from purely pragmatic advice to highly sophisticated theoretical considerations.",
           "pText": "",
           "options": [
             "relate",
@@ -55997,8 +55997,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"feel\" (Cảm thấy, cảm nhận, nhận thấy)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"feel\" (Cảm thấy, cảm nhận, nhận thấy) để điền vào chỗ trống:",
+          "qText": "Landmark experiments by cognitive researchers demonstrate that environmental ambiance—including background acoustic frequencies, packaging color gradients, cutlery weight, and tableware geometry—fundamentally modulates how human subjects ______ food sweetness, freshness, and quality.",
           "pText": "",
           "options": [
             "perceive",
@@ -56008,6 +56008,48 @@
           ],
           "answer": "perceive",
           "explain": "\"feel\" đồng nghĩa trực tiếp với \"perceive\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"remain\" (Duy trì, vẫn còn, ở lại · tàn tích/di cốt (remains) để điền vào chỗ trống:",
+          "qText": "As fresh food stores leave a neighborhood, residents find it harder to eat well and ______ healthy.",
+          "pText": "",
+          "options": [
+            "interest",
+            "stay",
+            "face",
+            "last"
+          ],
+          "answer": "stay",
+          "explain": "\"remain\" đồng nghĩa trực tiếp với \"stay\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"last\" (Cuối cùng, vừa qua · kéo dài, tồn tại) để điền vào chỗ trống:",
+          "qText": "The ______ 20 per cent were 'escapers', who reached their century with no sign of the most common chronic diseases.",
+          "pText": "",
+          "options": [
+            "remain",
+            "final",
+            "air",
+            "young"
+          ],
+          "answer": "final",
+          "explain": "\"last\" đồng nghĩa trực tiếp với \"final\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"family\" (Gia đình, họ) để điền vào chỗ trống:",
+          "qText": "Despite its sometimes rocky reception, Children’s and ______ Tales gradually took root with the public.",
+          "pText": "",
+          "options": [
+            "farm",
+            "household",
+            "industry",
+            "role"
+          ],
+          "answer": "household",
+          "explain": "\"family\" đồng nghĩa trực tiếp với \"household\"."
         },
         {
           "type": "synonym",
@@ -56022,34 +56064,6 @@
           ],
           "answer": "sector",
           "explain": "\"industry\" đồng nghĩa trực tiếp với \"sector\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"remain\" (Duy trì, vẫn còn, ở lại · tàn tích/di cốt (remains))?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "interest",
-            "stay",
-            "face",
-            "last"
-          ],
-          "answer": "stay",
-          "explain": "\"remain\" đồng nghĩa trực tiếp với \"stay\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"last\" (Cuối cùng, vừa qua · kéo dài, tồn tại)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "remain",
-            "final",
-            "air",
-            "young"
-          ],
-          "answer": "final",
-          "explain": "\"last\" đồng nghĩa trực tiếp với \"final\"."
         },
         {
           "type": "synonym",
@@ -56092,20 +56106,6 @@
           ],
           "answer": "discipline",
           "explain": "\"field\" đồng nghĩa trực tiếp với \"discipline\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"family\" (Gia đình, họ)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "farm",
-            "household",
-            "industry",
-            "role"
-          ],
-          "answer": "household",
-          "explain": "\"family\" đồng nghĩa trực tiếp với \"household\"."
         },
         {
           "type": "synonym",
@@ -57813,6 +57813,132 @@
       "test2Questions": [
         {
           "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"trade\" (Thương mại, sự buôn bán, nghề thủ công · giao dịch, trao đổi) để điền vào chỗ trống:",
+          "qText": "Whatever commentators may think, managers of museums, art galleries and science centres worldwide are looking for artful ways to blend culture and ______, and blockbuster exhibitions are at the top of the list.",
+          "pText": "",
+          "options": [
+            "commerce",
+            "site",
+            "approach",
+            "carry"
+          ],
+          "answer": "commerce",
+          "explain": "\"trade\" đồng nghĩa trực tiếp với \"commerce\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"source\" (Nguồn, nguồn gốc, tài liệu tham khảo · tìm nguồn cung) để điền vào chỗ trống:",
+          "qText": "A popular theory on the handshake’s ______ is that it began as a gesture of peace.",
+          "pText": "",
+          "options": [
+            "approach",
+            "left",
+            "recent",
+            "origin"
+          ],
+          "answer": "origin",
+          "explain": "\"source\" đồng nghĩa trực tiếp với \"origin\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"rise\" (Tăng lên, mọc lên, nổi dậy · sự gia tăng, sự trỗi dậy) để điền vào chỗ trống:",
+          "qText": "If we approach this controversy from a scientific aspect, although there has been some evidence that music does ______ brain activity, actual improvements in learning and memory have not been adequately demonstrated.",
+          "pText": "",
+          "options": [
+            "left",
+            "rate",
+            "increase",
+            "value"
+          ],
+          "answer": "increase",
+          "explain": "\"rise\" đồng nghĩa trực tiếp với \"increase\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"try\" (Cố gắng, thử nghiệm; xét xử · lần thử) để điền vào chỗ trống:",
+          "qText": "In an ______ to assert their need for independence and individuality, adolescents may respond with what appears to be hostility and lack of cooperation.",
+          "pText": "",
+          "options": [
+            "leave",
+            "resource",
+            "attempt",
+            "carry"
+          ],
+          "answer": "attempt",
+          "explain": "\"try\" đồng nghĩa trực tiếp với \"attempt\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"eat\" (Ăn, tiêu thụ (thức ăn) để điền vào chỗ trống:",
+          "qText": "By recirculating irrigation water within sealed vapor-recovery systems, advanced vertical facilities ______ up to 95 percent less water than conventional outdoor farming per kilogram of yield.",
+          "pText": "",
+          "options": [
+            "consume",
+            "carry",
+            "oil",
+            "crop"
+          ],
+          "answer": "consume",
+          "explain": "\"eat\" đồng nghĩa trực tiếp với \"consume\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"approach\" (Cách tiếp cận, phương pháp · tiếp cận, đến gần) để điền vào chỗ trống:",
+          "qText": "She believes the female dolphins invented the ______ because of the \"selective pressures they face while raising a calf as long as they do,\" about 4 to 5 years.",
+          "pText": "",
+          "options": [
+            "trade",
+            "method",
+            "reach",
+            "size"
+          ],
+          "answer": "method",
+          "explain": "\"approach\" đồng nghĩa trực tiếp với \"method\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"put\" (Đặt, để, đưa ra, diễn đạt) để điền vào chỗ trống:",
+          "qText": "The 18th century witnessed the transformation from an agrarian economy to an industrial one, one of the vital social changes taking ______ in the Western world.",
+          "pText": "",
+          "options": [
+            "continue",
+            "place",
+            "center",
+            "sell"
+          ],
+          "answer": "place",
+          "explain": "\"put\" đồng nghĩa trực tiếp với \"place\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"rate\" (Tỷ lệ, tốc độ, mức giá · đánh giá, xếp hạng) để điền vào chỗ trống:",
+          "qText": "At 58 centenarians per 100,000 people, it has the world's highest ______ in this age group, with Sardinia and Iceland not too far behind.",
+          "pText": "",
+          "options": [
+            "left",
+            "report",
+            "crop",
+            "proportion"
+          ],
+          "answer": "proportion",
+          "explain": "\"rate\" đồng nghĩa trực tiếp với \"proportion\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"value\" (Giá trị, tầm quan trọng, giá trị đạo đức · coi trọng, định giá) để điền vào chỗ trống:",
+          "qText": "It was named the Silk Road after its most precious commodity, which was considered to be ______ more than gold.",
+          "pText": "",
+          "options": [
+            "eat",
+            "line",
+            "present",
+            "worth"
+          ],
+          "answer": "worth",
+          "explain": "\"value\" đồng nghĩa trực tiếp với \"worth\"."
+        },
+        {
+          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"report\" (Báo cáo, bản tin · báo cáo, tường thuật, ghi nhận)?",
           "qText": "",
           "pText": "",
@@ -57824,20 +57950,6 @@
           ],
           "answer": "account",
           "explain": "\"report\" đồng nghĩa trực tiếp với \"account\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"trade\" (Thương mại, sự buôn bán, nghề thủ công · giao dịch, trao đổi)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "commerce",
-            "site",
-            "approach",
-            "carry"
-          ],
-          "answer": "commerce",
-          "explain": "\"trade\" đồng nghĩa trực tiếp với \"commerce\"."
         },
         {
           "type": "synonym",
@@ -57855,62 +57967,6 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"source\" (Nguồn, nguồn gốc, tài liệu tham khảo · tìm nguồn cung)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "approach",
-            "left",
-            "recent",
-            "origin"
-          ],
-          "answer": "origin",
-          "explain": "\"source\" đồng nghĩa trực tiếp với \"origin\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"rise\" (Tăng lên, mọc lên, nổi dậy · sự gia tăng, sự trỗi dậy)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "left",
-            "rate",
-            "increase",
-            "value"
-          ],
-          "answer": "increase",
-          "explain": "\"rise\" đồng nghĩa trực tiếp với \"increase\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"try\" (Cố gắng, thử nghiệm; xét xử · lần thử)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "leave",
-            "resource",
-            "attempt",
-            "carry"
-          ],
-          "answer": "attempt",
-          "explain": "\"try\" đồng nghĩa trực tiếp với \"attempt\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"eat\" (Ăn, tiêu thụ (thức ăn), ăn mòn)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "consume",
-            "carry",
-            "oil",
-            "crop"
-          ],
-          "answer": "consume",
-          "explain": "\"eat\" đồng nghĩa trực tiếp với \"consume\"."
-        },
-        {
-          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"appear\" (Xuất hiện; dường như, có vẻ)?",
           "qText": "",
           "pText": "",
@@ -57922,62 +57978,6 @@
           ],
           "answer": "emerge",
           "explain": "\"appear\" đồng nghĩa trực tiếp với \"emerge\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"approach\" (Cách tiếp cận, phương pháp · tiếp cận, đến gần)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "trade",
-            "method",
-            "reach",
-            "size"
-          ],
-          "answer": "method",
-          "explain": "\"approach\" đồng nghĩa trực tiếp với \"method\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"put\" (Đặt, để, đưa ra, diễn đạt)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "continue",
-            "place",
-            "center",
-            "sell"
-          ],
-          "answer": "place",
-          "explain": "\"put\" đồng nghĩa trực tiếp với \"place\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"rate\" (Tỷ lệ, tốc độ, mức giá · đánh giá, xếp hạng)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "left",
-            "report",
-            "crop",
-            "proportion"
-          ],
-          "answer": "proportion",
-          "explain": "\"rate\" đồng nghĩa trực tiếp với \"proportion\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"value\" (Giá trị, tầm quan trọng, giá trị đạo đức · coi trọng, định giá)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "eat",
-            "line",
-            "present",
-            "worth"
-          ],
-          "answer": "worth",
-          "explain": "\"value\" đồng nghĩa trực tiếp với \"worth\"."
         }
       ],
       "passage": {
@@ -59636,22 +59636,8 @@
       "test2Questions": [
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"section\" (Phần, mục, đoạn, khu vực)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "segment",
-            "next",
-            "decision",
-            "easy"
-          ],
-          "answer": "segment",
-          "explain": "\"section\" đồng nghĩa trực tiếp với \"segment\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"team\" (Đội, nhóm; hợp tác cùng)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"team\" (Đội, nhóm; hợp tác cùng) để điền vào chỗ trống:",
+          "qText": "But the devices that could be affected, such as smoke detectors and fuel level indicators, could still create serious problems for the flight ______ if they malfunction.",
           "pText": "",
           "options": [
             "crew",
@@ -59664,8 +59650,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"close\" (Gần gũi, chặt chẽ; đóng lại, kết thúc)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"close\" (Gần gũi, chặt chẽ; đóng lại, kết thúc) để điền vào chỗ trống:",
+          "qText": "The second innovation alters the wide, flat interconnect wires that collect current from the silver bus wires and electrically link ______ cells.",
           "pText": "",
           "options": [
             "adjacent",
@@ -59678,8 +59664,8 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"concern\" (Mối lo ngại; liên quan đến; quan tâm)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"concern\" (Mối lo ngại; liên quan đến; quan tâm) để điền vào chỗ trống:",
+          "qText": "But the company and others like it are beginning to seriously ______ large American firms, who see such half-crazy new and innovative ideas as a threat to their own future success.",
           "pText": "",
           "options": [
             "engineer",
@@ -59689,6 +59675,62 @@
           ],
           "answer": "worry",
           "explain": "\"concern\" đồng nghĩa trực tiếp với \"worry\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"hard\" (Khó khăn, khắc nghiệt; cứng rắn; chăm chỉ) để điền vào chỗ trống:",
+          "qText": "‘People who regularly participate in ______ tasks retain their intellectual abilities better than mental couch potatoes.'",
+          "pText": "",
+          "options": [
+            "challenging",
+            "section",
+            "noise",
+            "decision"
+          ],
+          "answer": "challenging",
+          "explain": "\"hard\" đồng nghĩa trực tiếp với \"challenging\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"short\" (Ngắn, thiếu hụt; tóm tắt) để điền vào chỗ trống:",
+          "qText": "In Scandinavia, the Swedish cinema had a ______ period of glory, notably with powerful epic films and comedies.",
+          "pText": "",
+          "options": [
+            "team",
+            "brief",
+            "clear",
+            "demand"
+          ],
+          "answer": "brief",
+          "explain": "\"short\" đồng nghĩa trực tiếp với \"brief\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"structure\" (Cấu trúc, kết cấu, công trình; sắp xếp) để điền vào chỗ trống:",
+          "qText": "These misconceptions do not remain isolated but become incorporated into a multifaceted, but organised, conceptual ______, making it and the component ideas, some of which are erroneous, more robust but also accessible to modification.",
+          "pText": "",
+          "options": [
+            "disease",
+            "average",
+            "easy",
+            "framework"
+          ],
+          "answer": "framework",
+          "explain": "\"structure\" đồng nghĩa trực tiếp với \"framework\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"section\" (Phần, mục, đoạn, khu vực)?",
+          "qText": "",
+          "pText": "",
+          "options": [
+            "segment",
+            "next",
+            "decision",
+            "easy"
+          ],
+          "answer": "segment",
+          "explain": "\"section\" đồng nghĩa trực tiếp với \"segment\"."
         },
         {
           "type": "synonym",
@@ -59748,20 +59790,6 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"hard\" (Khó khăn, khắc nghiệt; cứng rắn; chăm chỉ)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "challenging",
-            "section",
-            "noise",
-            "decision"
-          ],
-          "answer": "challenging",
-          "explain": "\"hard\" đồng nghĩa trực tiếp với \"challenging\"."
-        },
-        {
-          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"difficult\" (Khó khăn, phức tạp, nan giải)?",
           "qText": "",
           "pText": "",
@@ -59773,34 +59801,6 @@
           ],
           "answer": "arduous",
           "explain": "\"difficult\" đồng nghĩa trực tiếp với \"arduous\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"short\" (Ngắn, thiếu hụt; tóm tắt)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "team",
-            "brief",
-            "clear",
-            "demand"
-          ],
-          "answer": "brief",
-          "explain": "\"short\" đồng nghĩa trực tiếp với \"brief\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"structure\" (Cấu trúc, kết cấu, công trình; sắp xếp)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "disease",
-            "average",
-            "easy",
-            "framework"
-          ],
-          "answer": "framework",
-          "explain": "\"structure\" đồng nghĩa trực tiếp với \"framework\"."
         }
       ],
       "passage": {
@@ -61383,8 +61383,8 @@
       "test2Questions": [
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"note\" (Ghi chú; lưu ý, nhận thấy)?",
-          "qText": "",
+          "prompt": "Chọn từ đồng nghĩa với \"note\" (Ghi chú; lưu ý, nhận thấy) để điền vào chỗ trống:",
+          "qText": "The most extraordinary demonstration of the yawn-stretch linkage occurs in many people paralyzed on one side of their body because of brain damage caused by a stroke, the prominent British neurologist Sir Francis Walshe noted in 1923 that when these people yawn, they are startled and mystified to ______ that their otherwise paralyzed arm rises and flexes automatically in what neurologists term an 'associated response'.",
           "pText": "",
           "options": [
             "final",
@@ -61394,6 +61394,104 @@
           ],
           "answer": "observe",
           "explain": "\"note\" đồng nghĩa trực tiếp với \"observe\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"image\" (Hình ảnh, biểu tượng, hình dung) để điền vào chỗ trống:",
+          "qText": "Consequently, cutting-edge food designers now harness crossmodal acoustics and chromatic ______ cues to engineer healthier culinary products that require significantly lower sodium and refined sugar concentrations without diminishing consumer hedonic satisfaction.",
+          "pText": "",
+          "options": [
+            "visual",
+            "price",
+            "picture",
+            "lot"
+          ],
+          "answer": "visual",
+          "explain": "\"image\" đồng nghĩa trực tiếp với \"visual\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"film\" (Phim ảnh; lớp màng mỏng; quay phim) để điền vào chỗ trống:",
+          "qText": "In Scandinavia, the Swedish ______ had a brief period of glory, notably with powerful epic films and comedies.",
+          "pText": "",
+          "options": [
+            "hear",
+            "return",
+            "cinema",
+            "final"
+          ],
+          "answer": "cinema",
+          "explain": "\"film\" đồng nghĩa trực tiếp với \"cinema\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"step\" (Bước, giai đoạn; bước đi, can thiệp) để điền vào chỗ trống:",
+          "qText": "Even in capital-intensive businesses such as pharmaceuticals, entrepreneurs can conduct profitable, early- ______ research,selling out to the big firms when they reach expensive,risky clinical trials.",
+          "pText": "",
+          "options": [
+            "impossible",
+            "perhaps",
+            "stage",
+            "heat"
+          ],
+          "answer": "stage",
+          "explain": "\"step\" đồng nghĩa trực tiếp với \"stage\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"compare\" (So sánh, đối chiếu) để điền vào chỗ trống:",
+          "qText": "In ______, the Southern Ocean, which surrounds New Zealand, may warm by only 2°C. The sea will act as an air conditioner and in this aspect, New Zealand’s location is comparatively fortunate.",
+          "pText": "",
+          "options": [
+            "store",
+            "fuel",
+            "effort",
+            "contrast"
+          ],
+          "answer": "contrast",
+          "explain": "\"compare\" đồng nghĩa trực tiếp với \"contrast\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"national\" (Thuộc quốc gia, toàn quốc) để điền vào chỗ trống:",
+          "qText": "These are organisations which provide children under five with a ______ setting in which they are intensively exposed to the language.",
+          "pText": "",
+          "options": [
+            "heat",
+            "wide",
+            "domestic",
+            "month"
+          ],
+          "answer": "domestic",
+          "explain": "\"national\" đồng nghĩa trực tiếp với \"domestic\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"wide\" (Rộng lớn, sâu rộng, phổ biến) để điền vào chỗ trống:",
+          "qText": "The new, more ______ examination, which looks at DNA in the cell nucleus rather than in the mitochondria, shows this conclusion is wrong.",
+          "pText": "",
+          "options": [
+            "match",
+            "picture",
+            "extensive",
+            "fuel"
+          ],
+          "answer": "extensive",
+          "explain": "\"wide\" đồng nghĩa trực tiếp với \"extensive\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"together\" (Cùng nhau, hợp lại, đồng thời) để điền vào chỗ trống:",
+          "qText": "It has long been held that decision made ______ by large groups of people are more likely to turn out to be accurate than decisions made by individuals.",
+          "pText": "",
+          "options": [
+            "collectively",
+            "lot",
+            "fuel",
+            "fast"
+          ],
+          "answer": "collectively",
+          "explain": "\"together\" đồng nghĩa trực tiếp với \"collectively\"."
         },
         {
           "type": "synonym",
@@ -61411,20 +61509,6 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"image\" (Hình ảnh, biểu tượng, hình dung)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "visual",
-            "price",
-            "picture",
-            "lot"
-          ],
-          "answer": "visual",
-          "explain": "\"image\" đồng nghĩa trực tiếp với \"visual\"."
-        },
-        {
-          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"house\" (Ngôi nhà; chứa đựng, cung cấp chỗ ở)?",
           "qText": "",
           "pText": "",
@@ -61436,20 +61520,6 @@
           ],
           "answer": "residence",
           "explain": "\"house\" đồng nghĩa trực tiếp với \"residence\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"film\" (Phim ảnh; lớp màng mỏng; quay phim)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "hear",
-            "return",
-            "cinema",
-            "final"
-          ],
-          "answer": "cinema",
-          "explain": "\"film\" đồng nghĩa trực tiếp với \"cinema\"."
         },
         {
           "type": "synonym",
@@ -61467,20 +61537,6 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"step\" (Bước, giai đoạn; bước đi, can thiệp)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "impossible",
-            "perhaps",
-            "stage",
-            "heat"
-          ],
-          "answer": "stage",
-          "explain": "\"step\" đồng nghĩa trực tiếp với \"stage\"."
-        },
-        {
-          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"decade\" (Thập kỷ (10 năm))?",
           "qText": "",
           "pText": "",
@@ -61492,62 +61548,6 @@
           ],
           "answer": "ten-year period",
           "explain": "\"decade\" đồng nghĩa trực tiếp với \"ten-year period\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"compare\" (So sánh, đối chiếu)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "store",
-            "fuel",
-            "effort",
-            "contrast"
-          ],
-          "answer": "contrast",
-          "explain": "\"compare\" đồng nghĩa trực tiếp với \"contrast\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"national\" (Thuộc quốc gia, toàn quốc)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "heat",
-            "wide",
-            "domestic",
-            "month"
-          ],
-          "answer": "domestic",
-          "explain": "\"national\" đồng nghĩa trực tiếp với \"domestic\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"wide\" (Rộng lớn, sâu rộng, phổ biến)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "match",
-            "picture",
-            "extensive",
-            "fuel"
-          ],
-          "answer": "extensive",
-          "explain": "\"wide\" đồng nghĩa trực tiếp với \"extensive\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"together\" (Cùng nhau, hợp lại, đồng thời)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "collectively",
-            "lot",
-            "fuel",
-            "fast"
-          ],
-          "answer": "collectively",
-          "explain": "\"together\" đồng nghĩa trực tiếp với \"collectively\"."
         }
       ],
       "passage": {
@@ -63035,6 +63035,48 @@
       "test2Questions": [
         {
           "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"paint\" (Sơn, vẽ tranh; mô tả) để điền vào chỗ trống:",
+          "qText": "Over successive generations, natural selection favored reduced adrenaline production, which coincidentally triggered anatomical transformations such as floppy ears, shorter snouts, and piebald ______ pigmentation.",
+          "pText": "",
+          "options": [
+            "coat",
+            "decline",
+            "introduce",
+            "aim"
+          ],
+          "answer": "coat",
+          "explain": "\"paint\" đồng nghĩa trực tiếp với \"coat\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"lack\" (Thiếu hụt, khan hiếm (v/n) để điền vào chỗ trống:",
+          "qText": "A steep rise in solar panel sales in recent years had led to a global ______ of silicon because production capacity for the active material lagged behind, but now new silicon manufacturing plants are coming online.",
+          "pText": "",
+          "options": [
+            "job",
+            "eye",
+            "draw",
+            "shortage"
+          ],
+          "answer": "shortage",
+          "explain": "\"lack\" đồng nghĩa trực tiếp với \"shortage\"."
+        },
+        {
+          "type": "synonym",
+          "prompt": "Chọn từ đồng nghĩa với \"dry\" (Khô ráo, khô hạn; làm khô) để điền vào chỗ trống:",
+          "qText": "These immense mounds appear simply to be part of the geographical landscape in this ______ region squeezed between the Pacific Ocean and the Andes mountains.But looks deceive.",
+          "pText": "",
+          "options": [
+            "draw",
+            "lack",
+            "attention",
+            "arid"
+          ],
+          "answer": "arid",
+          "explain": "\"dry\" đồng nghĩa trực tiếp với \"arid\"."
+        },
+        {
+          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"draw\" (Vẽ; rút ra, thu hút)?",
           "qText": "",
           "pText": "",
@@ -63046,20 +63088,6 @@
           ],
           "answer": "sketch",
           "explain": "\"draw\" đồng nghĩa trực tiếp với \"sketch\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"paint\" (Sơn, vẽ tranh; mô tả)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "coat",
-            "decline",
-            "introduce",
-            "aim"
-          ],
-          "answer": "coat",
-          "explain": "\"paint\" đồng nghĩa trực tiếp với \"coat\"."
         },
         {
           "type": "synonym",
@@ -63119,20 +63147,6 @@
         },
         {
           "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"lack\" (Thiếu hụt, khan hiếm (v/n))?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "job",
-            "eye",
-            "draw",
-            "shortage"
-          ],
-          "answer": "shortage",
-          "explain": "\"lack\" đồng nghĩa trực tiếp với \"shortage\"."
-        },
-        {
-          "type": "synonym",
           "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"whole\" (Toàn bộ, tổng thể, nguyên vẹn)?",
           "qText": "",
           "pText": "",
@@ -63172,20 +63186,6 @@
           ],
           "answer": "circumstance",
           "explain": "\"situation\" đồng nghĩa trực tiếp với \"circumstance\"."
-        },
-        {
-          "type": "synonym",
-          "prompt": "Từ tiếng Anh nào đồng nghĩa sát nhất với \"dry\" (Khô ráo, khô hạn; làm khô)?",
-          "qText": "",
-          "pText": "",
-          "options": [
-            "draw",
-            "lack",
-            "attention",
-            "arid"
-          ],
-          "answer": "arid",
-          "explain": "\"dry\" đồng nghĩa trực tiếp với \"arid\"."
         },
         {
           "type": "synonym",
