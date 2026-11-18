@@ -134,6 +134,18 @@
   function getTaskLockRemainingMs(taskId) {
     const locks = loadTaskLocks();
     const until = Number(locks[taskId] || 0);
+    if (until <= 0) return 0;
+    const bridge = B();
+    const uid = getScopedStorageUid();
+    let unlockAt = 0;
+    if (bridge && uid && bridge.TEACHER_UNLOCK_KEY_BASE) {
+      try {
+        unlockAt = Number(localStorage.getItem(`${bridge.TEACHER_UNLOCK_KEY_BASE}${uid}`) || 0);
+      } catch (_) {}
+    }
+    if (unlockAt > 0 && (until - LOCK_PENALTY_MS) <= unlockAt) {
+      return 0;
+    }
     return Math.max(0, until - Date.now());
   }
 
@@ -633,8 +645,37 @@
     }
     updateBriefLockUI();
     clearInterval(lockCountdownTimer);
-    lockCountdownTimer = setInterval(updateBriefLockUI, 1000);
+    let briefPullTicks = 0;
+    if (!isTeacherOrBypassed() && getTaskLockRemainingMs(t.id) > 0) {
+      B()?.syncPullClassData?.();
+    }
+    lockCountdownTimer = setInterval(() => {
+      updateBriefLockUI();
+      briefPullTicks += 1;
+      if (
+        briefPullTicks % 5 === 0 &&
+        pendingTaskId &&
+        !isTeacherOrBypassed() &&
+        getTaskLockRemainingMs(pendingTaskId) > 0 &&
+        document.getElementById('modal-task-brief')?.classList.contains('open')
+      ) {
+        B()?.syncPullClassData?.();
+      }
+    }, 1000);
     document.getElementById('modal-task-brief')?.classList.add('open');
+  }
+
+  function checkTaskUnlockNow() {
+    const bridge = B();
+    bridge?.syncPullClassData?.()?.then?.(() => {
+      updateBriefLockUI();
+      updateTaskStudyBar();
+      if (pendingTaskId && getTaskLockRemainingMs(pendingTaskId) <= 0) {
+        bridge?.showToast?.('Task đã được mở khóa! Bạn có thể bắt đầu làm bài.');
+      } else {
+        bridge?.showToast?.('Chưa thấy lệnh mở khóa mới từ giáo viên — vui lòng thử lại sau vài giây.');
+      }
+    });
   }
 
   function updateBriefLockUI() {
@@ -644,8 +685,12 @@
     const remMs = getTaskLockRemainingMs(pendingTaskId);
     if (remMs > 0) {
       if (lockEl) {
-        lockEl.style.display = 'block';
-        lockEl.textContent = `Task đang tạm khóa do ngưng thao tác quá 10 phút. Vui lòng quay lại sau ${formatMmSs(remMs)}.`;
+        lockEl.style.display = 'flex';
+        lockEl.style.alignItems = 'center';
+        lockEl.style.justifyContent = 'space-between';
+        lockEl.style.gap = '10px';
+        lockEl.style.flexWrap = 'wrap';
+        lockEl.innerHTML = `<span>Task đang tạm khóa do ngưng thao tác quá 10 phút. Vui lòng quay lại sau ${formatMmSs(remMs)}.</span><button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.checkTaskUnlockNow()">Kiểm tra mở khóa</button>`;
       }
       if (startBtn) startBtn.disabled = true;
     } else {
@@ -2853,6 +2898,7 @@
     closeStudentTasksModal,
     openTaskBriefModal,
     closeTaskBriefModal,
+    checkTaskUnlockNow,
     openTaskSummaryModal,
     closeTaskSummaryModal,
     openTaskExamReadyModal,

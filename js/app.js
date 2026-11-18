@@ -1037,8 +1037,10 @@
         const uid = getScopedUid(st.id);
         if (!uid) return;
         // Bỏ qua dữ liệu cloud cũ trước mốc reset 2026-11-18 của thanhngoc để hiển thị sạch sẽ 0 từ / 0 phút / 0 ngày
+        // nhưng vẫn bảo toàn teacherUnlockedAt nếu giáo viên vừa bấm mở khóa
         if (uid === 'thanhngoc' && Number(st.syncData?.resetEpoch || 0) < 2026111816) {
           thanhngocCloudNeedsReset = true;
+          const preservedUnlockAt = Number(st.syncData?.teacherUnlockedAt || 0);
           nextCache[uid] = {
             ...st,
             todayMins: 0,
@@ -1048,7 +1050,7 @@
             streak: 0,
             syncData: {
               resetEpoch: 2026111816,
-              teacherUnlockedAt: 0,
+              teacherUnlockedAt: preservedUnlockAt,
               timerByDay: {},
               wordsByDay: {},
               streakDays: [],
@@ -1072,6 +1074,7 @@
         if (activeUid === 'thanhngoc') {
           try { localStorage.setItem('ielts_thanhngoc_cloud_reset_pushed_2026111807', '1'); } catch (_) {}
           if (thanhngocCloudNeedsReset) {
+            if (mine) mergeCloudEntryIntoLocal(currentUser.id, mine);
             syncPushCurrentUser(false);
           } else if (mine) {
             mergeCloudEntryIntoLocal(currentUser.id, mine);
@@ -1147,7 +1150,32 @@
         }),
       }).then(r => r.ok ? r.json() : null).then(res => {
         if (!res || !res.ok) return;
+        const serverConfirmedUnlock = res.action === 'unlock_student' && Number(res.teacherUnlockedAt || 0) > 0;
         const serverUnlock = Number(res.teacherUnlockedAt || effectiveUnlockAt);
+        if (!serverConfirmedUnlock) {
+          if (prev && prev.syncData && typeof prev.syncData === 'object') {
+            const fallbackPayload = {
+              id: acct?.id || prev?.id || studentId,
+              name: acct?.name || prev?.name || studentId,
+              todayMins: Number(prev.todayMins || 0),
+              weekMins: Number(prev.weekMins || 0),
+              monthMins: Number(prev.monthMins || 0),
+              mastered: Number(prev.mastered || 0),
+              streak: Number(prev.streak || 0),
+              syncData: {
+                ...prev.syncData,
+                taskLocks: {},
+                teacherUnlockedAt: effectiveUnlockAt,
+              },
+            };
+            fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify(fallbackPayload),
+            }).catch(() => {});
+          }
+          showToast('Apps Script trên Google Sheet chưa cập nhật bản mới (unlock_student) — hãy dán sync/google_apps_script.gs & Triển khai New version!');
+        }
         try {
           const curLocal = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0);
           if (serverUnlock > curLocal) {
@@ -4241,9 +4269,35 @@
     } catch (_) {}
   }
 
+  let lastResumePullAt = 0;
+
+  function maybePullCloudOnResume() {
+    if (document.hidden || !currentUser || isTeacherUser() || !getSyncUrl()) return;
+    const nowMs = Date.now();
+    if (nowMs - lastResumePullAt < 3000) return;
+    let hasLock = false;
+    try {
+      const scoped = getScopedUid(currentUser.id);
+      const tl = JSON.parse(localStorage.getItem(`${TASK_LOCKS_KEY_BASE}${scoped}`) || '{}') || {};
+      hasLock = Object.values(tl).some((u) => Number(u || 0) > nowMs);
+    } catch (_) {}
+    const lockModalOpen =
+      document.getElementById('modal-task-brief')?.classList.contains('open') ||
+      document.getElementById('modal-student-tasks')?.classList.contains('open');
+    if (hasLock || lockModalOpen) {
+      lastResumePullAt = nowMs;
+      syncPullClassData();
+    }
+  }
+
   function mountPandaWidgetFrames() {
     // Styled directly via CSS pastel botanical card themes & circular mascot lockups
   }
+
+  window.addEventListener('focus', maybePullCloudOnResume);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) maybePullCloudOnResume();
+  });
 
   // Init cleanly on load
   applyOneTimeStudentResetEpoch();
