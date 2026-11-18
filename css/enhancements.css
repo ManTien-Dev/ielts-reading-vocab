@@ -2846,10 +2846,87 @@ button.task-step-pill.active:hover {
   height: 100%;
 }
 @media (max-width: 960px) {
-  .task-exam-dialog > .modal-body:has(.translation-workspace) { overflow-y: auto !important; }
-  .translation-workspace { grid-template-columns: 1fr; height: auto; min-height: 100%; }
-  .translation-workspace .english-paper { border-right: none; border-bottom: 1.5px solid var(--card-border); height: auto; max-height: 40vh; padding: 14px 16px 18px; }
-  .translation-workspace .writing-paper { height: auto; overflow: visible; flex: 1 0 auto; }
+  .task-exam-dialog > .modal-body:has(.translation-workspace) {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  #task-stage-container:has(.translation-workspace) {
+    flex: 0 0 auto;
+    min-height: auto;
+    height: auto;
+  }
+  .translation-workspace {
+    grid-template-columns: 1fr;
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 0;
+  }
+  .translation-workspace .english-paper {
+    border-right: none;
+    border-bottom: 2px solid var(--card-border);
+    height: auto;
+    max-height: 36vh;
+    padding: 14px 16px 18px;
+  }
+  .translation-workspace .writing-paper {
+    height: auto;
+    overflow: visible;
+    flex: none;
+  }
+  .t3-tabs-bar {
+    padding: 0 16px;
+    gap: 18px;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+  #t3-pane-write {
+    flex: none !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 14px 16px 22px !important;
+    gap: 16px !important;
+  }
+  .t3-trans-field,
+  .t3-sum-field {
+    flex: none !important;
+    min-height: auto !important;
+    height: auto !important;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .translation-input {
+    flex: none !important;
+    height: auto !important;
+    min-height: 170px !important;
+    margin-top: 0 !important;
+  }
+  .summary-input {
+    flex: none !important;
+    height: auto !important;
+    min-height: 96px !important;
+    margin-top: 0 !important;
+  }
+  #t3-pane-grade {
+    flex: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 16px 16px 24px !important;
+  }
+}
+@media (max-width: 640px) {
+  .translation-workspace .english-passage {
+    font-size: 16.5px;
+    line-height: 1.68;
+    text-align: left;
+  }
+  .translation-workspace .translation-input,
+  .translation-workspace .summary-input {
+    font-size: 16px;
+    padding: 12px 14px;
+  }
 }
 .paper-eyebrow {
   display: flex;
@@ -2944,7 +3021,7 @@ button.task-step-pill.active:hover {
 }
 .t3-trans-field {
   flex: 1;
-  min-height: 0;
+  min-height: 168px;
   display: flex;
   flex-direction: column;
 }
