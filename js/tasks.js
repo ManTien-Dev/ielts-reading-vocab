@@ -3030,23 +3030,60 @@
       subEl.textContent = `${totalDone} / ${allTasks.length} Task đã hoàn thành · Toàn bộ từ thuộc các Task đã xong được đánh dấu Đã thuộc ở bộ chính`;
     }
 
+    const t2Total = (focusTask && focusRec) ? getTaskTest2Total(focusTask, focusRec) : 56;
     const focusHtml = (focusTask && focusRec?.status === 'completed') ? `
-      <div class="task-summary-highlight" style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
-        <img src="assets/images/panda_leaderboard.jpg" alt="" class="task-summary-panda">
-        <div style="flex:1; min-width:240px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-          <strong style="font-size:16px;">Kết quả ${esc(focusTask.label)} (${esc(focusTask.theme)})</strong>
-          <span class="tip-pill" style="margin:0;">HOÀN THÀNH · ${formatDurationVi(focusRec.durationSec)}</span>
-        </div>
-        <div class="ai-criteria-grid">
-          <div class="ai-crit-pill"><span>Học từ gốc + WF</span><span>50 / 50 (+${focusRec.newlyMarked ?? 0} mới)</span></div>
-          <div class="ai-crit-pill"><span>Test 1 (10 bảng ghép)</span><span>${focusRec.test1AccuracyPct ?? 100}% (${focusRec.test1Mistakes ?? 0} lỗi)</span></div>
-          <div class="ai-crit-pill"><span>Test 2 (Paraphrase &amp; Ngữ cảnh)</span><span>${focusRec.test2Score ?? 0} / ${getTaskTest2Total(focusTask, focusRec)} câu</span></div>
-          <div class="ai-crit-pill"><span>Test cuối (Dịch AI)</span><span>${Number(focusRec.translationScore || 0).toFixed(1)} / 10</span></div>
-        </div>
+      <div class="task-summary-highlight">
+        <div class="task-sum-hero-row">
+          <div class="task-sum-panda-ring">
+            <img src="assets/images/panda_leaderboard.jpg" alt="" class="task-summary-panda">
+          </div>
+          <div class="task-sum-hero-main">
+            <div class="task-sum-badges">
+              <span class="task-sum-done-pill">✓ HOÀN THÀNH ${esc(focusTask.label.toUpperCase())} · ${esc(formatDurationVi(focusRec.durationSec))}</span>
+              ${previewStudentSummary ? '<span class="task-sum-preview-pill">Bản xem thử (không lưu điểm lớp)</span>' : ''}
+            </div>
+            <div class="task-sum-hero-title">${esc(focusTask.theme)}</div>
+            <div class="task-sum-hero-note">
+              Đã hoàn tất 50 từ gốc + Word Family và vượt qua đủ 3 bài Test kiểm tra thực chiến.
+            </div>
+          </div>
+          <div class="task-sum-score-card">
+            <div class="task-sum-score-label">Điểm Dịch AI</div>
+            <div class="task-sum-score-num">${Number(focusRec.translationScore || 0).toFixed(1)}</div>
+            <div class="task-sum-score-sub">/ 10 · Đạt yêu cầu</div>
+          </div>
         </div>
       </div>
-    ` : '';
+      <div class="task-sum-stage-grid">
+        <div class="task-sum-stat is-mint">
+          <div class="task-sum-stat-label">Học từ gốc + WF</div>
+          <div class="task-sum-stat-val">50 / 50</div>
+          <div class="task-sum-stat-sub">+${focusRec.newlyMarked ?? 0} từ &amp; biến thể mới</div>
+        </div>
+        <div class="task-sum-stat is-teal">
+          <div class="task-sum-stat-label">Test 1 · Ghép nghĩa</div>
+          <div class="task-sum-stat-val">${focusRec.test1AccuracyPct ?? 100}%</div>
+          <div class="task-sum-stat-sub">${focusRec.test1Mistakes ?? 0} lỗi trên 10 bảng</div>
+        </div>
+        <div class="task-sum-stat is-gold">
+          <div class="task-sum-stat-label">Test 2 · Paraphrase &amp; Ngữ cảnh</div>
+          <div class="task-sum-stat-val">${focusRec.test2Score ?? 0} / ${t2Total}</div>
+          <div class="task-sum-stat-sub">50 kéo thả + 6 trắc nghiệm</div>
+        </div>
+        <div class="task-sum-stat is-coral">
+          <div class="task-sum-stat-label">Tổng tiến độ lộ trình</div>
+          <div class="task-sum-stat-val">${totalDone} / ${allTasks.length}</div>
+          <div class="task-sum-stat-sub">${totalLinkedWords} từ đã thuộc qua Task</div>
+        </div>
+      </div>
+    ` : `
+      <div class="task-sum-stage-grid">
+        <div class="task-sum-stat is-mint"><div class="task-sum-stat-label">Task hoàn thành</div><div class="task-sum-stat-val">${totalDone} / ${allTasks.length}</div><div class="task-sum-stat-sub">Tiến độ toàn khóa</div></div>
+        <div class="task-sum-stat is-gold"><div class="task-sum-stat-label">Điểm Dịch AI TB</div><div class="task-sum-stat-val">${avgScore} / 10</div><div class="task-sum-stat-sub">Trung bình các Task đạt</div></div>
+        <div class="task-sum-stat is-teal"><div class="task-sum-stat-label">Tổng thời gian Task</div><div class="task-sum-stat-val">${esc(formatDurationVi(totalSecs))}</div><div class="task-sum-stat-sub">Thời gian làm bài</div></div>
+        <div class="task-sum-stat is-coral"><div class="task-sum-stat-label">Từ Đã thuộc qua Task</div><div class="task-sum-stat-val">${totalLinkedWords} từ</div><div class="task-sum-stat-sub">Đã đồng bộ bộ chính</div></div>
+      </div>
+    `;
 
     const rowsHtml = doneList.map(({ task, rec }) => `
       <tr>
@@ -3061,11 +3098,9 @@
 
     bodyEl.innerHTML = `
       ${focusHtml}
-      <div class="task-kpi-grid">
-        <div class="task-kpi-card"><div class="task-kpi-label">Task hoàn thành</div><div class="task-kpi-val">${totalDone} / ${allTasks.length}</div></div>
-        <div class="task-kpi-card"><div class="task-kpi-label">Điểm Dịch AI TB</div><div class="task-kpi-val">${avgScore} / 10</div></div>
-        <div class="task-kpi-card"><div class="task-kpi-label">Tổng thời gian Task</div><div class="task-kpi-val">${esc(formatDurationVi(totalSecs))}</div></div>
-        <div class="task-kpi-card"><div class="task-kpi-label">Từ Đã thuộc qua Task</div><div class="task-kpi-val">${totalLinkedWords} từ</div></div>
+      <div class="task-sum-history-head">
+        <span>Chi tiết các Task đã hoàn thành</span>
+        <span>AI TB: ${avgScore}/10 · ${esc(formatDurationVi(totalSecs))}</span>
       </div>
       <div class="class-report-table-wrap">
         <table class="class-report-table">
@@ -3077,9 +3112,9 @@
           </tbody>
         </table>
       </div>
-      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
-        <button type="button" class="btn-subtle" onclick="TasksModule.closeTaskSummaryModal()">Xem lại bài dịch</button>
-        <button type="button" class="btn btn-primary" onclick="TasksModule.closeTaskSummaryModal(); TasksModule.exitTaskWorkspace(false);">Về màn hình từ vựng chính</button>
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap;">
+        <button type="button" class="btn-subtle" onclick="TasksModule.closeTaskSummaryModal()">← Xem lại bài làm</button>
+        <button type="button" class="btn btn-primary" onclick="TasksModule.closeTaskSummaryModal(); TasksModule.exitTaskWorkspace(false);">Về màn hình từ vựng chính →</button>
       </div>
     `;
     document.getElementById('modal-task-summary')?.classList.add('open');
