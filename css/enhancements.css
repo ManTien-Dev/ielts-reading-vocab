@@ -2484,6 +2484,9 @@ main.app-main:has(#screen-study.active) {
   display: flex;
   flex-direction: column;
 }
+#task-stage-container:has(.task-card-panel) {
+  flex: 1 0 auto;
+}
 .task-exam-dialog > .modal-body:has(.translation-workspace) {
   padding: 0 !important;
   overflow: hidden !important;
@@ -2565,9 +2568,9 @@ button.task-step-pill {
   outline: none;
   transition: all 0.15s ease;
 }
-button.task-step-pill:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+button.task-step-pill:not(.active):hover {
+  border-color: var(--accent);
+  color: var(--accent);
   transform: translateY(-1px);
 }
 button.task-step-pill.active:hover {
@@ -2660,19 +2663,14 @@ button.task-step-pill.active:hover {
   border-radius: 20px;
   padding: 24px 32px 28px;
   box-shadow: var(--card-shadow);
-  flex: 1;
+  flex: 1 0 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 .task-exam-dialog > .modal-body:has(.task-match-wrap) {
   padding: 18px 26px 22px !important;
-  overflow-y: hidden !important;
-}
-@media (max-height: 680px) {
-  .task-exam-dialog > .modal-body:has(.task-match-wrap) {
-    overflow-y: auto !important;
-  }
+  overflow-y: auto !important;
 }
 .task-learn-grid {
   display: grid;
@@ -2711,6 +2709,7 @@ button.task-step-pill.active:hover {
   margin-top: 14px;
   flex: 1;
   min-height: 0;
+  align-items: stretch;
 }
 .task-match-col {
   display: flex;
@@ -2719,10 +2718,11 @@ button.task-step-pill.active:hover {
   min-height: 0;
 }
 .task-match-btn {
-  flex: 1;
+  flex: 1 0 auto;
+  height: auto;
   padding: 18px 26px;
-  min-height: 76px;
-  max-height: 116px;
+  min-height: 70px;
+  max-height: none;
   border-radius: 16px;
   border: 1.5px solid var(--card-border);
   background: var(--card-bg);
@@ -2731,10 +2731,26 @@ button.task-step-pill.active:hover {
   font-weight: 750;
   line-height: 1.38;
   text-align: left;
+  overflow-wrap: break-word;
+  word-break: normal;
   cursor: pointer;
   display: flex;
   align-items: center;
   transition: transform 0.12s ease, border-color 0.14s ease, background-color 0.14s ease, box-shadow 0.14s ease;
+}
+@media (max-width: 1366px), (max-height: 780px) {
+  .task-exam-dialog > .modal-body:has(.task-match-wrap) {
+    padding: 14px 20px 18px !important;
+  }
+  .task-card-panel:has(.task-match-wrap) {
+    padding: 18px 22px 20px;
+  }
+  .task-match-btn {
+    padding: 13px 18px;
+    min-height: 60px;
+    font-size: 18px;
+    line-height: 1.35;
+  }
 }
 .task-match-btn:not(:disabled):hover {
   border-color: #84b175;
@@ -2830,11 +2846,10 @@ button.task-step-pill.active:hover {
   height: 100%;
 }
 @media (max-width: 960px) {
-  .task-exam-dialog:has(.translation-workspace) { height: auto !important; }
   .task-exam-dialog > .modal-body:has(.translation-workspace) { overflow-y: auto !important; }
-  .translation-workspace { grid-template-columns: 1fr; height: auto; }
-  .translation-workspace .english-paper { border-right: none; border-bottom: 1.5px solid var(--card-border); height: auto; max-height: 45vh; }
-  .translation-workspace .writing-paper { height: auto; overflow: visible; }
+  .translation-workspace { grid-template-columns: 1fr; height: auto; min-height: 100%; }
+  .translation-workspace .english-paper { border-right: none; border-bottom: 1.5px solid var(--card-border); height: auto; max-height: 40vh; padding: 14px 16px 18px; }
+  .translation-workspace .writing-paper { height: auto; overflow: visible; flex: 1 0 auto; }
 }
 .paper-eyebrow {
   display: flex;
@@ -2925,7 +2940,7 @@ button.task-step-pill.active:hover {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  overflow: hidden;
+  overflow-y: auto;
 }
 .t3-trans-field {
   flex: 1;
@@ -2965,6 +2980,19 @@ button.task-step-pill.active:hover {
 .summary-input {
   min-height: 102px;
   height: 104px;
+}
+@media (max-height: 720px) and (min-width: 961px) {
+  #t3-pane-write {
+    padding: 14px 22px 16px;
+    gap: 10px;
+  }
+  .translation-input {
+    min-height: 120px;
+  }
+  .summary-input {
+    min-height: 84px;
+    height: 88px;
+  }
 }
 .writing-label {
   display: flex;
@@ -3110,6 +3138,9 @@ button.task-step-pill.active:hover {
 }
 
 /* Simple Dedicated Teacher Dashboard */
+main.app-main:has(#screen-teacher.active) {
+  max-width: 1260px;
+}
 #screen-teacher {
   max-width: 1220px;
   margin: 0 auto;
@@ -3310,8 +3341,11 @@ body.is-multitab-blocked #app-shell {
 .toast-notice {
   top: 18px !important;
   bottom: auto !important;
-  z-index: 99999 !important;
+  z-index: 100001 !important;
+  width: max-content !important;
   max-width: min(92vw, 760px) !important;
+  overflow-wrap: break-word;
+  transform: translateX(-50%) translateY(-16px);
   padding: 16px 34px !important;
   border-radius: 20px !important;
   font-size: 20px !important;
@@ -3322,6 +3356,19 @@ body.is-multitab-blocked #app-shell {
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.32), 0 0 0 2px rgba(82, 136, 62, 0.5) !important;
   background: #172419 !important;
   color: #f7faf7 !important;
+}
+.toast-notice.show {
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto !important;
+}
+@media (max-width: 640px) {
+  .toast-notice {
+    top: 12px !important;
+    font-size: 15.5px !important;
+    padding: 12px 18px !important;
+    border-radius: 16px !important;
+    line-height: 1.45 !important;
+  }
 }
 .cheat-warn-card {
   max-width: 580px !important;
@@ -3490,13 +3537,23 @@ body:has(#screen-teacher.active) #anki-due-reminder {
     grid-template-columns: 1fr !important;
   }
   header.app-header {
+    position: static !important;
     flex-wrap: wrap !important;
-    padding: 8px 12px !important;
+    padding: 6px 10px !important;
+    gap: 5px !important;
   }
   header.app-header .header-actions {
     gap: 5px;
     flex-wrap: wrap;
     justify-content: flex-end;
+  }
+  .task-study-bar {
+    padding: 4px 8px !important;
+    gap: 5px 8px !important;
+  }
+  .header-user-id {
+    padding: 4px 8px !important;
+    font-size: 11.5px !important;
   }
   #btn-open-student-tasks {
     padding: 5px 9px !important;
@@ -3506,27 +3563,70 @@ body:has(#screen-teacher.active) #anki-due-reminder {
   main.app-main:has(#screen-study.active) {
     padding: 10px 12px 24px !important;
   }
+  #screen-teacher {
+    padding: 10px 4px 28px;
+    gap: 12px;
+  }
+  .teacher-panel {
+    padding: 14px 12px 16px;
+    border-radius: 16px;
+  }
+  #screen-teacher .class-report-table th:nth-child(2),
+  #screen-teacher .class-report-table td:nth-child(2) {
+    max-width: 150px;
+  }
   #screen-study .fc-scene {
     height: clamp(310px, 48svh, 420px) !important;
   }
   .ai-criteria-grid {
     grid-template-columns: 1fr !important;
   }
+  #screen-task.task-exam-overlay {
+    padding: 8px;
+  }
+  .task-exam-dialog .task-topbar {
+    padding: 10px 14px;
+    gap: 8px 10px;
+  }
+  .task-exam-dialog > .modal-body {
+    padding: 12px 12px 16px !important;
+  }
+  .task-exam-dialog > .modal-body:has(.task-match-wrap) {
+    padding: 10px 10px 14px !important;
+  }
+  .task-card-panel {
+    padding: 14px 12px 16px !important;
+    border-radius: 16px;
+  }
+  .task-exam-header-row {
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+  .task-exam-title {
+    font-size: 19px;
+  }
   .task-match-wrap {
-    grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr) !important;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr) !important;
     gap: 8px !important;
+    margin-top: 8px;
+  }
+  .task-match-col {
+    gap: 8px;
   }
   .task-match-btn {
-    padding: 12px 14px !important;
-    font-size: 15px !important;
+    padding: 10px 10px !important;
+    min-height: 54px !important;
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+    border-radius: 12px;
+    overflow-wrap: anywhere;
   }
-}
-
-/* Test 1 & Test 2 Matching balanced height */
-.task-match-btn {
-  min-height: 76px;
-  display: flex;
-  align-items: center;
+  .task-q-opt {
+    padding: 14px 16px;
+    min-height: 58px;
+    font-size: 17px;
+  }
 }
 
 /* Teacher Dashboard Usability: Mascots, 4 Pastel KPI Cards, Monograms, Single-Row Search+Sort */
@@ -3615,12 +3715,77 @@ body:has(#screen-teacher.active) #anki-due-reminder {
   overflow-y: auto;
   padding-right: 4px;
 }
-.class-report-table th:nth-child(2),
-.class-report-table td:nth-child(2) {
+#screen-teacher .class-report-table th:nth-child(1),
+#screen-teacher .class-report-table td:nth-child(1),
+#modal-class-report .class-report-table th:nth-child(1),
+#modal-class-report .class-report-table td:nth-child(1) {
   position: sticky;
   left: 0;
-  background: var(--card-bg);
+  z-index: 2;
+  box-sizing: border-box;
+  text-align: center;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+#screen-teacher .class-report-table th:nth-child(1),
+#screen-teacher .class-report-table td:nth-child(1) {
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+}
+#modal-class-report .class-report-table th:nth-child(1),
+#modal-class-report .class-report-table td:nth-child(1) {
+  width: 56px;
+  min-width: 56px;
+  max-width: 56px;
+}
+#screen-teacher .class-report-table th:nth-child(2),
+#screen-teacher .class-report-table td:nth-child(2) {
+  position: sticky;
+  left: 42px;
   z-index: 1;
+}
+#modal-class-report .class-report-table th:nth-child(2),
+#modal-class-report .class-report-table td:nth-child(2) {
+  position: sticky;
+  left: 56px;
+  z-index: 1;
+}
+#screen-teacher .class-report-table td:nth-child(1),
+#screen-teacher .class-report-table td:nth-child(2),
+#modal-class-report .class-report-table td:nth-child(1),
+#modal-class-report .class-report-table td:nth-child(2) {
+  background: var(--card-bg);
+}
+#screen-teacher .class-report-table th,
+#modal-class-report .class-report-table th,
+#screen-teacher .class-report-table th:nth-child(1),
+#screen-teacher .class-report-table th:nth-child(2),
+#modal-class-report .class-report-table th:nth-child(1),
+#modal-class-report .class-report-table th:nth-child(2) {
+  background: #f7f6f0;
+  background: color-mix(in srgb, var(--card-bg) 94%, #808080);
+}
+[data-theme="dark"] #screen-teacher .class-report-table th,
+[data-theme="dark"] #modal-class-report .class-report-table th,
+[data-theme="dark"] #screen-teacher .class-report-table th:nth-child(1),
+[data-theme="dark"] #screen-teacher .class-report-table th:nth-child(2),
+[data-theme="dark"] #modal-class-report .class-report-table th:nth-child(1),
+[data-theme="dark"] #modal-class-report .class-report-table th:nth-child(2) {
+  background: #212724;
+  background: color-mix(in srgb, var(--card-bg) 94%, #808080);
+}
+#modal-class-report .class-report-table tr.is-me td,
+#modal-class-report .class-report-table tr.is-me td:nth-child(1),
+#modal-class-report .class-report-table tr.is-me td:nth-child(2) {
+  background: #e9efe3;
+  background: color-mix(in srgb, var(--card-bg) 88%, rgb(70, 130, 82));
+}
+[data-theme="dark"] #modal-class-report .class-report-table tr.is-me td,
+[data-theme="dark"] #modal-class-report .class-report-table tr.is-me td:nth-child(1),
+[data-theme="dark"] #modal-class-report .class-report-table tr.is-me td:nth-child(2) {
+  background: #29362e;
+  background: color-mix(in srgb, var(--card-bg) 86%, rgb(130, 184, 146));
 }
 .class-report-table td:nth-child(3),
 .class-report-table td:nth-child(4),
@@ -4021,4 +4186,26 @@ header.app-header {
   border: 1.5px solid var(--card-border);
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(47, 107, 50, 0.12);
+}
+
+/* Compact #modal-menu so it fits 1366x768 & 390x844 without vertical scrollbar */
+#modal-menu .modal-card {
+  max-height: 92vh;
+}
+#modal-menu .modal-header {
+  padding: 14px 20px;
+}
+#modal-menu .modal-body {
+  padding: 16px 20px;
+}
+#modal-menu .modal-body > div {
+  margin-bottom: 12px !important;
+}
+#modal-menu .modal-body > div:first-child {
+  padding-bottom: 12px !important;
+}
+#modal-menu .modal-body > div:last-child {
+  margin-top: 12px !important;
+  margin-bottom: 0 !important;
+  padding-top: 12px !important;
 }

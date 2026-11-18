@@ -6,6 +6,7 @@
   const motion = {
     get enabled() { return !reduced.matches; },
     transition(change) {
+      if (typeof change !== 'function') return null;
       if (this.enabled && typeof document.startViewTransition === 'function') {
         return document.startViewTransition(change);
       }
@@ -15,7 +16,8 @@
     enterCard(direction = 1) {
       const scene = document.getElementById('fc-scene');
       if (!scene || !this.enabled || scene.style.display === 'none') return;
-      scene.getAnimations().forEach(animation => animation.cancel());
+      scene.getAnimations?.().forEach(animation => animation.cancel());
+      if (typeof scene.animate !== 'function') return;
       scene.animate([
         { opacity: 0, transform: `translate3d(${direction * 38}px, 0, 0) scale(.975)` },
         { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' }
@@ -24,7 +26,7 @@
     countTo(element, target, duration = 420, suffix = '') {
       if (!element) return;
       if (counterFrames.has(element)) cancelAnimationFrame(counterFrames.get(element));
-      if (!this.enabled) { element.textContent = target + suffix; return; }
+      if (!this.enabled || duration <= 0) { element.textContent = target + suffix; return; }
       const from = Number.parseInt(element.textContent, 10) || 0;
       const start = performance.now();
       const step = now => {
@@ -40,6 +42,7 @@
 
   // Vệt sáng chỉ xuất hiện tại điểm nhấn và tự được dọn sau animation.
   document.addEventListener('pointerdown', event => {
+    if (!(event.target instanceof Element)) return;
     const button = event.target.closest('button:not(:disabled)');
     if (!button || !motion.enabled) return;
     const rect = button.getBoundingClientRect();
@@ -48,7 +51,9 @@
     ripple.style.left = `${event.clientX - rect.left}px`;
     ripple.style.top = `${event.clientY - rect.top}px`;
     button.appendChild(ripple);
-    ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+    const cleanupRipple = () => ripple.remove();
+    ripple.addEventListener('animationend', cleanupRipple, { once: true });
+    setTimeout(cleanupRipple, 650);
   });
 
   const screens = document.querySelectorAll('.screen');
@@ -61,6 +66,7 @@
       screen.classList.remove('motion-screen-enter');
       void screen.offsetWidth;
       screen.classList.add('motion-screen-enter');
+      screen.addEventListener('animationend', () => screen.classList.remove('motion-screen-enter'), { once: true });
     }).observe(screen, { attributes: true, attributeFilter: ['class'] });
   });
 
@@ -68,13 +74,24 @@
   const cardScene = document.getElementById('fc-scene');
   let touchStart = null;
   cardScene?.addEventListener('touchstart', event => {
+    if (event.touches && event.touches.length > 1) { touchStart = null; return; }
     const touch = event.changedTouches[0];
     touchStart = touch ? { x: touch.clientX, y: touch.clientY } : null;
   }, { passive: true });
+  cardScene?.addEventListener('touchcancel', () => {
+    touchStart = null;
+  }, { passive: true });
   cardScene?.addEventListener('touchend', event => {
-    if (!touchStart || !document.getElementById('screen-study')?.classList.contains('active')) return;
+    if (!touchStart || !document.getElementById('screen-study')?.classList.contains('active')) {
+      touchStart = null;
+      return;
+    }
+    if (document.querySelector('.modal-overlay.open') || document.body.classList.contains('is-multitab-blocked')) {
+      touchStart = null;
+      return;
+    }
     const touch = event.changedTouches[0];
-    if (!touch) return;
+    if (!touch) { touchStart = null; return; }
     const dx = touch.clientX - touchStart.x;
     const dy = touch.clientY - touchStart.y;
     touchStart = null;

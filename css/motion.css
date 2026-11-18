@@ -19,7 +19,7 @@
   @keyframes badge-pop { 50% { transform: scale(1.18); filter: brightness(1.2); } }
   .timer-display-box.motion-running .timer-digits { animation: timer-breathe 2s ease-in-out infinite; }
   @keyframes timer-breathe { 50% { opacity: .72; } }
-  .modal-overlay.open, .app-modal[style*="display: block"] .modal-content { animation: screen-appear .25s ease both; }
+  .modal-overlay.open > .modal-card, .app-modal[style*="display: block"] .modal-content { animation: screen-appear .25s ease both; }
   .toast-notice.show { animation: toast-enter .28s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes toast-enter { from { opacity: 0; transform: translate3d(-50%, -14px, 0); } to { opacity: 1; transform: translate3d(-50%, 0, 0); } }
   .btn:not(:disabled):hover, .btn-assess:not(:disabled):hover, .btn-deck-tool:not(:disabled):hover { transform: scale(1.02); }
@@ -34,6 +34,11 @@ a:focus-visible,
 select:focus-visible,
 [tabindex]:focus-visible { outline: 3px solid #81b65b; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
-  #screen-study .card-progress-fill { transition: none !important; }
+  *, *::before, *::after {
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
   .motion-ripple { display: none; }
 }

@@ -186,11 +186,35 @@
     loadScope(taskId);
   }
 
+  function findRawTaskObj(taskId) {
+    if (!taskId || !String(taskId).startsWith('task_')) return null;
+    const fromMod = window.TasksModule?.getTaskById?.(taskId);
+    if (fromMod) return fromMod;
+    const list = (window.APP_TASKS_DATA && Array.isArray(window.APP_TASKS_DATA.tasks)) ? window.APP_TASKS_DATA.tasks : [];
+    return list.find((t) => t.id === taskId) || null;
+  }
+
+  function isTaskLockedLocally(taskId, uid = currentUser?.id) {
+    if (!taskId || !String(taskId).startsWith('task_') || isTeacherUser()) return false;
+    try {
+      const scoped = getScopedUid(uid);
+      const tl = JSON.parse(localStorage.getItem(`${TASK_LOCKS_KEY_BASE}${scoped}`) || '{}') || {};
+      const until = Number(tl[taskId] || 0);
+      if (until <= Date.now()) return false;
+      const unlockAt = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0);
+      const LOCK_WINDOW_MS = 30 * 60 * 1000;
+      if (unlockAt > 0 && (until - LOCK_WINDOW_MS) <= unlockAt) return false;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function getScopeDef(key) {
     const found = getAllScopes().find(s => s.key === key);
     if (found) return found;
-    if (key && key.startsWith('task_') && window.TasksModule?.getTaskById) {
-      const t = window.TasksModule.getTaskById(key);
+    if (key && key.startsWith('task_')) {
+      const t = findRawTaskObj(key);
       if (t) {
         return {
           key: t.id,
@@ -275,8 +299,12 @@
       const raw = localStorage.getItem(getUserStorageKey());
       if (!raw) return;
       const st = JSON.parse(raw);
-      if (st.currentScopeKey && getAllScopes().some(s => s.key === st.currentScopeKey)) {
-        currentScopeKey = st.currentScopeKey;
+      if (st.currentScopeKey) {
+        const isKnownStaticOrDyn = getAllScopes().some(s => s.key === st.currentScopeKey);
+        const isValidTask = Boolean(findRawTaskObj(st.currentScopeKey)) && !isTaskLockedLocally(st.currentScopeKey);
+        if (isKnownStaticOrDyn || isValidTask) {
+          currentScopeKey = st.currentScopeKey;
+        }
       }
       if (st.assessments && typeof st.assessments === 'object') assessments = st.assessments;
       if (st.srsData && typeof st.srsData === 'object') srsData = st.srsData;
@@ -737,6 +765,7 @@
   let cloudPullTimer = null;
   let cloudPushDebounce = null;
   let lastCloudSyncTime = '';
+  let initialCloudPullSettled = true;
 
   function getSyncUrl() {
     return String(window.APP_SYNC_URL || '').trim();
@@ -991,7 +1020,10 @@
   async function syncPullClassData() {
     const url = getSyncUrl();
     updateCloudSyncBadge();
-    if (!url) return;
+    if (!url) {
+      initialCloudPullSettled = true;
+      return;
+    }
     try {
       const sep = url.includes('?') ? '&' : '?';
       const res = await fetch(`${url}${sep}t=${Date.now()}`, { method: 'GET', cache: 'no-store' });
@@ -999,12 +1031,14 @@
       const data = await res.json();
       if (!data || !data.ok || !Array.isArray(data.students)) return;
 
+      let thanhngocCloudNeedsReset = false;
       const nextCache = {};
       data.students.forEach(st => {
         const uid = getScopedUid(st.id);
         if (!uid) return;
         // Bỏ qua dữ liệu cloud cũ trước mốc reset 2026-11-18 của thanhngoc để hiển thị sạch sẽ 0 từ / 0 phút / 0 ngày
         if (uid === 'thanhngoc' && Number(st.syncData?.resetEpoch || 0) < 2026111807) {
+          thanhngocCloudNeedsReset = true;
           nextCache[uid] = {
             ...st,
             todayMins: 0,
@@ -1012,23 +1046,38 @@
             monthMins: 0,
             mastered: 0,
             streak: 0,
-            syncData: { resetEpoch: 2026111807, timerByDay: {}, wordsByDay: {}, streakDays: [], assessments: {}, srsData: {}, scopePositions: {}, taskProgress: {}, taskLocks: {} },
+            syncData: {
+              resetEpoch: 2026111807,
+              teacherUnlockedAt: 0,
+              timerByDay: {},
+              wordsByDay: {},
+              streakDays: [],
+              assessments: {},
+              srsData: {},
+              scopePositions: {},
+              taskProgress: {},
+              taskLocks: {},
+            },
           };
           return;
         }
         nextCache[uid] = st;
       });
       cloudClassCache = nextCache;
+      initialCloudPullSettled = true;
 
       if (currentUser) {
-        const mine = cloudClassCache[getScopedUid(currentUser.id)];
-        if (mine) {
-          if (getScopedUid(currentUser.id) === 'thanhngoc' && !localStorage.getItem('ielts_thanhngoc_cloud_reset_pushed_2026111807')) {
-            localStorage.setItem('ielts_thanhngoc_cloud_reset_pushed_2026111807', '1');
+        const activeUid = getScopedUid(currentUser.id);
+        const mine = cloudClassCache[activeUid];
+        if (activeUid === 'thanhngoc') {
+          try { localStorage.setItem('ielts_thanhngoc_cloud_reset_pushed_2026111807', '1'); } catch (_) {}
+          if (thanhngocCloudNeedsReset) {
             syncPushCurrentUser(false);
-          } else {
+          } else if (mine) {
             mergeCloudEntryIntoLocal(currentUser.id, mine);
           }
+        } else if (mine) {
+          mergeCloudEntryIntoLocal(currentUser.id, mine);
         }
       }
 
@@ -1044,53 +1093,88 @@
       }
     } catch (err) {
       console.warn('Cloud pull skipped:', err);
+    } finally {
+      initialCloudPullSettled = true;
     }
   }
 
   function unlockStudentCloudLocks(studentId, unlockedAtTs = Date.now()) {
     const scoped = getScopedUid(studentId);
     if (!scoped) return;
+    const prev = cloudClassCache[scoped];
+    const LOCK_WINDOW_MS = 30 * 60 * 1000;
+    let maxLockOrigin = 0;
+    if (prev?.syncData?.taskLocks && typeof prev.syncData.taskLocks === 'object') {
+      Object.values(prev.syncData.taskLocks).forEach((until) => {
+        const origin = Number(until || 0) - LOCK_WINDOW_MS;
+        if (origin > maxLockOrigin) maxLockOrigin = origin;
+      });
+    }
+    const effectiveUnlockAt = Math.max(
+      Number(unlockedAtTs || Date.now()),
+      Number(prev?.syncData?.teacherUnlockedAt || 0),
+      maxLockOrigin > 0 ? (maxLockOrigin + 1) : 0
+    );
+
     try {
-      localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(unlockedAtTs));
+      localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(effectiveUnlockAt));
       localStorage.setItem(`${TASK_LOCKS_KEY_BASE}${scoped}`, '{}');
     } catch (_) {}
 
-    const prev = cloudClassCache[scoped] || {};
-    const prevSync = (prev.syncData && typeof prev.syncData === 'object') ? prev.syncData : buildUserSyncData(scoped);
-    const nextSync = {
-      ...prevSync,
-      taskLocks: {},
-      teacherUnlockedAt: unlockedAtTs,
-    };
-    const acct = getAccountsList().find((a) => getScopedUid(a.id) === scoped);
-    const mins = getUserPeriodMinutes(scoped);
-    const nextEntry = {
-      ...prev,
-      id: acct?.id || prev.id || studentId,
-      name: acct?.name || prev.name || studentId,
-      todayMins: prev.todayMins ?? mins.todayMins,
-      weekMins: prev.weekMins ?? mins.weekMins,
-      monthMins: prev.monthMins ?? mins.monthMins,
-      mastered: prev.mastered ?? getUserMasteredCount(scoped),
-      streak: prev.streak ?? computeConsecutiveStreakForUser(scoped),
-      syncData: nextSync,
-    };
-    cloudClassCache[scoped] = nextEntry;
+    if (prev && typeof prev === 'object') {
+      const prevSync = (prev.syncData && typeof prev.syncData === 'object') ? prev.syncData : {};
+      cloudClassCache[scoped] = {
+        ...prev,
+        syncData: {
+          ...prevSync,
+          taskLocks: {},
+          teacherUnlockedAt: effectiveUnlockAt,
+        },
+      };
+    }
 
+    const acct = getAccountsList().find((a) => getScopedUid(a.id) === scoped);
     const url = getSyncUrl();
     if (url) {
       fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(nextEntry),
+        body: JSON.stringify({
+          action: 'unlock_student',
+          id: acct?.id || prev?.id || studentId,
+          name: acct?.name || prev?.name || studentId,
+          unlockedAtTs: effectiveUnlockAt,
+        }),
+      }).then(r => r.ok ? r.json() : null).then(res => {
+        if (!res || !res.ok) return;
+        const serverUnlock = Number(res.teacherUnlockedAt || effectiveUnlockAt);
+        try {
+          const curLocal = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0);
+          if (serverUnlock > curLocal) {
+            localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(serverUnlock));
+          }
+        } catch (_) {}
+        if (cloudClassCache[scoped]?.syncData) {
+          cloudClassCache[scoped].syncData.taskLocks = {};
+          cloudClassCache[scoped].syncData.teacherUnlockedAt = Math.max(
+            Number(cloudClassCache[scoped].syncData.teacherUnlockedAt || 0),
+            serverUnlock
+          );
+        } else {
+          syncPullClassData();
+        }
+        if (isTeacherUser()) {
+          window.TasksModule?.renderTeacherDashboard?.();
+        }
       }).catch(() => {});
     }
   }
 
   function syncPushCurrentUser(useKeepalive = false) {
     const url = getSyncUrl();
-    if (!url || !currentUser || isTeacherUser()) return;
+    if (!url || !currentUser || isTeacherUser() || !initialCloudPullSettled) return;
     try {
+      const pushedUid = getScopedUid(currentUser.id);
       const mins = getUserPeriodMinutes(currentUser.id);
       const mastered = getUserMasteredCount(currentUser.id);
       const streak = computeConsecutiveStreakForUser(currentUser.id);
@@ -1105,8 +1189,8 @@
         syncData: buildUserSyncData(currentUser.id),
       };
 
-      cloudClassCache[getScopedUid(currentUser.id)] = {
-        ...cloudClassCache[getScopedUid(currentUser.id)],
+      cloudClassCache[pushedUid] = {
+        ...cloudClassCache[pushedUid],
         ...payload,
       };
 
@@ -1116,10 +1200,24 @@
         body: JSON.stringify(payload),
         keepalive: !!useKeepalive,
       }).then(r => r.ok ? r.json() : null).then(res => {
-        if (res && res.ok) {
-          const now = new Date();
-          lastCloudSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-          updateCloudSyncBadge();
+        if (!res || !res.ok) return;
+        if (!currentUser || getScopedUid(currentUser.id) !== pushedUid) return;
+        const now = new Date();
+        lastCloudSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        updateCloudSyncBadge();
+        const serverUnlock = Number(res.teacherUnlockedAt || 0);
+        const localUnlock = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${pushedUid}`) || 0);
+        if (serverUnlock > localUnlock) {
+          if (cloudClassCache[pushedUid]?.syncData) {
+            cloudClassCache[pushedUid].syncData.teacherUnlockedAt = serverUnlock;
+            cloudClassCache[pushedUid].syncData.taskLocks = res.taskLocks || {};
+          }
+          mergeCloudEntryIntoLocal(currentUser.id, {
+            syncData: {
+              teacherUnlockedAt: serverUnlock,
+              taskLocks: (res.taskLocks && typeof res.taskLocks === 'object') ? res.taskLocks : {},
+            },
+          });
         }
       }).catch(() => {});
     } catch (_) {}
@@ -1559,6 +1657,10 @@
       // Khi đang trong chế độ Task: BỎ HẾT các bộ từ mặc định (Paraphrase, Nền tảng, Học thuật, Chuyên sâu, Từ nối)
       // CHỈ hiển thị duy nhất các Task được giao hoặc Task hiện tại!
       let taskOptions = dynamicTaskScopes;
+      if (taskOptions.length === 0 && currentScopeKey && currentScopeKey.startsWith('task_')) {
+        const activeDef = getScopeDef(currentScopeKey);
+        if (activeDef && activeDef.isTask) taskOptions = [activeDef];
+      }
       if (taskOptions.length === 0 && window.TasksModule?.getAllTasks) {
         taskOptions = window.TasksModule.getAllTasks().map(t => ({
           key: t.id,
@@ -1589,7 +1691,7 @@
     const def = getScopeDef(currentScopeKey);
     fullScopeList = [...def.getList()];
     const sigBtn = document.getElementById('btn-top-signalwords');
-    if (sigBtn) sigBtn.style.display = currentScopeKey === 'signals' ? 'inline-flex' : 'none';
+    if (sigBtn) sigBtn.style.display = currentScopeKey === 'signal_words' ? 'inline-flex' : 'none';
 
     if (onlyDueReview) {
       const now = Date.now();
@@ -1620,14 +1722,28 @@
   }
 
   function loadScope(scopeKey) {
+    const nextDef = getScopeDef(scopeKey);
+    if (window.TasksModule?.getExamState?.()?.active && nextDef.key !== currentScopeKey) {
+      const sel = document.getElementById('study-scope-select');
+      if (sel) sel.value = currentScopeKey;
+      showToast('Đang làm bài Test — không thể đổi bộ từ lúc này!');
+      return false;
+    }
+    if (nextDef.key.startsWith('task_') && window.TasksModule?.canActivateTaskScope && !window.TasksModule.canActivateTaskScope(nextDef.key)) {
+      populateScopeSelect();
+      const sel = document.getElementById('study-scope-select');
+      if (sel) sel.value = currentScopeKey;
+      return false;
+    }
     cancelPendingAdvance();
-    currentScopeKey = getScopeDef(scopeKey).key;
+    currentScopeKey = nextDef.key;
     populateScopeSelect();
     const sel = document.getElementById('study-scope-select');
     if (sel) sel.value = currentScopeKey;
     window.TasksModule?.onScopeChanged?.(currentScopeKey);
     applyFilterAndBuildDeck();
     saveState();
+    return true;
   }
 
   function onScopeChange() {
@@ -2569,7 +2685,8 @@
   }
 
   function openRecallModal(item) {
-    if (!syncExamLock(true, 'Kiểm tra nhớ từ')) return;
+    if (!isExamAntiCheatBypassed() && !syncExamLock(true, 'Kiểm tra nhớ từ')) return;
+    syncAntiCopyClasses();
     stopRecallInputTimer();
     const rule = getRecallRule(item);
     recallTargetItem = item;
@@ -3155,7 +3272,11 @@
     if (!isTeacherUser()) return;
     teacherPreviewStudy = typeof forceVal === 'boolean' ? forceVal : !teacherPreviewStudy;
     updateClassReportHeaderAndActions();
+    syncAntiCopyClasses();
     if (teacherPreviewStudy) {
+      populateScopeSelect();
+      applyFilterAndBuildDeck(null, { speak: false });
+      window.TasksModule?.updateTaskStudyBar?.();
       showToast('Đang xem trước màn hình học của học viên.');
     }
   }
@@ -3192,6 +3313,8 @@
       if (taskScreen) {
         taskScreen.classList.remove('active', 'open');
       }
+      const taskBar = document.getElementById('task-study-bar');
+      if (taskBar) taskBar.style.display = 'none';
       if (teacherScreen) {
         teacherScreen.style.display = 'flex';
         teacherScreen.classList.add('active');
@@ -3420,12 +3543,14 @@
     recallSynOptions = [];
     recallSynSelected = new Set();
     scopePositions = {};
+    dynamicTaskScopes = [];
     displayedStreak = null;
   }
 
   function enterAppForUser(account, options = {}) {
     resetInMemoryStudyState();
     currentUser = account;
+    initialCloudPullSettled = !getSyncUrl();
 
     const gateEl = document.getElementById('auth-gate');
     const shellEl = document.getElementById('app-shell');
@@ -3441,13 +3566,19 @@
     loadState();
     updateAutoSpeakUI();
     updateClassReportHeaderAndActions();
+    syncAntiCopyClasses();
     if (isTeacherUser()) {
       pauseTimer();
       document.getElementById('anki-due-reminder')?.classList.remove('visible');
       updateCloudSyncBadge();
       syncPullClassData();
+      window.TasksModule?.onUserEntered?.(account);
     } else {
-      populateScopeSelect();
+      if (window.TasksModule?.onUserEntered) {
+        window.TasksModule.onUserEntered(account);
+      } else {
+        populateScopeSelect();
+      }
       const autoSpeakOnEnter = !!options.autoSpeakOnEnter;
       pendingInitialSpeak = !autoSpeakOnEnter && autoSpeak;
       applyFilterAndBuildDeck(null, { speak: autoSpeakOnEnter });
@@ -3463,7 +3594,7 @@
     cloudPullTimer = setInterval(() => {
       if (currentUser) syncPullClassData();
     }, 30000);
-    window.TasksModule?.onUserEntered?.(account);
+    evaluateMultiTabGuard(true);
   }
 
   function handleLoginSubmit(event) {
@@ -3514,8 +3645,13 @@
       saveState();
       syncPushCurrentUser(true);
     }
+    initialCloudPullSettled = true;
     resetInMemoryStudyState();
     currentUser = null;
+    closeRecallModal();
+    closeCheatWarningModal();
+    hideMultiTabBlockOverlay();
+    syncAntiCopyClasses();
 
     try {
       localStorage.removeItem(AUTH_SESSION_KEY);
@@ -3662,6 +3798,8 @@
 
   function closeCheatWarningModal() {
     document.getElementById('modal-cheat-warn')?.classList.remove('open');
+    const btn = document.getElementById('btn-cheat-warn-close');
+    if (btn) btn.onclick = null;
   }
 
   // =========================================================
@@ -3701,6 +3839,7 @@
   }
 
   function getLocalExamState() {
+    if (isExamAntiCheatBypassed()) return { active: false, label: '' };
     if (isRecallExamActive()) return { active: true, label: 'Kiểm tra nhớ từ' };
     try {
       const taskState = window.TasksModule?.getExamState?.();
@@ -3800,6 +3939,10 @@
   }
 
   function evaluateMultiTabGuard(isBootCheck = false) {
+    if (!currentUser || isExamAntiCheatBypassed()) {
+      hideMultiTabBlockOverlay();
+      return;
+    }
     const uid = getMyTabUid();
     const remoteLock = readActiveExamLock();
     if (remoteLock && remoteLock.tabId !== uid) {
@@ -3840,11 +3983,18 @@
     );
   }
 
+  function syncAntiCopyClasses() {
+    const enforce = Boolean(currentUser && !isExamAntiCheatBypassed());
+    ['fc-scene', 'modal-recall-check'].forEach((elId) => {
+      document.getElementById(elId)?.classList.toggle('exam-no-copy', enforce);
+    });
+  }
+
   function bindNoPasteGuards(el, toastMsg) {
     if (!el || el.dataset.noPasteBound === '1') return;
     el.dataset.noPasteBound = '1';
     const msg = toastMsg || 'Không được dán (paste) khi kiểm tra — hãy tự nhập trực tiếp!';
-    ['paste', 'drop', 'copy', 'cut', 'contextmenu'].forEach((evt) => {
+    ['paste', 'drop', 'contextmenu'].forEach((evt) => {
       el.addEventListener(evt, (e) => {
         if (isExamAntiCheatBypassed()) return;
         e.preventDefault();
@@ -3863,6 +4013,7 @@
   // Anti-cheat guards during flashcard study & Recall Check (1st leave blocks screen behind warning modal, 2nd leave fails)
   (function initRecallAntiCheat() {
     const handleLeaveAttempt = (reason) => {
+      if (isExamAntiCheatBypassed()) return;
       const modal = document.getElementById('modal-recall-check');
       if (!modal?.classList.contains('open') || !recallTargetItem || recallSubmitted) return;
       if (document.getElementById('modal-cheat-warn')?.classList.contains('open')) return;
@@ -3924,11 +4075,14 @@
     ['fc-scene', 'modal-recall-check'].forEach((elId) => {
       const el = document.getElementById(elId);
       if (!el) return;
-      el.classList.add('exam-no-copy');
       ['copy', 'cut', 'contextmenu'].forEach((evt) => {
-        el.addEventListener(evt, (e) => e.preventDefault());
+        el.addEventListener(evt, (e) => {
+          if (isExamAntiCheatBypassed()) return;
+          e.preventDefault();
+        });
       });
     });
+    syncAntiCopyClasses();
 
     if (typeof BroadcastChannel !== 'undefined') {
       try {
@@ -4009,6 +4163,7 @@
   window.__VOCAB_BRIDGE__ = {
     getCurrentUser: () => currentUser,
     isTeacherUser,
+    isExamAntiCheatBypassed,
     getScopedUid,
     getSyncUrl,
     getPreferredAccent: () => preferredAccent,

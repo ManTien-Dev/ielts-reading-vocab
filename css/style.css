@@ -1642,7 +1642,7 @@
       --accent:#83b0ff; --accent-hover:#a7c7ff; --accent-subtle:#273954; --accent-border:#445f86;
       --success:#72d4b0; --warning:#f2c16e; --danger:#ff9eaf;
     }
-    *, *::before, *::after {animation:none!important; transition:none!important; backdrop-filter:none!important; -webkit-backdrop-filter:none!important; text-shadow:none!important;}
+    *, *::before, *::after {text-shadow:none!important;}
     button:hover, button:active {transform:none!important;}
     header.app-header {height:auto; min-height:76px; padding:16px max(24px,calc((100vw - 1120px)/2)); background:var(--card-bg); border-bottom:1px solid var(--card-border); box-shadow:none; gap:24px;}
     .brand-title {font-size:20px; font-weight:700; letter-spacing:-.6px; white-space:nowrap;}

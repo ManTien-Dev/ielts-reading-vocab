@@ -54,6 +54,15 @@
 
   const B = () => window.__VOCAB_BRIDGE__;
 
+  function isTeacherOrBypassed() {
+    return Boolean(
+      isPreviewTestMode ||
+      B()?.isExamAntiCheatBypassed?.() ||
+      B()?.isTeacherUser?.() ||
+      B()?.getCurrentUser?.()?.role === 'teacher'
+    );
+  }
+
   function getTasksList() {
     return (window.APP_TASKS_DATA && Array.isArray(window.APP_TASKS_DATA.tasks))
       ? window.APP_TASKS_DATA.tasks
@@ -657,7 +666,7 @@
   // =========================================================
   function startPendingTask() {
     if (!pendingTaskId) return;
-    if (getTaskLockRemainingMs(pendingTaskId) > 0) {
+    if (!isTeacherOrBypassed() && getTaskLockRemainingMs(pendingTaskId) > 0) {
       updateBriefLockUI();
       return;
     }
@@ -734,14 +743,13 @@
     const scopeKey = B()?.getCurrentScopeKey?.() || '';
     const task = getTaskById(scopeKey) || activeTask;
     if (!task) return;
-    if (getTaskLockRemainingMs(task.id) > 0) {
+    if (!isTeacherOrBypassed() && getTaskLockRemainingMs(task.id) > 0) {
       openTaskBriefModal(task.id);
       return;
     }
     const total = task.words.length || 50;
     const masteredCount = getTaskMasteredCount(task);
-    const isTeacher = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
-    if (!isTeacher && masteredCount < total) {
+    if (!isTeacherOrBypassed() && masteredCount < total) {
       B()?.showToast?.(`Hãy học và bấm '3 - Đã thuộc' cho đủ ${total}/${total} từ của ${task.label} trước khi làm Test (hiện ${masteredCount}/${total}).`);
       return;
     }
@@ -753,7 +761,7 @@
     const scopeKey = B()?.getCurrentScopeKey?.() || '';
     const task = activeTask || getTaskById(scopeKey);
     if (!task) return;
-    if (getTaskLockRemainingMs(task.id) > 0) {
+    if (!isTeacherOrBypassed() && getTaskLockRemainingMs(task.id) > 0) {
       closeTaskExamReadyModal();
       openTaskBriefModal(task.id);
       return;
@@ -763,10 +771,34 @@
     startTest1();
   }
 
+  function canActivateTaskScope(taskId) {
+    const t = getTaskById(taskId);
+    if (!t) return false;
+    if (isTeacherOrBypassed()) return true;
+    const remMs = getTaskLockRemainingMs(t.id);
+    if (remMs > 0) {
+      B()?.showToast?.(`${t.label} đang tạm khóa (${formatMmSs(remMs)}) — vui lòng đợi hết khóa hoặc nhờ giáo viên mở khóa!`);
+      openTaskBriefModal(t.id);
+      return false;
+    }
+    return true;
+  }
+
   function onScopeChanged(scopeKey) {
     if (scopeKey && scopeKey.startsWith('task_')) {
       const t = getTaskById(scopeKey);
       if (t) {
+        if (!isTeacherOrBypassed() && getTaskLockRemainingMs(t.id) > 0) {
+          stopIdleMonitor();
+          activeTask = null;
+          activeStage = 0;
+          if (B()?.getCurrentScopeKey?.() === t.id) {
+            B()?.loadMainScope?.('paraphrase');
+          }
+          openTaskBriefModal(t.id);
+          updateTaskStudyBar();
+          return;
+        }
         if (!activeTask || activeTask.id !== t.id) {
           activeTask = t;
           activeStage = 0;
@@ -870,12 +902,24 @@
     updateTaskStudyBar();
   }
 
+  function evaluateTaskIdleTimeout() {
+    if (!activeTask || taskTestPassed || isPreviewTestMode) return false;
+    const isTeacher = Boolean(B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
+    if (isTeacher) return false;
+    if (lastActivityAt > 0 && (Date.now() - lastActivityAt >= IDLE_LIMIT_MS)) {
+      lockAndExitActiveTask('Ngưng thao tác quá 10 phút — Task bị khóa 30 phút!');
+      return true;
+    }
+    return false;
+  }
+
   function bumpIdleActivity() {
+    if (evaluateTaskIdleTimeout()) return;
     lastActivityAt = Date.now();
   }
 
   function lockAndExitActiveTask(toastMsg) {
-    if (!activeTask) return;
+    if (!activeTask || isTeacherOrBypassed()) return;
     const failedTaskId = activeTask.id;
     const locks = loadTaskLocks();
     locks[failedTaskId] = Date.now() + LOCK_PENALTY_MS;
@@ -887,7 +931,7 @@
   }
 
   function handleTaskTabLeave(customReason) {
-    if (!activeTask || activeStage < 1 || taskTestPassed || isPreviewTestMode) return;
+    if (!activeTask || activeStage < 1 || taskTestPassed || isTeacherOrBypassed()) return;
     if (document.getElementById('modal-cheat-warn')?.classList.contains('open')) return;
     const now = Date.now();
     if (now - lastTaskLeaveAt < 800) return;
@@ -933,15 +977,7 @@
     host.dataset.noCopyBound = '1';
     ['copy', 'cut', 'contextmenu'].forEach((evt) => {
       host.addEventListener(evt, (e) => {
-        const isTeacherOrPreview = Boolean(
-          isPreviewTestMode ||
-          B()?.isTeacherUser?.() ||
-          B()?.getCurrentUser?.()?.role === 'teacher' ||
-          new URLSearchParams(window.location.search || '').has('adminTest') ||
-          new URLSearchParams(window.location.search || '').has('preview') ||
-          localStorage.getItem('ielts_bypass_anti_cheat') === '1'
-        );
-        if (isTeacherOrPreview || !activeTask || activeStage < 1 || taskTestPassed) return;
+        if (isTeacherOrBypassed() || !activeTask || activeStage < 1 || taskTestPassed) return;
         const t = e.target;
         const isEditable = t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT');
         if (evt === 'contextmenu' || !isEditable) {
@@ -953,11 +989,19 @@
   }
 
   function onTaskVisibilityChange() {
-    if (document.hidden) handleTaskTabLeave();
+    if (document.hidden) {
+      handleTaskTabLeave();
+    } else {
+      evaluateTaskIdleTimeout();
+    }
   }
 
   function onTaskWindowBlur() {
     handleTaskTabLeave();
+  }
+
+  function onTaskWindowFocus() {
+    evaluateTaskIdleTimeout();
   }
 
   function onTaskLearnKeydown(e) {
@@ -978,12 +1022,15 @@
 
   function startIdleMonitor() {
     stopIdleMonitor();
+    const isTeacher = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
+    if (!activeTask || isTeacher) return;
     lastActivityAt = Date.now();
     ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'input'].forEach((evt) => {
       window.addEventListener(evt, bumpIdleActivity, { passive: true });
     });
     document.addEventListener('visibilitychange', onTaskVisibilityChange);
     window.addEventListener('blur', onTaskWindowBlur);
+    window.addEventListener('focus', onTaskWindowFocus);
     document.addEventListener('keydown', onTaskLearnKeydown);
     idleTimer = setInterval(() => {
       if (!activeTask) {
@@ -999,9 +1046,7 @@
       if (studyIdle) {
         studyIdle.textContent = `${formatMmSs(idleMs)} / 10:00`;
       }
-      if (idleMs >= IDLE_LIMIT_MS) {
-        lockAndExitActiveTask('Ngưng thao tác quá 10 phút — Task bị khóa 30 phút!');
-      }
+      evaluateTaskIdleTimeout();
     }, 1000);
   }
 
@@ -1015,13 +1060,14 @@
     });
     document.removeEventListener('visibilitychange', onTaskVisibilityChange);
     window.removeEventListener('blur', onTaskWindowBlur);
+    window.removeEventListener('focus', onTaskWindowFocus);
     document.removeEventListener('keydown', onTaskLearnKeydown);
   }
 
   function updateStepPills() {
     const nav = document.getElementById('task-steps-nav');
     if (!nav) return;
-    const isTeacher = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
+    const isTeacher = isTeacherOrBypassed();
     if (isTeacher) {
       nav.innerHTML = `
         <button type="button" class="task-step-pill ${activeStage === 1 ? 'active' : ''}" onclick="TasksModule.openAdminTestPreview(1)" title="Xem Test 1">Test 1</button>
@@ -1037,8 +1083,8 @@
   function renderTaskStage() {
     if (!activeTask) return;
     bindTaskNoCopyOnce();
-    const isTeacher = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
-    const isTestNow = activeStage >= 1 && !taskTestPassed && !isPreviewTestMode;
+    const isBypassed = isTeacherOrBypassed();
+    const isTestNow = activeStage >= 1 && !taskTestPassed && !isBypassed;
     if (isTestNow && B()?.syncExamLock?.(true, activeTask.label) === false) {
       activeStage = 0;
       document.getElementById('screen-task')?.classList.remove('open', 'active', 'exam-no-copy');
@@ -1056,15 +1102,15 @@
         const idleBadge = document.getElementById('task-idle-badge');
         if (badge) badge.textContent = activeTask.label.toUpperCase();
         if (theme) {
-          theme.textContent = isPreviewTestMode
+          theme.textContent = isBypassed
             ? `${activeTask.theme} · Chế độ Test`
             : activeTask.theme;
         }
-        if (idleBadge) idleBadge.style.display = isPreviewTestMode ? 'none' : '';
+        if (idleBadge) idleBadge.style.display = isBypassed ? 'none' : '';
       } else {
         examModal.classList.remove('open', 'active');
       }
-      examModal.classList.toggle('exam-no-copy', isTestNow && !isTeacher);
+      examModal.classList.toggle('exam-no-copy', isTestNow);
     }
     updateStepPills();
     if (activeStage === 1) renderTest1Stage();
@@ -1125,7 +1171,7 @@
   function startTest1() {
     if (!activeTask) return;
     const total = activeTask.words.length || 50;
-    if (getTaskMasteredCount(activeTask) < total) return;
+    if (!isTeacherOrBypassed() && getTaskMasteredCount(activeTask) < total) return;
     activeStage = 1;
     t1BoardIndex = 0;
     t1Mistakes = 0;
@@ -1191,61 +1237,142 @@
   }
 
   function hasStemOverlap(a, b) {
-    const w1 = String(a || '').toLowerCase().trim().split(/\s+/)[0] || '';
-    const w2 = String(b || '').toLowerCase().trim().split(/\s+/)[0] || '';
-    if (w1.length < 4 || w2.length < 4) return false;
-    const prefix = Math.min(5, Math.min(w1.length, w2.length));
-    return prefix >= 4 && w1.slice(0, prefix) === w2.slice(0, prefix);
+    const normTokens = (s) => String(s || '')
+      .toLowerCase()
+      .trim()
+      .split(/[\s\-/]+/)
+      .map((t) => t.replace(/[^a-z]/g, ''))
+      .filter((t) => t.length >= 4);
+    const t1 = normTokens(a);
+    const t2 = normTokens(b);
+    for (const w1 of t1) {
+      for (const w2 of t2) {
+        const prefix = Math.min(5, w1.length, w2.length);
+        if (prefix >= 4 && w1.slice(0, prefix) === w2.slice(0, prefix)) return true;
+        if (
+          w1.slice(0, 4) === w2.slice(0, 4) &&
+          ((w1.endsWith('re') && w2.endsWith('er')) || (w1.endsWith('er') && w2.endsWith('re')))
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function getTaskTest2Total(task, rec = null) {
+    if (rec && Number(rec.test2Total) > 0) return Number(rec.test2Total);
+    if (task) {
+      const pairCount = Array.isArray(task.test2ParaphrasePairs) && task.test2ParaphrasePairs.length > 0
+        ? task.test2ParaphrasePairs.length
+        : (Array.isArray(task.words) ? Math.min(50, task.words.length) : 50);
+      const qs = Array.isArray(task.test2Questions) ? task.test2Questions : [];
+      const nonParaCount = qs.filter((q) => q.type !== 'paraphrase').length;
+      const mcqCount = nonParaCount > 0 ? Math.min(6, nonParaCount) : Math.min(6, qs.length);
+      return pairCount + mcqCount;
+    }
+    return 56;
   }
 
   function initTest2State(task) {
-    const qs = task?.test2Questions || [];
+    const qs = Array.isArray(task?.test2Questions) ? task.test2Questions : [];
     const pairs = [];
     const usedL = new Set();
     const usedR = new Set();
 
-    // 1. Lấy các cặp paraphrase trọng tâm trong bài đọc trước (tránh lộ gốc từ)
-    qs.filter((q) => q.type === 'paraphrase').forEach((q) => {
-      const m = String(q.prompt || '').match(/["“]([^"”]+)["”]\s*\??\s*$/);
-      const left = (m ? m[1] : '').trim();
-      const right = String(q.answer || '').trim();
-      if (!left || !right) return;
-      const lKey = left.toLowerCase();
-      const rKey = right.toLowerCase();
-      if (lKey === rKey || usedL.has(lKey) || usedR.has(rKey) || hasStemOverlap(left, right)) return;
-      usedL.add(lKey);
-      usedR.add(rKey);
-      pairs.push({
-        id: `p_${pairs.length}`,
-        left,
-        right,
-        explain: q.explain || `${left} ↔ ${right}`,
+    // 1. Primary (Interface Contract §1): consume curated task.test2ParaphrasePairs (50 pairs -> 10 boards x 5)
+    if (Array.isArray(task?.test2ParaphrasePairs) && task.test2ParaphrasePairs.length > 0) {
+      task.test2ParaphrasePairs.forEach((p, idx) => {
+        const left = String(p?.left || '').trim();
+        const right = String(p?.right || '').trim();
+        if (!left || !right) return;
+        const lKey = left.toLowerCase();
+        const rKey = right.toLowerCase();
+        if (lKey === rKey || usedL.has(lKey) || usedR.has(rKey)) return;
+        usedL.add(lKey);
+        usedR.add(rKey);
+        pairs.push({
+          id: String(p.id || `p_${idx}`),
+          left,
+          right,
+          explain: String(p.explain || `${left} ↔ ${right}`),
+        });
       });
-    });
+    } else {
+      // 2. Fallback: build 50 non-overlapping pairs covering all task.words (no 20-pair cap)
+      const words = Array.isArray(task?.words) ? task.words : [];
+      const allTaskLemmas = new Set(
+        words.map((w) => String(w?.lemma || '').trim().toLowerCase()).filter(Boolean)
+      );
 
-    // 2. Bổ sung các cặp từ đồng nghĩa hay bị paraphrase nhất (chỉ lấy 1 từ đồng nghĩa khác gốc tiêu biểu nhất/từ, không đáp án nhiễu) cho đủ 20 cặp (4 bảng x 5 cặp)
-    (task?.words || []).forEach((w) => {
-      if (pairs.length >= 20) return;
-      const left = String(w.lemma || '').trim();
-      const syns = Array.isArray(w.synonyms) ? w.synonyms : [];
-      const lKey = left.toLowerCase();
-      if (!left || usedL.has(lKey)) return;
-      for (const rawSyn of syns) {
-        const syn = String(rawSyn || '').trim();
-        const rKey = syn.toLowerCase();
-        if (syn && rKey !== lKey && !usedL.has(rKey) && !usedR.has(rKey) && !hasStemOverlap(left, syn)) {
+      words.forEach((w) => {
+        if (pairs.length >= 50) return;
+        const left = String(w?.lemma || '').trim();
+        const lKey = left.toLowerCase();
+        if (!left || usedL.has(lKey)) return;
+        const syns = Array.isArray(w?.synonyms) ? w.synonyms : [];
+        let picked = '';
+
+        // Tier 1: clean alphabetic IELTS synonym, no stem overlap, not colliding with another task lemma
+        for (const rawSyn of syns) {
+          const syn = String(rawSyn || '').trim();
+          const rKey = syn.toLowerCase();
+          if (
+            syn &&
+            !/[0-9=<>@#$%^&*_+]/u.test(syn) &&
+            /[a-zA-Z]{2,}/.test(syn) &&
+            rKey !== lKey &&
+            !allTaskLemmas.has(rKey) &&
+            !usedL.has(rKey) &&
+            !usedR.has(rKey) &&
+            !hasStemOverlap(left, syn)
+          ) {
+            picked = syn;
+            break;
+          }
+        }
+
+        // Tier 2: allow clean alphanumeric tokens (e.g., 18th/17th) except comma-split "000 ..."
+        if (!picked) {
+          for (const rawSyn of syns) {
+            const syn = String(rawSyn || '').trim();
+            const rKey = syn.toLowerCase();
+            if (
+              syn &&
+              !/^000\b/i.test(syn) &&
+              /[a-zA-Z]{2,}/.test(syn) &&
+              rKey !== lKey &&
+              !usedL.has(rKey) &&
+              !usedR.has(rKey) &&
+              !hasStemOverlap(left, syn)
+            ) {
+              picked = syn;
+              break;
+            }
+          }
+        }
+
+        // Tier 3: clean Vietnamese meaning gloss fallback (e.g., chemistry, canadian)
+        if (!picked && w?.meaning) {
+          const gloss = String(w.meaning).split(';')[0].trim() || String(w.meaning).trim();
+          const gKey = gloss.toLowerCase();
+          if (gloss && gKey !== lKey && !usedL.has(gKey) && !usedR.has(gKey)) {
+            picked = gloss;
+          }
+        }
+
+        if (picked) {
           usedL.add(lKey);
-          usedR.add(rKey);
+          usedR.add(picked.toLowerCase());
           pairs.push({
             id: `p_${pairs.length}`,
             left,
-            right: syn,
-            explain: `${left} đồng nghĩa / paraphrase với ${syn}`,
+            right: picked,
+            explain: `${left} đồng nghĩa / paraphrase với ${picked}`,
           });
-          break;
         }
-      }
-    });
+      });
+    }
 
     t2ParaPairs = pairs;
     t2ParaBoards = [];
@@ -1500,30 +1627,31 @@
     if (t2Answered || !activeTask) return;
     t2Answered = true;
     const q = t2ContextQs[t2Index];
-    const chosen = q.options[optIdx];
-    const isRight = chosen.trim().toLowerCase() === q.answer.trim().toLowerCase();
+    const chosen = String(q?.options?.[optIdx] ?? '');
+    const ans = String(q?.answer ?? '');
+    const isRight = chosen.trim().toLowerCase() === ans.trim().toLowerCase();
     if (isRight) {
       t2Correct++;
     } else {
       t2WrongRecords.push({
         prompt: q.prompt,
         chosen,
-        answer: q.answer,
+        answer: ans,
         explain: q.explain || '',
       });
     }
 
     document.querySelectorAll('#task-t2-opts .task-q-opt').forEach((btn, i) => {
       btn.disabled = true;
-      const val = q.options[i];
-      if (val.trim().toLowerCase() === q.answer.trim().toLowerCase()) btn.classList.add('is-right');
+      const val = String(q?.options?.[i] ?? '');
+      if (val.trim().toLowerCase() === ans.trim().toLowerCase()) btn.classList.add('is-right');
       else if (i === optIdx && !isRight) btn.classList.add('is-wrong');
     });
 
     const exp = document.getElementById('task-t2-explain');
     if (exp) {
       exp.style.display = 'block';
-      exp.innerHTML = `<strong>${isRight ? 'Chính xác!' : `Đáp án: ${B()?.escapeHtml(q.answer)}.`}</strong> ${B()?.escapeHtml(q.explain || '')}`;
+      exp.innerHTML = `<strong>${isRight ? 'Chính xác!' : `Đáp án: ${B()?.escapeHtml(ans)}.`}</strong> ${B()?.escapeHtml(q.explain || '')}`;
     }
     const nextBtn = document.getElementById('btn-t2-next');
     if (nextBtn) nextBtn.style.display = 'inline-flex';
@@ -1536,6 +1664,7 @@
   }
 
   function retryTest2() {
+    if (!activeTask) return;
     initTest2State(activeTask);
     taskStartedAt = Date.now();
     taskLeaveWarnings = 0;
@@ -1546,6 +1675,7 @@
   }
 
   function startFinalTranslation() {
+    if (!activeTask) return;
     activeStage = 3;
     renderTaskStage();
   }
@@ -1654,8 +1784,7 @@
     };
     transEl?.addEventListener('input', updateCounts);
     sumEl?.addEventListener('input', updateCounts);
-    const isTeacherOrPreview = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
-    if (!isTeacherOrPreview) {
+    if (!isTeacherOrBypassed()) {
       B()?.bindNoPasteGuards?.(transEl, 'Không được dán (paste) khi làm bài dịch — hãy tự dịch trực tiếp!');
       B()?.bindNoPasteGuards?.(sumEl, 'Không được dán (paste) khi tóm tắt — hãy tự viết trực tiếp!');
     }
@@ -1726,58 +1855,110 @@
 
   function generateTaskModelTranslation(task) {
     if (!task) return '';
-    if (TASK_MODEL_TRANSLATIONS[task.id]) return TASK_MODEL_TRANSLATIONS[task.id];
     const p = task.passage;
+    if (p && typeof p.modelTranslation === 'string' && p.modelTranslation.trim()) {
+      return p.modelTranslation.trim();
+    }
+    if (TASK_MODEL_TRANSLATIONS[task.id]) return TASK_MODEL_TRANSLATIONS[task.id];
     if (!p || !p.text) return '';
     return `Bản dịch chuẩn tham khảo cho ${task.label} (${task.theme}):\n` +
       `Đoạn văn tập trung phân tích chuyên sâu về chủ đề ${task.theme}. Người đọc cần bám sát các từ khóa trọng tâm (${(p.anchorWords || []).join(', ')}) kết hợp với các từ nối logic (${(p.signalClues || []).join(', ')}) để diễn đạt chuẩn xác từng câu văn theo đúng ngữ cảnh học thuật IELTS.`;
   }
 
-  function evaluateTranslationLocally(payload) {
-    const trans = String(payload.translation || '').trim();
-    const sum = String(payload.summary || '').trim();
-    const passage = String(payload.passage || '').trim();
+  const QWERTY_ROWS = [
+    'qwertyuiop', 'poiuytrewq',
+    'asdfghjkl', 'lkjhgfdsa',
+    'zxcvbnm', 'mnbvcxz',
+    'qazwsxedc', 'wsxedcrfv', 'edcrfvtgb',
+  ];
+  const VALID_ALPHANUM_RE = /^(?:\d+(?:st|nd|rd|th|h|m|km|cm|mm|kg|g|mg|ml|l|s|d|D)|(?:CO2|H2O|O2|N2|CH4|SO2|NO2|pH\d*|[A-Z]{1,3}\d{1,2}))$/;
+
+  function stripVietnameseDiacritics(str) {
+    return String(str || '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function hasKeyboardMashRun(clean) {
+    const low = stripVietnameseDiacritics(clean).toLowerCase();
+    if (low.length < 5) return false;
+    for (const row of QWERTY_ROWS) {
+      for (let i = 0; i <= row.length - 5; i++) {
+        if (low.includes(row.slice(i, i + 5))) return true;
+      }
+    }
+    return false;
+  }
+
+  function isSingleGibberishToken(tok, passageTokensSet) {
+    const clean = String(tok || '').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+    if (clean.length < 3) return false;
+    if (VALID_ALPHANUM_RE.test(clean)) return false;
+    if (/[a-zA-Zà-ỹÀ-Ỹ]\d|\d[a-zA-Zà-ỹÀ-Ỹ]/.test(clean)) return true;
+    if (/^\d+$/.test(clean)) return false;
+    if (/(.)\1\1/i.test(clean)) return true;
+    if (clean.length >= 6 && /^(.{2,4})\1{2,}$/i.test(clean)) return true;
+    if (hasKeyboardMashRun(clean)) return true;
+    if (passageTokensSet && passageTokensSet.has(clean.toLowerCase())) return false;
+    if (/[a-zà-ỹ][A-ZĐ][a-zà-ỹ][A-ZĐ]/.test(clean)) return true;
+
+    const stripped = stripVietnameseDiacritics(clean);
+    if (/^[a-zA-Z]+$/.test(stripped)) {
+      const low = stripped.toLowerCase();
+      const vowels = (low.match(/[aeiouy]/g) || []).length;
+      if (low.length >= 5 && vowels === 0) return true;
+      const baseForCluster = low.length >= 7 ? low.replace(/s$/, '') : low;
+      if (/[bcdfghjklmnpqrstvwxz]{6,}/.test(baseForCluster)) return true;
+      if (/[bcdfghjklmnpqrstvwxz]{5,}/.test(baseForCluster) && (vowels / low.length) < 0.22) return true;
+      if (low.length >= 10 && (vowels / low.length) < 0.15) return true;
+    }
+    return false;
+  }
+
+  function isGibberishToken(tok, passageTokensSet) {
+    const raw = String(tok || '').trim();
+    if (!raw) return false;
+    const parts = raw.split(/[-/]+/).filter(Boolean);
+    if (parts.length > 1) return parts.some((p) => isSingleGibberishToken(p, passageTokensSet));
+    return isSingleGibberishToken(raw, passageTokensSet);
+  }
+
+  function buildPassageTokensSet(passage) {
+    return new Set(
+      (String(passage || '').toLowerCase().match(/[a-z]{2,}/g) || [])
+    );
+  }
+
+  function preValidateTranslationLocally(payload) {
+    const trans = String(payload?.translation || '').trim();
+    const sum = String(payload?.summary || '').trim();
+    const passage = String(payload?.passage || '').trim();
     const task = activeTask || {};
-    const anchorWords = Array.isArray(payload.anchorWords) && payload.anchorWords.length ? payload.anchorWords : (task.passage?.anchorWords || []);
-    const signalClues = Array.isArray(payload.signalClues) && payload.signalClues.length ? payload.signalClues : (task.passage?.signalClues || []);
     const wordsList = trans.split(/\s+/).filter(Boolean);
     const wordCount = wordsList.length;
     const passageWords = passage.split(/\s+/).filter(Boolean).length;
+    const passageTokensSet = buildPassageTokensSet(passage);
 
-    // 1. Phục hồi kiểm tra ký tự vô nghĩa / gõ phím ngẫu nhiên (Gibberish Detection)
-    const isGibberishToken = (tok) => {
-      const clean = tok.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
-      if (clean.length < 3) return false;
-      if (clean.length >= 13) return true;
-      if (/[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ]{4,}/.test(clean)) return true;
-      if (/(.)\1\1/.test(clean)) return true;
-      if (/[a-zà-ỹ][A-ZĐ][a-zà-ỹ]/.test(clean)) return true;
-      if (/[a-zA-Zà-ỹ]\d+|\d+[a-zA-Zà-ỹ]/.test(clean)) return true;
-      return false;
-    };
+    // RULE 1: Ký tự rác / gõ phím ngẫu nhiên / không có từ hợp lệ
+    const meaningfulTokens = wordsList.filter((w) => /[\p{L}\p{N}]/u.test(w));
+    const gibberishMatches = meaningfulTokens.filter((w) => isGibberishToken(w, passageTokensSet));
+    const gibberishRatio = meaningfulTokens.length > 0 ? (gibberishMatches.length / meaningfulTokens.length) : 0;
 
-    const gibberishMatches = wordsList.filter(isGibberishToken);
-    const gibberishRatio = wordsList.length > 0 ? gibberishMatches.length / wordsList.length : 0;
-
-    // RULE 1: Ký tự rác / vô nghĩa
-    if (gibberishMatches.length >= 2 || gibberishRatio >= 0.2 || (wordsList.length < 15 && gibberishMatches.length >= 1)) {
-      const sample = gibberishMatches.slice(0, 3).join(', ');
+    if (meaningfulTokens.length === 0 || gibberishMatches.length >= 2 || gibberishRatio >= 0.2 || (meaningfulTokens.length < 15 && gibberishMatches.length >= 1)) {
+      const sample = gibberishMatches.slice(0, 3).join(', ') || trans.slice(0, 30);
       return {
         ok: true,
         grade: {
           score: 1.5,
           passed: false,
-          criteria: {
-            accuracy: 1.0,
-            signalWords: 1.0,
-            contextInference: 1.0,
-            summary: 1.0,
-          },
+          criteria: { accuracy: 1.0, signalWords: 1.0, contextInference: 1.0, summary: 1.0 },
           overallComment: `Bài làm KHÔNG ĐẠT (1.5/10): Phát hiện chuỗi ký tự gõ phím ngẫu nhiên hoặc từ vô nghĩa ("${sample}"). Hệ thống AI chấm dựa trên ngữ cảnh đọc hiểu thực tế; vui lòng dịch nghiêm túc sang câu văn tiếng Việt có nghĩa.`,
           lineFeedback: [
             {
               issue: 'Từ ngữ không hợp lệ / Ký tự ngẫu nhiên',
-              student: gibberishMatches.slice(0, 4).join(' '),
+              student: (gibberishMatches.slice(0, 4).join(' ') || trans.slice(0, 50)),
               advice: 'Hệ thống yêu cầu bản dịch tiếng Việt thực tế bám sát đoạn văn, không chấp nhận gõ phím thử nghiệm hoặc từ rác.',
               suggested: 'Hãy đọc từng câu tiếng Anh của bài đọc và dịch nghĩa chính xác sang tiếng Việt.',
             },
@@ -1787,10 +1968,17 @@
       };
     }
 
-    // RULE 2: Sao chép lại tiếng Anh
-    const hasVietnameseDiacritics = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i.test(trans);
-    const englishWordMatches = wordsList.filter((w) => /^[a-zA-Z]{3,}$/.test(w) && passage.toLowerCase().includes(w.toLowerCase()));
-    if (!hasVietnameseDiacritics && englishWordMatches.length >= 8 && (englishWordMatches.length / wordsList.length) > 0.4) {
+    // RULE 2: Sao chép lại tiếng Anh (kể cả khi chèn 1-2 từ tiếng Việt ở đầu)
+    const vnDiacriticRe = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
+    const vnDiacriticCount = wordsList.filter((w) => vnDiacriticRe.test(w)).length;
+    const vnTokenRatio = wordsList.length > 0 ? (vnDiacriticCount / wordsList.length) : 0;
+    const englishWordMatches = wordsList.filter((w) => {
+      const clean = w.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '').toLowerCase();
+      return clean.length >= 3 && /^[a-z]+$/.test(clean) && passageTokensSet.has(clean);
+    });
+    const englishMatchRatio = wordsList.length > 0 ? (englishWordMatches.length / wordsList.length) : 0;
+    if ((englishWordMatches.length >= 8 && englishMatchRatio > 0.4 && vnTokenRatio < 0.15) ||
+        (wordsList.length >= 15 && vnDiacriticCount === 0 && englishMatchRatio > 0.3)) {
       return {
         ok: true,
         grade: {
@@ -1801,7 +1989,7 @@
           lineFeedback: [
             {
               issue: 'Chưa dịch sang tiếng Việt',
-              student: trans.slice(0, 60) + '...',
+              student: trans.slice(0, 60) + (trans.length > 60 ? '...' : ''),
               advice: 'Vui lòng dịch các câu tiếng Anh sang tiếng Việt hoàn chỉnh.',
               suggested: 'Dịch lại toàn bộ các câu trong bài đọc sang tiếng Việt.',
             },
@@ -1811,7 +1999,68 @@
       };
     }
 
-    // RULE 3: Bài dịch quá ngắn (< 30 từ so với đoạn đọc gốc 200-300 từ)
+    // RULE 3: Lặp từ / Lặp cụm từ spam / Độ đa dạng từ vựng (TTR) quá thấp
+    const normTokens = wordsList
+      .map((w) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''))
+      .filter(Boolean);
+    const nTok = normTokens.length;
+    if (nTok >= 10) {
+      const freq = new Map();
+      let maxTokenCount = 0;
+      let hasConsecTriple = false;
+      for (let i = 0; i < nTok; i++) {
+        const tk = normTokens[i];
+        const nextC = (freq.get(tk) || 0) + 1;
+        freq.set(tk, nextC);
+        if (nextC > maxTokenCount) maxTokenCount = nextC;
+        if (i >= 2 && normTokens[i] === normTokens[i - 1] && normTokens[i - 1] === normTokens[i - 2]) {
+          hasConsecTriple = true;
+        }
+      }
+      const uniqueCount = freq.size;
+      const ttr = uniqueCount / nTok;
+      const topFreqRatio = maxTokenCount / nTok;
+      let top3GramCount = 0;
+      if (nTok >= 18) {
+        const gramFreq = new Map();
+        for (let i = 0; i <= nTok - 3; i++) {
+          const g = `${normTokens[i]} ${normTokens[i + 1]} ${normTokens[i + 2]}`;
+          const c = (gramFreq.get(g) || 0) + 1;
+          gramFreq.set(g, c);
+          if (c > top3GramCount) top3GramCount = c;
+        }
+      }
+      const top3GramCoverage = (top3GramCount * 3) / nTok;
+
+      if (
+        (nTok >= 15 && ttr < 0.28) ||
+        uniqueCount <= 4 ||
+        (nTok >= 12 && topFreqRatio > 0.22) ||
+        hasConsecTriple ||
+        (nTok >= 18 && top3GramCount >= 4 && top3GramCoverage >= 0.35)
+      ) {
+        return {
+          ok: true,
+          grade: {
+            score: 1.8,
+            passed: false,
+            criteria: { accuracy: 1.5, signalWords: 1.5, contextInference: 1.5, summary: 1.5 },
+            overallComment: 'Bài làm KHÔNG ĐẠT (1.8/10): Phát hiện lặp từ / lặp cụm từ hoặc độ đa dạng từ vựng quá thấp (nghi vấn spam nội dung). Vui lòng dịch thực tế từng câu của đoạn văn gốc sang tiếng Việt.',
+            lineFeedback: [
+              {
+                issue: 'Lặp từ / Lặp cụm từ bất thường',
+                student: trans.slice(0, 70) + (trans.length > 70 ? '...' : ''),
+                advice: 'Mỗi câu trong đoạn văn IELTS chứa thông tin và từ vựng riêng biệt; không lặp lại cùng một cụm từ để đủ số từ.',
+                suggested: 'Hãy dịch sát từng câu từ đầu đến cuối đoạn văn tiếng Anh.',
+              },
+            ],
+            modelTranslation: generateTaskModelTranslation(task),
+          },
+        };
+      }
+    }
+
+    // RULE 4: Bài dịch quá ngắn (< 30 từ so với đoạn đọc gốc 200-300 từ)
     if (wordCount < 30) {
       const shortScore = Math.min(4.5, Math.max(2.0, Math.round((wordCount / 30) * 4.5 * 10) / 10));
       return {
@@ -1839,20 +2088,47 @@
       };
     }
 
-    // RULE 4: ĐỐI CHIẾU NGỮ CẢNH VÀ TỪ KHÓA BÀI ĐỌC (Context & Semantic Evaluation)
+    return null;
+  }
+
+  function evaluateTranslationLocally(payload) {
+    const preCheck = preValidateTranslationLocally(payload);
+    if (preCheck) return preCheck;
+
+    const trans = String(payload.translation || '').trim();
+    const sum = String(payload.summary || '').trim();
+    const passage = String(payload.passage || '').trim();
+    const task = activeTask || {};
+    let anchorWords = Array.isArray(payload.anchorWords) && payload.anchorWords.length ? payload.anchorWords : (task.passage?.anchorWords || []);
+    const wordsList = trans.split(/\s+/).filter(Boolean);
+    const wordCount = wordsList.length;
+    const passageWords = passage.split(/\s+/).filter(Boolean).length;
+    const passageTokensSet = buildPassageTokensSet(passage);
+
+    // RULE 5: ĐỐI CHIẾU NGỮ CẢNH VÀ TỪ KHÓA BÀI ĐỌC (Context & Semantic Evaluation)
     const transLower = trans.toLowerCase();
     const sumLower = sum.toLowerCase();
 
-    // 4.1 Bóc tách và đối chiếu từ khóa cốt lõi (Anchor Words)
+    // 5.1 Bóc tách và đối chiếu từ khóa cốt lõi (Anchor Words)
     const taskWords = Array.isArray(task.words) ? task.words : [];
+    const escReLocal = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (anchorWords.length === 0 && taskWords.length > 0 && passage) {
+      anchorWords = taskWords
+        .map((w) => String(w.lemma || '').trim())
+        .filter((lem) => lem.length >= 4 && new RegExp(`\\b${escReLocal(lem)}\\b`, 'i').test(passage))
+        .slice(0, 10);
+    }
+
     const wordMeaningsMap = new Map();
     taskWords.forEach((w) => {
       const cleanLemma = String(w.lemma || '').toLowerCase().trim();
       const mList = [];
       if (w.meaning) {
-        String(w.meaning).split(/[,;/–—\(\)]+/).forEach((part) => {
+        String(w.meaning).split(/[,;/–—:\(\)]+|\s+hoặc\s+/i).forEach((part) => {
           const c = part.trim().toLowerCase();
           if (c.length >= 2) mList.push(c);
+          const stripped = c.replace(/^(?:thuộc về|thuộc|một cách|mang tính|có tính|sự|việc)\s+/i, '').trim();
+          if (stripped.length >= 3 && stripped !== c) mList.push(stripped);
         });
       }
       if (Array.isArray(w.synonyms)) {
@@ -1886,10 +2162,16 @@
       }
     });
 
-    const totalAnchors = Math.max(1, anchorWords.length);
-    const anchorRatio = anchorHits / totalAnchors;
+    // Độ bao quát dung lượng đoạn văn
+    const lengthRatio = Math.min(1.0, wordCount / Math.max(80, passageWords * 0.55));
+    const coverageScore = Math.min(10, Math.round(lengthRatio * 10 * 10) / 10);
 
-    // 4.2 Đối chiếu mạch liên kết từ nối định hướng (Signal Clues)
+    const hasAnchors = anchorWords.length > 0;
+    const anchorRatio = hasAnchors
+      ? (anchorHits / anchorWords.length)
+      : Math.min(0.85, Math.max(0.55, (coverageScore / 10) * 0.85));
+
+    // 5.2 Đối chiếu mạch liên kết từ nối định hướng (Signal Clues)
     const signalPatterns = [
       { signals: ['however', 'yet', 'nevertheless', 'nonetheless'], vn: ['tuy nhiên', 'dẫu vậy', 'tuy thế', 'nhưng'] },
       { signals: ['while', 'whereas', 'in contrast', 'on the other hand', 'conversely'], vn: ['trong khi', 'trong khi đó', 'ngược lại', 'mặt khác'] },
@@ -1912,10 +2194,16 @@
 
     const signalRatio = signalPresentInPassageCount > 0 ? (signalReflectedInTransCount / signalPresentInPassageCount) : 0.8;
 
-    // 4.3 Đánh giá tóm tắt ý chính
-    const sumWords = sum.split(/\s+/).filter(Boolean).length;
+    // 5.3 Đánh giá tóm tắt ý chính (có kiểm tra gibberish)
+    const sumWordsList = sum.split(/\s+/).filter(Boolean);
+    const sumWords = sumWordsList.length;
+    const sumGibberish = sumWordsList.filter((w) => isGibberishToken(w, passageTokensSet));
     let sumScore = 3.0;
-    if (sumWords >= 12 && sumWords <= 80) {
+    let sumHasSpam = false;
+    if (sumWords > 0 && (sumGibberish.length >= 2 || (sumGibberish.length / sumWords) >= 0.3)) {
+      sumScore = 1.0;
+      sumHasSpam = true;
+    } else if (sumWords >= 12 && sumWords <= 80) {
       sumScore = 8.0;
       const topicKeywords = String(task.theme || '').toLowerCase().split(/[\s&·,]+/);
       const hitsTopic = topicKeywords.some((k) => k.length >= 3 && sumLower.includes(k));
@@ -1926,20 +2214,27 @@
       sumScore = 4.0;
     }
 
-    // 4.4 Độ bao quát dung lượng đoạn văn
-    const lengthRatio = Math.min(1.0, wordCount / Math.max(80, passageWords * 0.55));
-    const coverageScore = Math.min(10, Math.round(lengthRatio * 10 * 10) / 10);
-
-    // 4.5 Tính điểm thành phần và tổng điểm
+    // 5.4 Tính điểm thành phần và tổng điểm
     const accuracy = Math.min(9.5, Math.max(3.0, Math.round((coverageScore * 0.45 + anchorRatio * 5.0) * 10) / 10));
     const signalWordsScore = Math.min(9.5, Math.max(3.0, Math.round((signalRatio * 7.5 + 2.0) * 10) / 10));
     const contextInferenceScore = Math.min(9.5, Math.max(3.0, Math.round((anchorRatio * 5.5 + (coverageScore >= 7 ? 3.5 : 2.0)) * 10) / 10));
 
-    const finalScore = Math.min(9.5, Math.max(2.5, Math.round((accuracy * 0.4 + signalWordsScore * 0.2 + contextInferenceScore * 0.2 + sumScore * 0.2) * 10) / 10));
+    let finalScore = Math.min(9.5, Math.max(2.5, Math.round((accuracy * 0.4 + signalWordsScore * 0.2 + contextInferenceScore * 0.2 + sumScore * 0.2) * 10) / 10));
+    if (wordCount < 50 && finalScore >= 6.0) {
+      finalScore = 5.5;
+    }
     const passed = finalScore >= 6.0 && wordCount >= 50;
 
-    // 4.6 Tạo góp ý chi tiết từng câu bám sát bài đọc
+    // 5.5 Tạo góp ý chi tiết từng câu bám sát bài đọc
     const lineFeedback = [];
+    if (sumHasSpam) {
+      lineFeedback.push({
+        issue: 'Phần tóm tắt ý chính chứa ký tự không hợp lệ',
+        student: sum.slice(0, 60),
+        advice: 'Vui lòng viết 1–3 câu tiếng Việt súc tích tóm tắt ý chính đoạn văn thay vì gõ ký tự vô nghĩa.',
+        suggested: 'Tóm tắt lại luận điểm chính của bài đọc bằng tiếng Việt rõ ràng.',
+      });
+    }
     if (missedAnchorNames.length > 0) {
       const m1 = missedAnchorNames[0];
       const mMeanings = wordMeaningsMap.get(m1) || [];
@@ -1969,9 +2264,10 @@
       });
     }
 
+    const anchorNote = hasAnchors ? ` Nắm bắt được ${(anchorRatio * 100).toFixed(0)}% từ khóa trọng tâm và mạch suy luận từ nối.` : '';
     const comment = passed
-      ? `Bản dịch đạt yêu cầu đọc hiểu (${finalScore}/10). Nắm bắt được ${(anchorRatio * 100).toFixed(0)}% từ khóa trọng tâm và mạch suy luận từ nối. Tóm tắt ý chính ${sumWords >= 12 ? 'súc tích, rõ ràng' : 'ở mức cơ bản'}.`
-      : `Bản dịch chưa đạt (${finalScore}/10 - cần >= 6.0). ${wordCount < 60 ? 'Độ dài bài dịch chưa bao quát đủ các câu của bài đọc. ' : ''}${anchorRatio < 0.5 ? 'Chưa dịch sát nghĩa các từ khóa quan trọng của bài đọc. ' : ''}Vui lòng đối chiếu kỹ lại bản dịch tham khảo và hoàn thiện lại.`;
+      ? `Bản dịch đạt yêu cầu đọc hiểu (${finalScore}/10).${anchorNote} Tóm tắt ý chính ${sumWords >= 12 && !sumHasSpam ? 'súc tích, rõ ràng' : 'ở mức cơ bản'}.`
+      : `Bản dịch chưa đạt (${finalScore}/10 - cần >= 6.0). ${wordCount < 50 ? 'Độ dài bản dịch chưa đạt tối thiểu 50 từ để bao quát bài đọc. ' : ''}${hasAnchors && anchorRatio < 0.5 ? 'Chưa dịch sát nghĩa các từ khóa quan trọng của bài đọc. ' : ''}Vui lòng đối chiếu kỹ lại bản dịch tham khảo và hoàn thiện lại.`;
 
     return {
       ok: true,
@@ -2065,10 +2361,18 @@
     const grade = JSON.parse(clean);
     grade.score = Number(grade.score || 0);
     grade.passed = grade.score >= 6.0;
+    if (!grade.modelTranslation) {
+      grade.modelTranslation = generateTaskModelTranslation(activeTask);
+    }
     return grade;
   }
 
   async function requestAiGrading(payload) {
+    const preCheck = preValidateTranslationLocally(payload);
+    if (preCheck) {
+      return { ...preCheck, engine: 'local-anti-spam' };
+    }
+
     const user = B()?.getCurrentUser?.();
     const syncUrl = B()?.getSyncUrl?.() || '';
 
@@ -2103,6 +2407,9 @@
         if (res.ok) {
           const data = await res.json();
           if (data && data.ok && data.grade && typeof data.grade.score === 'number') {
+            if (!data.grade.modelTranslation) {
+              data.grade.modelTranslation = generateTaskModelTranslation(activeTask);
+            }
             return { ok: true, grade: data.grade, engine: 'apps-script-gemini' };
           }
         }
@@ -2117,7 +2424,7 @@
 
   async function submitTranslationForAi() {
     if (!activeTask) return;
-    const isTeacherOrPreview = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
+    const isTeacherSession = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
     const trans = (document.getElementById('task-trans-input')?.value || '').trim();
     const summary = (document.getElementById('task-summary-input')?.value || '').trim();
     const transWords = trans.split(/\s+/).filter(Boolean).length;
@@ -2172,7 +2479,7 @@
       `).join('');
 
       let masteryNote = '';
-      if (g.passed && isPreviewTestMode) {
+      if (g.passed && isTeacherSession) {
         masteryNote = `
           <div style="margin-top:14px; padding:14px 16px; border-radius:12px; background:rgba(82,136,62,0.16); border:1px solid rgba(82,136,62,0.35); color:var(--text-bright); font-size:15.5px;">
             <div style="font-weight:800;">✓ Đạt Test thử ${esc(activeTask.label)}!</div>
@@ -2184,7 +2491,9 @@
         document.getElementById('screen-task')?.classList.remove('exam-no-copy');
         document.getElementById('task-leave-warn-banner')?.remove();
         const durationSec = Math.max(1, Math.round((Date.now() - (taskStartedAt || Date.now())) / 1000));
-        const t1AccuracyPct = Math.max(0, Math.round(((50 - Math.min(50, t1Mistakes)) / 50) * 100));
+        const totalT1 = activeTask.words?.length || 50;
+        const t1AccuracyPct = Math.max(0, Math.round(((totalT1 - Math.min(totalT1, t1Mistakes)) / totalT1) * 100));
+        const totalT2 = (t2ParaPairs.length + t2ContextQs.length) || getTaskTest2Total(activeTask);
         const newlyMarked = B()?.markMasteredBatch?.(activeTask.linkedIds) || 0;
         const prog = loadTaskProgress();
         prog[activeTask.id] = {
@@ -2192,6 +2501,7 @@
           test1Mistakes: t1Mistakes,
           test1AccuracyPct: t1AccuracyPct,
           test2Score: t2Correct,
+          test2Total: totalT2,
           translationScore: g.score,
           durationSec,
           linkedCount: activeTask.linkedIds.length,
@@ -2242,7 +2552,7 @@
 
       switchT3Tab('grade');
 
-      if (g.passed && !isPreviewTestMode) {
+      if (g.passed && !isTeacherSession) {
         setTimeout(() => openTaskSummaryModal(activeTask?.id), 180);
       }
     } catch (err) {
@@ -2273,6 +2583,7 @@
     if (account.role === 'teacher') {
       urlCheckedForUid = account.id;
       if (sTasksBtn) sTasksBtn.style.display = 'none';
+      syncAssignedTaskScopes();
       renderTeacherDashboard();
       if (previewStage > 0) {
         openAdminTestPreview(previewStage, assignedUrlTaskIds[0] || 'task_01');
@@ -2282,7 +2593,18 @@
     if (sTasksBtn) {
       sTasksBtn.style.display = assignedUrlTaskIds.length > 0 ? 'inline-flex' : 'none';
     }
-    syncAssignedTaskScopes();
+    const curScope = B()?.getCurrentScopeKey?.() || '';
+    const curTask = curScope.startsWith('task_') ? getTaskById(curScope) : null;
+    if (curTask && !isTeacherOrBypassed() && getTaskLockRemainingMs(curTask.id) > 0) {
+      syncAssignedTaskScopes();
+      B()?.loadMainScope?.('paraphrase');
+      openTaskBriefModal(curTask.id);
+      return;
+    }
+    syncAssignedTaskScopes(curTask);
+    if (curTask) {
+      onScopeChanged(curTask.id);
+    }
     if (urlCheckedForUid !== account.id && previewStage > 0) {
       urlCheckedForUid = account.id;
       openAdminTestPreview(previewStage, assignedUrlTaskIds[0] || 'task_01');
@@ -2290,10 +2612,12 @@
     }
     if (urlCheckedForUid !== account.id && assignedUrlTaskIds.length > 0) {
       urlCheckedForUid = account.id;
-      if (assignedUrlTaskIds.length === 1) {
-        openTaskBriefModal(assignedUrlTaskIds[0]);
-      } else {
-        openStudentTasksModal();
+      if (!curTask || !assignedUrlTaskIds.includes(curTask.id)) {
+        if (assignedUrlTaskIds.length === 1) {
+          openTaskBriefModal(assignedUrlTaskIds[0]);
+        } else {
+          openStudentTasksModal();
+        }
       }
     }
   }
@@ -2309,6 +2633,8 @@
     taskTestPassed = false;
     B()?.syncExamLock?.(false);
     document.getElementById('screen-task')?.classList.remove('open', 'active', 'exam-no-copy');
+    document.getElementById('task-stage-container')?.style.removeProperty('visibility');
+    document.getElementById('task-leave-warn-banner')?.remove();
     updateTaskStudyBar();
     closeStudentTasksModal();
     closeTaskBriefModal();
@@ -2415,7 +2741,7 @@
         <div class="ai-criteria-grid">
           <div class="ai-crit-pill"><span>Học từ gốc + WF</span><span>50 / 50 (+${focusRec.newlyMarked ?? 0} mới)</span></div>
           <div class="ai-crit-pill"><span>Test 1 (10 bảng ghép)</span><span>${focusRec.test1AccuracyPct ?? 100}% (${focusRec.test1Mistakes ?? 0} lỗi)</span></div>
-          <div class="ai-crit-pill"><span>Test 2 (Ngữ cảnh)</span><span>${focusRec.test2Score ?? 0} / 12 câu</span></div>
+          <div class="ai-crit-pill"><span>Test 2 (Paraphrase &amp; Ngữ cảnh)</span><span>${focusRec.test2Score ?? 0} / ${getTaskTest2Total(focusTask, focusRec)} câu</span></div>
           <div class="ai-crit-pill"><span>Test cuối (Dịch AI)</span><span>${Number(focusRec.translationScore || 0).toFixed(1)} / 10</span></div>
         </div>
         </div>
@@ -2427,7 +2753,7 @@
         <td><strong>${esc(task.label)}</strong></td>
         <td>${esc(task.theme)}</td>
         <td>${rec.test1AccuracyPct ?? 100}% (${rec.test1Mistakes ?? 0} lỗi)</td>
-        <td>${rec.test2Score ?? 0} / 12</td>
+        <td>${rec.test2Score ?? 0} / ${getTaskTest2Total(task, rec)}</td>
         <td><strong>${Number(rec.translationScore || 0).toFixed(1)} / 10</strong></td>
         <td>${formatDurationVi(rec.durationSec)}</td>
       </tr>
@@ -2465,8 +2791,12 @@
   }
 
   function onCloudMerged() {
+    updateTaskStudyBar();
     if (pendingTaskId && document.getElementById('modal-task-brief')?.classList.contains('open')) {
       updateBriefLockUI();
+    }
+    if (document.getElementById('modal-student-tasks')?.classList.contains('open')) {
+      openStudentTasksModal();
     }
   }
 
@@ -2492,6 +2822,7 @@
     onClickStartTaskExam,
     confirmStartTaskExam,
     updateTaskStudyBar,
+    canActivateTaskScope,
     onScopeChanged,
     onStudyAssessmentChanged,
     startPendingTask,
@@ -2516,7 +2847,7 @@
     onCloudMerged,
     getActiveTask: () => activeTask,
     isPreviewMode: () => isPreviewTestMode,
-    getAllTasks: () => tasksList,
+    getAllTasks: getTasksList,
     getTaskById,
     getExamState: () => ({
       active: Boolean(activeTask && activeStage >= 1 && !taskTestPassed && !isPreviewTestMode),

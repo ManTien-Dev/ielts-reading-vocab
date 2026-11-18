@@ -224,6 +224,127 @@ function doGet(e) {
   }
 }
 
+var MAX_SYNC_CELL_CHARS = 41000;
+var LOCK_WINDOW_MS = 30 * 60 * 1000;
+
+function trimMapOldest_(mapObj, slim, maxChars) {
+  if (!mapObj || typeof mapObj !== 'object') return;
+  var keys = Object.keys(mapObj).sort();
+  while (keys.length > 0 && JSON.stringify(slim).length > maxChars) {
+    delete mapObj[keys.shift()];
+  }
+}
+
+function compactSyncData_(sd, maxChars) {
+  if (!sd || typeof sd !== 'object') return '';
+  var limit = maxChars || MAX_SYNC_CELL_CHARS;
+  var fullJson = JSON.stringify(sd);
+  if (fullJson.length <= limit) return fullJson;
+
+  // Preserve all SYNC_META_KEYS first — NEVER drop resetEpoch, teacherUnlockedAt, taskLocks, taskProgress
+  var slim = {
+    resetEpoch: Number(sd.resetEpoch || 0),
+    teacherUnlockedAt: Number(sd.teacherUnlockedAt || 0),
+    taskLocks: (sd.taskLocks && typeof sd.taskLocks === 'object') ? sd.taskLocks : {},
+    taskProgress: (sd.taskProgress && typeof sd.taskProgress === 'object') ? sd.taskProgress : {},
+    timerByDay: (sd.timerByDay && typeof sd.timerByDay === 'object') ? sd.timerByDay : {},
+    wordsByDay: (sd.wordsByDay && typeof sd.wordsByDay === 'object') ? sd.wordsByDay : {},
+    streakDays: Array.isArray(sd.streakDays) ? sd.streakDays.slice() : [],
+    currentScopeKey: String(sd.currentScopeKey || 'paraphrase'),
+    scopePositions: (sd.scopePositions && typeof sd.scopePositions === 'object') ? sd.scopePositions : {},
+    assessments: {},
+    srsData: {}
+  };
+
+  var assessSrc = (sd.assessments && typeof sd.assessments === 'object') ? sd.assessments : {};
+  var srsSrc = (sd.srsData && typeof sd.srsData === 'object') ? sd.srsData : {};
+
+  // Step 1: Try keeping all assessments + binary-searched top-priority srsData
+  slim.assessments = assessSrc;
+  if (JSON.stringify(slim).length <= limit) {
+    var srsKeys = Object.keys(srsSrc).sort(function(a, b) {
+      var la = assessSrc[a] || 0;
+      var lb = assessSrc[b] || 0;
+      var pa = (la === 2) ? 2 : (la === 1 ? 1 : 0);
+      var pb = (lb === 2) ? 2 : (lb === 1 ? 1 : 0);
+      if (pb !== pa) return pb - pa;
+      var ta = (srsSrc[a] && srsSrc[a].lastAt) ? Number(srsSrc[a].lastAt) : 0;
+      var tb = (srsSrc[b] && srsSrc[b].lastAt) ? Number(srsSrc[b].lastAt) : 0;
+      return tb - ta;
+    });
+    var lo = 0, hi = srsKeys.length, best = 0;
+    while (lo <= hi) {
+      var mid = (lo + hi) >> 1;
+      var sub = {};
+      for (var i = 0; i < mid; i++) sub[srsKeys[i]] = srsSrc[srsKeys[i]];
+      slim.srsData = sub;
+      if (JSON.stringify(slim).length <= limit) {
+        best = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    var finalSrs = {};
+    for (var j = 0; j < best; j++) finalSrs[srsKeys[j]] = srsSrc[srsKeys[j]];
+    slim.srsData = finalSrs;
+    return JSON.stringify(slim);
+  }
+
+  // Step 2: Drop srsData and ensure metadata alone fits before fitting assessments
+  slim.srsData = {};
+  slim.assessments = {};
+  if (JSON.stringify(slim).length > limit) {
+    slim.scopePositions = {};
+  }
+  if (JSON.stringify(slim).length > limit) {
+    trimMapOldest_(slim.timerByDay, slim, limit);
+    trimMapOldest_(slim.wordsByDay, slim, limit);
+    while (slim.streakDays.length > 0 && JSON.stringify(slim).length > limit) {
+      slim.streakDays.shift();
+    }
+  }
+
+  // Step 3: Binary-search top-priority assessments entries (level 1/2 first, then most recent)
+  var assessKeys = Object.keys(assessSrc).sort(function(a, b) {
+    var la = assessSrc[a] || 0;
+    var lb = assessSrc[b] || 0;
+    var pa = (la === 1 || la === 2) ? 1 : 0;
+    var pb = (lb === 1 || lb === 2) ? 1 : 0;
+    if (pb !== pa) return pb - pa;
+    var ta = (srsSrc[a] && srsSrc[a].lastAt) ? Number(srsSrc[a].lastAt) : 0;
+    var tb = (srsSrc[b] && srsSrc[b].lastAt) ? Number(srsSrc[b].lastAt) : 0;
+    return tb - ta;
+  });
+  var alo = 0, ahi = assessKeys.length, abest = 0;
+  while (alo <= ahi) {
+    var amid = (alo + ahi) >> 1;
+    var asub = {};
+    for (var k = 0; k < amid; k++) asub[assessKeys[k]] = assessSrc[assessKeys[k]];
+    slim.assessments = asub;
+    if (JSON.stringify(slim).length <= limit) {
+      abest = amid;
+      alo = amid + 1;
+    } else {
+      ahi = amid - 1;
+    }
+  }
+  var finalAssess = {};
+  for (var m = 0; m < abest; m++) finalAssess[assessKeys[m]] = assessSrc[assessKeys[m]];
+  slim.assessments = finalAssess;
+  return JSON.stringify(slim);
+}
+
+function parseSyncJsonSafe_(rawCell) {
+  if (!rawCell) return {};
+  try {
+    var parsed = JSON.parse(String(rawCell));
+    return (parsed && typeof parsed === 'object') ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(15000);
@@ -252,18 +373,93 @@ function doPost(e) {
     }
 
     var nowStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd HH:mm:ss');
-    var syncJson = payload.syncData ? JSON.stringify(payload.syncData) : '';
-    if (syncJson.length > 48000) {
-      var slim = {
-        timerByDay: payload.syncData.timerByDay || {},
-        wordsByDay: payload.syncData.wordsByDay || {},
-        streakDays: payload.syncData.streakDays || [],
-        taskProgress: payload.syncData.taskProgress || {},
-        taskLocks: payload.syncData.taskLocks || {}
-      };
-      syncJson = JSON.stringify(slim);
+
+    if (payload.action === 'unlock_student') {
+      var existingRow = targetRow > 0 ? values[targetRow - 1] : null;
+      var existingSync = existingRow ? parseSyncJsonSafe_(existingRow[8]) : {};
+      var oldLocks = (existingSync.taskLocks && typeof existingSync.taskLocks === 'object') ? existingSync.taskLocks : {};
+      var maxLockOrigin = 0;
+      Object.keys(oldLocks).forEach(function(tid) {
+        var origin = Number(oldLocks[tid] || 0) - LOCK_WINDOW_MS;
+        if (origin > maxLockOrigin) maxLockOrigin = origin;
+      });
+      var effectiveUnlock = Math.max(
+        Number(payload.unlockedAtTs || 0),
+        Date.now(),
+        Number(existingSync.teacherUnlockedAt || 0),
+        maxLockOrigin > 0 ? (maxLockOrigin + 1) : 0
+      );
+      existingSync.taskLocks = {};
+      existingSync.teacherUnlockedAt = effectiveUnlock;
+      var unlockSyncJson = compactSyncData_(existingSync, MAX_SYNC_CELL_CHARS);
+
+      if (targetRow > 0) {
+        var preservedRow = [
+          id,
+          String(existingRow[1] || payload.name || id),
+          Number(existingRow[2] || 0),
+          Number(existingRow[3] || 0),
+          Number(existingRow[4] || 0),
+          Number(existingRow[5] || 0),
+          Number(existingRow[6] || 0),
+          nowStr,
+          unlockSyncJson
+        ];
+        sheet.getRange(targetRow, 1, 1, preservedRow.length).setValues([preservedRow]);
+      } else {
+        sheet.appendRow([
+          id,
+          String(payload.name || id),
+          0, 0, 0, 0, 0,
+          nowStr,
+          unlockSyncJson
+        ]);
+      }
+      return jsonOut_({
+        ok: true,
+        action: 'unlock_student',
+        id: id,
+        teacherUnlockedAt: effectiveUnlock,
+        updatedAt: nowStr
+      });
     }
 
+    // Default sync_user path
+    var incomingSync = (payload.syncData && typeof payload.syncData === 'object') ? payload.syncData : null;
+    if (targetRow > 0 && incomingSync) {
+      var curSync = parseSyncJsonSafe_(values[targetRow - 1][8]);
+      var existingEpoch = Number(curSync.resetEpoch || 0);
+      var incomingEpoch = Number(incomingSync.resetEpoch || 0);
+
+      // Guard 1: reject stale pre-reset tabs trying to downgrade resetEpoch
+      if (existingEpoch > 0 && incomingEpoch < existingEpoch) {
+        return jsonOut_({
+          ok: false,
+          error: 'stale_reset_epoch',
+          existingResetEpoch: existingEpoch
+        });
+      }
+
+      // Guard 2: preserve newer teacherUnlockedAt & strip superseded taskLocks unless epoch increased
+      if (incomingEpoch === existingEpoch) {
+        var existingUnlockAt = Number(curSync.teacherUnlockedAt || 0);
+        var incomingUnlockAt = Number(incomingSync.teacherUnlockedAt || 0);
+        var mergedUnlockAt = Math.max(existingUnlockAt, incomingUnlockAt);
+        incomingSync.teacherUnlockedAt = mergedUnlockAt;
+
+        var rawLocks = (incomingSync.taskLocks && typeof incomingSync.taskLocks === 'object') ? incomingSync.taskLocks : {};
+        var cleanLocks = {};
+        Object.keys(rawLocks).forEach(function(tid) {
+          var untilMs = Number(rawLocks[tid] || 0);
+          if (untilMs > 0 && (mergedUnlockAt <= 0 || (untilMs - LOCK_WINDOW_MS) > mergedUnlockAt)) {
+            cleanLocks[tid] = untilMs;
+          }
+        });
+        incomingSync.taskLocks = cleanLocks;
+      }
+    }
+
+    var syncJson = incomingSync ? compactSyncData_(incomingSync, MAX_SYNC_CELL_CHARS) : '';
     var rowData = [
       id,
       String(payload.name || id),
@@ -282,7 +478,13 @@ function doPost(e) {
       sheet.appendRow(rowData);
     }
 
-    return jsonOut_({ ok: true, id: id, updatedAt: nowStr });
+    return jsonOut_({
+      ok: true,
+      id: id,
+      updatedAt: nowStr,
+      teacherUnlockedAt: incomingSync ? Number(incomingSync.teacherUnlockedAt || 0) : 0,
+      taskLocks: (incomingSync && incomingSync.taskLocks) ? incomingSync.taskLocks : {}
+    });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   } finally {
