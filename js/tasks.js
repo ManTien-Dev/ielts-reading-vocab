@@ -403,13 +403,16 @@
       return merged;
     }
 
+    const hasRemote = Boolean(bridge.getSyncUrl?.() && cache?.[uid]?.syncData && typeof cache[uid].syncData === 'object');
     const remoteUnlock = Number(cache?.[uid]?.syncData?.teacherUnlockedAt || 0);
     let localUnlock = 0;
     try {
       localUnlock = Number(localStorage.getItem(`${bridge.TEACHER_UNLOCK_KEY_BASE}${uid}`) || 0);
     } catch (_) {}
-    const unlockAt = Math.max(remoteUnlock, localUnlock);
-    const merged = { ...(remote && typeof remote === 'object' ? remote : {}), ...local };
+    const unlockAt = hasRemote ? remoteUnlock : Math.max(remoteUnlock, localUnlock);
+    const merged = hasRemote
+      ? { ...(remote && typeof remote === 'object' ? remote : {}) }
+      : { ...(remote && typeof remote === 'object' ? remote : {}), ...local };
     Object.keys(merged).forEach((tid) => {
       const until = Number(merged[tid] || 0);
       if (until <= 0 || (unlockAt > 0 && (until - LOCK_PENALTY_MS) <= unlockAt)) {
@@ -490,9 +493,7 @@
     const statusEl = document.getElementById('teacher-sync-status');
     const syncTime = bridge.getLastCloudSyncTime?.();
     if (statusEl) {
-      statusEl.textContent = syncTime
-        ? `Cập nhật lúc ${syncTime} · Theo dõi tự động giờ học, từ đã thuộc & Task`
-        : 'Theo dõi giờ học, chuỗi ngày, từ đã thuộc & kết quả Task của cả lớp';
+      statusEl.textContent = syncTime ? `Cập nhật lúc ${syncTime}` : 'Theo dõi giờ học & Task của cả lớp';
     }
 
     const tbody = document.getElementById('teacher-dashboard-tbody');
