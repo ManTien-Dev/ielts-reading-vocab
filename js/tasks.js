@@ -1517,8 +1517,8 @@
       <div class="translation-workspace">
         <article class="practice-paper english-paper" lang="en">
           <div class="paper-eyebrow">
-            <span>${esc(p.topic || activeTask.theme)}</span>
-            <span>${p.wordCount} từ</span>
+            <span class="paper-title-upper">${esc(String(p.title || p.topic || activeTask.theme).toUpperCase())}</span>
+            <span class="paper-wc">${p.wordCount} từ</span>
           </div>
           <div id="task-passage-hl-legend" class="passage-hl-legend" style="display:none; margin-bottom:12px;"></div>
           <div class="english-passage" id="task-english-passage">${esc(p.text)}</div>

@@ -2819,16 +2819,27 @@ button.task-step-pill.active:hover {
 }
 .paper-eyebrow {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  font-size: 14.5px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
-  color: var(--accent);
+  gap: 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--card-border);
   margin-bottom: 16px;
+  flex-shrink: 0;
+}
+.paper-title-upper {
+  font-size: 16.5px;
+  font-weight: 850;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  color: var(--text-bright);
+  line-height: 1.35;
+}
+.paper-wc {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
   flex-shrink: 0;
 }
 .english-passage {
