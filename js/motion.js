@@ -40,11 +40,16 @@
   };
   window.IELTSMotion = motion;
 
-  // Vệt sáng chỉ xuất hiện tại điểm nhấn và tự được dọn sau animation.
+  // Vệt sáng chỉ xuất hiện tại điểm nhấn (tắt ở màn Test để tránh rối mắt).
   document.addEventListener('pointerdown', event => {
     if (!(event.target instanceof Element)) return;
     const button = event.target.closest('button:not(:disabled)');
     if (!button || !motion.enabled) return;
+    if (
+      button.closest('#screen-task') ||
+      button.classList.contains('task-match-btn') ||
+      button.classList.contains('task-q-opt')
+    ) return;
     const rect = button.getBoundingClientRect();
     const ripple = document.createElement('span');
     ripple.className = 'motion-ripple';

@@ -25,9 +25,9 @@
   .btn:not(:disabled):hover, .btn-assess:not(:disabled):hover, .btn-deck-tool:not(:disabled):hover { transform: scale(1.02); }
   .btn:not(:disabled):active, .btn-assess:not(:disabled):active, .btn-deck-tool:not(:disabled):active { transform: scale(.98); }
 }
-button { position: relative; }
-.motion-ripple { position: absolute; z-index: 3; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .2; transform: translate(-50%, -50%) scale(0); animation: motion-ripple .55s ease-out forwards; }
-@keyframes motion-ripple { to { opacity: 0; transform: translate(-50%, -50%) scale(20); } }
+button { position: relative; overflow: hidden; }
+.motion-ripple { position: absolute; z-index: 3; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .12; transform: translate(-50%, -50%) scale(0); animation: motion-ripple .38s ease-out forwards; }
+@keyframes motion-ripple { to { opacity: 0; transform: translate(-50%, -50%) scale(12); } }
 .timer-display-box.motion-urgent .timer-digits { color: #d94d42; }
 button:focus-visible,
 a:focus-visible,

@@ -2882,6 +2882,9 @@ button.task-step-pill.active:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(47, 107, 50, 0.08);
 }
+.task-match-btn:not(:disabled):active {
+  transform: scale(0.985);
+}
 .task-match-btn.is-active {
   border-color: #2f6b32;
   background: rgba(82, 136, 62, 0.14);
