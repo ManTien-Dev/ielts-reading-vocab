@@ -647,13 +647,13 @@
 
     const progress = loadTaskProgress()[t.id];
     const doneNote = progress?.status === 'completed'
-      ? `<div class="task-text-ok" style="margin-top:8px; font-weight:700;">✓ Bạn đã hoàn thành Task này (Điểm dịch AI: ${progress.translationScore}/10). Có thể làm lại để ôn tập.</div>`
+      ? `<div class="task-text-ok" style="margin-top:8px; font-weight:700;">✓ Bạn đã hoàn thành Task này (Test 3 dịch bài: ${progress.translationScore}/10). Có thể làm lại để ôn tập.</div>`
       : '';
 
     if (info) {
       info.innerHTML = `
         <div><strong>Nội dung:</strong> Học 50 từ vựng gốc (kèm Word Family) ngay trên giao diện Flashcard chính.</div>
-        <div style="margin-top:6px;"><strong>Quy trình &amp; Thời lượng (~${t.estMinutes} phút):</strong> Bấm <strong>Đã thuộc đủ 50/50 từ</strong> → Tự mở Cửa sổ Bài Test gồm <strong>Test 1 ghép từ → Test 2 ngữ cảnh → Test cuối dịch bài AI</strong>.</div>
+        <div style="margin-top:6px;"><strong>Quy trình &amp; Thời lượng (~${t.estMinutes} phút):</strong> Bấm <strong>Đã thuộc đủ 50/50 từ</strong> → Tự mở Cửa sổ Bài Test gồm <strong>Test 1 ghép từ → Test 2 kéo thả &amp; ngữ cảnh → Test 3 dịch bài</strong>.</div>
         <div style="margin-top:6px;"><strong>Yêu cầu kỷ luật:</strong> Tập trung hoàn thành bài; nếu ngưng thao tác quá <strong>10 phút</strong> (hoặc rời tab quá 2 lần khi đang làm Test), Task sẽ bị <strong>khóa 30 phút</strong> mới được làm lại.</div>
         ${doneNote}
       `;
@@ -3008,9 +3008,17 @@
           .map((t) => ({ task: t, rec: prog[t.id] }))
           .filter((x) => x.rec && x.rec.status === 'completed');
 
+    const computeTaskOverallScore = (taskObj, recObj) => {
+      const t1Ratio = Math.max(0, Math.min(1, Number(recObj?.test1AccuracyPct ?? 100) / 100));
+      const t2Tot = Math.max(1, getTaskTest2Total(taskObj, recObj));
+      const t2Ratio = Math.max(0, Math.min(1, Number(recObj?.test2Score ?? 0) / t2Tot));
+      const t3Ratio = Math.max(0, Math.min(1, Number(recObj?.translationScore || 0) / 10));
+      return Math.round((((t1Ratio + t2Ratio + t3Ratio) / 3) * 10) * 10) / 10;
+    };
+
     const totalDone = doneList.length;
-    const avgScore = totalDone
-      ? (doneList.reduce((s, x) => s + Number(x.rec.translationScore || 0), 0) / totalDone).toFixed(1)
+    const avgOverallScore = totalDone
+      ? (doneList.reduce((s, x) => s + computeTaskOverallScore(x.task, x.rec), 0) / totalDone).toFixed(1)
       : '--';
     const totalSecs = doneList.reduce((s, x) => s + Number(x.rec.durationSec || 0), 0);
     const totalLinkedWords = new Set(
@@ -3027,6 +3035,7 @@
     }
 
     const t2Total = (focusTask && focusRec) ? getTaskTest2Total(focusTask, focusRec) : 56;
+    const focusOverall = (focusTask && focusRec) ? computeTaskOverallScore(focusTask, focusRec) : 0;
     const focusHtml = (focusTask && focusRec?.status === 'completed') ? `
       <div class="task-summary-highlight">
         <div class="task-sum-hero-row">
@@ -3044,38 +3053,38 @@
             </div>
           </div>
           <div class="task-sum-score-card">
-            <div class="task-sum-score-label">Điểm Dịch AI</div>
-            <div class="task-sum-score-num">${Number(focusRec.translationScore || 0).toFixed(1)}</div>
-            <div class="task-sum-score-sub">/ 10 · Đạt yêu cầu</div>
+            <div class="task-sum-score-label">Điểm tổng</div>
+            <div class="task-sum-score-num">${focusOverall.toFixed(1)}</div>
+            <div class="task-sum-score-sub">/ 10 · Trung bình 3 Test</div>
           </div>
         </div>
       </div>
       <div class="task-sum-stage-grid">
         <div class="task-sum-stat is-mint">
-          <div class="task-sum-stat-label">Học từ gốc + WF</div>
-          <div class="task-sum-stat-val">50 / 50</div>
-          <div class="task-sum-stat-sub">+${focusRec.newlyMarked ?? 0} từ &amp; biến thể mới</div>
-        </div>
-        <div class="task-sum-stat is-teal">
           <div class="task-sum-stat-label">Test 1 · Ghép nghĩa</div>
           <div class="task-sum-stat-val">${focusRec.test1AccuracyPct ?? 100}%</div>
           <div class="task-sum-stat-sub">${focusRec.test1Mistakes ?? 0} lỗi trên 10 bảng</div>
         </div>
-        <div class="task-sum-stat is-gold">
-          <div class="task-sum-stat-label">Test 2 · Paraphrase &amp; Ngữ cảnh</div>
+        <div class="task-sum-stat is-teal">
+          <div class="task-sum-stat-label">Test 2 · Kéo thả &amp; Ngữ cảnh</div>
           <div class="task-sum-stat-val">${focusRec.test2Score ?? 0} / ${t2Total}</div>
           <div class="task-sum-stat-sub">50 kéo thả + 6 trắc nghiệm</div>
         </div>
+        <div class="task-sum-stat is-gold">
+          <div class="task-sum-stat-label">Test 3 · Dịch bài</div>
+          <div class="task-sum-stat-val">${Number(focusRec.translationScore || 0).toFixed(1)} / 10</div>
+          <div class="task-sum-stat-sub">Dịch đoạn &amp; tóm tắt ý chính</div>
+        </div>
         <div class="task-sum-stat is-coral">
-          <div class="task-sum-stat-label">Tổng tiến độ lộ trình</div>
-          <div class="task-sum-stat-val">${totalDone} / ${allTasks.length}</div>
-          <div class="task-sum-stat-sub">${totalLinkedWords} từ đã thuộc qua Task</div>
+          <div class="task-sum-stat-label">Từ vựng · Tiến độ</div>
+          <div class="task-sum-stat-val">50 / 50 từ</div>
+          <div class="task-sum-stat-sub">+${focusRec.newlyMarked ?? 0} mới · ${totalDone}/${allTasks.length} Task</div>
         </div>
       </div>
     ` : `
       <div class="task-sum-stage-grid">
         <div class="task-sum-stat is-mint"><div class="task-sum-stat-label">Task hoàn thành</div><div class="task-sum-stat-val">${totalDone} / ${allTasks.length}</div><div class="task-sum-stat-sub">Tiến độ toàn khóa</div></div>
-        <div class="task-sum-stat is-gold"><div class="task-sum-stat-label">Điểm Dịch AI TB</div><div class="task-sum-stat-val">${avgScore} / 10</div><div class="task-sum-stat-sub">Trung bình các Task đạt</div></div>
+        <div class="task-sum-stat is-gold"><div class="task-sum-stat-label">Điểm tổng TB</div><div class="task-sum-stat-val">${avgOverallScore} / 10</div><div class="task-sum-stat-sub">Trung bình 3 Test mỗi Task</div></div>
         <div class="task-sum-stat is-teal"><div class="task-sum-stat-label">Tổng thời gian Task</div><div class="task-sum-stat-val">${esc(formatDurationVi(totalSecs))}</div><div class="task-sum-stat-sub">Thời gian làm bài</div></div>
         <div class="task-sum-stat is-coral"><div class="task-sum-stat-label">Từ Đã thuộc qua Task</div><div class="task-sum-stat-val">${totalLinkedWords} từ</div><div class="task-sum-stat-sub">Đã đồng bộ bộ chính</div></div>
       </div>
@@ -3096,12 +3105,12 @@
       ${focusHtml}
       <div class="task-sum-history-head">
         <span>Chi tiết các Task đã hoàn thành</span>
-        <span>AI TB: ${avgScore}/10 · ${esc(formatDurationVi(totalSecs))}</span>
+        <span>Điểm tổng TB: ${avgOverallScore}/10 · ${esc(formatDurationVi(totalSecs))}</span>
       </div>
       <div class="class-report-table-wrap">
         <table class="class-report-table">
           <thead>
-            <tr><th>Task</th><th>Chủ đề</th><th>Test 1</th><th>Test 2</th><th>Dịch AI</th><th>Thời gian</th></tr>
+            <tr><th>Task</th><th>Chủ đề</th><th>Test 1</th><th>Test 2</th><th>Test 3 (Dịch bài)</th><th>Thời gian</th></tr>
           </thead>
           <tbody>
             ${rowsHtml || '<tr><td colspan="6" style="text-align:center;">Bạn chưa hoàn thành Task nào.</td></tr>'}
