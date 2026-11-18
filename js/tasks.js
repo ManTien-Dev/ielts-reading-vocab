@@ -1438,14 +1438,14 @@
             <span class="recall-stage-pill">Đúng ${t2Correct} / ${totalT2}</span>
           </div>
         </div>
-        <div style="font-size:19.5px; font-weight:750; color:var(--text-bright); line-height:1.5; margin-bottom:14px;">${esc(q.prompt)}</div>
-        ${q.qText ? `<div style="padding:16px 20px; border-radius:14px; background:var(--bg-soft); border:1px solid var(--card-border); margin-bottom:14px; font-size:18px; line-height:1.65;">${esc(q.qText)}</div>` : ''}
+        <div style="font-size:22px; font-weight:750; color:var(--text-bright); line-height:1.5; margin-bottom:16px;">${esc(q.prompt)}</div>
+        ${q.qText ? `<div style="padding:20px 24px; border-radius:16px; background:var(--bg-soft); border:1px solid var(--card-border); margin-bottom:16px; font-size:20px; line-height:1.68;">${esc(q.qText)}</div>` : ''}
         <div class="task-q-opts" id="task-t2-opts">
           ${q.options.map((opt, idx) => `<button type="button" class="task-q-opt" data-opt-idx="${idx}" onclick="TasksModule.answerTest2(${idx})">${esc(opt)}</button>`).join('')}
         </div>
-        <div id="task-t2-explain" style="display:none; margin-top:16px;" class="task-notice-box"></div>
-        <div style="display:flex; justify-content:flex-end; margin-top:16px;">
-          <button type="button" class="btn btn-primary" id="btn-t2-next" style="display:none; font-size:16px; padding:11px 24px;" onclick="TasksModule.nextTest2Question()">
+        <div id="task-t2-explain" style="display:none; margin-top:18px; font-size:18px;" class="task-notice-box"></div>
+        <div style="display:flex; justify-content:flex-end; margin-top:auto; padding-top:18px;">
+          <button type="button" class="btn btn-primary" id="btn-t2-next" style="display:none; font-size:17.5px; padding:13px 28px;" onclick="TasksModule.nextTest2Question()">
             ${t2Index < qs.length - 1 ? 'Câu tiếp →' : 'Xem kết quả Test 2'}
           </button>
         </div>
