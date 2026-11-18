@@ -3067,7 +3067,7 @@
           <div class="task-sum-stat-sub">${focusRec.test1Mistakes ?? 0} lỗi trên 10 bảng</div>
         </div>
         <div class="task-sum-stat is-teal">
-          <div class="task-sum-stat-label">Test 2 · Kéo thả &amp; Ngữ cảnh</div>
+          <div class="task-sum-stat-label">Test 2 · Paraphrase</div>
           <div class="task-sum-stat-val">${focusRec.test2Score ?? 0} / ${t2Total}</div>
           <div class="task-sum-stat-sub">50 kéo thả + 6 trắc nghiệm</div>
         </div>
@@ -3091,36 +3091,11 @@
       </div>
     `;
 
-    const rowsHtml = doneList.map(({ task, rec }) => `
-      <tr>
-        <td><strong>${esc(task.label)}</strong></td>
-        <td>${esc(task.theme)}</td>
-        <td>${rec.test1AccuracyPct ?? 100}% (${rec.test1Mistakes ?? 0} lỗi)</td>
-        <td>${rec.test2Score ?? 0} / ${getTaskTest2Total(task, rec)}</td>
-        <td><strong>${Number(rec.translationScore || 0).toFixed(1)} / 10</strong></td>
-        <td>${formatDurationVi(rec.durationSec)}</td>
-      </tr>
-    `).join('');
-
     bodyEl.innerHTML = `
       ${focusHtml}
-      <div class="task-sum-history-head">
-        <span>Chi tiết các Task đã hoàn thành</span>
-        <span>Điểm tổng TB: ${avgOverallScore}/10 · ${esc(formatDurationVi(totalSecs))}</span>
-      </div>
-      <div class="class-report-table-wrap">
-        <table class="class-report-table">
-          <thead>
-            <tr><th>Task</th><th>Chủ đề</th><th>Test 1</th><th>Test 2</th><th>Test 3 (Dịch bài)</th><th>Thời gian</th></tr>
-          </thead>
-          <tbody>
-            ${rowsHtml || '<tr><td colspan="6" style="text-align:center;">Bạn chưa hoàn thành Task nào.</td></tr>'}
-          </tbody>
-        </table>
-      </div>
-      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap;">
-        <button type="button" class="btn-subtle" onclick="TasksModule.closeTaskSummaryModal()">← Xem lại bài làm</button>
-        <button type="button" class="btn btn-primary" onclick="TasksModule.closeTaskSummaryModal(); TasksModule.exitTaskWorkspace(false);">Về màn hình từ vựng chính →</button>
+      <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap;">
+        <button type="button" class="btn-subtle" style="font-size:15.5px; padding:11px 20px;" onclick="TasksModule.closeTaskSummaryModal()">← Xem lại bài làm</button>
+        <button type="button" class="btn btn-primary" style="font-size:15.5px; padding:11px 22px;" onclick="TasksModule.closeTaskSummaryModal(); TasksModule.exitTaskWorkspace(false);">Về màn hình từ vựng chính →</button>
       </div>
     `;
     document.getElementById('modal-task-summary')?.classList.add('open');

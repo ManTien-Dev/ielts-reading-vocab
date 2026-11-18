@@ -3447,11 +3447,11 @@ button.task-step-pill.active:hover {
   margin-top: 3px;
 }
 .task-summary-highlight {
-  padding: 18px 20px;
+  padding: 24px 26px;
   border-radius: 18px;
   border: 1.5px solid #c6dec1;
   background: linear-gradient(135deg, #eef7eb 0%, #fbf7eb 54%, #edf6f3 100%);
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   box-shadow: 0 6px 20px rgba(47, 107, 50, 0.06);
 }
 [data-theme="dark"] .task-summary-highlight {
@@ -3461,12 +3461,12 @@ button.task-step-pill.active:hover {
 .task-sum-hero-row {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 .task-sum-panda-ring {
-  width: 84px;
-  height: 84px;
+  width: 96px;
+  height: 96px;
   padding: 4px;
   border-radius: 22px;
   background: #ffffff;
@@ -3486,7 +3486,7 @@ button.task-step-pill.active:hover {
   box-shadow: none;
 }
 .task-sum-hero-main {
-  flex: 1 1 240px;
+  flex: 1 1 260px;
   min-width: 0;
 }
 .task-sum-badges {
@@ -3494,54 +3494,54 @@ button.task-step-pill.active:hover {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .task-sum-done-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 11px;
+  padding: 5px 13px;
   border-radius: 999px;
   background: #2f6b32;
   color: #ffffff;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.35px;
 }
 .task-sum-preview-pill {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 999px;
   background: rgba(13, 148, 136, 0.14);
   border: 1px solid rgba(13, 148, 136, 0.32);
   color: #0f766e;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 800;
 }
 [data-theme="dark"] .task-sum-preview-pill {
   color: #99f6e4;
 }
 .task-sum-hero-title {
-  font-size: 19px;
+  font-size: 24px;
   font-weight: 850;
   color: var(--text-bright);
-  line-height: 1.3;
+  line-height: 1.28;
 }
 .task-sum-hero-note {
-  font-size: 13.5px;
+  font-size: 15.5px;
   color: var(--text-muted);
-  margin-top: 4px;
-  line-height: 1.45;
+  margin-top: 6px;
+  line-height: 1.5;
 }
 .task-sum-score-card {
-  padding: 12px 18px;
-  border-radius: 16px;
+  padding: 16px 24px;
+  border-radius: 18px;
   background: #ffffff;
   border: 1.5px solid #e6d7ad;
   box-shadow: 0 4px 14px rgba(180, 130, 35, 0.10);
   text-align: center;
-  min-width: 116px;
+  min-width: 150px;
   flex-shrink: 0;
 }
 [data-theme="dark"] .task-sum-score-card {
@@ -3549,39 +3549,40 @@ button.task-step-pill.active:hover {
   border-color: #5b4d27;
 }
 .task-sum-score-label {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.45px;
   color: var(--text-muted);
 }
 .task-sum-score-num {
-  font-size: 28px;
+  font-size: 38px;
   font-weight: 900;
   color: #2f6b32;
-  line-height: 1.1;
-  margin-top: 2px;
+  line-height: 1.08;
+  margin-top: 4px;
 }
 [data-theme="dark"] .task-sum-score-num {
   color: #9be2ae;
 }
 .task-sum-score-sub {
-  font-size: 12px;
+  font-size: 13.5px;
   color: var(--text-muted);
   font-weight: 700;
+  margin-top: 2px;
 }
 .task-sum-stage-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 10px;
 }
 @media (max-width: 780px) {
   .task-sum-stage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .task-sum-stat {
-  padding: 14px 16px;
-  border-radius: 14px;
+  padding: 18px 20px;
+  border-radius: 16px;
   border: 1.5px solid var(--card-border);
   background: var(--card-bg);
 }
@@ -3594,23 +3595,29 @@ button.task-step-pill.active:hover {
 [data-theme="dark"] .task-sum-stat.is-gold { background: rgba(180, 130, 35, 0.16); border-color: #574824; }
 [data-theme="dark"] .task-sum-stat.is-coral { background: rgba(185, 75, 45, 0.16); border-color: #5c3726; }
 .task-sum-stat-label {
-  font-size: 12px;
+  font-size: 14.5px;
   font-weight: 800;
   color: var(--text-muted);
   line-height: 1.3;
 }
 .task-sum-stat-val {
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 900;
   color: var(--text-bright);
-  margin-top: 6px;
+  margin-top: 8px;
   line-height: 1.15;
 }
 .task-sum-stat-sub {
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--text-muted);
   font-weight: 650;
-  margin-top: 4px;
+  margin-top: 6px;
+}
+#modal-task-summary .modal-title {
+  font-size: 21px;
+}
+#task-summary-subtitle {
+  font-size: 14px !important;
 }
 .task-sum-history-head {
   display: flex;
