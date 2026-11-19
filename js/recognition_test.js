@@ -179,13 +179,13 @@
     const cert = certs[scopeKey];
     const cp = cps[scopeKey];
     if (cp && Array.isArray(cp.orderIds) && cp.cursor > 0 && cp.cursor < cp.orderIds.length) {
-      btn.innerHTML = `<span>Tiếp Test tổng (${cp.cursor}/${cp.orderIds.length})</span>`;
+      btn.innerHTML = `<span>Speed Quiz (${cp.cursor}/${cp.orderIds.length})</span>`;
       btn.classList.add('active');
     } else if (cert?.passed) {
-      btn.innerHTML = `<span>✓ Đạt Test tổng (${cert.pct}%)</span>`;
+      btn.innerHTML = `<span>✓ Đạt (${cert.pct}%)</span>`;
       btn.classList.remove('active');
     } else {
-      btn.innerHTML = `<span>Test tổng kết</span>`;
+      btn.innerHTML = `<span>Speed Quiz</span>`;
       btn.classList.remove('active');
     }
   }

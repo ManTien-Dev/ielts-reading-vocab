@@ -10,9 +10,9 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261119s">
-  <link rel="stylesheet" href="css/motion.css?v=20261119s">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261119s">
+  <link rel="stylesheet" href="css/style.css?v=20261119t">
+  <link rel="stylesheet" href="css/motion.css?v=20261119t">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261119t">
 </head>
 <body>
 
@@ -147,11 +147,14 @@
           <button class="btn-deck-tool" id="btn-top-signalwords" onclick="openSignalWordsModal()" title="Xem bảng phân loại từ nối chỉ hướng nghĩa" style="display:none;">
             <span>Bảng từ nối</span>
           </button>
-          <button class="btn-deck-tool" id="btn-top-list-final-test" onclick="RecognitionTestModule.startListFinalExam()" title="Làm bài Test tổng kết 100% từ vựng trong bộ đang chọn">
-            <span>Test tổng kết</span>
+          <button class="btn-deck-tool btn-deck-tool-accent" id="btn-top-list-final-test" onclick="RecognitionTestModule.startListFinalExam()" title="Speed Quiz toàn bộ danh sách (5 giây/từ, tự động lưu mốc 50 từ)">
+            <span>Speed Quiz</span>
           </button>
           <button class="btn-deck-tool" id="btn-top-shuffle" onclick="shuffleCurrentScope()" title="Trộn ngẫu nhiên thứ tự">
             <span>Trộn</span>
+          </button>
+          <button class="btn-deck-tool btn-focus-toggle" id="btn-top-focus-mode" onclick="toggleFocusMode()" title="Thu gọn 2 cột bên để tập trung học Flashcard">
+            <span>Tập trung</span>
           </button>
           <div class="study-progress-wrap">
             <span class="study-progress" id="study-progress-text">1 / 1500</span>
@@ -723,7 +726,7 @@
           </table>
         </div>
         <div style="font-size:12.5px; color:var(--text-muted); margin-top:10px; line-height:1.5;">
-          Cách tính điểm: <strong>+10đ/từ gốc</strong> (đã khử trùng) · <strong>+100–200đ/Task</strong> · <strong>+300đ/Test tổng</strong> · <strong>+15đ/ngày streak</strong> · <strong>+1đ/phút học</strong> (có trần theo hiệu suất chống treo tab).
+          Cách tính điểm: <strong>+10đ/từ gốc</strong> (đã khử trùng) · <strong>+100–200đ/Task</strong> · <strong>+300đ/Speed Quiz</strong> · <strong>+15đ/ngày streak</strong> · <strong>+1đ/phút học</strong> (có trần theo hiệu suất chống treo tab).
         </div>
         <div id="class-report-actions" style="display:none; gap:10px; flex-wrap:wrap; margin-top:14px; justify-content:flex-end;">
           <button type="button" class="btn btn-primary" id="btn-copy-full-report" onclick="copyFullClassReport()">Sao chép bảng cả lớp</button>
@@ -813,7 +816,8 @@
         </div>
       </div>
       <div class="modal-body" style="padding:14px 22px 20px;">
-        <div class="task-suite-tabs" id="student-task-suite-tabs" style="margin-bottom:12px;"></div>
+        <div class="task-suite-tabs" id="student-task-suite-tabs" style="margin-bottom:10px;"></div>
+        <div class="task-suite-progress" id="student-task-suite-progress" style="display:none;"></div>
         <div class="teacher-task-grid" id="student-task-grid"></div>
       </div>
     </div>
@@ -987,21 +991,21 @@
     </div>
   </div>
 
-  <script src="data/accounts.js?v=20261119s"></script>
-  <script src="data/vocab_data.js?v=20261119s"></script>
-  <script src="data/tasks_data.js?v=20261119s"></script>
-  <script src="data/ipa_dict.js?v=20261119s"></script>
-  <script src="js/motion.js?v=20261119s"></script>
-  <script src="js/core/EventBus.js?v=20261119s"></script>
-  <script src="js/core/LazyDataLoader.js?v=20261119s"></script>
-  <script src="js/core/AudioEngine.js?v=20261119s"></script>
-  <script src="js/core/AntiCheatGuard.js?v=20261119s"></script>
-  <script src="js/core/BaseSkillMode.js?v=20261119s"></script>
-  <script src="js/skills/reading/ReadingMode.js?v=20261119s"></script>
-  <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119s"></script>
-  <script src="js/core/AppCore.js?v=20261119s"></script>
-  <script src="js/recognition_test.js?v=20261119s"></script>
-  <script src="js/app.js?v=20261119s"></script>
-  <script src="js/tasks.js?v=20261119s"></script>
+  <script src="data/accounts.js?v=20261119t"></script>
+  <script src="data/vocab_data.js?v=20261119t"></script>
+  <script src="data/tasks_data.js?v=20261119t"></script>
+  <script src="data/ipa_dict.js?v=20261119t"></script>
+  <script src="js/motion.js?v=20261119t"></script>
+  <script src="js/core/EventBus.js?v=20261119t"></script>
+  <script src="js/core/LazyDataLoader.js?v=20261119t"></script>
+  <script src="js/core/AudioEngine.js?v=20261119t"></script>
+  <script src="js/core/AntiCheatGuard.js?v=20261119t"></script>
+  <script src="js/core/BaseSkillMode.js?v=20261119t"></script>
+  <script src="js/skills/reading/ReadingMode.js?v=20261119t"></script>
+  <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119t"></script>
+  <script src="js/core/AppCore.js?v=20261119t"></script>
+  <script src="js/recognition_test.js?v=20261119t"></script>
+  <script src="js/app.js?v=20261119t"></script>
+  <script src="js/tasks.js?v=20261119t"></script>
 </body>
 </html>

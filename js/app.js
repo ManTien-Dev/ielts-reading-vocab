@@ -2424,7 +2424,12 @@
     const backDisplaySent = sentence || item.qa_example?.question || '';
     const backHighlightTerm = sentence ? item.lemma : (item.qa_example?.q_term || item.lemma);
     if (backDisplaySent) {
-      backSent.innerHTML = formatSentenceHighlight(backDisplaySent, backHighlightTerm);
+      const citTitle = (Array.isArray(item.exam_citations) && item.exam_citations[0]?.title)
+        ? String(item.exam_citations[0].title).trim()
+        : (item.qa_example?.exam_title || '');
+      const cleanSource = citTitle && citTitle !== '617 đề IELTS Academic Reading' ? citTitle : 'Đề thi thật IELTS Academic';
+      const srcHtml = `<div class="fc-sentence-src">${escapeHtml(cleanSource)}</div>`;
+      backSent.innerHTML = srcHtml + formatSentenceHighlight(backDisplaySent, backHighlightTerm);
       backSent.style.display = 'block';
     } else {
       backSent.style.display = 'none';
@@ -4156,6 +4161,17 @@
   }
 
   // Settings Menu Modal
+  function toggleFocusMode() {
+    const isOn = document.body.classList.toggle('study-focus-mode');
+    const btn = document.getElementById('btn-top-focus-mode');
+    if (btn) {
+      btn.classList.toggle('is-active', isOn);
+      btn.innerHTML = isOn ? '<span>Hiện cột bên</span>' : '<span>Tập trung</span>';
+    }
+    try { localStorage.setItem('ielts_focus_mode_v1', isOn ? '1' : '0'); } catch (_) {}
+  }
+  window.toggleFocusMode = toggleFocusMode;
+
   function openMenuModal() {
     updateAutoSpeakUI();
     syncThemeUIControls();

@@ -5725,3 +5725,406 @@ header.app-header {
   background: rgba(148, 163, 184, 0.22);
   color: var(--text-muted);
 }
+
+/* =========================================================
+   UI POLISH PASS (LOCAL PREVIEW):
+   1. Bottom-anchored Toast (never blocks top header/toolbar)
+   2. Mobile 390px Action Bar zero-clip layout
+   3. Desktop Focus Mode + Calm Side Decks + Accent CTA
+   4. Balanced Flashcard Back Pairs & Real-Exam Source Tag
+   5. Modern Numbered Task Cards & Suite Progress Strip
+   ========================================================= */
+
+/* 1. Sleek bottom-anchored Toast */
+.toast-notice {
+  top: auto !important;
+  bottom: 22px !important;
+  transform: translateX(-50%) translateY(14px);
+  padding: 12px 24px !important;
+  border-radius: 14px !important;
+  font-size: 15px !important;
+  font-weight: 750 !important;
+  line-height: 1.45 !important;
+  max-width: min(92vw, 680px) !important;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.24), 0 0 0 1.5px rgba(82, 136, 62, 0.45) !important;
+}
+.toast-notice.show {
+  transform: translateX(-50%) translateY(0);
+}
+@media (max-width: 640px) {
+  .toast-notice {
+    top: auto !important;
+    bottom: 10px !important;
+    font-size: 13px !important;
+    padding: 8px 14px !important;
+    border-radius: 12px !important;
+  }
+}
+
+/* 2. Mobile 390px Action Bar — zero horizontal clipping */
+@media (max-width: 640px) {
+  #screen-study .study-top-actions {
+    flex-wrap: wrap !important;
+    overflow-x: visible !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+  }
+  #screen-study .btn-deck-tool,
+  #screen-study .study-progress {
+    padding: 5px 9px !important;
+    font-size: 12px !important;
+    min-height: 31px !important;
+  }
+}
+
+/* 3. Desktop Visual Hierarchy + Focus Mode */
+.btn-deck-tool-accent {
+  background: rgba(47, 107, 50, 0.1) !important;
+  border-color: rgba(47, 107, 50, 0.36) !important;
+  color: #1f5a26 !important;
+  font-weight: 750 !important;
+}
+.btn-deck-tool-accent:hover {
+  background: rgba(47, 107, 50, 0.18) !important;
+  border-color: #2f6b32 !important;
+}
+[data-theme="dark"] .btn-deck-tool-accent {
+  background: rgba(130, 184, 146, 0.16) !important;
+  border-color: rgba(130, 184, 146, 0.45) !important;
+  color: #d7f2df !important;
+}
+
+.btn-focus-toggle {
+  display: inline-flex;
+}
+@media (max-width: 1199px) {
+  .btn-focus-toggle {
+    display: none !important;
+  }
+}
+@media (min-width: 1200px) {
+  #screen-study .study-deck .deck-widget {
+    opacity: 0.92;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+    transition: opacity 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  #screen-study .study-deck .deck-widget:hover {
+    opacity: 1;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08) !important;
+  }
+  body.study-focus-mode main.app-main,
+  body.study-focus-mode main.app-main:has(#screen-study.active) {
+    max-width: 1280px !important;
+  }
+  body.study-focus-mode #screen-study .study-deck {
+    display: none !important;
+  }
+  body.study-focus-mode #screen-study .study-stage-row {
+    justify-content: center !important;
+    grid-template-columns: minmax(0, min(1200px, 92vw)) !important;
+  }
+  body.study-focus-mode #screen-study .study-center-col {
+    max-width: min(1200px, 92vw) !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+  }
+  body.study-focus-mode #screen-study .fc-scene {
+    max-width: min(1200px, 92vw) !important;
+    width: 100% !important;
+    height: clamp(480px, calc(100svh - 196px), 665px) !important;
+    min-height: 480px !important;
+    border-radius: 28px !important;
+    box-shadow: 0 24px 60px rgba(24, 48, 28, 0.12), 0 4px 16px rgba(24, 48, 28, 0.06) !important;
+  }
+  body.study-focus-mode:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
+    height: clamp(430px, calc(100svh - 252px), 605px) !important;
+    min-height: 430px !important;
+  }
+  body.study-focus-mode #screen-study .fc-card,
+  body.study-focus-mode #screen-study .fc-face {
+    border-radius: 28px !important;
+  }
+  body.study-focus-mode #screen-study .fc-face {
+    padding: clamp(16px, 2.8svh, 30px) clamp(28px, 4vw, 54px) clamp(14px, 2.2svh, 24px) !important;
+  }
+  body.study-focus-mode #screen-study .fc-face-front .fc-word {
+    font-size: clamp(4.2rem, 6.2vw, 5.75rem) !important;
+    letter-spacing: -0.025em;
+  }
+  body.study-focus-mode #screen-study .fc-face-front .fc-ipa-badge {
+    font-size: 1.5rem !important;
+    padding: 8px 20px !important;
+    border-radius: 12px !important;
+  }
+  body.study-focus-mode #screen-study .fc-face-front .btn-voice-speak {
+    font-size: 16px !important;
+    padding: 8px 20px !important;
+    min-height: 42px !important;
+    border-radius: 11px !important;
+  }
+  body.study-focus-mode #screen-study .fc-face-front .fc-pos {
+    font-size: 14.5px !important;
+    padding: 6px 16px !important;
+  }
+  body.study-focus-mode #screen-study #fc-front-sentence {
+    max-width: 100% !important;
+    width: 100% !important;
+    font-size: clamp(19px, 2.5svh, 24px) !important;
+    line-height: 1.5 !important;
+    padding: clamp(11px, 1.7svh, 16px) 22px !important;
+  }
+  body.study-focus-mode #screen-study .fc-flip-prompt {
+    font-size: 15.5px !important;
+  }
+  body.study-focus-mode #screen-study .fc-back-scrollable {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-bottom: clamp(4px, 1svh, 10px) !important;
+    padding-right: 0 !important;
+    scrollbar-width: thin;
+  }
+  body.study-focus-mode #screen-study .fc-back-header-bar {
+    width: 100% !important;
+    gap: clamp(3px, 0.7svh, 8px) !important;
+    padding-bottom: clamp(5px, 1svh, 11px) !important;
+  }
+  body.study-focus-mode #screen-study #fc-back-word {
+    font-size: clamp(1.85rem, 3.3svh, 2.95rem) !important;
+  }
+  body.study-focus-mode #screen-study .fc-back-header-bar .fc-ipa-badge {
+    font-size: clamp(1rem, 1.7svh, 1.25rem) !important;
+    padding: 4px 13px !important;
+  }
+  body.study-focus-mode #screen-study .fc-back-header-bar .btn-voice-speak {
+    font-size: 14px !important;
+    padding: 5px 13px !important;
+    min-height: 34px !important;
+  }
+  body.study-focus-mode #screen-study .btn-reading-tip {
+    font-size: 13px !important;
+    padding: 5px 13px !important;
+  }
+  body.study-focus-mode #screen-study .fc-back-body-stack {
+    gap: clamp(8px, 1.6svh, 16px) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    align-items: stretch !important;
+  }
+  body.study-focus-mode #screen-study .fc-back-meaning {
+    font-size: clamp(1.75rem, 3.2svh, 2.85rem) !important;
+    line-height: 1.16 !important;
+    padding: 0 !important;
+  }
+  body.study-focus-mode #screen-study .fc-pairs-grid {
+    gap: clamp(12px, 1.8vw, 20px) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  body.study-focus-mode #screen-study .fc-pair-card {
+    padding: clamp(9px, 1.5svh, 16px) clamp(14px, 1.8vw, 22px) !important;
+    border-radius: 15px !important;
+  }
+  body.study-focus-mode #screen-study .fc-pair-label {
+    font-size: clamp(12.5px, 1.6svh, 14px) !important;
+    margin-bottom: clamp(5px, 0.9svh, 9px) !important;
+  }
+  body.study-focus-mode #screen-study .fc-pair-card .fc-chip {
+    font-size: clamp(16px, 2.2svh, 20.5px) !important;
+    padding: clamp(4px, 0.7svh, 7px) clamp(11px, 1.2vw, 15px) !important;
+    border-radius: 10px !important;
+  }
+  body.study-focus-mode #screen-study #fc-back-sentence {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: clamp(10px, 1.6svh, 16px) clamp(14px, 1.8vw, 22px) !important;
+    font-size: clamp(17.5px, 2.45svh, 22.5px) !important;
+    line-height: 1.48 !important;
+  }
+  body.study-focus-mode #screen-study .fc-sentence-src {
+    font-size: clamp(11.5px, 1.4svh, 13px) !important;
+    margin-bottom: 4px !important;
+  }
+  body.study-focus-mode #screen-study .assessment-row {
+    gap: 14px !important;
+    padding-top: clamp(8px, 1.4svh, 14px) !important;
+  }
+  body.study-focus-mode #screen-study .btn-assess {
+    padding: clamp(9px, 1.4svh, 14px) 18px !important;
+    font-size: clamp(15px, 1.9svh, 17px) !important;
+    border-radius: 13px !important;
+  }
+  body.study-focus-mode #screen-study .study-controls .btn {
+    padding: clamp(9px, 1.3svh, 12px) 26px !important;
+    font-size: 16px !important;
+    border-radius: 14px !important;
+  }
+  body.study-focus-mode #screen-study .study-controls .btn-flip-action {
+    min-width: 185px !important;
+  }
+}
+
+/* 4. Flashcard Back Face Balance + Real-Exam Source Tag */
+.fc-pairs-grid {
+  align-items: start !important;
+}
+.fc-sentence-src {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #2f6b32;
+  margin-bottom: 4px;
+  opacity: 0.85;
+}
+[data-theme="dark"] .fc-sentence-src {
+  color: #9dd1ab;
+}
+
+/* 5. Modern Numbered Task Cards & Suite Progress Strip */
+.task-suite-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: var(--bg-soft);
+  border: 1px solid var(--card-border);
+}
+.task-suite-prog-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.task-suite-prog-top strong {
+  color: var(--text-bright);
+  font-weight: 800;
+}
+.task-suite-prog-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+  overflow: hidden;
+}
+.task-suite-prog-fill {
+  height: 100%;
+  background: #2f6b32;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+.task-card-modern {
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  padding: 11px 13px !important;
+}
+.task-num-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 850;
+  flex-shrink: 0;
+  background: rgba(47, 107, 50, 0.09);
+  color: #265022;
+  border: 1px solid rgba(47, 107, 50, 0.2);
+}
+.task-num-badge.is-done {
+  background: #2f6b32;
+  color: #ffffff;
+  border-color: #2f6b32;
+}
+.task-num-badge.is-locked {
+  background: rgba(220, 38, 38, 0.1);
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.25);
+}
+[data-theme="dark"] .task-num-badge {
+  background: rgba(130, 184, 146, 0.15);
+  color: #cdebd6;
+  border-color: rgba(130, 184, 146, 0.3);
+}
+.task-card-body {
+  min-width: 0;
+  flex: 1;
+}
+.task-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: rgba(148, 163, 184, 0.45);
+}
+.task-status-dot.is-done { background: #2f6b32; }
+.task-status-dot.is-locked { background: #dc2626; }
+
+/* 6. Scrollbar Optimization: zero unnecessary scrollbars & zero double-scroll in Tasks modal */
+#modal-student-tasks .modal-card {
+  max-width: min(980px, 94vw) !important;
+  max-height: 90svh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+#modal-student-tasks .modal-body {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+#modal-student-tasks #student-task-grid {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 4px 0 0 !important;
+  padding: 2px 4px 4px 2px !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+}
+@media (min-width: 960px) {
+  #modal-student-tasks #student-task-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 640px) {
+  #modal-student-tasks #student-task-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+#modal-student-tasks .task-card-modern {
+  padding: 9px 11px !important;
+  gap: 9px !important;
+}
+#modal-student-tasks .task-num-badge {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+  border-radius: 9px;
+}
+#screen-study .fc-back-scrollable {
+  scrollbar-width: thin;
+}
+#screen-study .fc-back-scrollable::-webkit-scrollbar,
+#modal-student-tasks #student-task-grid::-webkit-scrollbar {
+  width: 5px;
+}
+#screen-study .fc-back-scrollable::-webkit-scrollbar-thumb,
+#modal-student-tasks #student-task-grid::-webkit-scrollbar-thumb {
+  background: rgba(82, 136, 62, 0.28);
+  border-radius: 999px;
+}
+#screen-study .fc-back-scrollable::-webkit-scrollbar-track,
+#modal-student-tasks #student-task-grid::-webkit-scrollbar-track {
+  background: transparent;
+}

@@ -5,7 +5,7 @@
    ========================================================= */
 (function () {
   const bus = new window.CoreEventBus();
-  const loader = new window.CoreLazyDataLoader('20261119s');
+  const loader = new window.CoreLazyDataLoader('20261119t');
   const audio = new window.CoreAudioEngine();
   const antiCheat = new window.CoreAntiCheatGuard({
     isBypassed: () => Boolean(window.__VOCAB_BRIDGE__?.isExamAntiCheatBypassed?.()),

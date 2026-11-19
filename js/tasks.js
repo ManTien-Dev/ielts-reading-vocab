@@ -954,6 +954,7 @@
   function renderStudentTasksModalBody() {
     const grid = document.getElementById('student-task-grid');
     const tabsEl = document.getElementById('student-task-suite-tabs');
+    const progEl = document.getElementById('student-task-suite-progress');
     if (!grid) return;
     const progress = loadTaskProgress();
     const esc = B()?.escapeHtml || ((x) => String(x));
@@ -973,7 +974,23 @@
       ? assignedUrlTaskIds.map(getTaskById).filter(Boolean)
       : getTasksByScope(activeStudentTaskTab);
 
-    grid.innerHTML = listToShow.map((t) => {
+    if (progEl) {
+      const doneCnt = listToShow.filter((t) => progress[t.id]?.status === 'completed').length;
+      const totCnt = listToShow.length || 1;
+      const pct = Math.round((doneCnt / totCnt) * 100);
+      const suiteMeta = TASK_SUITES_META.find((m) => m.key === activeStudentTaskTab);
+      const titleTxt = hasAssigned ? 'Tiến độ bài được giao' : `Tiến độ ${suiteMeta ? suiteMeta.label : ''}`;
+      progEl.style.display = 'flex';
+      progEl.innerHTML = `
+        <div class="task-suite-prog-top">
+          <span>${esc(titleTxt)}</span>
+          <strong>${doneCnt} / ${totCnt} hoàn thành (${pct}%)</strong>
+        </div>
+        <div class="task-suite-prog-track"><div class="task-suite-prog-fill" style="width:${pct}%"></div></div>
+      `;
+    }
+
+    grid.innerHTML = listToShow.map((t, idx) => {
       const exp = getTaskExpiryState(t.id);
       const done = exp.completed;
       const lockRem = getTaskLockRemainingMs(t.id);
@@ -981,35 +998,43 @@
       const scoreBadge = isRecog
         ? `${progress[t.id]?.recognitionScore ?? '--'}%`
         : `${progress[t.id]?.translationScore ?? '--'}/10`;
+      const numStr = String(t.num || (idx + 1)).padStart(2, '0');
       let statusText = `${t.theme} · ~${t.estMinutes}p`;
       let clsState = '';
       let subCls = '';
+      let dotCls = 'is-idle';
 
       if (exp.expired && !done) {
         statusText = `Task đã kết thúc (Hết hạn lúc ${exp.formattedAt})`;
         clsState = 'is-locked';
         subCls = 'task-text-err';
+        dotCls = 'is-locked';
       } else if (exp.expired && done) {
         statusText = `✓ Hoàn thành (${scoreBadge}) · Hết hạn (Chỉ xem kết quả)`;
         clsState = 'is-done';
         subCls = 'task-text-ok';
+        dotCls = 'is-done';
       } else if (done) {
         statusText = `✓ Hoàn thành (${scoreBadge})` + (exp.hasDeadline ? ` · Còn ${formatDeadlineRemaining(exp.remainingMs)}` : '');
         clsState = 'is-done';
         subCls = 'task-text-ok';
+        dotCls = 'is-done';
       } else if (lockRem > 0) {
         statusText = `Khóa ${formatMmSs(lockRem)}`;
         clsState = 'is-locked';
         subCls = 'task-text-err';
+        dotCls = 'is-locked';
       } else if (exp.hasDeadline) {
         statusText = `${t.theme} · Còn ${formatDeadlineRemaining(exp.remainingMs)}`;
       }
       return `
-        <button type="button" class="teacher-task-item ${clsState}" style="text-align:left;" onclick="TasksModule.closeStudentTasksModal(); TasksModule.openTaskBriefModal('${esc(t.id)}')">
-          <div>
+        <button type="button" class="teacher-task-item task-card-modern ${clsState}" style="text-align:left;" onclick="TasksModule.closeStudentTasksModal(); TasksModule.openTaskBriefModal('${esc(t.id)}')">
+          <span class="task-num-badge ${dotCls}">${esc(numStr)}</span>
+          <div class="task-card-body">
             <div class="teacher-task-title">${esc(t.label)}</div>
             <div class="teacher-task-sub ${subCls}">${esc(statusText)}</div>
           </div>
+          <span class="task-status-dot ${dotCls}" aria-hidden="true"></span>
         </button>
       `;
     }).join('');
