@@ -42,7 +42,7 @@
     {
       key: 'advanced',
       name: 'Từ Vựng Chuyên Sâu',
-      getList: () => (APP_DATA.file2_families_3500 || []).slice(2500, 3500),
+      getList: () => (APP_DATA.file2_families_3500 || []).slice(2500),
     },
     {
       key: 'signal_words',
@@ -348,6 +348,64 @@
       console.warn('Load failed:', e);
     }
     loadMasterCooldowns();
+    syncAllLemmaPeersFromAssessments();
+  }
+
+  let _lemmaPeersCache = null;
+  let _idToLemmaCache = null;
+
+  function ensureLemmaPeerIndex() {
+    if (_lemmaPeersCache && _idToLemmaCache) return;
+    _lemmaPeersCache = new Map();
+    _idToLemmaCache = new Map();
+    const lists = [APP_DATA?.file1_paraphrase_1500 || [], APP_DATA?.file2_families_3500 || []];
+    lists.forEach((arr) => {
+      arr.forEach((it) => {
+        if (!it || !it.id || !it.lemma) return;
+        const key = String(it.lemma).trim().toLowerCase();
+        if (!key) return;
+        _idToLemmaCache.set(it.id, key);
+        if (!_lemmaPeersCache.has(key)) _lemmaPeersCache.set(key, []);
+        const bucket = _lemmaPeersCache.get(key);
+        if (!bucket.includes(it.id)) bucket.push(it.id);
+      });
+    });
+  }
+
+  function syncLemmaPeersMastery(wordId, level, now = Date.now()) {
+    if (level !== 3 || !wordId) return;
+    ensureLemmaPeerIndex();
+    const lem = _idToLemmaCache?.get(wordId);
+    if (!lem) return;
+    const peers = _lemmaPeersCache?.get(lem) || [];
+    peers.forEach((pid) => {
+      if (pid === wordId) return;
+      assessments[pid] = 3;
+      if (!srsData[pid]) srsData[pid] = computeNextAnkiState(pid, 3, now);
+    });
+  }
+
+  function syncAllLemmaPeersFromAssessments() {
+    ensureLemmaPeerIndex();
+    const now = Date.now();
+    Object.keys(assessments).forEach((wid) => {
+      if (assessments[wid] === 3) {
+        syncLemmaPeersMastery(wid, 3, now);
+      }
+    });
+  }
+
+  function countUniqueMasteredWords(assessMap) {
+    if (!assessMap || typeof assessMap !== 'object') return 0;
+    ensureLemmaPeerIndex();
+    const uniq = new Set();
+    Object.entries(assessMap).forEach(([wid, lvl]) => {
+      if (lvl === 3) {
+        const lem = _idToLemmaCache?.get(wid);
+        uniq.add(lem || wid);
+      }
+    });
+    return uniq.size;
   }
 
   /* =========================================================
@@ -958,6 +1016,7 @@
         });
       }
       if (assessAdded) {
+        syncAllLemmaPeersFromAssessments();
         saveState();
         changed = true;
       }
@@ -1410,14 +1469,14 @@
     const scoped = getScopedUid(uid);
     const cloudMastered = Number(cloudClassCache[scoped]?.mastered || 0);
     if (currentUser && scoped === getScopedUid(currentUser.id)) {
-      return Object.values(assessments).filter(v => v === 3).length;
+      return countUniqueMasteredWords(assessments);
     }
     let localMastered = 0;
     try {
       const raw = localStorage.getItem(getUserStorageKey(uid));
       if (raw) {
         const st = JSON.parse(raw);
-        localMastered = st?.assessments ? Object.values(st.assessments).filter(v => v === 3).length : 0;
+        localMastered = st?.assessments ? countUniqueMasteredWords(st.assessments) : 0;
       }
     } catch (_) {}
     return Math.max(localMastered, cloudMastered);
@@ -3049,8 +3108,10 @@
   }
 
   function commitAssessment(item, level) {
+    const now = Date.now();
     assessments[item.id] = level;
-    srsData[item.id] = computeNextAnkiState(item.id, level, Date.now());
+    srsData[item.id] = computeNextAnkiState(item.id, level, now);
+    if (level === 3) syncLemmaPeersMastery(item.id, 3, now);
     renderStatusTag('fc-front-status', level);
     renderStatusTag('fc-back-status', level);
     saveState();
@@ -3369,26 +3430,108 @@
     }
   }
 
+  let cachedSpeechVoices = [];
+  let fallbackAudioEl = null;
+
+  function refreshSpeechVoices() {
+    try {
+      if ('speechSynthesis' in window && typeof window.speechSynthesis.getVoices === 'function') {
+        cachedSpeechVoices = window.speechSynthesis.getVoices() || [];
+      }
+    } catch (_) {}
+  }
+  refreshSpeechVoices();
+  try {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.addEventListener?.('voiceschanged', refreshSpeechVoices);
+    }
+  } catch (_) {}
+
+  function pickBestEnglishVoice(targetAccent) {
+    if (!cachedSpeechVoices.length) refreshSpeechVoices();
+    const isUk = targetAccent === 'en-GB';
+    const langPrefix = isUk ? 'en-gb' : 'en-us';
+    const matching = cachedSpeechVoices.filter((v) => String(v.lang || '').toLowerCase().replace('_', '-').startsWith(langPrefix));
+    if (!matching.length) return null;
+    const preferredNames = isUk
+      ? ['google uk english female', 'google uk english male', 'daniel', 'martha', 'libby', 'sonia', 'ryan', 'serena']
+      : ['google us english', 'samantha', 'alex', 'aria', 'jenny', 'guy', 'ava', 'allison'];
+    for (const kw of preferredNames) {
+      const hit = matching.find((v) => String(v.name || '').toLowerCase().includes(kw));
+      if (hit) return hit;
+    }
+    return matching.find((v) => /natural|neural|google|enhanced|premium/i.test(v.name || '')) || matching[0];
+  }
+
+  function playDictionaryAudioFallback(text, targetAccent) {
+    try {
+      // Never fire external audio requests during headless/local automated test runs or offline mode
+      if (navigator.webdriver || !navigator.onLine) return;
+      const host = String(window.location?.hostname || '').toLowerCase();
+      if (host === '127.0.0.1' || host === 'localhost') return;
+      const clean = String(text || '').trim();
+      if (!clean || clean.length > 60) return;
+      if (fallbackAudioEl) {
+        try { fallbackAudioEl.pause(); } catch (_) {}
+      }
+      const typeCode = targetAccent === 'en-GB' ? 1 : 2;
+      const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(clean)}&type=${typeCode}`;
+      fallbackAudioEl = new Audio(url);
+      fallbackAudioEl.playbackRate = 0.96;
+      fallbackAudioEl.play?.().catch?.(() => {});
+    } catch (_) {}
+  }
+
+  function speakCleanTextReliable(text, targetAccent, rate = 0.92) {
+    const clean = String(text || '').replace(/\s*\/\s*/g, ' or ').trim();
+    if (!clean) return;
+    if (fallbackAudioEl) {
+      try { fallbackAudioEl.pause(); fallbackAudioEl = null; } catch (_) {}
+    }
+    const canSynth = ('speechSynthesis' in window) && typeof SpeechSynthesisUtterance !== 'undefined';
+    if (!canSynth) {
+      playDictionaryAudioFallback(clean, targetAccent);
+      return;
+    }
+    const bestVoice = pickBestEnglishVoice(targetAccent);
+    // On mobile WebViews (Zalo/Messenger/budget Android) where voices list is loaded yet has 0 English voices, use real audio fallback
+    const anyEnVoice = cachedSpeechVoices.some((v) => String(v.lang || '').toLowerCase().startsWith('en'));
+    if (cachedSpeechVoices.length > 0 && !anyEnVoice) {
+      playDictionaryAudioFallback(clean, targetAccent);
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.resume?.();
+      const utt = new SpeechSynthesisUtterance(clean);
+      utt.lang = targetAccent;
+      utt.rate = rate;
+      if (bestVoice) utt.voice = bestVoice;
+      utt.onerror = (ev) => {
+        const errCode = String(ev?.error || '');
+        if (errCode === 'interrupted' || errCode === 'canceled' || errCode === 'not-allowed') return;
+        playDictionaryAudioFallback(clean, targetAccent);
+      };
+      window.speechSynthesis.speak(utt);
+    } catch (_) {
+      playDictionaryAudioFallback(clean, targetAccent);
+    }
+  }
+
   function speakCurrentWord(accent = preferredAccent, event) {
     if (event && typeof event.stopPropagation === 'function') {
       event.stopPropagation();
     }
     const targetAccent = (accent === 'en-GB' || accent === 'en-US') ? accent : preferredAccent;
     const item = currentScopeList[currentCardIndex];
-    if (!item || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
+    if (!item) return;
 
     stopSpeechPlayback();
     speakTimeout = setTimeout(() => {
       speakTimeout = null;
       const latestItem = currentScopeList[currentCardIndex];
       if (!latestItem || !currentUser) return;
-      try {
-        window.speechSynthesis.resume?.();
-        const utt = new SpeechSynthesisUtterance(latestItem.lemma);
-        utt.lang = targetAccent;
-        utt.rate = 0.92;
-        window.speechSynthesis.speak(utt);
-      } catch (_) {}
+      speakCleanTextReliable(latestItem.lemma, targetAccent, 0.92);
     }, 35);
   }
 
@@ -4493,6 +4636,7 @@
       if (assessments[wid] !== 3) addedCount++;
       assessments[wid] = 3;
       srsData[wid] = computeNextAnkiState(wid, 3, now);
+      syncLemmaPeersMastery(wid, 3, now);
     });
     saveState();
     recordDailyWordActivity();
@@ -4509,15 +4653,8 @@
 
   function speakTextWithAccent(text, accent) {
     if (!text) return;
-    const clean = String(text).replace(/\s*\/\s*/g, ' or ').trim();
-    try {
-      if (!('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(clean);
-      u.lang = accent || preferredAccent || 'en-US';
-      u.rate = 0.94;
-      window.speechSynthesis.speak(u);
-    } catch (_) {}
+    const targetAccent = (accent === 'en-GB' || accent === 'en-US') ? accent : (preferredAccent || 'en-US');
+    speakCleanTextReliable(text, targetAccent, 0.94);
   }
 
   window.__VOCAB_BRIDGE__ = {
