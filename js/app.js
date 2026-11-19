@@ -25,23 +25,23 @@
 
   const SCOPES = [
     {
-      key: 'paraphrase',
-      name: 'Từ Vựng Paraphrase',
-      getList: () => APP_DATA.file1_paraphrase_1500 || [],
-    },
-    {
       key: 'foundation',
-      name: 'Từ Vựng Nền Tảng',
+      name: '1. Từ Vựng Nền Tảng',
       getList: () => (APP_DATA.file2_families_3500 || []).slice(0, 1500),
     },
     {
       key: 'academic',
-      name: 'Từ Vựng Học Thuật',
+      name: '2. Từ Vựng Học Thuật',
       getList: () => (APP_DATA.file2_families_3500 || []).slice(1500, 2500),
     },
     {
+      key: 'paraphrase',
+      name: '3. Từ Vựng Paraphrase',
+      getList: () => APP_DATA.file1_paraphrase_1500 || [],
+    },
+    {
       key: 'advanced',
-      name: 'Từ Vựng Chuyên Sâu',
+      name: '4. Từ Vựng Chuyên Sâu',
       getList: () => (APP_DATA.file2_families_3500 || []).slice(2500),
     },
     {
@@ -50,6 +50,15 @@
       getList: () => APP_DATA.signal_words || [],
     },
   ];
+
+  function isTaskScopeKey(key) {
+    return Boolean(key && /^(task|fnd|acd|adv)_/i.test(String(key)));
+  }
+
+  function isReadingQuickScopeKey(key) {
+    const k = String(key || '').toLowerCase();
+    return k === 'foundation' || k === 'academic' || k === 'advanced' || k.startsWith('fnd_') || k.startsWith('acd_') || k.startsWith('adv_');
+  }
 
   // Study State
   let currentUser = null;
@@ -75,6 +84,10 @@
   let recallTargetItem = null;
   let recallSubmitted = false;
   let recallStage = 1;
+  let recallMode = 'standard'; // 'standard' | 'quick_vi'
+  let recallStage2Type = 'synonym'; // 'synonym' | 'wordbox'
+  let recallWbSentence = '';
+  let recallWbTitle = '';
   let recallAttemptsLeft = 2;
   let recallSynOptions = [];
   let recallSynSelected = new Set();
@@ -193,7 +206,7 @@
   }
 
   function findRawTaskObj(taskId) {
-    if (!taskId || !String(taskId).startsWith('task_')) return null;
+    if (!isTaskScopeKey(taskId)) return null;
     const fromMod = window.TasksModule?.getTaskById?.(taskId);
     if (fromMod) return fromMod;
     const list = (window.APP_TASKS_DATA && Array.isArray(window.APP_TASKS_DATA.tasks)) ? window.APP_TASKS_DATA.tasks : [];
@@ -201,7 +214,7 @@
   }
 
   function isTaskLockedLocally(taskId, uid = currentUser?.id) {
-    if (!taskId || !String(taskId).startsWith('task_') || isTeacherUser()) return false;
+    if (!isTaskScopeKey(taskId) || isTeacherUser()) return false;
     try {
       const scoped = getScopedUid(uid);
       const tl = JSON.parse(localStorage.getItem(`${TASK_LOCKS_KEY_BASE}${scoped}`) || '{}') || {};
@@ -226,7 +239,7 @@
     }
     const found = getAllScopes().find(s => s.key === key);
     if (found) return found;
-    if (key && key.startsWith('task_')) {
+    if (isTaskScopeKey(key)) {
       const t = findRawTaskObj(key);
       if (t) {
         return {
@@ -237,7 +250,7 @@
         };
       }
     }
-    return SCOPES[0];
+    return SCOPES.find(s => s.key === 'paraphrase') || SCOPES[0];
   }
 
   function escapeHtml(str) {
@@ -916,6 +929,10 @@
       taskLocks = JSON.parse(localStorage.getItem(`${TASK_LOCKS_KEY_BASE}${scoped}`) || '{}') || {};
     } catch (_) {}
 
+    const recogExtra = (currentUser && getScopedUid(currentUser.id) === scoped && window.RecognitionTestModule?.exportCloudRecognitionData)
+      ? window.RecognitionTestModule.exportCloudRecognitionData()
+      : {};
+
     return {
       resetEpoch: CLASS_RESET_EPOCH,
       timerByDay,
@@ -928,6 +945,7 @@
       taskProgress,
       taskLocks,
       teacherUnlockedAt: Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0),
+      ...recogExtra,
     };
   }
 
@@ -1018,6 +1036,9 @@
       if (assessAdded) {
         syncAllLemmaPeersFromAssessments();
         saveState();
+        changed = true;
+      }
+      if (window.RecognitionTestModule?.importCloudRecognitionData?.(sd)) {
         changed = true;
       }
     }
@@ -1830,15 +1851,15 @@
     const sel = document.getElementById('study-scope-select');
     if (!sel) return;
     const isTaskActive = Boolean(
-      (currentScopeKey && currentScopeKey.startsWith('task_')) ||
+      isTaskScopeKey(currentScopeKey) ||
       (window.TasksModule?.getActiveTask?.()) ||
-      (dynamicTaskScopes.length > 0 && currentScopeKey && currentScopeKey.startsWith('task_'))
+      (dynamicTaskScopes.length > 0 && isTaskScopeKey(currentScopeKey))
     );
     if (isTaskActive) {
-      // Khi đang trong chế độ Task: BỎ HẾT các bộ từ mặc định (Paraphrase, Nền tảng, Học thuật, Chuyên sâu, Từ nối)
+      // Khi đang trong chế độ Task: BỎ HẾT các bộ từ mặc định (Nền tảng, Học thuật, Paraphrase, Chuyên sâu, Từ nối)
       // CHỈ hiển thị duy nhất các Task được giao hoặc Task hiện tại!
       let taskOptions = dynamicTaskScopes;
-      if (taskOptions.length === 0 && currentScopeKey && currentScopeKey.startsWith('task_')) {
+      if (taskOptions.length === 0 && isTaskScopeKey(currentScopeKey)) {
         const activeDef = getScopeDef(currentScopeKey);
         if (activeDef && activeDef.isTask) taskOptions = [activeDef];
       }
@@ -1917,7 +1938,7 @@
       showToast('Đang làm bài Test — không thể đổi bộ từ lúc này!');
       return false;
     }
-    if (nextDef.key.startsWith('task_') && window.TasksModule?.canActivateTaskScope && !window.TasksModule.canActivateTaskScope(nextDef.key)) {
+    if (isTaskScopeKey(nextDef.key) && window.TasksModule?.canActivateTaskScope && !window.TasksModule.canActivateTaskScope(nextDef.key)) {
       populateScopeSelect();
       const sel = document.getElementById('study-scope-select');
       if (sel) sel.value = currentScopeKey;
@@ -1929,6 +1950,7 @@
     const sel = document.getElementById('study-scope-select');
     if (sel) sel.value = currentScopeKey;
     window.TasksModule?.onScopeChanged?.(currentScopeKey);
+    window.RecognitionTestModule?.updateScopeListTestButton?.();
     applyFilterAndBuildDeck();
     saveState();
     return true;
@@ -2133,7 +2155,7 @@
       const btnPrev = document.getElementById('btn-prev-card');
       if (btnPrev) btnPrev.disabled = (currentCardIndex <= 0);
       const finExamBtn = document.getElementById('btn-finished-task-exam');
-      if (finExamBtn) finExamBtn.style.display = currentScopeKey.startsWith('task_') ? 'inline-flex' : 'none';
+      if (finExamBtn) finExamBtn.style.display = isTaskScopeKey(currentScopeKey) ? 'inline-flex' : 'none';
       window.TasksModule?.updateTaskStudyBar?.();
       return;
     }
@@ -2812,14 +2834,110 @@
     return shuffleArray(options);
   }
 
+  function buildRecallWordBoxExercise(item) {
+    const lem = String(item?.lemma || '').trim();
+    const lemLow = lem.toLowerCase();
+    // 1. Try to reuse exact verified Task Word Box item if available in APP_TASKS_DATA
+    let sentenceBlank = '';
+    let examTitle = '';
+    let correctSurface = lem;
+    let trapForms = [];
+
+    const allTasks = window.APP_TASKS_DATA?.tasks || [];
+    for (const tk of allTasks) {
+      for (const bd of (tk.test2WordBoxBoards || [])) {
+        const hit = (bd.items || []).find((bi) => String(bi.lemma || '').toLowerCase() === lemLow || bi.wordId === item.id);
+        if (hit && hit.sentenceBlank && hit.answer) {
+          sentenceBlank = hit.sentenceBlank;
+          examTitle = hit.examTitle || 'IELTS Reading';
+          correctSurface = hit.answer;
+          trapForms = (bd.wordBox || [])
+            .filter((o) => String(o.text || '').toLowerCase() !== String(hit.answer).toLowerCase())
+            .map((o) => o.text);
+          break;
+        }
+      }
+      if (sentenceBlank) break;
+    }
+
+    // 2. Fallback: blank out target lemma / inflection directly from verbatim exam_citations
+    if (!sentenceBlank) {
+      const cits = Array.isArray(item?.exam_citations) ? item.exam_citations : [];
+      const inflects = [lemLow, lemLow + 's', lemLow + 'es', lemLow + 'ed', lemLow + 'd', lemLow + 'ing'];
+      if (lemLow.endsWith('e') && lemLow.length >= 3) inflects.push(lemLow.slice(0, -1) + 'ing');
+      if (lemLow.endsWith('y') && lemLow.length >= 3) inflects.push(lemLow.slice(0, -1) + 'ies', lemLow.slice(0, -1) + 'ied');
+      const sortedForms = Array.from(new Set(inflects)).sort((a, b) => b.length - a.length);
+
+      for (const c of cits) {
+        const sent = String(c?.sentence || '').trim();
+        if (sent.length < 25) continue;
+        for (const fm of sortedForms) {
+          const rx = new RegExp(`\\b${fm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          const m = sent.match(rx);
+          if (m) {
+            sentenceBlank = sent.replace(rx, '______');
+            examTitle = String(c?.title || 'IELTS Academic Reading');
+            correctSurface = m[0].toLowerCase();
+            break;
+          }
+        }
+        if (sentenceBlank) break;
+      }
+    }
+
+    if (!sentenceBlank) return null;
+
+    // Build 6 clean Word Box options (1 correct + word-family traps + distractors from scope)
+    const opts = [];
+    const seen = new Set([correctSurface.toLowerCase()]);
+    opts.push({ text: correctSurface, isCorrect: true });
+
+    const pushDistractor = (txt) => {
+      const t = String(txt || '').trim();
+      if (!t || opts.length >= 6) return;
+      const tl = t.toLowerCase();
+      if (seen.has(tl)) return;
+      seen.add(tl);
+      opts.push({ text: t, isCorrect: false });
+    };
+
+    // Priority 1: traps from clean_forms (word family traps!) + task wordBox traps
+    (Array.isArray(item?.clean_forms) ? item.clean_forms : []).forEach((f) => {
+      if (String(f || '').trim().toLowerCase() !== lemLow) pushDistractor(f);
+    });
+    shuffleArray(trapForms).forEach(pushDistractor);
+
+    // Priority 2: distractors from currentScopeList / file1
+    const pool = (currentScopeList && currentScopeList.length >= 12) ? currentScopeList : (APP_DATA?.file1_paraphrase_1500 || []);
+    const targetPos = getCleanPos(item);
+    const samePos = [];
+    const otherPos = [];
+    const offset = Math.floor(Math.random() * Math.max(1, pool.length));
+    for (let k = 0; k < Math.min(pool.length, 80); k++) {
+      const cand = pool[(offset + k * 3) % pool.length];
+      if (!cand || cand.id === item.id) continue;
+      if (getCleanPos(cand) === targetPos) samePos.push(cand.lemma);
+      else otherPos.push(cand.lemma);
+    }
+    [...samePos, ...otherPos].forEach(pushDistractor);
+
+    return {
+      sentenceBlank,
+      examTitle,
+      options: shuffleArray(opts),
+    };
+  }
+
   function renderRecallSynGrid(revealAnswers = false) {
     const grid = document.getElementById('recall-syn-grid');
     if (!grid) return;
     grid.innerHTML = '';
+    grid.classList.toggle('is-quick-vi', recallMode === 'quick_vi');
     recallSynOptions.forEach((opt, idx) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'recall-syn-opt';
+      if (recallMode === 'quick_vi') btn.classList.add('is-vi-choice');
       const isSelected = recallSynSelected.has(idx);
       if (revealAnswers) {
         btn.disabled = true;
@@ -2828,7 +2946,7 @@
           btn.textContent = `✓ ${opt.text}`;
         } else if (opt.isCorrect && !isSelected) {
           btn.classList.add('is-missed');
-          btn.textContent = `Thiếu: ${opt.text}`;
+          btn.textContent = recallMode === 'quick_vi' ? `✓ ${opt.text}` : `Thiếu: ${opt.text}`;
         } else if (!opt.isCorrect && isSelected) {
           btn.classList.add('is-wrong');
           btn.textContent = `✗ ${opt.text}`;
@@ -2845,9 +2963,41 @@
   }
 
   function toggleRecallSynOption(idx) {
-    if (recallStage !== 2 || recallSubmitted) return;
-    if (recallSynSelected.has(idx)) recallSynSelected.delete(idx);
-    else recallSynSelected.add(idx);
+    if (recallSubmitted) return;
+    // Fast 1-Tap Vietnamese Meaning check for Reading scopes (Nền Tảng / Học Thuật / Chuyên Sâu)
+    if (recallMode === 'quick_vi') {
+      const opt = recallSynOptions[idx];
+      if (!opt || !recallTargetItem) return;
+      recallSynSelected = new Set([idx]);
+      if (opt.isCorrect) {
+        stopRecallInputTimer();
+        clearRecallActiveSession();
+        recallSubmitted = true;
+        renderRecallSynGrid(true);
+        delete masterCooldowns[recallTargetItem.id];
+        saveMasterCooldowns();
+        updateAssess3CooldownUI();
+        const doneItem = recallTargetItem;
+        commitAssessment(doneItem, 3);
+        setTimeout(() => {
+          closeRecallModal(null, true);
+          showToast(`Chính xác! Đã thuộc "${doneItem.lemma}".`);
+          advanceDeckAfterAssess3();
+        }, 180);
+      } else {
+        failRecallCheck(recallTargetItem, 'Chưa chính xác!');
+      }
+      return;
+    }
+
+    if (recallStage !== 2) return;
+    // Single-select in Word Box replacement mode; multi-select in real-exam synonym mode
+    if (recallStage2Type === 'wordbox') {
+      recallSynSelected = new Set([idx]);
+    } else {
+      if (recallSynSelected.has(idx)) recallSynSelected.delete(idx);
+      else recallSynSelected.add(idx);
+    }
     const fb = document.getElementById('recall-feedback');
     if (fb && fb.style.display !== 'none') {
       fb.style.display = 'none';
@@ -2887,6 +3037,16 @@
       }
     }
     if (p2) {
+      if (recallMode === 'quick_vi') {
+        p2.innerHTML = 'Chọn nhanh <strong>nghĩa tiếng Việt đúng</strong> trong 5 giây (1 chạm):';
+        return;
+      }
+      if (recallStage2Type === 'wordbox') {
+        p2.innerHTML = recallAttemptsLeft <= 0
+          ? 'Đã hết lượt thử cho bước điền Word Box.'
+          : `Chọn <strong>1 từ đúng</strong> (cẩn thận bẫy Word Family) để điền vào câu trích đề thật (còn ${recallAttemptsLeft} lần thử):`;
+        return;
+      }
       const targetTotal = recallSynOptions.filter((o) => o.isCorrect).length;
       const selBadge = targetTotal > 0
         ? ` <span class="recall-select-counter">Đã chọn ${recallSynSelected.size}/${targetTotal}</span>`
@@ -2902,12 +3062,15 @@
     }
   }
 
-  function enterRecallStage2(item) {
+  function enterRecallStage2(item, wbExercise = null) {
     stopRecallInputTimer();
     recallStage = 2;
     recallSubmitted = false;
     recallAttemptsLeft = getRecallRule(item).maxAttempts;
-    recallSynOptions = buildRecallSynonymOptions(item);
+    recallStage2Type = wbExercise ? 'wordbox' : 'synonym';
+    recallWbSentence = wbExercise ? wbExercise.sentenceBlank : '';
+    recallWbTitle = wbExercise ? wbExercise.examTitle : '';
+    recallSynOptions = wbExercise ? wbExercise.options : buildRecallSynonymOptions(item);
     recallSynSelected = new Set();
 
     const limitSec = getRecallTimeLimitSec(item, 2);
@@ -2916,6 +3079,7 @@
     const stageBadge = document.getElementById('recall-stage-badge');
     const timerBadge = document.getElementById('recall-timer-badge');
     const hintBox = document.getElementById('recall-hint-box');
+    const targetSubEl = document.querySelector('#recall-stage2-target .recall-stage-sub');
     const targetWordEl = document.getElementById('recall-stage2-word');
     const stage1Body = document.getElementById('recall-stage1-body');
     const stage2Body = document.getElementById('recall-stage2-body');
@@ -2923,13 +3087,25 @@
     const fb = document.getElementById('recall-feedback');
 
     inp?.blur();
-    if (stageBadge) stageBadge.textContent = 'Test 2';
+    if (stageBadge) stageBadge.textContent = wbExercise ? 'Test 2 · Word Box' : 'Test 2';
     if (timerBadge) {
       timerBadge.textContent = `${limitSec}s`;
       timerBadge.classList.remove('is-urgent');
     }
     if (hintBox) hintBox.style.display = 'block';
-    if (targetWordEl) targetWordEl.textContent = item.lemma || '';
+    if (wbExercise) {
+      if (targetSubEl) targetSubEl.textContent = `Điền từ vào câu trích đề thật (${wbExercise.examTitle})`;
+      if (targetWordEl) {
+        targetWordEl.className = 'recall-wb-sentence';
+        targetWordEl.innerHTML = escapeHtml(wbExercise.sentenceBlank).replace(/______/g, '<span class="wb-inline-blank">______</span>');
+      }
+    } else {
+      if (targetSubEl) targetSubEl.textContent = 'Click các từ đồng nghĩa của';
+      if (targetWordEl) {
+        targetWordEl.className = 'recall-stage-word';
+        targetWordEl.textContent = item.lemma || '';
+      }
+    }
     if (stage1Body) stage1Body.style.display = 'none';
     if (stage2Body) stage2Body.style.display = 'block';
     if (fb) {
@@ -2963,7 +3139,7 @@
       badge.classList.add('is-urgent');
     }
     if (inp) inp.disabled = true;
-    if (recallStage === 2) {
+    if (recallStage === 2 || recallMode === 'quick_vi') {
       renderRecallSynGrid(true);
     }
     syncExamLock(false);
@@ -2979,7 +3155,13 @@
     if (fb) {
       fb.style.display = 'block';
       fb.className = 'recall-feedback err';
-      if (recallStage === 2) {
+      if (recallMode === 'quick_vi') {
+        const rightMean = item.clean_meaning || item.meaning || item.definition || '';
+        fb.innerHTML = `${escapeHtml(reasonPrefix)} Nghĩa đúng của <strong>${escapeHtml(item.lemma)}</strong> là: <strong>${escapeHtml(rightMean)}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
+      } else if (recallStage === 2 && recallStage2Type === 'wordbox') {
+        const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
+        fb.innerHTML = `${escapeHtml(reasonPrefix)} Đáp án Word Box đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
+      } else if (recallStage === 2) {
         const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
         fb.innerHTML = `${escapeHtml(reasonPrefix)} Các từ đồng nghĩa đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
       } else {
@@ -3000,18 +3182,25 @@
     recallTargetItem = item;
     recallSubmitted = false;
     recallStage = 1;
-    recallAttemptsLeft = rule.maxAttempts;
+    recallStage2Type = 'synonym';
+    recallWbSentence = '';
+    recallWbTitle = '';
+    const useQuickVi = isReadingQuickScopeKey(currentScopeKey) && Boolean(window.RecognitionTestModule?.buildMeaningDistractors);
+    recallMode = useQuickVi ? 'quick_vi' : 'standard';
+    recallAttemptsLeft = useQuickVi ? 1 : rule.maxAttempts;
     recallLeaveWarnings = 0;
     lastRecallLeaveAt = 0;
     recallSynOptions = [];
     recallSynSelected = new Set();
 
-    const limitSec = getRecallTimeLimitSec(item, 1);
+    const limitSec = useQuickVi ? 5 : getRecallTimeLimitSec(item, 1);
     recallDeadlineAt = Date.now() + limitSec * 1000;
 
     const stageBadge = document.getElementById('recall-stage-badge');
     const timerBadge = document.getElementById('recall-timer-badge');
     const hintBox = document.getElementById('recall-hint-box');
+    const targetSubEl = document.querySelector('#recall-stage2-target .recall-stage-sub');
+    const targetWordEl = document.getElementById('recall-stage2-word');
     const stage1Body = document.getElementById('recall-stage1-body');
     const stage2Body = document.getElementById('recall-stage2-body');
     const inp = document.getElementById('recall-word-input');
@@ -3020,17 +3209,40 @@
     const btnSubmit = document.getElementById('btn-recall-submit');
     const btnReturn = document.getElementById('btn-recall-return');
 
-    if (stageBadge) stageBadge.textContent = 'Test 1';
-    if (timerBadge) {
-      timerBadge.textContent = `${limitSec}s`;
-      timerBadge.classList.remove('is-urgent');
-    }
-    if (hintBox) hintBox.style.display = 'none';
-    if (stage1Body) stage1Body.style.display = 'block';
-    if (stage2Body) stage2Body.style.display = 'none';
-    if (inp) {
-      inp.value = '';
-      inp.disabled = false;
+    if (useQuickVi) {
+      const choices = window.RecognitionTestModule.buildMeaningDistractors(item, currentScopeList, 3);
+      recallSynOptions = choices.map((c) => ({ text: c.meaning, isCorrect: c.isCorrect }));
+      if (stageBadge) stageBadge.textContent = 'Phản xạ 5s';
+      if (timerBadge) {
+        timerBadge.textContent = `${limitSec}s`;
+        timerBadge.classList.remove('is-urgent');
+      }
+      if (hintBox) hintBox.style.display = 'block';
+      const ipaTxt = getIPA(item);
+      const posTxt = getCleanPos(item);
+      if (targetSubEl) targetSubEl.textContent = `${ipaTxt !== '/.../' ? ipaTxt + ' · ' : ''}${posTxt}`;
+      if (targetWordEl) {
+        targetWordEl.className = 'recall-stage-word';
+        targetWordEl.textContent = item.lemma || '';
+      }
+      if (stage1Body) stage1Body.style.display = 'none';
+      if (stage2Body) stage2Body.style.display = 'block';
+      if (btnSubmit) btnSubmit.style.display = 'none';
+      renderRecallSynGrid(false);
+    } else {
+      if (stageBadge) stageBadge.textContent = 'Test 1';
+      if (timerBadge) {
+        timerBadge.textContent = `${limitSec}s`;
+        timerBadge.classList.remove('is-urgent');
+      }
+      if (hintBox) hintBox.style.display = 'none';
+      if (stage1Body) stage1Body.style.display = 'block';
+      if (stage2Body) stage2Body.style.display = 'none';
+      if (inp) {
+        inp.value = '';
+        inp.disabled = false;
+      }
+      if (btnSubmit) btnSubmit.style.display = 'inline-flex';
     }
     if (fb) {
       fb.style.display = 'none';
@@ -3049,7 +3261,6 @@
         ? 'Đóng'
         : `Thoát giữa chừng sẽ bị hạ về Chưa thuộc và khóa nút Đã thuộc ${abortPenaltySec}s`;
     }
-    if (btnSubmit) btnSubmit.style.display = 'inline-flex';
     if (btnReturn) btnReturn.style.display = 'none';
 
     updateRecallPromptAttempts(item);
@@ -3058,7 +3269,7 @@
     document.querySelector('#modal-recall-check .recall-check-card')?.style.removeProperty('visibility');
     document.getElementById('modal-recall-check')?.classList.add('open');
     recallDeadlineTimer = setInterval(updateRecallCountdownBadge, 250);
-    setTimeout(() => inp?.focus(), 40);
+    if (!useQuickVi) setTimeout(() => inp?.focus(), 40);
   }
 
   function abortRecallCheck() {
@@ -3159,6 +3370,14 @@
               return sl && sl !== expected;
             });
         if (!hasStage2Targets) {
+          // For Paraphrase words without a real-exam paraphrase, run Stage 2 IELTS Summary Word Box replacement!
+          if (!isSignal) {
+            const wbEx = buildRecallWordBoxExercise(item);
+            if (wbEx && wbEx.options.length >= 2) {
+              enterRecallStage2(item, wbEx);
+              return;
+            }
+          }
           stopRecallInputTimer();
           clearRecallActiveSession();
           recallSubmitted = true;
@@ -3171,7 +3390,7 @@
           advanceDeckAfterAssess3();
           return;
         }
-        enterRecallStage2(item);
+        enterRecallStage2(item, null);
         return;
       }
 
@@ -3192,12 +3411,14 @@
       return;
     }
 
-    // Stage 2: synonym selection verification
+    // Stage 2: synonym selection OR Word Box verification
     if (recallSynSelected.size === 0) {
       if (fb) {
         fb.style.display = 'block';
         fb.className = 'recall-feedback err';
-        fb.textContent = 'Vui lòng click chọn ít nhất 1 từ đồng nghĩa trước khi xác nhận.';
+        fb.textContent = recallStage2Type === 'wordbox'
+          ? 'Vui lòng click chọn 1 từ trong Word Box để điền vào câu trước khi xác nhận.'
+          : 'Vui lòng click chọn ít nhất 1 từ đồng nghĩa trước khi xác nhận.';
       }
       return;
     }
@@ -4047,6 +4268,7 @@
       const autoSpeakOnEnter = !!options.autoSpeakOnEnter;
       pendingInitialSpeak = !autoSpeakOnEnter && autoSpeak;
       applyFilterAndBuildDeck(null, { speak: autoSpeakOnEnter });
+      window.RecognitionTestModule?.updateScopeListTestButton?.();
       loadStudyTimerState();
       startTimer();
       startStudyIdleMonitor();
@@ -4657,6 +4879,14 @@
     speakCleanTextReliable(text, targetAccent, 0.94);
   }
 
+  function setWordWeakLevel(wordId, level = 1) {
+    if (!currentUser || !wordId) return;
+    assessments[wordId] = level;
+    srsData[wordId] = computeNextAnkiState(wordId, level, Date.now());
+    saveState();
+    updateVocabMasteryUI();
+  }
+
   window.__VOCAB_BRIDGE__ = {
     getCurrentUser: () => currentUser,
     isTeacherUser,
@@ -4666,15 +4896,17 @@
     getPreferredAccent: () => preferredAccent,
     speakText: speakTextWithAccent,
     markMasteredBatch,
+    setWordWeakLevel,
     resetWordAssessments,
     setDynamicTaskScopes,
     activateTaskScope,
-    loadMainScope: (scopeKey) => loadScope(scopeKey || SCOPES[0].key),
+    loadMainScope: (scopeKey) => loadScope(scopeKey || 'paraphrase'),
     getAssessmentsMap: () => assessments,
     getSrsMap: () => srsData,
     isWordDueNow,
     startOldVocabReview,
     getCurrentScopeKey: () => currentScopeKey,
+    scheduleCloudPush,
     saveAndSync: () => {
       saveState();
       syncPushCurrentUser(false);
@@ -4683,6 +4915,7 @@
     escapeHtml,
     formatSentenceHighlight,
     openCheatWarningModal,
+    showCheatWarningModal: openCheatWarningModal,
     closeCheatWarningModal,
     syncExamLock,
     recheckMultiTabLock,

@@ -79,16 +79,106 @@
     );
   }
 
-  function getTasksList() {
-    return (window.APP_TASKS_DATA && Array.isArray(window.APP_TASKS_DATA.tasks))
-      ? window.APP_TASKS_DATA.tasks
+  const TASK_SUITES_META = [
+    { key: 'foundation', prefix: 'fnd', label: '1. Nền Tảng', count: 30, desc: 'Nhận diện mặt chữ & nghĩa (1.500 từ)', kind: 'recognition' },
+    { key: 'academic', prefix: 'acd', label: '2. Học Thuật', count: 20, desc: 'Học thuật Reading (1.000 từ)', kind: 'recognition' },
+    { key: 'paraphrase', prefix: 'task', label: '3. Paraphrase', count: 30, desc: 'Paraphrase đề thật + Word Box + Dịch bài (1.500 từ)', kind: 'paraphrase_full' },
+    { key: 'advanced', prefix: 'adv', label: '4. Chuyên Sâu', count: 30, desc: 'Chuyên sâu C1–C2 (1.504 từ)', kind: 'recognition' },
+  ];
+
+  let _generatedSuiteCache = null;
+  let activeStudentTaskTab = 'paraphrase';
+  let activeTeacherTaskTab = 'paraphrase';
+
+  function isAnyTaskId(raw) {
+    return Boolean(raw && /^(task|fnd|acd|adv)_\d{2}$/i.test(String(raw).trim()));
+  }
+
+  function buildReadingSuiteTasks(scopeKey, prefix, shortLabel, themeLabel, rawList, numTasks) {
+    const out = [];
+    const total = rawList.length;
+    for (let i = 0; i < numTasks; i++) {
+      const start = i * 50;
+      const end = (i === numTasks - 1) ? total : Math.min(total, start + 50);
+      const slice = rawList.slice(start, end);
+      if (!slice.length) continue;
+      const num = i + 1;
+      const id = `${prefix}_${String(num).padStart(2, '0')}`;
+      const words = slice.map((it) => ({
+        id: it.id,
+        lemma: it.lemma,
+        ipa: it.ipa || window.IPA_DICT?.[String(it.lemma || '').toLowerCase()] || '',
+        pos: it.clean_pos || it.pos || 'Danh từ',
+        meaning: it.clean_meaning || it.definition || '',
+        synonyms: Array.isArray(it.clean_synonyms) ? it.clean_synonyms : [],
+        antonyms: Array.isArray(it.clean_antonyms) ? it.clean_antonyms : [],
+        wordFamily: [],
+        example: (Array.isArray(it.exam_citations) && it.exam_citations[0]?.sentence) ? it.exam_citations[0].sentence : '',
+        linkedIds: [it.id],
+      }));
+      out.push({
+        id,
+        num,
+        scopeKey,
+        taskKind: 'recognition',
+        label: `${shortLabel} · Task ${num}`,
+        theme: `${themeLabel} (${words.length} từ)`,
+        estMinutes: 15,
+        words,
+        linkedIds: words.map((w) => w.id),
+      });
+    }
+    return out;
+  }
+
+  function ensureGeneratedSuites() {
+    if (_generatedSuiteCache) return _generatedSuiteCache;
+    const f2 = (window.APP_DATA && Array.isArray(window.APP_DATA.file2_families_3500))
+      ? window.APP_DATA.file2_families_3500
       : [];
+    const paraRaw = (window.APP_TASKS_DATA && Array.isArray(window.APP_TASKS_DATA.tasks))
+      ? window.APP_TASKS_DATA.tasks.map((t, idx) => {
+          t.num = idx + 1;
+          t.scopeKey = 'paraphrase';
+          t.taskKind = 'paraphrase_full';
+          return t;
+        })
+      : [];
+    _generatedSuiteCache = {
+      foundation: buildReadingSuiteTasks('foundation', 'fnd', 'Nền Tảng', 'Nhận diện mặt chữ & nghĩa', f2.slice(0, 1500), 30),
+      academic: buildReadingSuiteTasks('academic', 'acd', 'Học Thuật', 'Học thuật Reading', f2.slice(1500, 2500), 20),
+      paraphrase: paraRaw,
+      advanced: buildReadingSuiteTasks('advanced', 'adv', 'Chuyên Sâu', 'Chuyên sâu C1–C2', f2.slice(2500), 30),
+    };
+    return _generatedSuiteCache;
+  }
+
+  function getTasksByScope(scopeKey) {
+    const suites = ensureGeneratedSuites();
+    return suites[scopeKey] || suites.paraphrase || [];
+  }
+
+  function getAllCatalogTasks() {
+    const suites = ensureGeneratedSuites();
+    return [...suites.foundation, ...suites.academic, ...suites.paraphrase, ...suites.advanced];
+  }
+
+  function getTasksList() {
+    return getTasksByScope('paraphrase');
   }
 
   function normalizeTaskId(raw) {
     const s = String(raw || '').trim().toLowerCase();
     if (!s) return null;
-    const m = s.match(/^task_?(\d{1,2})$/) || s.match(/^(\d{1,2})$/);
+    const mp = s.match(/^(fnd|acd|adv|task)_?(\d{1,2})$/);
+    if (mp) {
+      const pref = mp[1];
+      const n = parseInt(mp[2], 10);
+      const maxN = pref === 'acd' ? 20 : 30;
+      if (n < 1 || n > maxN) return null;
+      return `${pref}_${String(n).padStart(2, '0')}`;
+    }
+    const m = s.match(/^(\d{1,2})$/);
     if (!m) return null;
     const n = parseInt(m[1], 10);
     if (n < 1 || n > 30) return null;
@@ -97,7 +187,8 @@
 
   function getTaskById(tid) {
     const norm = normalizeTaskId(tid);
-    return getTasksList().find((t) => t.id === norm) || null;
+    if (!norm) return null;
+    return getAllCatalogTasks().find((t) => t.id === norm) || null;
   }
 
   function getScopedStorageUid() {
@@ -394,13 +485,28 @@
     renderTeacherTasksGrid();
   }
 
+  function switchTeacherTaskTab(scopeKey) {
+    if (!TASK_SUITES_META.some((m) => m.key === scopeKey)) return;
+    activeTeacherTaskTab = scopeKey;
+    renderTeacherTasksGrid();
+  }
+
   function renderTeacherTasksGrid() {
-    const tasks = getTasksList();
+    const tasks = getTasksByScope(activeTeacherTaskTab);
     const esc = B()?.escapeHtml || ((x) => String(x));
     const sentMap = loadTeacherSentTasks();
     const visibleTasks = teacherFilterPendingOnly
       ? tasks.filter((t) => !getTaskClassStatus(t.id).allDone)
       : tasks;
+
+    const tabsEl = document.getElementById('teacher-task-suite-tabs');
+    if (tabsEl) {
+      tabsEl.innerHTML = TASK_SUITES_META.map((m) => {
+        const list = getTasksByScope(m.key);
+        const selInTab = list.filter((t) => teacherSelectedIds.has(t.id)).length;
+        return `<button type="button" class="task-suite-tab ${activeTeacherTaskTab === m.key ? 'active' : ''}" onclick="TasksModule.switchTeacherTaskTab('${m.key}')">${esc(m.label)} (${list.length})${selInTab > 0 ? ` · <strong>${selInTab}</strong>` : ''}</button>`;
+      }).join('');
+    }
 
     const html = visibleTasks.map((t) => {
       const checked = teacherSelectedIds.has(t.id) ? 'checked' : '';
@@ -420,26 +526,38 @@
         subStatusHtml = `<div class="teacher-task-missing">Chưa ai xong (0/${st.totalStudents} HS)</div>`;
       }
 
+      const previewBtns = t.taskKind === 'recognition'
+        ? `<button type="button" class="btn-subtle" style="padding:2px 8px; font-size:11px;" onclick="TasksModule.openRecognitionTaskPreview('${esc(t.id)}')">Xem Speed Quiz (${t.words.length} từ)</button>`
+        : `
+          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(1, '${esc(t.id)}')">Test 1</button>
+          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(2, '${esc(t.id)}')">Test 2</button>
+          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(3, '${esc(t.id)}')">Test 3</button>`;
+
       return `
         <label class="teacher-task-item ${st.allDone ? 'is-all-done' : ''}" style="align-items:flex-start;">
           <input type="checkbox" style="margin-top:3px;" value="${esc(t.id)}" ${checked} onchange="TasksModule.toggleTeacherTask('${esc(t.id)}', this.checked)">
           <div style="min-width:0; flex:1;">
             <div class="teacher-task-title">${esc(t.label)}${badgeHtml}</div>
-            <div class="teacher-task-sub">${esc(t.theme)} · 50 từ</div>
+            <div class="teacher-task-sub">${esc(t.theme)} · ${t.words.length} từ</div>
             ${subStatusHtml}
             <div style="margin-top:7px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;" onclick="event.stopPropagation()">
               <span style="font-size:11.5px; color:var(--text-muted); font-weight:700;">Xem Test:</span>
-              <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(1, '${esc(t.id)}')">Test 1</button>
-              <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(2, '${esc(t.id)}')">Test 2</button>
-              <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(3, '${esc(t.id)}')">Test 3</button>
+              ${previewBtns}
             </div>
           </div>
         </label>
       `;
-    }).join('') || '<div style="grid-column:1/-1; text-align:center; padding:18px; color:var(--text-muted);">Cả lớp đã hoàn thành 100% tất cả Task!</div>';
+    }).join('') || '<div style="grid-column:1/-1; text-align:center; padding:18px; color:var(--text-muted);">Cả lớp đã hoàn thành 100% Task ở bộ này!</div>';
 
     const gridEl = document.getElementById('teacher-dash-task-grid');
     if (gridEl) gridEl.innerHTML = html;
+  }
+
+  function openRecognitionTaskPreview(tid) {
+    const t = getTaskById(tid);
+    if (t && window.RecognitionTestModule?.startTaskFinalExam) {
+      window.RecognitionTestModule.startTaskFinalExam(t, null);
+    }
   }
 
   function toggleTeacherTask(tid, isChecked) {
@@ -449,8 +567,9 @@
   }
 
   function selectTeacherTaskRange(startNum, endNum) {
+    const meta = TASK_SUITES_META.find((m) => m.key === activeTeacherTaskTab) || TASK_SUITES_META[2];
     for (let n = startNum; n <= endNum; n++) {
-      const id = normalizeTaskId(n);
+      const id = normalizeTaskId(`${meta.prefix}_${String(n).padStart(2, '0')}`);
       if (id) teacherSelectedIds.add(id);
     }
     renderTeacherTasksGrid();
@@ -804,19 +923,44 @@
   // =========================================================
   // STUDENT TASK HUB & PRE-TASK BRIEFING MODAL
   // =========================================================
-  function openStudentTasksModal() {
+  function switchStudentTaskTab(scopeKey) {
+    if (!TASK_SUITES_META.some((m) => m.key === scopeKey)) return;
+    activeStudentTaskTab = scopeKey;
+    renderStudentTasksModalBody();
+  }
+
+  function renderStudentTasksModalBody() {
     const grid = document.getElementById('student-task-grid');
+    const tabsEl = document.getElementById('student-task-suite-tabs');
     if (!grid) return;
     const progress = loadTaskProgress();
     const esc = B()?.escapeHtml || ((x) => String(x));
-    const listToShow = assignedUrlTaskIds.length > 0
+    const hasAssigned = assignedUrlTaskIds.length > 0;
+    if (tabsEl) {
+      if (hasAssigned) {
+        tabsEl.style.display = 'none';
+      } else {
+        tabsEl.style.display = 'flex';
+        tabsEl.innerHTML = TASK_SUITES_META.map((m) => {
+          const list = getTasksByScope(m.key);
+          const doneCnt = list.filter((t) => progress[t.id]?.status === 'completed').length;
+          return `<button type="button" class="task-suite-tab ${activeStudentTaskTab === m.key ? 'active' : ''}" data-suite="${m.key}" onclick="TasksModule.switchStudentTaskTab('${m.key}')">${esc(m.label)} (${doneCnt}/${list.length})</button>`;
+        }).join('');
+      }
+    }
+
+    const listToShow = hasAssigned
       ? assignedUrlTaskIds.map(getTaskById).filter(Boolean)
-      : getTasksList();
+      : getTasksByScope(activeStudentTaskTab);
 
     grid.innerHTML = listToShow.map((t) => {
       const exp = getTaskExpiryState(t.id);
       const done = exp.completed;
       const lockRem = getTaskLockRemainingMs(t.id);
+      const isRecog = t.taskKind === 'recognition';
+      const scoreBadge = isRecog
+        ? `${progress[t.id]?.recognitionScore ?? '--'}%`
+        : `${progress[t.id]?.translationScore ?? '--'}/10`;
       let statusText = `${t.theme} · ~${t.estMinutes}p`;
       let clsState = '';
       let subCls = '';
@@ -826,11 +970,11 @@
         clsState = 'is-locked';
         subCls = 'task-text-err';
       } else if (exp.expired && done) {
-        statusText = `✓ Hoàn thành (${progress[t.id].translationScore ?? '--'}/10) · Hết hạn (Chỉ xem kết quả)`;
+        statusText = `✓ Hoàn thành (${scoreBadge}) · Hết hạn (Chỉ xem kết quả)`;
         clsState = 'is-done';
         subCls = 'task-text-ok';
       } else if (done) {
-        statusText = `✓ Hoàn thành (${progress[t.id].translationScore ?? '--'}/10)` + (exp.hasDeadline ? ` · Còn ${formatDeadlineRemaining(exp.remainingMs)}` : '');
+        statusText = `✓ Hoàn thành (${scoreBadge})` + (exp.hasDeadline ? ` · Còn ${formatDeadlineRemaining(exp.remainingMs)}` : '');
         clsState = 'is-done';
         subCls = 'task-text-ok';
       } else if (lockRem > 0) {
@@ -849,6 +993,17 @@
         </button>
       `;
     }).join('');
+  }
+
+  function openStudentTasksModal() {
+    const curScope = B()?.getCurrentScopeKey?.() || '';
+    if (TASK_SUITES_META.some((m) => m.key === curScope)) {
+      activeStudentTaskTab = curScope;
+    } else if (isAnyTaskId(curScope)) {
+      const curT = getTaskById(curScope);
+      if (curT?.scopeKey) activeStudentTaskTab = curT.scopeKey;
+    }
+    renderStudentTasksModalBody();
     document.getElementById('modal-student-tasks')?.classList.add('open');
   }
 
@@ -870,17 +1025,27 @@
 
     const progress = loadTaskProgress()[t.id];
     const exp = getTaskExpiryState(t.id);
+    const isRecog = t.taskKind === 'recognition';
+    const doneScoreStr = isRecog
+      ? `Test phản xạ: ${progress?.recognitionScore ?? '--'}%`
+      : `Test 3 dịch bài: ${progress?.translationScore ?? '--'}/10`;
     const doneNote = progress?.status === 'completed'
-      ? `<div class="task-text-ok" style="margin-top:8px; font-weight:700;">✓ Bạn đã hoàn thành Task này (Test 3 dịch bài: ${progress.translationScore}/10).${exp.expired ? ' Đã hết thời hạn — chỉ có thể xem lại kết quả.' : ' Còn hạn: có thể làm lại để ôn tập.'}</div>`
+      ? `<div class="task-text-ok" style="margin-top:8px; font-weight:700;">✓ Bạn đã hoàn thành Task này (${doneScoreStr}).${exp.expired ? ' Đã hết thời hạn — chỉ có thể xem lại kết quả.' : ' Còn hạn: có thể làm lại để ôn tập.'}</div>`
       : '';
     const deadlineLine = exp.hasDeadline
       ? `<div id="brief-deadline-line" style="margin-top:6px; font-weight:700; color:${exp.expired ? '#dc2626' : 'var(--accent)'};">${exp.expired ? `⏰ Đã hết hạn lúc ${esc(exp.formattedAt)}` : `⏱ Thời hạn: còn ${esc(formatDeadlineRemaining(exp.remainingMs))} (đóng lúc ${esc(exp.formattedAt)})`}</div>`
       : '';
 
     if (info) {
-      info.innerHTML = `
-        <div><strong>Nội dung:</strong> Học 50 từ vựng gốc (kèm Word Family) ngay trên giao diện Flashcard chính.</div>
-        <div style="margin-top:6px;"><strong>Quy trình &amp; Thời lượng (~${t.estMinutes} phút):</strong> Bấm <strong>Đã thuộc đủ 50/50 từ</strong> → Tự mở Cửa sổ Bài Test gồm <strong>Test 1 ghép từ → Test 2 kéo thả &amp; ngữ cảnh → Test 3 dịch bài</strong>.</div>
+      info.innerHTML = isRecog ? `
+        <div><strong>Nội dung:</strong> Học ${t.words.length} từ vựng đã gom theo cụm gốc từ (Word Family) ngay trên Flashcard. Từ nào biết sẵn bấm <strong>Đã thuộc</strong> (chọn nghĩa 1 chạm trong 5 giây).</div>
+        <div style="margin-top:6px;"><strong>Quy trình &amp; Thời lượng (~${t.estMinutes} phút):</strong> Bấm <strong>Đã thuộc đủ ${t.words.length}/${t.words.length} từ</strong> → Làm <strong>Test Phản Xạ Reading (${t.words.length} từ · 5s/từ · &ge; 94% + Sửa lỗi 100%)</strong>.</div>
+        <div style="margin-top:6px;"><strong>Yêu cầu kỷ luật:</strong> Tập trung hoàn thành bài; nếu ngưng thao tác quá <strong>10 phút</strong> (hoặc rời tab quá 2 lần khi đang làm Test), Task sẽ bị <strong>khóa 30 phút</strong> mới được làm lại.</div>
+        ${deadlineLine}
+        ${doneNote}
+      ` : `
+        <div><strong>Nội dung:</strong> Học ${t.words.length} từ vựng gốc (kèm Word Family) ngay trên giao diện Flashcard chính.</div>
+        <div style="margin-top:6px;"><strong>Quy trình &amp; Thời lượng (~${t.estMinutes} phút):</strong> Bấm <strong>Đã thuộc đủ ${t.words.length}/${t.words.length} từ</strong> → Tự mở Cửa sổ Bài Test gồm <strong>Test 1 ghép từ → Test 2 Paraphrase đề thật &amp; Word Box → Test 3 dịch bài</strong>.</div>
         <div style="margin-top:6px;"><strong>Yêu cầu kỷ luật:</strong> Tập trung hoàn thành bài; nếu ngưng thao tác quá <strong>10 phút</strong> (hoặc rời tab quá 2 lần khi đang làm Test), Task sẽ bị <strong>khóa 30 phút</strong> mới được làm lại.</div>
         ${deadlineLine}
         ${doneNote}
@@ -926,8 +1091,9 @@
   }
 
   function getOldWordsToReviewForTask(taskId) {
+    const curTask = getTaskById(taskId);
     const taskNum = getTaskNumberOrder(taskId);
-    if (taskNum < 2) return [];
+    if (!curTask || taskNum < 2) return [];
     const bridge = B();
     const amap = bridge?.getAssessmentsMap?.() || {};
     const srs = bridge?.getSrsMap?.() || {};
@@ -936,7 +1102,7 @@
     const seen = new Set();
     const dueWords = [];
 
-    getTasksList().forEach((prevTask) => {
+    getTasksByScope(curTask.scopeKey || 'paraphrase').forEach((prevTask) => {
       const prevNum = getTaskNumberOrder(prevTask.id);
       if (prevNum <= 0 || prevNum >= taskNum) return;
       const words = Array.isArray(prevTask.words) ? prevTask.words : [];
@@ -1135,7 +1301,7 @@
     const finWarnEl = document.getElementById('fc-finished-task-warn');
     if (!bar) return;
     const scopeKey = B()?.getCurrentScopeKey?.() || '';
-    if (!scopeKey.startsWith('task_')) {
+    if (!isAnyTaskId(scopeKey)) {
       bar.style.display = 'none';
       if (finWarnEl) finWarnEl.style.display = 'none';
       return;
@@ -1151,14 +1317,18 @@
     const allReady = masteredCount >= total;
     const prog = loadTaskProgress()[task.id];
     const isCompleted = Boolean(prog && prog.status === 'completed') || taskTestPassed;
+    const isRecog = task.taskKind === 'recognition';
+    const examDesc = isRecog
+      ? 'Test Phản Xạ Reading (5s/từ · &ge; 94% + Sửa lỗi 100%)'
+      : 'Test 1 + Test 2 + Test 3';
     if (finWarnEl) {
       const esc = B()?.escapeHtml || ((x) => String(x));
       if (!isCompleted && !isTeacherOrBypassed()) {
         finWarnEl.style.display = 'block';
         if (allReady) {
-          finWarnEl.innerHTML = `<strong>⚠️ Chưa hoàn thành ${esc(task.label)}!</strong> Bạn đã thuộc đủ ${total}/${total} từ — hãy bấm <strong>"Làm bài Test kết thúc Task →"</strong> bên dưới và vượt qua đủ <strong>Test 1 + Test 2 + Test 3</strong> thì Task mới được tính hoàn thành.`;
+          finWarnEl.innerHTML = `<strong>⚠️ Chưa hoàn thành ${esc(task.label)}!</strong> Bạn đã thuộc đủ ${total}/${total} từ — hãy bấm <strong>"Làm bài Test kết thúc Task →"</strong> bên dưới và vượt qua <strong>${examDesc}</strong> thì Task mới được tính hoàn thành.`;
         } else {
-          finWarnEl.innerHTML = `<strong>⚠️ Chưa hoàn thành ${esc(task.label)}!</strong> Xem hết lượt thẻ chưa tính xong Task. Bạn mới thuộc <strong>${masteredCount}/${total} từ</strong> (còn ${total - masteredCount} từ) — cần học thuộc đủ ${total}/${total} từ rồi làm bài <strong>Test kết thúc Task (Test 1 + Test 2 + Test 3)</strong>.`;
+          finWarnEl.innerHTML = `<strong>⚠️ Chưa hoàn thành ${esc(task.label)}!</strong> Xem hết lượt thẻ chưa tính xong Task. Bạn mới thuộc <strong>${masteredCount}/${total} từ</strong> (còn ${total - masteredCount} từ) — cần học thuộc đủ ${total}/${total} từ rồi làm bài <strong>Test kết thúc Task (${examDesc})</strong>.`;
         }
       } else {
         finWarnEl.style.display = 'none';
@@ -1199,8 +1369,19 @@
     if (!modal) return;
     const pill = document.getElementById('exam-ready-task-pill');
     const heading = document.getElementById('exam-ready-heading');
+    const desc = document.getElementById('exam-ready-desc');
+    const startBtn = document.getElementById('btn-confirm-open-task-exam');
+    const isRecog = task.taskKind === 'recognition';
     if (pill) pill.textContent = task.label.toUpperCase();
     if (heading) heading.textContent = `Bạn đã học và bấm Đã thuộc đủ ${task.words.length}/${task.words.length} từ (${task.label})!`;
+    if (desc) {
+      desc.innerHTML = isRecog
+        ? `Bước cuối để hoàn tất Task: vượt qua <strong>Test Phản Xạ Reading (${task.words.length} từ · 5s/từ · &ge; 94% + Sửa lỗi 100%)</strong>. Chú ý không rời tab khi làm bài nhé!`
+        : `Bước cuối để hoàn tất Task: vượt qua <strong>Test 1 (Ghép từ) → Test 2 (Paraphrase &amp; Word Box) → Test 3 (Dịch bài)</strong>. Chú ý không rời tab khi làm bài nhé!`;
+    }
+    if (startBtn) {
+      startBtn.textContent = isRecog ? 'Bắt đầu Test Phản Xạ →' : 'Bắt đầu làm Test 1 →';
+    }
     modal.classList.add('open');
   }
 
@@ -1261,6 +1442,27 @@
     }
     activeTask = task;
     closeTaskExamReadyModal();
+    if (task.taskKind === 'recognition' && window.RecognitionTestModule?.startTaskFinalExam) {
+      window.RecognitionTestModule.startTaskFinalExam(task, (res) => {
+        const prog = loadTaskProgress();
+        prog[task.id] = {
+          status: 'completed',
+          taskKind: 'recognition',
+          recognitionScore: res.round1Pct,
+          correctCount: res.correctCount,
+          totalWords: res.totalWords,
+          elapsedSec: res.elapsedSec,
+          completedAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        saveTaskProgress(prog);
+        taskTestPassed = true;
+        clearActiveExamSession();
+        updateTaskStudyBar();
+        B()?.saveAndSync?.();
+      });
+      return;
+    }
     startTest1();
   }
 
@@ -1292,7 +1494,7 @@
   }
 
   function onScopeChanged(scopeKey) {
-    if (scopeKey && scopeKey.startsWith('task_')) {
+    if (isAnyTaskId(scopeKey)) {
       const t = getTaskById(scopeKey);
       if (t) {
         if (!isTeacherOrBypassed() && (getTaskExpiryState(t.id).expired || getTaskLockRemainingMs(t.id) > 0 || getOldWordsToReviewForTask(t.id).length > 0)) {
@@ -1300,7 +1502,7 @@
           activeTask = null;
           activeStage = 0;
           if (B()?.getCurrentScopeKey?.() === t.id) {
-            B()?.loadMainScope?.('paraphrase');
+            B()?.loadMainScope?.(t.scopeKey || 'paraphrase');
           }
           openTaskBriefModal(t.id);
           updateTaskStudyBar();
@@ -1324,7 +1526,7 @@
 
   function onStudyAssessmentChanged(scopeKey, _assessments, _item, level) {
     updateTaskStudyBar();
-    if (!scopeKey || !scopeKey.startsWith('task_')) return;
+    if (!isAnyTaskId(scopeKey)) return;
     const task = getTaskById(scopeKey) || activeTask;
     if (!task) return;
     activeTask = task;
@@ -1424,7 +1626,7 @@
   function hasIncompleteActiveTask() {
     if (isPreviewTestMode || isTeacherOrBypassed()) return false;
     const scopeKey = B()?.getCurrentScopeKey?.() || '';
-    const task = activeTask || (scopeKey.startsWith('task_') ? getTaskById(scopeKey) : null);
+    const task = activeTask || (isAnyTaskId(scopeKey) ? getTaskById(scopeKey) : null);
     if (!task) return false;
     if (activeStage < 1 && scopeKey !== task.id) return false;
     if (taskTestPassed) return false;
@@ -1563,12 +1765,21 @@
     }
 
     stopIdleMonitor();
+    const returnScope = activeTask?.scopeKey || 'paraphrase';
     activeTask = null;
     activeStage = 0;
     taskTestPassed = false;
-    B()?.loadMainScope?.('paraphrase');
+    B()?.loadMainScope?.(returnScope);
     if (confirmExit) B()?.showToast('Đã quay lại màn hình học từ vựng chính.');
     updateTaskStudyBar();
+    window.RecognitionTestModule?.updateScopeListTestButton?.();
+  }
+
+  function triggerExternalAntiCheatLock(taskId, reason) {
+    const t = getTaskById(taskId) || activeTask;
+    if (!t || isTeacherOrBypassed()) return;
+    activeTask = t;
+    lockAndExitActiveTask(`${reason} — ${t.label} bị khóa 30 phút!`);
   }
 
   function evaluateTaskIdleTimeout() {
@@ -3761,7 +3972,7 @@
       return;
     }
     if (sTasksBtn) {
-      sTasksBtn.style.display = assignedUrlTaskIds.length > 0 ? 'inline-flex' : 'none';
+      sTasksBtn.style.display = 'inline-flex';
     }
     // Chống F5 / tải lại trang để reset giờ & xóa lỗi khi đang thi dở Test Task
     if (!isTeacherOrBypassed()) {
@@ -3787,16 +3998,16 @@
       }
     }
     const curScope = B()?.getCurrentScopeKey?.() || '';
-    const curTask = curScope.startsWith('task_') ? getTaskById(curScope) : null;
+    const curTask = isAnyTaskId(curScope) ? getTaskById(curScope) : null;
     if (curTask && !isTeacherOrBypassed() && getTaskExpiryState(curTask.id).expired) {
       syncAssignedTaskScopes();
-      B()?.loadMainScope?.('paraphrase');
+      B()?.loadMainScope?.(curTask.scopeKey || 'paraphrase');
       openTaskBriefModal(curTask.id);
       return;
     }
     if (curTask && !isTeacherOrBypassed() && getTaskLockRemainingMs(curTask.id) > 0) {
       syncAssignedTaskScopes();
-      B()?.loadMainScope?.('paraphrase');
+      B()?.loadMainScope?.(curTask.scopeKey || 'paraphrase');
       openTaskBriefModal(curTask.id);
       return;
     }
@@ -4211,11 +4422,18 @@
     onUserLogout,
     onCloudMerged,
     getActiveTask: () => activeTask,
+    isTaskWorkspaceActive: () => Boolean(activeTask || isAnyTaskId(B()?.getCurrentScopeKey?.() || '')),
     isPreviewMode: () => isPreviewTestMode,
     getAllTasks: getTasksList,
+    getAllCatalogTasks,
+    getTasksByScope,
     getTaskById,
+    switchStudentTaskTab,
+    switchTeacherTaskTab,
+    openRecognitionTaskPreview,
+    triggerExternalAntiCheatLock,
     getExamState: () => ({
-      active: Boolean(activeTask && activeStage >= 1 && !taskTestPassed && !isPreviewTestMode),
+      active: Boolean(activeTask && activeStage >= 1 && !taskTestPassed && !isPreviewTestMode) || Boolean(window.RecognitionTestModule?.isActive?.()),
       label: activeTask?.label || 'Test Task',
       isPreview: isPreviewTestMode,
       isTeacher: Boolean(B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher'),

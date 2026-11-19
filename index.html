@@ -10,9 +10,9 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261119o">
-  <link rel="stylesheet" href="css/motion.css?v=20261119o">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261119o">
+  <link rel="stylesheet" href="css/style.css?v=20261119p">
+  <link rel="stylesheet" href="css/motion.css?v=20261119p">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261119p">
 </head>
 <body>
 
@@ -146,6 +146,9 @@
           </button>
           <button class="btn-deck-tool" id="btn-top-signalwords" onclick="openSignalWordsModal()" title="Xem bảng phân loại từ nối chỉ hướng nghĩa" style="display:none;">
             <span>Bảng từ nối</span>
+          </button>
+          <button class="btn-deck-tool" id="btn-top-list-final-test" onclick="RecognitionTestModule.startListFinalExam()" title="Làm bài Test tổng kết 100% từ vựng trong bộ đang chọn">
+            <span>Test tổng kết</span>
           </button>
           <button class="btn-deck-tool" id="btn-top-shuffle" onclick="shuffleCurrentScope()" title="Trộn ngẫu nhiên thứ tự">
             <span>Trộn</span>
@@ -566,6 +569,7 @@
           </div>
         </div>
 
+        <div class="task-suite-tabs" id="teacher-task-suite-tabs" style="margin-bottom:10px;"></div>
         <div class="teacher-task-dash-grid" id="teacher-dash-task-grid"></div>
 
         <details style="margin-top:14px; padding-top:12px; border-top:1px solid var(--card-border);">
@@ -801,6 +805,7 @@
         </div>
       </div>
       <div class="modal-body" style="padding:14px 22px 20px;">
+        <div class="task-suite-tabs" id="student-task-suite-tabs" style="margin-bottom:12px;"></div>
         <div class="teacher-task-grid" id="student-task-grid"></div>
       </div>
     </div>
@@ -960,12 +965,27 @@
     </div>
   </div>
 
-  <script src="data/accounts.js?v=20261119o"></script>
-  <script src="data/vocab_data.js?v=20261119o"></script>
-  <script src="data/tasks_data.js?v=20261119o"></script>
-  <script src="data/ipa_dict.js?v=20261119o"></script>
-  <script src="js/motion.js?v=20261119o"></script>
-  <script src="js/app.js?v=20261119o"></script>
-  <script src="js/tasks.js?v=20261119o"></script>
+  <!-- MODAL: ĐỘNG CƠ TEST PHẢN XẠ READING HỢP NHẤT (TASK FINAL & LIST CUMULATIVE FINAL) -->
+  <div class="modal-overlay task-exam-overlay" id="modal-recognition-test" onclick="RecognitionTestModule.closeModal(event)" aria-label="Bài Test Phản Xạ Reading">
+    <div class="modal-card recog-modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+          <span class="tip-pill" id="recog-modal-badge" style="margin:0; flex-shrink:0;">TEST PHẢN XẠ</span>
+          <div class="modal-title" id="recog-modal-title" style="font-size:17px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Test Phản Xạ Reading</div>
+        </div>
+        <button type="button" class="btn-icon-glass" style="width:32px; height:32px; font-size:1rem; flex-shrink:0;" onclick="RecognitionTestModule.closeModal()" aria-label="Đóng">✕</button>
+      </div>
+      <div class="modal-body" id="recog-modal-body" style="padding:18px 22px 22px;"></div>
+    </div>
+  </div>
+
+  <script src="data/accounts.js?v=20261119p"></script>
+  <script src="data/vocab_data.js?v=20261119p"></script>
+  <script src="data/tasks_data.js?v=20261119p"></script>
+  <script src="data/ipa_dict.js?v=20261119p"></script>
+  <script src="js/motion.js?v=20261119p"></script>
+  <script src="js/recognition_test.js?v=20261119p"></script>
+  <script src="js/app.js?v=20261119p"></script>
+  <script src="js/tasks.js?v=20261119p"></script>
 </body>
 </html>
