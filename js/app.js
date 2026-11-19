@@ -26,22 +26,22 @@
   const SCOPES = [
     {
       key: 'foundation',
-      name: '1. Từ Vựng Nền Tảng',
+      name: 'Từ Vựng Nền Tảng',
       getList: () => (APP_DATA.file2_families_3500 || []).slice(0, 1500),
     },
     {
       key: 'academic',
-      name: '2. Từ Vựng Học Thuật',
+      name: 'Từ Vựng Học Thuật',
       getList: () => (APP_DATA.file2_families_3500 || []).slice(1500, 2500),
     },
     {
       key: 'paraphrase',
-      name: '3. Từ Vựng Paraphrase',
+      name: 'Từ Vựng Paraphrase',
       getList: () => APP_DATA.file1_paraphrase_1500 || [],
     },
     {
       key: 'advanced',
-      name: '4. Từ Vựng Chuyên Sâu',
+      name: 'Từ Vựng Chuyên Sâu',
       getList: () => (APP_DATA.file2_families_3500 || []).slice(2500),
     },
     {

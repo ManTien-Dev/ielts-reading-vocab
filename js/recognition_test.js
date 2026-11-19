@@ -321,7 +321,7 @@
       taskId: taskObj.id,
       taskLabel: taskObj.label,
       scopeKey: taskObj.scopeKey || 'foundation',
-      title: `${taskObj.label} · Test Kết thúc (${orderIds.length} từ)`,
+      title: `${taskObj.label} · Test Kết thúc`,
       pool: taskObj.words,
       itemById,
       orderIds,
@@ -380,7 +380,7 @@
       mode: 'list_final',
       scopeKey: info.key,
       scopeName: info.name,
-      title: `Test Tổng Kết · ${info.name} (${orderIds.length} từ)`,
+      title: `Test Tổng Kết · ${info.name}`,
       pool: info.list,
       itemById,
       orderIds,
@@ -583,7 +583,8 @@
         <div class="recog-word-stage">
           <div class="recog-word-row">
             <span class="recog-word-main" id="recog-word-main">${esc(item.lemma)}</span>
-            <button type="button" class="btn-voice-speak" title="Nghe phát âm" onclick="window.__VOCAB_BRIDGE__?.speakText?.('${esc(item.lemma)}', 'en-US')">🔊</button>
+            <button type="button" class="btn-voice-speak" title="Nghe phát âm Anh - Anh (UK)" onclick="window.__VOCAB_BRIDGE__?.speakText?.('${esc(item.lemma)}', 'en-GB')"><span>UK</span></button>
+            <button type="button" class="btn-voice-speak" title="Nghe phát âm Anh - Mỹ (US)" onclick="window.__VOCAB_BRIDGE__?.speakText?.('${esc(item.lemma)}', 'en-US')"><span>US</span></button>
           </div>
           <div class="recog-word-sub">
             ${ipaText ? `<span class="recog-ipa">${esc(ipaText)}</span>` : ''}
@@ -837,7 +838,7 @@
       <div class="recog-intro-card" style="text-align:center;">
         <img src="assets/images/panda_leaderboard.jpg" alt="" class="celebrate-panda-img" style="width:88px; height:88px; margin-bottom:10px;">
         <div class="recog-intro-title" style="color:var(--success);">
-          ${session.mode === 'task_final' ? `✓ Hoàn thành xuất sắc ${esc(session.taskLabel)}!` : `🏆 Chinh phục 100% ${esc(session.scopeName)}!`}
+          ${session.mode === 'task_final' ? `✓ Hoàn thành xuất sắc ${esc(session.taskLabel)}!` : `✓ Chinh phục 100% ${esc(session.scopeName)}!`}
         </div>
         <p style="font-size:15.5px; color:var(--text-muted); margin:10px 0 18px; line-height:1.6;">
           Phản xạ Vòng 1: <strong>${session.correctCount}/${total} từ (${pct}%)</strong> · Sửa lỗi 100%: <strong>Đạt</strong> · Thời gian: <strong>${durStr}</strong>.

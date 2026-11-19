@@ -80,10 +80,10 @@
   }
 
   const TASK_SUITES_META = [
-    { key: 'foundation', prefix: 'fnd', label: '1. Nền Tảng', count: 30, desc: 'Nhận diện mặt chữ & nghĩa (1.500 từ)', kind: 'recognition' },
-    { key: 'academic', prefix: 'acd', label: '2. Học Thuật', count: 20, desc: 'Học thuật Reading (1.000 từ)', kind: 'recognition' },
-    { key: 'paraphrase', prefix: 'task', label: '3. Paraphrase', count: 30, desc: 'Paraphrase đề thật + Word Box + Dịch bài (1.500 từ)', kind: 'paraphrase_full' },
-    { key: 'advanced', prefix: 'adv', label: '4. Chuyên Sâu', count: 30, desc: 'Chuyên sâu C1–C2 (1.504 từ)', kind: 'recognition' },
+    { key: 'foundation', prefix: 'fnd', label: 'Nền Tảng', count: 30, desc: 'Nhận diện mặt chữ & nghĩa', kind: 'recognition' },
+    { key: 'academic', prefix: 'acd', label: 'Học Thuật', count: 20, desc: 'Học thuật Reading', kind: 'recognition' },
+    { key: 'paraphrase', prefix: 'task', label: 'Paraphrase', count: 30, desc: 'Paraphrase đề thật & Dịch bài', kind: 'paraphrase_full' },
+    { key: 'advanced', prefix: 'adv', label: 'Chuyên Sâu', count: 30, desc: 'Chuyên sâu C1–C2', kind: 'recognition' },
   ];
 
   let _generatedSuiteCache = null;
@@ -122,7 +122,7 @@
         scopeKey,
         taskKind: 'recognition',
         label: `${shortLabel} · Task ${num}`,
-        theme: `${themeLabel} (${words.length} từ)`,
+        theme: themeLabel,
         estMinutes: 15,
         words,
         linkedIds: words.map((w) => w.id),
@@ -504,7 +504,7 @@
       tabsEl.innerHTML = TASK_SUITES_META.map((m) => {
         const list = getTasksByScope(m.key);
         const selInTab = list.filter((t) => teacherSelectedIds.has(t.id)).length;
-        return `<button type="button" class="task-suite-tab ${activeTeacherTaskTab === m.key ? 'active' : ''}" onclick="TasksModule.switchTeacherTaskTab('${m.key}')">${esc(m.label)} (${list.length})${selInTab > 0 ? ` · <strong>${selInTab}</strong>` : ''}</button>`;
+        return `<button type="button" class="task-suite-tab ${activeTeacherTaskTab === m.key ? 'active' : ''}" onclick="TasksModule.switchTeacherTaskTab('${m.key}')">${esc(m.label)}${selInTab > 0 ? ` · <strong>${selInTab}</strong>` : ''}</button>`;
       }).join('');
     }
 
@@ -527,7 +527,7 @@
       }
 
       const previewBtns = t.taskKind === 'recognition'
-        ? `<button type="button" class="btn-subtle" style="padding:2px 8px; font-size:11px;" onclick="TasksModule.openRecognitionTaskPreview('${esc(t.id)}')">Xem Speed Quiz (${t.words.length} từ)</button>`
+        ? `<button type="button" class="btn-subtle" style="padding:2px 8px; font-size:11px;" onclick="TasksModule.openRecognitionTaskPreview('${esc(t.id)}')">Xem Speed Quiz</button>`
         : `
           <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(1, '${esc(t.id)}')">Test 1</button>
           <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(2, '${esc(t.id)}')">Test 2</button>
@@ -538,7 +538,7 @@
           <input type="checkbox" style="margin-top:3px;" value="${esc(t.id)}" ${checked} onchange="TasksModule.toggleTeacherTask('${esc(t.id)}', this.checked)">
           <div style="min-width:0; flex:1;">
             <div class="teacher-task-title">${esc(t.label)}${badgeHtml}</div>
-            <div class="teacher-task-sub">${esc(t.theme)} · ${t.words.length} từ</div>
+            <div class="teacher-task-sub">${esc(t.theme)}</div>
             ${subStatusHtml}
             <div style="margin-top:7px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;" onclick="event.stopPropagation()">
               <span style="font-size:11.5px; color:var(--text-muted); font-weight:700;">Xem Test:</span>
@@ -942,9 +942,7 @@
       } else {
         tabsEl.style.display = 'flex';
         tabsEl.innerHTML = TASK_SUITES_META.map((m) => {
-          const list = getTasksByScope(m.key);
-          const doneCnt = list.filter((t) => progress[t.id]?.status === 'completed').length;
-          return `<button type="button" class="task-suite-tab ${activeStudentTaskTab === m.key ? 'active' : ''}" data-suite="${m.key}" onclick="TasksModule.switchStudentTaskTab('${m.key}')">${esc(m.label)} (${doneCnt}/${list.length})</button>`;
+          return `<button type="button" class="task-suite-tab ${activeStudentTaskTab === m.key ? 'active' : ''}" data-suite="${m.key}" onclick="TasksModule.switchStudentTaskTab('${m.key}')">${esc(m.label)}</button>`;
         }).join('');
       }
     }
@@ -966,7 +964,7 @@
       let subCls = '';
 
       if (exp.expired && !done) {
-        statusText = `⏰ Task đã kết thúc (Hết hạn lúc ${exp.formattedAt})`;
+        statusText = `Task đã kết thúc (Hết hạn lúc ${exp.formattedAt})`;
         clsState = 'is-locked';
         subCls = 'task-text-err';
       } else if (exp.expired && done) {
@@ -1033,7 +1031,7 @@
       ? `<div class="task-text-ok" style="margin-top:8px; font-weight:700;">✓ Bạn đã hoàn thành Task này (${doneScoreStr}).${exp.expired ? ' Đã hết thời hạn — chỉ có thể xem lại kết quả.' : ' Còn hạn: có thể làm lại để ôn tập.'}</div>`
       : '';
     const deadlineLine = exp.hasDeadline
-      ? `<div id="brief-deadline-line" style="margin-top:6px; font-weight:700; color:${exp.expired ? '#dc2626' : 'var(--accent)'};">${exp.expired ? `⏰ Đã hết hạn lúc ${esc(exp.formattedAt)}` : `⏱ Thời hạn: còn ${esc(formatDeadlineRemaining(exp.remainingMs))} (đóng lúc ${esc(exp.formattedAt)})`}</div>`
+      ? `<div id="brief-deadline-line" style="margin-top:6px; font-weight:700; color:${exp.expired ? '#dc2626' : 'var(--accent)'};">${exp.expired ? `Đã hết hạn lúc ${esc(exp.formattedAt)}` : `⏱ Thời hạn: còn ${esc(formatDeadlineRemaining(exp.remainingMs))} (đóng lúc ${esc(exp.formattedAt)})`}</div>`
       : '';
 
     if (info) {
@@ -1151,7 +1149,7 @@
     if (dlLine && exp.hasDeadline) {
       dlLine.style.color = exp.expired ? '#dc2626' : 'var(--accent)';
       dlLine.textContent = exp.expired
-        ? `⏰ Đã hết hạn lúc ${exp.formattedAt}`
+        ? `Đã hết hạn lúc ${exp.formattedAt}`
         : `⏱ Thời hạn: còn ${formatDeadlineRemaining(exp.remainingMs)} (đóng lúc ${exp.formattedAt})`;
     }
 
@@ -1165,10 +1163,10 @@
         lockEl.style.flexWrap = 'wrap';
         if (exp.completed) {
           lockEl.classList.add('is-info-ended');
-          lockEl.innerHTML = `<span>⏰ Task đã hết thời hạn làm bài (${exp.formattedAt}). Bạn đã hoàn thành — không thể làm lại nữa, chỉ có thể xem lại kết quả.</span>`;
+          lockEl.innerHTML = `<span>Task đã hết thời hạn làm bài (${exp.formattedAt}). Bạn đã hoàn thành — không thể làm lại nữa, chỉ có thể xem lại kết quả.</span>`;
         } else {
           lockEl.classList.remove('is-info-ended');
-          lockEl.innerHTML = `<span>⏰ Task đã kết thúc! Đã hết thời hạn làm bài (${exp.formattedAt}) — bạn chưa hoàn thành nên không thể vào làm hay xem kết quả.</span>`;
+          lockEl.innerHTML = `<span>Task đã kết thúc! Đã hết thời hạn làm bài (${exp.formattedAt}) — bạn chưa hoàn thành nên không thể vào làm hay xem kết quả.</span>`;
         }
       }
       if (startBtn) {
@@ -1215,7 +1213,7 @@
           lockEl.style.justifyContent = 'space-between';
           lockEl.style.gap = '10px';
           lockEl.style.flexWrap = 'wrap';
-          lockEl.innerHTML = `<span>📚 Yêu cầu ôn tập từ vựng cũ: Bạn còn <strong>${dueOld.length} từ cũ</strong> (thuộc các Task trước) chưa thuộc hết hoặc đến hạn ôn tập. Hãy ôn thuộc hết trước khi vào Task này!</span>`;
+          lockEl.innerHTML = `<span>Yêu cầu ôn tập từ vựng cũ: Bạn còn <strong>${dueOld.length} từ cũ</strong> (thuộc các Task trước) chưa thuộc hết hoặc đến hạn ôn tập. Hãy ôn thuộc hết trước khi vào Task này!</span>`;
         }
         if (reviewBtn) {
           reviewBtn.style.display = 'inline-flex';
@@ -1326,9 +1324,9 @@
       if (!isCompleted && !isTeacherOrBypassed()) {
         finWarnEl.style.display = 'block';
         if (allReady) {
-          finWarnEl.innerHTML = `<strong>⚠️ Chưa hoàn thành ${esc(task.label)}!</strong> Bạn đã thuộc đủ ${total}/${total} từ — hãy bấm <strong>"Làm bài Test kết thúc Task →"</strong> bên dưới và vượt qua <strong>${examDesc}</strong> thì Task mới được tính hoàn thành.`;
+          finWarnEl.innerHTML = `<strong>Chưa hoàn thành ${esc(task.label)}!</strong> Bạn đã thuộc đủ ${total}/${total} từ — hãy bấm <strong>"Làm bài Test kết thúc Task →"</strong> bên dưới và vượt qua <strong>${examDesc}</strong> thì Task mới được tính hoàn thành.`;
         } else {
-          finWarnEl.innerHTML = `<strong>⚠️ Chưa hoàn thành ${esc(task.label)}!</strong> Xem hết lượt thẻ chưa tính xong Task. Bạn mới thuộc <strong>${masteredCount}/${total} từ</strong> (còn ${total - masteredCount} từ) — cần học thuộc đủ ${total}/${total} từ rồi làm bài <strong>Test kết thúc Task (${examDesc})</strong>.`;
+          finWarnEl.innerHTML = `<strong>Chưa hoàn thành ${esc(task.label)}!</strong> Xem hết lượt thẻ chưa tính xong Task. Bạn mới thuộc <strong>${masteredCount}/${total} từ</strong> (còn ${total - masteredCount} từ) — cần học thuộc đủ ${total}/${total} từ rồi làm bài <strong>Test kết thúc Task (${examDesc})</strong>.`;
         }
       } else {
         finWarnEl.style.display = 'none';
@@ -1939,7 +1937,7 @@
           exitTaskWorkspace(false);
           B()?.showToast?.(exp.completed
             ? 'Đã hết thời hạn làm bài! Chỉ có thể xem lại kết quả.'
-            : '⏰ Đã hết thời hạn — Task đã kết thúc!');
+            : 'Đã hết thời hạn — Task đã kết thúc!');
           openTaskBriefModal(expiredId);
           return;
         }

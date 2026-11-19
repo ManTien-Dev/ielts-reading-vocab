@@ -35,10 +35,10 @@
       const f2 = d.file2_families_3500 || [];
       const f1 = d.file1_paraphrase_1500 || [];
       return [
-        { key: 'foundation', name: '1. Từ Vựng Nền Tảng', count: Math.min(1500, f2.length) },
-        { key: 'academic', name: '2. Từ Vựng Học Thuật', count: f2.slice(1500, 2500).length },
-        { key: 'paraphrase', name: '3. Từ Vựng Paraphrase', count: f1.length },
-        { key: 'advanced', name: '4. Từ Vựng Chuyên Sâu', count: f2.slice(2500).length },
+        { key: 'foundation', name: 'Từ Vựng Nền Tảng', count: Math.min(1500, f2.length) },
+        { key: 'academic', name: 'Từ Vựng Học Thuật', count: f2.slice(1500, 2500).length },
+        { key: 'paraphrase', name: 'Từ Vựng Paraphrase', count: f1.length },
+        { key: 'advanced', name: 'Từ Vựng Chuyên Sâu', count: f2.slice(2500).length },
         { key: 'signal_words', name: 'Từ Nối Chỉ Hướng Nghĩa', count: (d.signal_words || []).length },
       ];
     }
