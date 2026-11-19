@@ -5814,41 +5814,41 @@ header.app-header {
   }
   body.study-focus-mode main.app-main,
   body.study-focus-mode main.app-main:has(#screen-study.active) {
-    max-width: 1280px !important;
+    max-width: 1120px !important;
   }
   body.study-focus-mode #screen-study .study-deck {
     display: none !important;
   }
   body.study-focus-mode #screen-study .study-stage-row {
     justify-content: center !important;
-    grid-template-columns: minmax(0, min(1200px, 92vw)) !important;
+    grid-template-columns: minmax(0, min(1040px, 84vw)) !important;
   }
   body.study-focus-mode #screen-study .study-center-col {
-    max-width: min(1200px, 92vw) !important;
+    max-width: min(1040px, 84vw) !important;
     width: 100% !important;
     margin: 0 auto !important;
   }
   body.study-focus-mode #screen-study .fc-scene {
-    max-width: min(1200px, 92vw) !important;
+    max-width: min(1040px, 84vw) !important;
     width: 100% !important;
-    height: clamp(480px, calc(100svh - 196px), 665px) !important;
-    min-height: 480px !important;
-    border-radius: 28px !important;
-    box-shadow: 0 24px 60px rgba(24, 48, 28, 0.12), 0 4px 16px rgba(24, 48, 28, 0.06) !important;
+    height: clamp(460px, calc(100svh - 210px), 620px) !important;
+    min-height: 460px !important;
+    border-radius: 26px !important;
+    box-shadow: 0 22px 54px rgba(24, 48, 28, 0.11), 0 4px 14px rgba(24, 48, 28, 0.05) !important;
   }
   body.study-focus-mode:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
-    height: clamp(430px, calc(100svh - 252px), 605px) !important;
-    min-height: 430px !important;
+    height: clamp(415px, calc(100svh - 262px), 575px) !important;
+    min-height: 415px !important;
   }
   body.study-focus-mode #screen-study .fc-card,
   body.study-focus-mode #screen-study .fc-face {
-    border-radius: 28px !important;
+    border-radius: 26px !important;
   }
   body.study-focus-mode #screen-study .fc-face {
-    padding: clamp(16px, 2.8svh, 30px) clamp(28px, 4vw, 54px) clamp(14px, 2.2svh, 24px) !important;
+    padding: clamp(16px, 2.7svh, 28px) clamp(28px, 3.6vw, 48px) clamp(14px, 2.1svh, 22px) !important;
   }
   body.study-focus-mode #screen-study .fc-face-front .fc-word {
-    font-size: clamp(4.2rem, 6.2vw, 5.75rem) !important;
+    font-size: clamp(3.8rem, 5.4vw, 5rem) !important;
     letter-spacing: -0.025em;
   }
   body.study-focus-mode #screen-study .fc-face-front .fc-ipa-badge {
