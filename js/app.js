@@ -3090,6 +3090,26 @@
       }
 
       if (acceptedVariants.includes(typed)) {
+        const isSignal = currentScopeKey === 'signal_words' || Boolean(item?.strategy);
+        const hasStage2Targets = isSignal
+          ? splitCsvItems(item?.word_forms).length > 0
+          : getCleanSynonyms(item).some((s) => {
+              const sl = String(s || '').trim().toLowerCase();
+              return sl && sl !== expected;
+            });
+        if (!hasStage2Targets) {
+          stopRecallInputTimer();
+          clearRecallActiveSession();
+          recallSubmitted = true;
+          delete masterCooldowns[item.id];
+          saveMasterCooldowns();
+          updateAssess3CooldownUI();
+          commitAssessment(item, 3);
+          closeRecallModal(null, true);
+          showToast(`Chính xác! Đã thuộc "${item.lemma}".`);
+          advanceDeckAfterAssess3();
+          return;
+        }
         enterRecallStage2(item);
         return;
       }

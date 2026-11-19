@@ -44,6 +44,13 @@
   let t2ParaFailedIds = new Set();
   let t2ParaMistakes = 0;
   let t2ParaDone = false;
+  let t2WbBoards = [];
+  let t2WbBoardIndex = 0;
+  let t2WbDone = false;
+  let t2WbFills = {};
+  let t2WbActiveSlotId = null;
+  let t2WbSubmitted = false;
+  let t2WbMistakes = 0;
   let t2ContextQs = [];
 
   let idleTimer = null;
@@ -2002,15 +2009,26 @@
   function getTaskTest2Total(task, rec = null) {
     if (rec && Number(rec.test2Total) > 0) return Number(rec.test2Total);
     if (task) {
-      const pairCount = Array.isArray(task.test2ParaphrasePairs) && task.test2ParaphrasePairs.length > 0
-        ? task.test2ParaphrasePairs.length
+      const pairCount = Array.isArray(task.test2ParaphrasePairs) ? task.test2ParaphrasePairs.length : 0;
+      const wbCount = Array.isArray(task.test2WordBoxBoards)
+        ? task.test2WordBoxBoards.reduce((sum, b) => sum + (Array.isArray(b?.items) ? b.items.length : 0), 0)
+        : 0;
+      const effectiveWordCount = (pairCount + wbCount) > 0
+        ? (pairCount + wbCount)
         : (Array.isArray(task.words) ? Math.min(50, task.words.length) : 50);
       const qs = Array.isArray(task.test2Questions) ? task.test2Questions : [];
       const nonParaCount = qs.filter((q) => q.type !== 'paraphrase').length;
       const mcqCount = nonParaCount > 0 ? Math.min(6, nonParaCount) : Math.min(6, qs.length);
-      return pairCount + mcqCount;
+      return effectiveWordCount + mcqCount;
     }
     return 56;
+  }
+
+  function setupT2WbBoard() {
+    const cur = t2WbBoards[t2WbBoardIndex] || null;
+    t2WbFills = {};
+    t2WbSubmitted = false;
+    t2WbActiveSlotId = cur?.items?.[0]?.id || null;
   }
 
   function initTest2State(task) {
@@ -2019,8 +2037,10 @@
     const usedL = new Set();
     const usedR = new Set();
 
-    // 1. Primary (Interface Contract §1): consume curated task.test2ParaphrasePairs (50 pairs -> 10 boards x 5)
-    if (Array.isArray(task?.test2ParaphrasePairs) && task.test2ParaphrasePairs.length > 0) {
+    const hasCuratedWb = Array.isArray(task?.test2WordBoxBoards) && task.test2WordBoxBoards.length > 0;
+
+    // 1. Primary: consume curated task.test2ParaphrasePairs (real-exam paraphrases only when Word Box is present)
+    if (Array.isArray(task?.test2ParaphrasePairs) && (task.test2ParaphrasePairs.length > 0 || hasCuratedWb)) {
       task.test2ParaphrasePairs.forEach((p, idx) => {
         const left = String(p?.left || '').trim();
         const right = String(p?.right || '').trim();
@@ -2125,8 +2145,13 @@
     t2ParaMistakes = 0;
     t2ParaDone = t2ParaBoards.length === 0;
     setupT2ParaBoard();
+    t2WbBoards = Array.isArray(task?.test2WordBoxBoards) ? task.test2WordBoxBoards : [];
+    t2WbBoardIndex = 0;
+    t2WbMistakes = 0;
+    t2WbDone = t2WbBoards.length === 0;
+    setupT2WbBoard();
     t2ContextQs = qs.filter((q) => q.type !== 'paraphrase').slice(0, 6);
-    if (t2ContextQs.length === 0 && pairs.length === 0) t2ContextQs = qs.slice();
+    if (t2ContextQs.length === 0 && pairs.length === 0 && t2WbBoards.length === 0) t2ContextQs = qs.slice();
     t2Index = 0;
     t2Correct = 0;
     t2Answered = false;
@@ -2233,7 +2258,9 @@
           setupT2ParaBoard();
         } else {
           t2ParaDone = true;
-          B()?.showToast?.('Xong Nối từ tương đương! Tiếp tục phần Ngữ cảnh.');
+          B()?.showToast?.(t2WbBoards.length > 0
+            ? 'Xong Nối Paraphrase đề thật! Tiếp tục phần Summary Word Box.'
+            : 'Xong Nối từ tương đương! Tiếp tục phần Ngữ cảnh.');
         }
       }
       renderTest2Stage();
@@ -2377,12 +2404,117 @@
   function onT2DragLeave() {}
   function onT2Drop(event) { event?.preventDefault?.(); }
 
+  function selectT2WbSlot(itemId) {
+    if (t2WbSubmitted) return;
+    if (t2WbActiveSlotId === itemId && t2WbFills[itemId]) {
+      delete t2WbFills[itemId];
+    } else {
+      t2WbActiveSlotId = itemId;
+    }
+    renderTest2Stage();
+  }
+
+  function clearT2WbSlot(itemId, event) {
+    event?.stopPropagation?.();
+    if (t2WbSubmitted) return;
+    delete t2WbFills[itemId];
+    t2WbActiveSlotId = itemId;
+    renderTest2Stage();
+  }
+
+  function pickT2WbOption(optKey) {
+    if (t2WbSubmitted) return;
+    const curBoard = t2WbBoards[t2WbBoardIndex];
+    if (!curBoard || !Array.isArray(curBoard.items) || curBoard.items.length === 0) return;
+
+    // If this option is already placed in a slot, clicking it frees it from the old slot first
+    let prevSlot = null;
+    for (const [sid, key] of Object.entries(t2WbFills)) {
+      if (key === optKey) {
+        prevSlot = sid;
+        break;
+      }
+    }
+    if (prevSlot && prevSlot === t2WbActiveSlotId) {
+      delete t2WbFills[prevSlot];
+      renderTest2Stage();
+      return;
+    }
+    if (prevSlot) delete t2WbFills[prevSlot];
+
+    let targetSlot = (t2WbActiveSlotId && curBoard.items.some((x) => x.id === t2WbActiveSlotId))
+      ? t2WbActiveSlotId
+      : null;
+    if (!targetSlot || t2WbFills[targetSlot]) {
+      const firstEmpty = curBoard.items.find((x) => !t2WbFills[x.id]);
+      if (firstEmpty) targetSlot = firstEmpty.id;
+      else targetSlot = targetSlot || curBoard.items[0].id;
+    }
+    t2WbFills[targetSlot] = optKey;
+
+    const nextEmpty = curBoard.items.find((x) => !t2WbFills[x.id]);
+    if (nextEmpty) t2WbActiveSlotId = nextEmpty.id;
+    renderTest2Stage();
+  }
+
+  function submitT2WbBoard() {
+    if (t2WbSubmitted) return;
+    const curBoard = t2WbBoards[t2WbBoardIndex];
+    if (!curBoard || !Array.isArray(curBoard.items)) return;
+    const missing = curBoard.items.filter((it) => !t2WbFills[it.id]);
+    if (missing.length > 0) {
+      t2WbActiveSlotId = missing[0].id;
+      B()?.showToast?.(`Vui lòng điền đủ ${curBoard.items.length} ô trống trước khi kiểm tra (còn ${missing.length} ô)!`);
+      renderTest2Stage();
+      return;
+    }
+
+    t2WbSubmitted = true;
+    const optByKey = {};
+    (curBoard.wordBox || []).forEach((o) => { optByKey[o.key] = o; });
+
+    curBoard.items.forEach((it) => {
+      const chosenKey = t2WbFills[it.id];
+      const chosenOpt = optByKey[chosenKey] || { text: '', role: '', note: '' };
+      const isRight = String(chosenOpt.text || '').trim().toLowerCase() === String(it.answer || '').trim().toLowerCase();
+      if (isRight) {
+        t2Correct++;
+      } else {
+        t2WbMistakes++;
+        const trapTag = chosenOpt.role === 'wf_trap'
+          ? 'Bẫy họ từ / từ loại'
+          : chosenOpt.role === 'task_distractor'
+            ? 'Từ nhiễu trong Task'
+            : 'Nhầm vị trí ô khác';
+        t2WrongRecords.push({
+          prompt: `Summary Word Box (${it.examTitle || 'IELTS Reading'}): ${it.sentenceBlank}`,
+          chosen: `${chosenOpt.text} (${trapTag})`,
+          answer: it.answer,
+          explain: `${chosenOpt.note ? chosenOpt.note + ' ' : ''}${it.explain || ''}`.trim(),
+        });
+      }
+    });
+    renderTest2Stage();
+  }
+
+  function nextT2WbBoard() {
+    if (t2WbBoardIndex < t2WbBoards.length - 1) {
+      t2WbBoardIndex++;
+      setupT2WbBoard();
+      renderTest2Stage();
+      return;
+    }
+    t2WbDone = true;
+    B()?.showToast?.('Xong Summary Word Box! Tiếp tục 6 câu trắc nghiệm.');
+    renderTest2Stage();
+  }
+
   function renderTest2Stage() {
     const container = document.getElementById('task-stage-container');
     if (!container || !activeTask) return;
     cleanupT2FloatingDrag();
     const esc = B()?.escapeHtml || ((x) => String(x));
-    if (t2ParaBoards.length === 0 && t2ContextQs.length === 0) {
+    if (t2ParaBoards.length === 0 && t2WbBoards.length === 0 && t2ContextQs.length === 0) {
       initTest2State(activeTask);
     }
 
@@ -2401,6 +2533,9 @@
       }).join('');
 
       const paraPct = Math.round(((t2ParaBoardIndex + (t2ParaMatchedIds.size / Math.max(1, curBoard.length))) / Math.max(1, t2ParaBoards.length)) * 100);
+      const teacherWbBtn = (isTeacherOrBypassed() && t2WbBoards.length > 0)
+        ? `<button type="button" class="btn-subtle" id="btn-teacher-t2-wb-preview" style="padding:5px 11px; font-size:12.5px;" onclick="TasksModule.jumpToT2WbPreview()">Xem Word Box →</button>`
+        : '';
       const teacherMcqBtn = isTeacherOrBypassed()
         ? `<button type="button" class="btn-subtle" id="btn-teacher-t2-mcq-preview" style="padding:5px 11px; font-size:12.5px;" onclick="TasksModule.jumpToT2McqPreview()">Xem 6 câu A/B/C/D →</button>`
         : '';
@@ -2412,17 +2547,18 @@
           </div>
           <div class="task-exam-header-row">
             <div class="task-exam-title-group">
-              <h2 class="task-exam-title">Nối cụm từ tương đương · Bảng ${t2ParaBoardIndex + 1} / ${t2ParaBoards.length}</h2>
+              <h2 class="task-exam-title">Nối Paraphrase đề thật · Bảng ${t2ParaBoardIndex + 1} / ${t2ParaBoards.length}</h2>
             </div>
             <div class="task-stat-pills">
               <span class="task-err-pill ${t2ParaMistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t2-err-cnt">${t2ParaMistakes}</strong></span>
               <span class="recall-stage-pill">${t2ParaMatchedIds.size} / ${curBoard.length} cặp</span>
+              ${teacherWbBtn}
               ${teacherMcqBtn}
             </div>
           </div>
           <div class="task-match-head">
             <span>Từ vựng trong Task (Hộp chứa)</span>
-            <span>Paraphrase thường gặp (Kéo sang trái)</span>
+            <span>Paraphrase từ đề thi thật (Kéo sang trái)</span>
           </div>
           <div class="task-match-wrap is-t2-dnd">
             <div class="task-match-col">${leftHtml}</div>
@@ -2434,8 +2570,118 @@
       return;
     }
 
+    if (!t2WbDone && t2WbBoards.length > 0) {
+      const curBoard = t2WbBoards[t2WbBoardIndex] || { items: [], wordBox: [] };
+      const items = curBoard.items || [];
+      const wordBox = curBoard.wordBox || [];
+      const optByKey = {};
+      wordBox.forEach((o) => { optByKey[o.key] = o; });
+      const usedKeys = new Set(Object.values(t2WbFills));
+      const filledCount = items.filter((it) => Boolean(t2WbFills[it.id])).length;
+      const wbPct = Math.round(((t2WbBoardIndex + (t2WbSubmitted ? 1 : (filledCount / Math.max(1, items.length)) * 0.85)) / Math.max(1, t2WbBoards.length)) * 100);
+
+      const teacherNavBtns = isTeacherOrBypassed()
+        ? `${t2ParaBoards.length > 0 ? `<button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.jumpToT2ParaPreview()">← Paraphrase</button>` : ''}
+           <button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.jumpToT2McqPreview()">6 câu A/B/C/D →</button>`
+        : '';
+
+      const boxHtml = wordBox.map((opt) => {
+        const isUsed = usedKeys.has(opt.key);
+        let stateCls = isUsed ? 'is-used' : '';
+        let roleBadge = '';
+        if (t2WbSubmitted) {
+          if (opt.role === 'answer') {
+            stateCls = 'is-wb-ans';
+          } else if (opt.role === 'wf_trap') {
+            stateCls = 'is-wb-trap';
+            roleBadge = '<span class="t2-wb-role-tag">Bẫy từ loại</span>';
+          } else {
+            stateCls = 'is-wb-dist';
+            roleBadge = '<span class="t2-wb-role-tag">Từ nhiễu</span>';
+          }
+        }
+        return `<button type="button" class="t2-wb-chip ${stateCls}" data-wb-key="${esc(opt.key)}" ${t2WbSubmitted ? 'disabled' : ''} onclick="TasksModule.pickT2WbOption('${esc(opt.key)}')">
+          <span class="t2-wb-chip-key">${esc(opt.key)}</span>
+          <span class="t2-wb-chip-word">${esc(opt.text)}</span>
+          ${roleBadge}
+        </button>`;
+      }).join('');
+
+      const sentsHtml = items.map((it) => {
+        const chosenKey = t2WbFills[it.id] || '';
+        const chosenOpt = chosenKey ? optByKey[chosenKey] : null;
+        const isActive = !t2WbSubmitted && t2WbActiveSlotId === it.id;
+        const isRight = t2WbSubmitted && chosenOpt && String(chosenOpt.text).trim().toLowerCase() === String(it.answer).trim().toLowerCase();
+        const isWrong = t2WbSubmitted && !isRight;
+
+        let slotCls = 't2-wb-slot';
+        if (isActive) slotCls += ' is-active';
+        if (chosenOpt && !t2WbSubmitted) slotCls += ' is-filled';
+        if (isRight) slotCls += ' is-right';
+        if (isWrong) slotCls += ' is-wrong';
+
+        const slotInner = chosenOpt
+          ? `<span><strong>${esc(chosenOpt.key)}.</strong> ${esc(chosenOpt.text)}</span>${!t2WbSubmitted ? `<span class="t2-wb-slot-x" onclick="TasksModule.clearT2WbSlot('${esc(it.id)}', event)" title="Xóa ô này">×</span>` : (isRight ? ' ✓' : ' ✗')}`
+          : `<span>(${it.slotNum}) ______</span>`;
+
+        const slotBtn = `<button type="button" class="${slotCls}" id="t2-wb-slot-${esc(it.id)}" ${t2WbSubmitted ? 'disabled' : ''} onclick="TasksModule.selectT2WbSlot('${esc(it.id)}')">${slotInner}</button>`;
+        const sentRendered = esc(it.sentenceBlank).replace('______', slotBtn);
+
+        let fbHtml = '';
+        if (t2WbSubmitted) {
+          if (isRight) {
+            fbHtml = `<div class="t2-wb-fb is-ok">✓ Đúng — <strong>${esc(it.answer)}</strong> (${esc(it.pos)}: ${esc(it.meaning)})</div>`;
+          } else {
+            const trapInfo = chosenOpt?.note ? ` · ${esc(chosenOpt.note)}` : '';
+            fbHtml = `<div class="t2-wb-fb is-err">✗ Đáp án đúng: <strong>${esc(it.answer)}</strong> (${esc(it.pos)}: ${esc(it.meaning)})${trapInfo}</div>`;
+          }
+        }
+
+        return `
+          <div class="t2-wb-sent-row ${isActive ? 'is-active-row' : ''} ${isRight ? 'is-ok-row' : ''} ${isWrong ? 'is-err-row' : ''}">
+            <div class="t2-wb-sent-head">
+              <span class="t2-wb-num">Câu ${it.slotNum}</span>
+              <span class="t2-wb-src">Đề thật: ${esc(it.examTitle || 'IELTS Reading')}</span>
+            </div>
+            <div class="t2-wb-sent-text">${sentRendered}</div>
+            ${fbHtml}
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="task-card-panel t2-wb-panel">
+          <div class="task-stage-progress" aria-hidden="true">
+            <div class="task-stage-progress-fill" style="width:${wbPct}%;"></div>
+          </div>
+          <div class="task-exam-header-row">
+            <div class="task-exam-title-group">
+              <h2 class="task-exam-title">Summary Word Box · Bảng ${t2WbBoardIndex + 1} / ${t2WbBoards.length}</h2>
+            </div>
+            <div class="task-stat-pills">
+              <span class="task-err-pill ${t2WbMistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t2-wb-err-cnt">${t2WbMistakes}</strong></span>
+              <span class="recall-stage-pill">${filledCount} / ${items.length} ô</span>
+              ${teacherNavBtns}
+            </div>
+          </div>
+          <div class="t2-wb-box" id="t2-wb-wordbox">
+            <div class="t2-wb-box-label">KHO TỪ (WORD BOX) · Có bẫy họ từ / từ loại &amp; từ nhiễu trong Task — bấm chọn từ để điền vào ô đang chọn</div>
+            <div class="t2-wb-chip-grid">${boxHtml}</div>
+          </div>
+          <div class="t2-wb-list" id="t2-wb-list">${sentsHtml}</div>
+          <div class="t2-wb-footer">
+            ${!t2WbSubmitted
+              ? `<button type="button" class="btn btn-primary" id="btn-t2-wb-submit" onclick="TasksModule.submitT2WbBoard()">Kiểm tra bảng này (${filledCount}/${items.length})</button>`
+              : `<button type="button" class="btn btn-primary" id="btn-t2-wb-next" onclick="TasksModule.nextT2WbBoard()">${t2WbBoardIndex < t2WbBoards.length - 1 ? 'Bảng Word Box tiếp theo →' : 'Sang 6 câu trắc nghiệm →'}</button>`}
+          </div>
+        </div>
+      `;
+      return;
+    }
+
     const qs = t2ContextQs;
-    const totalT2 = t2ParaPairs.length + qs.length;
+    const totalWbItems = t2WbBoards.reduce((sum, b) => sum + (Array.isArray(b?.items) ? b.items.length : 0), 0);
+    const totalT2 = t2ParaPairs.length + totalWbItems + qs.length;
 
     if (t2Index >= qs.length) {
       const passThreshold = Math.max(1, Math.ceil(totalT2 * 0.66));
@@ -2552,8 +2798,18 @@
   function jumpToT2McqPreview() {
     if (!activeTask || !isTeacherOrBypassed()) return;
     t2ParaDone = true;
+    t2WbDone = true;
     t2Index = 0;
     t2Answered = false;
+    renderTest2Stage();
+  }
+
+  function jumpToT2WbPreview() {
+    if (!activeTask || !isTeacherOrBypassed() || t2WbBoards.length === 0) return;
+    t2ParaDone = true;
+    t2WbDone = false;
+    t2WbBoardIndex = 0;
+    setupT2WbBoard();
     renderTest2Stage();
   }
 
@@ -3390,7 +3646,7 @@
         const durationSec = Math.max(1, Math.round((Date.now() - (taskStartedAt || Date.now())) / 1000));
         const totalT1 = activeTask.words?.length || 50;
         const t1AccuracyPct = Math.max(0, Math.round(((totalT1 - Math.min(totalT1, t1Mistakes)) / totalT1) * 100));
-        const totalT2 = (t2ParaPairs.length + t2ContextQs.length) || getTaskTest2Total(activeTask);
+        const totalT2 = (t2ParaPairs.length + t2WbBoards.reduce((s, b) => s + (b.items?.length || 0), 0) + t2ContextQs.length) || getTaskTest2Total(activeTask);
         lastPreviewSummaryRecord = {
           taskId: activeTask.id,
           status: 'completed',
@@ -3736,7 +3992,7 @@
         <div class="task-sum-stat is-teal">
           <div class="task-sum-stat-label">Test 2 · Paraphrase</div>
           <div class="task-sum-stat-val">${focusRec.test2Score ?? 0} / ${t2Total}</div>
-          <div class="task-sum-stat-sub">50 kéo thả + 6 trắc nghiệm</div>
+          <div class="task-sum-stat-sub">Paraphrase + Word Box + 6 trắc nghiệm</div>
         </div>
         <div class="task-sum-stat is-gold">
           <div class="task-sum-stat-label">Test 3 · Dịch bài</div>
@@ -3803,7 +4059,7 @@
       const durationSec = Math.max(1, Math.round((Date.now() - (taskStartedAt || Date.now())) / 1000));
       const totalT1 = activeTask.words?.length || 50;
       const t1AccuracyPct = Math.max(0, Math.round(((totalT1 - Math.min(totalT1, t1Mistakes)) / totalT1) * 100));
-      const totalT2 = (t2ParaPairs.length + t2ContextQs.length) || getTaskTest2Total(activeTask);
+      const totalT2 = (t2ParaPairs.length + t2WbBoards.reduce((s, b) => s + (b.items?.length || 0), 0) + t2ContextQs.length) || getTaskTest2Total(activeTask);
       const previewScore = Number(lastT3Grade?.score || lastPreviewSummaryRecord?.translationScore || 8.5);
       lastPreviewSummaryRecord = {
         taskId: activeTask.id,
@@ -3846,7 +4102,7 @@
     const durationSec = Math.max(1, Math.round((Date.now() - (taskStartedAt || Date.now())) / 1000));
     const totalT1 = activeTask.words?.length || 50;
     const t1AccuracyPct = Math.max(0, Math.round(((totalT1 - Math.min(totalT1, t1Mistakes)) / totalT1) * 100));
-    const totalT2 = (t2ParaPairs.length + t2ContextQs.length) || getTaskTest2Total(activeTask);
+    const totalT2 = (t2ParaPairs.length + t2WbBoards.reduce((s, b) => s + (b.items?.length || 0), 0) + t2ContextQs.length) || getTaskTest2Total(activeTask);
     const newlyMarked = B()?.markMasteredBatch?.(activeTask.linkedIds) || 0;
     const prog = loadTaskProgress();
     prog[activeTask.id] = {
@@ -3929,7 +4185,13 @@
     proceedToTest2FromT1,
     answerTest2,
     nextTest2Question,
+    selectT2WbSlot,
+    clearT2WbSlot,
+    pickT2WbOption,
+    submitT2WbBoard,
+    nextT2WbBoard,
     jumpToT2McqPreview,
+    jumpToT2WbPreview,
     jumpToT2ParaPreview,
     retryTest2,
     startFinalTranslation,
