@@ -17,6 +17,7 @@
   const TASK_PROGRESS_KEY_BASE = 'ielts_reading_task_progress_';
   const TASK_LOCKS_KEY_BASE = 'ielts_reading_task_locks_';
   const TEACHER_UNLOCK_KEY_BASE = 'ielts_teacher_unlocked_at_';
+  const LIST_CERTS_KEY_BASE = 'ielts_list_certs_v1_';
   const MASTER_COOLDOWN_KEY_BASE = 'ielts_master_cooldowns_';
   const RECALL_ACTIVE_KEY_BASE = 'ielts_recall_active_';
   const REVIEW_OLD_SCOPE_KEY = '__old_vocab_review__';
@@ -952,21 +953,35 @@
   }
 
   function computeConsecutiveStreakForUser(uid) {
+    const scoped = getScopedUid(uid);
     const now = new Date();
     const todayKey = localStudyDayKey(now);
-    let history = [];
+    const completed = new Set();
     try {
-      history = JSON.parse(localStorage.getItem(getUserStreakKey(uid)) || '[]');
-      if (!Array.isArray(history)) history = [];
+      const history = JSON.parse(localStorage.getItem(getUserStreakKey(scoped)) || '[]');
+      if (Array.isArray(history)) history.forEach((d) => { if (d) completed.add(String(d)); });
     } catch (_) {}
-    const completed = new Set(history);
-    if (getUserSecondsForDay(uid, todayKey) > 0) completed.add(todayKey);
+    const cloudEntry = cloudClassCache[scoped];
+    const cloudStreakDays = cloudEntry?.syncData?.streakDays;
+    if (Array.isArray(cloudStreakDays)) {
+      cloudStreakDays.forEach((d) => { if (d) completed.add(String(d)); });
+    }
+    const cloudTimerByDay = cloudEntry?.syncData?.timerByDay;
+    if (cloudTimerByDay && typeof cloudTimerByDay === 'object') {
+      Object.entries(cloudTimerByDay).forEach(([dayKey, secs]) => {
+        if ((parseInt(secs || '0', 10) || 0) > 0) completed.add(String(dayKey));
+      });
+    }
+    if (getUserSecondsForDay(scoped, todayKey) > 0) completed.add(todayKey);
     let streak = 0;
     const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     if (!completed.has(localStudyDayKey(cursor))) cursor.setDate(cursor.getDate() - 1);
     while (completed.has(localStudyDayKey(cursor))) {
       streak++;
       cursor.setDate(cursor.getDate() - 1);
+    }
+    if (streak === 0 && cloudEntry && !cloudEntry.syncData?.streakDays && !cloudEntry.syncData?.timerByDay) {
+      streak = Number(cloudEntry.streak || 0);
     }
     return streak;
   }
@@ -1428,6 +1443,7 @@
   }
 
   function scheduleCloudPush() {
+    if (currentUser && !isTeacherUser()) updateLeaderboardUI();
     if (!getSyncUrl() || !currentUser || isTeacherUser()) return;
     clearTimeout(cloudPushDebounce);
     cloudPushDebounce = setTimeout(() => syncPushCurrentUser(false), 1800);
@@ -1490,7 +1506,14 @@
 
   function getUserMasteredCount(uid) {
     const scoped = getScopedUid(uid);
-    const cloudMastered = Number(cloudClassCache[scoped]?.mastered || 0);
+    const cloudEntry = cloudClassCache[scoped];
+    const cloudAssess = cloudEntry?.syncData?.assessments;
+    const cloudAssessCount = (cloudAssess && typeof cloudAssess === 'object')
+      ? countUniqueMasteredWords(cloudAssess)
+      : 0;
+    const cloudMastered = cloudAssessCount > 0
+      ? cloudAssessCount
+      : Number(cloudEntry?.mastered || 0);
     if (currentUser && scoped === getScopedUid(currentUser.id)) {
       return countUniqueMasteredWords(assessments);
     }
@@ -1505,13 +1528,121 @@
     return Math.max(localMastered, cloudMastered);
   }
 
+  function getUserTaskProgressMap(uid) {
+    const scoped = getScopedUid(uid);
+    const merged = {};
+    try {
+      const localTp = JSON.parse(localStorage.getItem(`${TASK_PROGRESS_KEY_BASE}${scoped}`) || '{}') || {};
+      Object.entries(localTp).forEach(([tid, rec]) => {
+        if (rec && typeof rec === 'object') merged[tid] = rec;
+      });
+    } catch (_) {}
+    const cloudTp = cloudClassCache[scoped]?.syncData?.taskProgress;
+    if (cloudTp && typeof cloudTp === 'object') {
+      Object.entries(cloudTp).forEach(([tid, rec]) => {
+        if (!rec || typeof rec !== 'object') return;
+        const prev = merged[tid];
+        if (!prev || (rec.status === 'completed' && prev.status !== 'completed') || Number(rec.updatedAt || 0) > Number(prev.updatedAt || 0)) {
+          merged[tid] = rec;
+        }
+      });
+    }
+    return merged;
+  }
+
+  function getUserListCertsMap(uid) {
+    const scoped = getScopedUid(uid);
+    const merged = {};
+    try {
+      const localC = JSON.parse(localStorage.getItem(`${LIST_CERTS_KEY_BASE}${scoped}`) || '{}') || {};
+      Object.entries(localC).forEach(([k, v]) => {
+        if (v && typeof v === 'object') merged[k] = v;
+      });
+    } catch (_) {}
+    const cloudC = cloudClassCache[scoped]?.syncData?.listMasteryCerts;
+    if (cloudC && typeof cloudC === 'object') {
+      Object.entries(cloudC).forEach(([k, v]) => {
+        if (v?.passed && (!merged[k]?.passed || Number(v.completedAt || 0) > Number(merged[k].completedAt || 0))) {
+          merged[k] = v;
+        }
+      });
+    }
+    return merged;
+  }
+
+  function computeTaskRecordScore10(tid, rec) {
+    if (!rec || typeof rec !== 'object') return { score10: 0, isRecognition: false, recognitionPct: 0 };
+    const isRecog = rec.taskKind === 'recognition'
+      || /^(fnd|acd|adv)_/i.test(String(tid || ''))
+      || (rec.recognitionScore != null && rec.translationScore == null);
+    if (isRecog) {
+      const pct = Math.max(0, Math.min(100, Number(rec.recognitionScore ?? 0)));
+      return {
+        score10: Math.round((pct / 10) * 10) / 10,
+        isRecognition: true,
+        recognitionPct: pct,
+      };
+    }
+    const t1Ratio = Math.max(0, Math.min(1, Number(rec.test1AccuracyPct ?? 100) / 100));
+    const t2Tot = Math.max(1, Number(rec.test2Total || 56));
+    const t2Ratio = Math.max(0, Math.min(1, Number(rec.test2Score ?? 0) / t2Tot));
+    const t3Ratio = Math.max(0, Math.min(1, Number(rec.translationScore || 0) / 10));
+    return {
+      score10: Math.round((((t1Ratio + t2Ratio + t3Ratio) / 3) * 10) * 10) / 10,
+      isRecognition: false,
+      recognitionPct: 0,
+    };
+  }
+
+  function computeStudentRankScore({ mastered, periodMins, streak, taskProgress, listCerts }, period = 'week') {
+    const vocabPoints = Math.max(0, Number(mastered || 0)) * 10;
+    let tasksCompleted = 0;
+    let taskPoints = 0;
+    Object.entries(taskProgress || {}).forEach(([tid, rec]) => {
+      if (rec?.status !== 'completed') return;
+      tasksCompleted += 1;
+      const info = computeTaskRecordScore10(tid, rec);
+      if (info.isRecognition) {
+        const bonus = info.recognitionPct >= 98 ? 20 : (info.recognitionPct >= 96 ? 10 : 0);
+        taskPoints += 100 + bonus;
+      } else {
+        taskPoints += 150 + Math.round(info.score10 * 5);
+      }
+    });
+
+    let certsPassed = 0;
+    Object.values(listCerts || {}).forEach((c) => {
+      if (c?.passed) certsPassed += 1;
+    });
+    const certPoints = certsPassed * 300;
+    const hasLearningOutput = (Math.max(0, Number(mastered || 0)) > 0) || tasksCompleted > 0 || certsPassed > 0;
+    const streakPoints = hasLearningOutput ? Math.min(150, Math.max(0, Number(streak || 0)) * 15) : 0;
+
+    // Chặn trần điểm thời gian theo hiệu suất thực tế để chống treo tab 0 từ vẫn lên hạng
+    const periodCap = period === 'month' ? 360 : 120;
+    const outputCap = Math.max(0, Number(mastered || 0)) * 2 + tasksCompleted * 40 + certsPassed * 120;
+    const timePoints = Math.min(Math.max(0, Number(periodMins || 0)), periodCap, outputCap);
+
+    const score = vocabPoints + taskPoints + certPoints + streakPoints + timePoints;
+    return {
+      score,
+      tasksCompleted,
+      certsPassed,
+      scoreBreakdown: { vocabPoints, taskPoints, certPoints, streakPoints, timePoints },
+    };
+  }
+
   function getClassRankedEntries(period = currentLeaderboardTab) {
     const accounts = getAccountsList();
     const studentAccounts = accounts.filter(acc => acc.role !== 'teacher');
     const entries = studentAccounts.map((acc, idx) => {
       const mins = getUserPeriodMinutes(acc.id);
       const mastered = getUserMasteredCount(acc.id);
+      const streak = computeConsecutiveStreakForUser(acc.id);
+      const taskProgress = getUserTaskProgressMap(acc.id);
+      const listCerts = getUserListCertsMap(acc.id);
       const periodMins = period === 'month' ? mins.monthMins : mins.weekMins;
+      const scored = computeStudentRankScore({ mastered, periodMins, streak, taskProgress, listCerts }, period);
       return {
         id: acc.id,
         name: acc.name,
@@ -1521,17 +1652,34 @@
         monthMins: mins.monthMins,
         periodMins,
         mastered,
+        streak,
+        tasksCompleted: scored.tasksCompleted,
+        certsPassed: scored.certsPassed,
+        score: scored.score,
+        scoreBreakdown: scored.scoreBreakdown,
       };
     });
 
     entries.sort((a, b) => {
-      if (b.periodMins !== a.periodMins) return b.periodMins - a.periodMins;
+      if (b.score !== a.score) return b.score - a.score;
       if (b.mastered !== a.mastered) return b.mastered - a.mastered;
-      if (b.todayMins !== a.todayMins) return b.todayMins - a.todayMins;
+      if (b.tasksCompleted !== a.tasksCompleted) return b.tasksCompleted - a.tasksCompleted;
+      if (b.periodMins !== a.periodMins) return b.periodMins - a.periodMins;
       return a.order - b.order;
     });
 
-    return entries.map((entry, idx) => ({ ...entry, rank: idx + 1 }));
+    let lastScore = null;
+    let lastRank = 0;
+    return entries.map((entry, idx) => {
+      const rank = (idx > 0 && entry.score === lastScore) ? lastRank : (idx + 1);
+      lastScore = entry.score;
+      lastRank = rank;
+      return {
+        ...entry,
+        rank,
+        rankLabel: entry.score > 0 ? `#${rank}` : '–',
+      };
+    });
   }
 
   function switchLeaderboardTab(tab) {
@@ -1539,6 +1687,9 @@
     document.getElementById('board-tab-week')?.classList.toggle('active', tab === 'week');
     document.getElementById('board-tab-month')?.classList.toggle('active', tab === 'month');
     updateLeaderboardUI();
+    if (document.getElementById('modal-class-report')?.classList.contains('open')) {
+      renderClassReportTable();
+    }
   }
 
   function updateLeaderboardUI() {
@@ -1560,18 +1711,22 @@
       return (parts[0] || 'HV').slice(0, 2).toUpperCase();
     };
 
+    const formatPts = (n) => `${Number(n || 0).toLocaleString('vi-VN')} đ`;
+    const formatTip = (p) => `${p.name} · ${p.score.toLocaleString('vi-VN')} điểm (${p.mastered} từ gốc · ${p.tasksCompleted} Task · ${p.periodMins}p · ${p.streak} ngày streak)`;
+
     listEl.innerHTML = visibleTop.map((p, idx) => {
       const isMe = currentUser && getScopedUid(p.id) === activeUid;
       const toneClass = `tone-${idx % 4}`;
+      const isTop1 = p.rank === 1 && p.score > 0;
       return `
-        <div class="board-item${isMe ? ' is-me' : ''}${p.rank === 1 ? ' is-top1' : ''}">
-          <span class="board-rank" style="font-size:11.5px;font-weight:800;min-width:19px;">#${p.rank}</span>
+        <div class="board-item${isMe ? ' is-me' : ''}${isTop1 ? ' is-top1' : ''}" title="${escapeHtml(formatTip(p))}">
+          <span class="board-rank" style="font-size:11.5px;font-weight:800;min-width:19px;">${p.rankLabel}</span>
           <span class="board-avatar ${toneClass}" aria-hidden="true">${escapeHtml(getMonogram(p.name))}</span>
           <div class="board-info">
             <span class="board-name">${escapeHtml(p.name)}</span>
-            <span class="board-meta">· ${p.periodMins}p</span>
+            <span class="board-meta">· ${p.mastered} từ</span>
           </div>
-          <span class="board-score">${p.mastered} từ</span>
+          <span class="board-score">${formatPts(p.score)}</span>
         </div>
       `;
     }).join('');
@@ -1585,12 +1740,12 @@
         const myEntry = ranked[myIdx];
         if (myEntry) {
           userCardEl.innerHTML = `
-            <span class="board-rank user-rank">#${myEntry.rank}</span>
-            <div class="board-info" style="display:flex;align-items:baseline;gap:4px;" title="${escapeHtml(currentUser.name)} · Hôm nay: ${myEntry.todayMins}p">
+            <span class="board-rank user-rank">${myEntry.rankLabel}</span>
+            <div class="board-info" style="display:flex;align-items:baseline;gap:4px;" title="${escapeHtml(formatTip(myEntry))}">
               <span class="board-name user-name">${escapeHtml(currentUser.name)}</span>
-              <span class="board-meta" style="white-space:nowrap;flex-shrink:0;">· ${myEntry.periodMins}p</span>
+              <span class="board-meta" style="white-space:nowrap;flex-shrink:0;">· ${myEntry.mastered} từ</span>
             </div>
-            <span class="board-score user-score">${myEntry.mastered} từ</span>
+            <span class="board-score user-score">${formatPts(myEntry.score)}</span>
           `;
         } else {
           userCardEl.style.display = 'none';
@@ -3948,21 +4103,25 @@
     updateClassReportHeaderAndActions();
     const tbody = document.getElementById('class-report-tbody');
     if (!tbody) return;
-    const ranked = getClassRankedEntries('week');
+    const period = currentLeaderboardTab === 'month' ? 'month' : 'week';
+    const ranked = getClassRankedEntries(period);
     const activeUid = getScopedUid(currentUser?.id);
     tbody.innerHTML = ranked.map(item => {
       const isMe = currentUser && !isTeacherUser() && getScopedUid(item.id) === activeUid;
+      const bd = item.scoreBreakdown || {};
+      const tip = `Từ gốc: +${bd.vocabPoints || 0}đ | Task: +${bd.taskPoints || 0}đ | Test tổng: +${bd.certPoints || 0}đ | Streak: +${bd.streakPoints || 0}đ | Thời gian: +${bd.timePoints || 0}đ`;
       return `
-        <tr class="${isMe ? 'is-me' : ''}">
-          <td>#${item.rank}</td>
+        <tr class="${isMe ? 'is-me' : ''}" title="${escapeHtml(tip)}">
+          <td>${item.rankLabel}</td>
           <td><strong>${escapeHtml(item.name)}</strong></td>
-          <td>${item.todayMins} phút</td>
+          <td><strong>${item.score.toLocaleString('vi-VN')} đ</strong></td>
+          <td>${item.mastered} từ</td>
+          <td>${item.tasksCompleted}</td>
           <td>${item.weekMins} phút</td>
           <td>${item.monthMins} phút</td>
-          <td>${item.mastered} từ</td>
         </tr>
       `;
-    }).join('') || '<tr><td colspan="6" style="text-align:center;">Chưa có tài khoản học viên.</td></tr>';
+    }).join('') || '<tr><td colspan="7" style="text-align:center;">Chưa có tài khoản học viên.</td></tr>';
   }
 
   function openClassReportModal() {
@@ -3979,19 +4138,21 @@
 
   function copyMyStudyReport() {
     if (!currentUser) return;
+    const ranked = getClassRankedEntries(currentLeaderboardTab);
+    const mine = ranked.find(r => getScopedUid(r.id) === getScopedUid(currentUser.id));
     const mins = getUserPeriodMinutes(currentUser.id);
     const mastered = getUserMasteredCount(currentUser.id);
     const todayStr = localStudyDayKey();
-    const msg = `[Báo cáo học Vocab - ${todayStr}]\nHọc viên: ${currentUser.name} (${currentUser.id})\n- Hôm nay: ${mins.todayMins} phút\n- Tuần này: ${mins.weekMins} phút\n- Tháng này: ${mins.monthMins} phút\n- Đã thuộc: ${mastered} từ`;
+    const msg = `[Báo cáo học Vocab - ${todayStr}]\nHọc viên: ${currentUser.name} (${currentUser.id})\n- Xếp hạng: ${mine ? mine.rankLabel : '–'} (${mine ? mine.score.toLocaleString('vi-VN') : 0} điểm)\n- Hôm nay: ${mins.todayMins} phút\n- Tuần này: ${mins.weekMins} phút\n- Tháng này: ${mins.monthMins} phút\n- Đã thuộc: ${mastered} từ\n- Task hoàn thành: ${mine ? mine.tasksCompleted : 0}`;
     copyTextWithFeedback(msg, 'Đã sao chép báo cáo cá nhân!');
   }
 
   function copyFullClassReport() {
     const ranked = getClassRankedEntries('week');
     const todayStr = localStudyDayKey();
-    const lines = ranked.map(r => `#${r.rank} | ${r.name} (${r.id}) | Hôm nay: ${r.todayMins}p | Tuần: ${r.weekMins}p | Tháng: ${r.monthMins}p | Thuộc: ${r.mastered} từ`);
-    const msg = `[Bảng Xếp Hạng Giờ Học Lớp - ${todayStr}]\n` + lines.join('\n');
-    copyTextWithFeedback(msg, 'Đã sao chép bảng giờ học cả lớp!');
+    const lines = ranked.map(r => `${r.rankLabel} | ${r.name} (${r.id}) | Điểm: ${r.score.toLocaleString('vi-VN')}đ | Thuộc: ${r.mastered} từ | Task: ${r.tasksCompleted} | Tuần: ${r.weekMins}p | Tháng: ${r.monthMins}p`);
+    const msg = `[Bảng Xếp Hạng Lớp - ${todayStr}]\n` + lines.join('\n');
+    copyTextWithFeedback(msg, 'Đã sao chép bảng xếp hạng cả lớp!');
   }
 
   // Settings Menu Modal

@@ -247,6 +247,8 @@ function compactSyncData_(sd, maxChars) {
     teacherUnlockedAt: Number(sd.teacherUnlockedAt || 0),
     taskLocks: (sd.taskLocks && typeof sd.taskLocks === 'object') ? sd.taskLocks : {},
     taskProgress: (sd.taskProgress && typeof sd.taskProgress === 'object') ? sd.taskProgress : {},
+    listFinalCheckpoints: (sd.listFinalCheckpoints && typeof sd.listFinalCheckpoints === 'object') ? sd.listFinalCheckpoints : {},
+    listMasteryCerts: (sd.listMasteryCerts && typeof sd.listMasteryCerts === 'object') ? sd.listMasteryCerts : {},
     timerByDay: (sd.timerByDay && typeof sd.timerByDay === 'object') ? sd.timerByDay : {},
     wordsByDay: (sd.wordsByDay && typeof sd.wordsByDay === 'object') ? sd.wordsByDay : {},
     streakDays: Array.isArray(sd.streakDays) ? sd.streakDays.slice() : [],

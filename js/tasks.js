@@ -767,28 +767,47 @@
     return /[",]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   }
 
+  function isRecognitionTaskEntry(tid, rec) {
+    return rec?.taskKind === 'recognition'
+      || /^(fnd|acd|adv)_/i.test(String(tid || ''))
+      || (rec?.recognitionScore != null && rec?.translationScore == null);
+  }
+
+  function formatTaskDoneTag(tid, rec) {
+    const idStr = String(tid || '');
+    const num = Number(idStr.replace(/\D/g, '')) || idStr;
+    if (/^fnd_/i.test(idStr)) return `NT${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
+    if (/^acd_/i.test(idStr)) return `HT${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
+    if (/^adv_/i.test(idStr)) return `CS${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
+    if (isRecognitionTaskEntry(idStr, rec)) return `T${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
+    return `P${num} (${Number(rec?.translationScore || 0).toFixed(1)})`;
+  }
+
+  function computeAvgAiScore(doneEntries) {
+    const paraEntries = (doneEntries || []).filter(([tid, v]) => !isRecognitionTaskEntry(tid, v) && v?.translationScore != null);
+    if (!paraEntries.length) return '';
+    return (paraEntries.reduce((sum, [, v]) => sum + Number(v.translationScore || 0), 0) / paraEntries.length).toFixed(1);
+  }
+
   function exportClassReportCsv() {
     const bridge = B();
     if (!bridge?.isTeacherUser?.()) return;
     const ranked = bridge.getClassRankedEntries?.('week') || [];
     const cache = bridge.getCloudClassCache?.() || {};
+    const totalTasks = getAllCatalogTasks().length || 110;
     const header = [
-      'Hạng', 'Họ và tên', 'Hôm nay (phút)', 'Tuần này (phút)', 'Tháng này (phút)',
-      'Chuỗi ngày', 'Từ đã thuộc', 'Số Task xong (/30)', 'Điểm Dịch AI TB', 'Chi tiết các Task đã xong'
+      'Hạng', 'Họ và tên', 'Điểm xếp hạng', 'Hôm nay (phút)', 'Tuần này (phút)', 'Tháng này (phút)',
+      'Chuỗi ngày', 'Từ đã thuộc', `Số Task xong (/${totalTasks})`, 'Điểm Dịch AI TB', 'Chi tiết các Task đã xong'
     ];
     const rows = ranked.map((item) => {
       const uid = bridge.getScopedUid(item.id);
-      const streak = bridge.computeConsecutiveStreakForUser?.(item.id) || 0;
+      const streak = item.streak ?? (bridge.computeConsecutiveStreakForUser?.(item.id) || 0);
       const tp = readStudentTaskMap(bridge, cache, bridge.TASK_PROGRESS_KEY_BASE, uid);
       const doneEntries = Object.entries(tp).filter(([, v]) => v?.status === 'completed');
-      const avgAi = doneEntries.length
-        ? (doneEntries.reduce((sum, [, v]) => sum + Number(v.translationScore || 0), 0) / doneEntries.length).toFixed(1)
-        : '';
-      const details = doneEntries
-        .map(([tid, v]) => `T${Number(tid.replace(/\D/g, '')) || tid} (${Number(v.translationScore || 0).toFixed(1)})`)
-        .join('; ');
+      const avgAi = computeAvgAiScore(doneEntries);
+      const details = doneEntries.map(([tid, v]) => formatTaskDoneTag(tid, v)).join('; ');
       return [
-        item.rank, item.name, item.todayMins, item.weekMins, item.monthMins,
+        item.rankLabel || `#${item.rank}`, item.name, item.score ?? 0, item.todayMins, item.weekMins, item.monthMins,
         streak, item.mastered, doneEntries.length, avgAi, details
       ].map(formatCsvCell).join(',');
     });
@@ -821,13 +840,14 @@
     if (tbody) {
       const ranked = bridge.getClassRankedEntries?.('week') || [];
       const cache = bridge.getCloudClassCache?.() || {};
+      const totalTasks = getAllCatalogTasks().length || 110;
       const now = Date.now();
       const q = (document.getElementById('teacher-student-search')?.value || '').trim().toLowerCase();
       const sortMode = document.getElementById('teacher-student-sort')?.value || 'rank';
 
       const allEnriched = ranked.map((item) => {
         const uid = bridge.getScopedUid(item.id);
-        const streak = bridge.computeConsecutiveStreakForUser?.(item.id) || 0;
+        const streak = item.streak ?? (bridge.computeConsecutiveStreakForUser?.(item.id) || 0);
         const tp = readStudentTaskMap(bridge, cache, bridge.TASK_PROGRESS_KEY_BASE, uid);
         const tl = readStudentTaskMap(bridge, cache, bridge.TASK_LOCKS_KEY_BASE, uid);
         const doneEntries = Object.entries(tp).filter(([, v]) => v?.status === 'completed');
@@ -840,7 +860,9 @@
         const totalMastered = allEnriched.reduce((s, r) => s + Number(r.item.mastered || 0), 0);
         const totalDoneTasks = allEnriched.reduce((s, r) => s + r.doneEntries.length, 0);
         const topRow = allEnriched[0];
-        const topLabel = topRow ? `${esc(topRow.item.name.split(' ').slice(-2).join(' '))} (${topRow.item.weekMins}p)` : 'Chưa có';
+        const topLabel = (topRow && Number(topRow.item.score || 0) > 0)
+          ? `${esc(topRow.item.name.split(' ').slice(-2).join(' '))} (${Number(topRow.item.score).toLocaleString('vi-VN')}đ)`
+          : 'Chưa có';
         kpiStrip.innerHTML = `
           <div class="teacher-kpi-card is-mint">
             <div class="teacher-kpi-label">Học viên</div>
@@ -864,11 +886,11 @@
       const enriched = allEnriched.filter((row) => !q || String(row.item.name || '').toLowerCase().includes(q) || String(row.item.id || '').toLowerCase().includes(q));
 
       if (sortMode === 'mastered') {
-        enriched.sort((a, b) => (b.item.mastered - a.item.mastered) || (a.item.rank - b.item.rank));
+        enriched.sort((a, b) => (b.item.mastered - a.item.mastered) || (b.item.score - a.item.score));
       } else if (sortMode === 'tasks') {
-        enriched.sort((a, b) => (b.doneEntries.length - a.doneEntries.length) || (b.item.mastered - a.item.mastered));
+        enriched.sort((a, b) => (b.doneEntries.length - a.doneEntries.length) || (b.item.score - a.item.score));
       } else if (sortMode === 'today') {
-        enriched.sort((a, b) => (b.item.todayMins - a.item.todayMins) || (a.item.rank - b.item.rank));
+        enriched.sort((a, b) => (b.item.todayMins - a.item.todayMins) || (b.item.score - a.item.score));
       }
 
       const getMonogram = (name) => {
@@ -877,10 +899,10 @@
       };
 
       tbody.innerHTML = enriched.map(({ item, streak, doneEntries, tl }, idx) => {
-        const tags = doneEntries.map(([tid, v]) => `T${Number(tid.replace(/\D/g, '')) || tid} (${Number(v.translationScore || 0).toFixed(1)})`).join(', ');
+        const tags = doneEntries.map(([tid, v]) => formatTaskDoneTag(tid, v)).join(', ');
         const activeLocks = Object.entries(tl).filter(([, until]) => Number(until || 0) > now);
         const taskSummary = doneEntries.length > 0
-          ? `<strong>${doneEntries.length}/30</strong> · ${esc(tags)}`
+          ? `<strong>${doneEntries.length}/${totalTasks}</strong> · ${esc(tags)}`
           : '<span style="color:var(--text-muted);">Chưa xong Task</span>';
         const statusCell = activeLocks.length > 0
           ? `<div class="teacher-status-cell is-locked">
@@ -891,8 +913,8 @@
 
         return `
           <tr>
-            <td>#${item.rank}</td>
-            <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(getMonogram(item.name))}</span><strong>${esc(item.name)}</strong></div></td>
+            <td>${item.rankLabel || `#${item.rank}`}</td>
+            <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(getMonogram(item.name))}</span><div><strong>${esc(item.name)}</strong><div style="font-size:11.5px;color:var(--text-muted);font-weight:600;">${Number(item.score || 0).toLocaleString('vi-VN')} điểm</div></div></div></td>
             <td>${item.todayMins}p</td>
             <td>${item.weekMins}p</td>
             <td>${item.monthMins}p</td>
@@ -4081,6 +4103,7 @@
       if (subEl) subEl.textContent = 'Theo dõi số Task hoàn thành, điểm Test và điểm Dịch AI của từng học viên';
       const students = bridge.getStudentAccounts?.() || [];
       const cache = bridge.getCloudClassCache?.() || {};
+      const totalTasks = getAllCatalogTasks().length || 110;
       const rowsHtml = students.map((st) => {
         const uid = bridge.getScopedUid(st.id);
         let tp = cache[uid]?.syncData?.taskProgress || null;
@@ -4090,16 +4113,14 @@
           } catch (_) { tp = {}; }
         }
         const doneEntries = Object.entries(tp).filter(([, v]) => v?.status === 'completed');
-        const avgAi = doneEntries.length
-          ? (doneEntries.reduce((sum, [, v]) => sum + Number(v.translationScore || 0), 0) / doneEntries.length).toFixed(1)
-          : '--';
+        const avgAi = computeAvgAiScore(doneEntries) || '--';
         const tags = doneEntries.length
-          ? doneEntries.map(([tid, v]) => `T${Number(tid.replace(/\D/g, '')) || tid} (${Number(v.translationScore || 0).toFixed(1)})`).join(', ')
+          ? doneEntries.map(([tid, v]) => formatTaskDoneTag(tid, v)).join(', ')
           : 'Chưa hoàn thành Task nào';
         return `
           <tr>
             <td><strong>${esc(st.name)}</strong></td>
-            <td><strong>${doneEntries.length} / 30</strong></td>
+            <td><strong>${doneEntries.length} / ${totalTasks}</strong></td>
             <td>${avgAi}</td>
             <td style="font-size:12.5px;">${esc(tags)}</td>
           </tr>
@@ -4122,7 +4143,7 @@
 
     // Student Task Summary View (or Teacher Post-Test Preview)
     const prog = previewStudentSummary ? {} : loadTaskProgress();
-    const allTasks = getTasksList();
+    const allTasks = getAllCatalogTasks();
     const focusTask = focusTaskId ? getTaskById(focusTaskId) : null;
     const focusRec = (previewStudentSummary && lastPreviewSummaryRecord && (!focusTask || lastPreviewSummaryRecord.taskId === focusTask.id))
       ? lastPreviewSummaryRecord
@@ -4142,6 +4163,10 @@
           .filter((x) => x.rec && x.rec.status === 'completed');
 
     const computeTaskOverallScore = (taskObj, recObj) => {
+      if (taskObj?.taskKind === 'recognition' || isRecognitionTaskEntry(taskObj?.id, recObj)) {
+        const pct = Math.max(0, Math.min(100, Number(recObj?.recognitionScore ?? 0)));
+        return Math.round((pct / 10) * 10) / 10;
+      }
       const t1Ratio = Math.max(0, Math.min(1, Number(recObj?.test1AccuracyPct ?? 100) / 100));
       const t2Tot = Math.max(1, getTaskTest2Total(taskObj, recObj));
       const t2Ratio = Math.max(0, Math.min(1, Number(recObj?.test2Score ?? 0) / t2Tot));
