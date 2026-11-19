@@ -2310,7 +2310,18 @@
 
     // CỘT 1: EXAMPLE
     const leftParts = [];
-    leftParts.push('<div class="tip-col-heading tip-exam-title-bar">EXAMPLE</div>');
+    let examSourceBadge = '';
+    if (qa && qa.question && qa.passage) {
+      const qaSrc = qa.qa_source || (qa.exam_title && qa.exam_title !== '617 đề IELTS Academic Reading' ? 'real_exam' : 'ielts_model');
+      if (qaSrc === 'real_exam' && qa.exam_title) {
+        examSourceBadge = ` <span style="font-weight:600; color:var(--accent); text-transform:none; letter-spacing:0;">· Đề thật: ${escapeHtml(qa.exam_title)}</span>`;
+      } else if (qaSrc === 'real_passage') {
+        examSourceBadge = ` <span style="font-weight:500; color:var(--text-muted); text-transform:none; letter-spacing:0;">· Trích bài đọc thật (617 đề)</span>`;
+      } else {
+        examSourceBadge = ` <span style="font-weight:500; color:var(--text-muted); text-transform:none; letter-spacing:0;">· Mô phỏng IELTS Reading</span>`;
+      }
+    }
+    leftParts.push(`<div class="tip-col-heading tip-exam-title-bar">EXAMPLE${examSourceBadge}</div>`);
 
     if (qa && qa.question && qa.passage) {
       leftParts.push(`
