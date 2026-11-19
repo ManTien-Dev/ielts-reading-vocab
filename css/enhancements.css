@@ -5665,3 +5665,63 @@ header.app-header {
   border-bottom: 1px dashed var(--card-border);
 }
 .recog-miss-row:last-child { border-bottom: none; }
+
+/* =========================================================
+   OOP MULTI-SKILL MODE MENU (SETTINGS PANEL)
+   ========================================================= */
+.skill-modes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skill-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 11px;
+  border: 1.5px solid var(--card-border);
+  background: var(--bg-soft);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.skill-mode-row.is-active {
+  border-color: #2f6b32;
+  background: rgba(82, 136, 62, 0.12);
+}
+.skill-mode-row.is-upcoming {
+  opacity: 0.78;
+}
+.skill-mode-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.skill-mode-row-main strong {
+  font-size: 13.5px;
+  color: var(--text-bright);
+}
+.skill-mode-row-main span {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+.skill-mode-pill {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.skill-mode-pill.is-live {
+  background: #2f6b32;
+  color: #ffffff;
+}
+.skill-mode-pill.is-soon {
+  background: rgba(148, 163, 184, 0.22);
+  color: var(--text-muted);
+}

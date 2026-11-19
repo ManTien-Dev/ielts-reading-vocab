@@ -10,9 +10,9 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261119p">
-  <link rel="stylesheet" href="css/motion.css?v=20261119p">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261119p">
+  <link rel="stylesheet" href="css/style.css?v=20261119q">
+  <link rel="stylesheet" href="css/motion.css?v=20261119q">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261119q">
 </head>
 <body>
 
@@ -756,6 +756,10 @@
           </div>
         </div>
         <div style="margin-bottom: 18px;">
+          <div style="font-weight: 700; color: var(--text-bright); margin-bottom: 8px;">Chế độ kỹ năng (IELTS 4 Kỹ năng)</div>
+          <div class="skill-modes-list" id="menu-skill-modes-list"></div>
+        </div>
+        <div style="margin-bottom: 18px;">
           <div style="font-weight: 700; color: var(--text-bright); margin-bottom: 8px;">Công cụ nhanh</div>
           <button type="button" class="btn" style="width: 100%; justify-content: center;" onclick="closeMenuModal(); openSignalWordsModal();">
             Mở bảng Từ Nối Chỉ Hướng Nghĩa
@@ -979,13 +983,21 @@
     </div>
   </div>
 
-  <script src="data/accounts.js?v=20261119p"></script>
-  <script src="data/vocab_data.js?v=20261119p"></script>
-  <script src="data/tasks_data.js?v=20261119p"></script>
-  <script src="data/ipa_dict.js?v=20261119p"></script>
-  <script src="js/motion.js?v=20261119p"></script>
-  <script src="js/recognition_test.js?v=20261119p"></script>
-  <script src="js/app.js?v=20261119p"></script>
-  <script src="js/tasks.js?v=20261119p"></script>
+  <script src="data/accounts.js?v=20261119q"></script>
+  <script src="data/vocab_data.js?v=20261119q"></script>
+  <script src="data/tasks_data.js?v=20261119q"></script>
+  <script src="data/ipa_dict.js?v=20261119q"></script>
+  <script src="js/motion.js?v=20261119q"></script>
+  <script src="js/core/EventBus.js?v=20261119q"></script>
+  <script src="js/core/LazyDataLoader.js?v=20261119q"></script>
+  <script src="js/core/AudioEngine.js?v=20261119q"></script>
+  <script src="js/core/AntiCheatGuard.js?v=20261119q"></script>
+  <script src="js/core/BaseSkillMode.js?v=20261119q"></script>
+  <script src="js/skills/reading/ReadingMode.js?v=20261119q"></script>
+  <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119q"></script>
+  <script src="js/core/AppCore.js?v=20261119q"></script>
+  <script src="js/recognition_test.js?v=20261119q"></script>
+  <script src="js/app.js?v=20261119q"></script>
+  <script src="js/tasks.js?v=20261119q"></script>
 </body>
 </html>

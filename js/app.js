@@ -935,6 +935,8 @@
 
     return {
       resetEpoch: CLASS_RESET_EPOCH,
+      skillNamespaceVersion: 2,
+      activeSkillId: window.AppCore?.skills?.getActiveId?.() || 'reading',
       timerByDay,
       wordsByDay,
       streakDays,
@@ -3608,6 +3610,10 @@
       clearTimeout(speakTimeout);
       speakTimeout = null;
     }
+    if (window.AppCore?.audio) {
+      window.AppCore.audio.stop();
+      return;
+    }
     try {
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     } catch (_) {}
@@ -3651,92 +3657,20 @@
     }
   }
 
-  let cachedSpeechVoices = [];
-  let fallbackAudioEl = null;
-
-  function refreshSpeechVoices() {
-    try {
-      if ('speechSynthesis' in window && typeof window.speechSynthesis.getVoices === 'function') {
-        cachedSpeechVoices = window.speechSynthesis.getVoices() || [];
-      }
-    } catch (_) {}
-  }
-  refreshSpeechVoices();
-  try {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.addEventListener?.('voiceschanged', refreshSpeechVoices);
-    }
-  } catch (_) {}
-
-  function pickBestEnglishVoice(targetAccent) {
-    if (!cachedSpeechVoices.length) refreshSpeechVoices();
-    const isUk = targetAccent === 'en-GB';
-    const langPrefix = isUk ? 'en-gb' : 'en-us';
-    const matching = cachedSpeechVoices.filter((v) => String(v.lang || '').toLowerCase().replace('_', '-').startsWith(langPrefix));
-    if (!matching.length) return null;
-    const preferredNames = isUk
-      ? ['google uk english female', 'google uk english male', 'daniel', 'martha', 'libby', 'sonia', 'ryan', 'serena']
-      : ['google us english', 'samantha', 'alex', 'aria', 'jenny', 'guy', 'ava', 'allison'];
-    for (const kw of preferredNames) {
-      const hit = matching.find((v) => String(v.name || '').toLowerCase().includes(kw));
-      if (hit) return hit;
-    }
-    return matching.find((v) => /natural|neural|google|enhanced|premium/i.test(v.name || '')) || matching[0];
-  }
-
-  function playDictionaryAudioFallback(text, targetAccent) {
-    try {
-      // Never fire external audio requests during headless/local automated test runs or offline mode
-      if (navigator.webdriver || !navigator.onLine) return;
-      const host = String(window.location?.hostname || '').toLowerCase();
-      if (host === '127.0.0.1' || host === 'localhost') return;
-      const clean = String(text || '').trim();
-      if (!clean || clean.length > 60) return;
-      if (fallbackAudioEl) {
-        try { fallbackAudioEl.pause(); } catch (_) {}
-      }
-      const typeCode = targetAccent === 'en-GB' ? 1 : 2;
-      const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(clean)}&type=${typeCode}`;
-      fallbackAudioEl = new Audio(url);
-      fallbackAudioEl.playbackRate = 0.96;
-      fallbackAudioEl.play?.().catch?.(() => {});
-    } catch (_) {}
-  }
-
   function speakCleanTextReliable(text, targetAccent, rate = 0.92) {
+    if (window.AppCore?.audio) {
+      window.AppCore.audio.speak(text, { accent: targetAccent, rate });
+      return;
+    }
     const clean = String(text || '').replace(/\s*\/\s*/g, ' or ').trim();
-    if (!clean) return;
-    if (fallbackAudioEl) {
-      try { fallbackAudioEl.pause(); fallbackAudioEl = null; } catch (_) {}
-    }
-    const canSynth = ('speechSynthesis' in window) && typeof SpeechSynthesisUtterance !== 'undefined';
-    if (!canSynth) {
-      playDictionaryAudioFallback(clean, targetAccent);
-      return;
-    }
-    const bestVoice = pickBestEnglishVoice(targetAccent);
-    // On mobile WebViews (Zalo/Messenger/budget Android) where voices list is loaded yet has 0 English voices, use real audio fallback
-    const anyEnVoice = cachedSpeechVoices.some((v) => String(v.lang || '').toLowerCase().startsWith('en'));
-    if (cachedSpeechVoices.length > 0 && !anyEnVoice) {
-      playDictionaryAudioFallback(clean, targetAccent);
-      return;
-    }
+    if (!clean || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return;
     try {
       window.speechSynthesis.cancel();
-      window.speechSynthesis.resume?.();
       const utt = new SpeechSynthesisUtterance(clean);
       utt.lang = targetAccent;
       utt.rate = rate;
-      if (bestVoice) utt.voice = bestVoice;
-      utt.onerror = (ev) => {
-        const errCode = String(ev?.error || '');
-        if (errCode === 'interrupted' || errCode === 'canceled' || errCode === 'not-allowed') return;
-        playDictionaryAudioFallback(clean, targetAccent);
-      };
       window.speechSynthesis.speak(utt);
-    } catch (_) {
-      playDictionaryAudioFallback(clean, targetAccent);
-    }
+    } catch (_) {}
   }
 
   function speakCurrentWord(accent = preferredAccent, event) {
@@ -4072,6 +4006,7 @@
       const roleText = currentUser.role === 'teacher' ? 'Giáo viên' : 'Học viên';
       accEl.textContent = `${roleText}: ${currentUser.name} (ID: ${currentUser.id})`;
     }
+    window.AppCore?.renderSkillModesMenu?.();
     document.getElementById('modal-menu')?.classList.add('open');
   }
 
