@@ -6,6 +6,8 @@
   class AudioEngine {
     constructor() {
       this._voices = [];
+      this._lockedVoices = {};
+      this._preferFallback = false;
       this._fallbackAudio = null;
       this._activeUtterance = null;
       this._speakSeq = 0;
@@ -13,7 +15,10 @@
       this.refreshVoices();
       try {
         if ('speechSynthesis' in window) {
-          window.speechSynthesis.addEventListener?.('voiceschanged', () => this.refreshVoices());
+          window.speechSynthesis.addEventListener?.('voiceschanged', () => {
+            this.refreshVoices();
+            this._lockedVoices = {};
+          });
         }
         const wake = () => {
           this.refreshVoices();
@@ -39,22 +44,30 @@
       const langPrefix = normAccent.startsWith('en-gb')
         ? 'en-gb'
         : (normAccent.startsWith('en-au') ? 'en-au' : 'en-us');
+      if (this._lockedVoices[langPrefix] && this._voices.includes(this._lockedVoices[langPrefix])) {
+        return this._lockedVoices[langPrefix];
+      }
       const matching = this._voices.filter((v) =>
         String(v.lang || '').toLowerCase().replace('_', '-').startsWith(langPrefix)
       );
       if (!matching.length) return null;
 
       const preferredMap = {
-        'en-gb': ['google uk english female', 'google uk english male', 'daniel', 'martha', 'libby', 'sonia', 'ryan', 'serena'],
-        'en-au': ['karen', 'catherine', 'gordon', 'natasha', 'william', 'google'],
-        'en-us': ['google us english', 'samantha', 'alex', 'aria', 'jenny', 'guy', 'ava', 'allison'],
+        'en-gb': ['microsoft sonia', 'microsoft libby', 'google uk english female', 'daniel', 'martha', 'serena', 'google uk english male', 'ryan'],
+        'en-au': ['microsoft natasha', 'karen', 'catherine', 'gordon', 'william', 'google'],
+        'en-us': ['microsoft aria', 'microsoft jenny', 'google us english', 'samantha', 'ava', 'allison', 'alex', 'guy'],
       };
       const preferred = preferredMap[langPrefix] || preferredMap['en-us'];
+      let chosen = null;
       for (const kw of preferred) {
         const hit = matching.find((v) => String(v.name || '').toLowerCase().includes(kw));
-        if (hit) return hit;
+        if (hit) { chosen = hit; break; }
       }
-      return matching.find((v) => /natural|neural|google|enhanced|premium/i.test(v.name || '')) || matching[0];
+      if (!chosen) {
+        chosen = matching.find((v) => /natural|neural|google|enhanced|premium/i.test(v.name || '')) || matching[0];
+      }
+      if (chosen) this._lockedVoices[langPrefix] = chosen;
+      return chosen;
     }
 
     stop() {
@@ -121,12 +134,13 @@
         try { this._fallbackAudio.pause(); this._fallbackAudio = null; } catch (_) {}
       }
       const canSynth = ('speechSynthesis' in window) && typeof SpeechSynthesisUtterance !== 'undefined';
-      if (!canSynth) {
+      if (!canSynth || this._preferFallback) {
         return this.playDictionaryFallback(clean, accent, rate);
       }
-      const bestVoice = this.pickBestVoice(accent);
+      if (!this._voices.length) this.refreshVoices();
       const anyEnVoice = this._voices.some((v) => String(v.lang || '').toLowerCase().startsWith('en'));
       if (this._voices.length > 0 && !anyEnVoice) {
+        this._preferFallback = true;
         return this.playDictionaryFallback(clean, accent, rate);
       }
       try {
@@ -137,6 +151,8 @@
         const runSpeak = () => {
           if (this._speakSeq !== seq) return;
           try {
+            if (!this._voices.length) this.refreshVoices();
+            const bestVoice = this.pickBestVoice(accent);
             window.speechSynthesis.resume?.();
             const utt = new SpeechSynthesisUtterance(clean);
             utt.lang = accent;
@@ -163,30 +179,40 @@
               const code = String(ev?.error || '');
               if (code === 'interrupted' || code === 'canceled') return;
               if (this._speakSeq === seq) {
+                this._preferFallback = true;
                 this.playDictionaryFallback(clean, accent, rate);
               }
             };
             window.speechSynthesis.speak(utt);
-            // Watchdog for silent Chrome/Edge speechSynthesis stalls: fallback to dictionary audio if onstart never fires
+            // Remote voices (Google/Edge Natural) may need up to ~1.5s to stream; avoid cutting them off early into a different fallback voice
+            const watchdogMs = (bestVoice && bestVoice.localService === false) ? 1800 : 900;
             this._watchdog = setTimeout(() => {
               if (!started && this._speakSeq === seq) {
                 this._watchdog = null;
                 try { window.speechSynthesis.cancel(); } catch (_) {}
+                this._preferFallback = true;
                 this.playDictionaryFallback(clean, accent, rate);
               }
-            }, 650);
+            }, watchdogMs);
           } catch (_) {
-            if (this._speakSeq === seq) this.playDictionaryFallback(clean, accent, rate);
+            if (this._speakSeq === seq) {
+              this._preferFallback = true;
+              this.playDictionaryFallback(clean, accent, rate);
+            }
           }
         };
         if (wasBusy) {
           // 40ms micro-gap avoids Chromium bug where cancel() silently swallows an immediately queued speak()
           setTimeout(runSpeak, 40);
+        } else if (!this._voices.length) {
+          // Brief 100ms wait on very first call so voices list finishes hydrating and word #1 uses the same locked voice
+          setTimeout(runSpeak, 100);
         } else {
           runSpeak();
         }
         return true;
       } catch (_) {
+        this._preferFallback = true;
         return this.playDictionaryFallback(clean, accent, rate);
       }
     }

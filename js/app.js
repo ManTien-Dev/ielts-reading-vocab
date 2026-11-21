@@ -5536,7 +5536,7 @@
   function speakTextWithAccent(text, accent) {
     if (!text) return;
     const targetAccent = (accent === 'en-GB' || accent === 'en-US') ? accent : (preferredAccent || 'en-US');
-    speakCleanTextReliable(text, targetAccent, 0.94);
+    speakCleanTextReliable(text, targetAccent, 0.92);
   }
 
   function setWordWeakLevel(wordId, level = 1) {
