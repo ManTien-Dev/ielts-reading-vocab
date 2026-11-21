@@ -2640,7 +2640,7 @@
     const { speak = true } = options;
     if (speak && autoSpeak && !isCardFlipped) {
       pendingInitialSpeak = false;
-      speakCurrentWord(preferredAccent);
+      speakCurrentWord(preferredAccent, null, 'youdao');
     }
   }
 
@@ -4046,9 +4046,12 @@
     isCardFlipped = !isCardFlipped;
     document.getElementById('fc-card')?.classList.toggle('flipped', isCardFlipped);
     document.getElementById('btn-flip-action').textContent = isCardFlipped ? 'Mặt trước' : 'Xem nghĩa';
-    if (pendingInitialSpeak && autoSpeak) {
+    if (isCardFlipped && autoSpeak) {
       pendingInitialSpeak = false;
-      speakCurrentWord(preferredAccent);
+      speakCurrentWord(preferredAccent, null, 'browser');
+    } else if (pendingInitialSpeak && autoSpeak) {
+      pendingInitialSpeak = false;
+      speakCurrentWord(preferredAccent, null, 'youdao');
     }
   }
 
@@ -4125,7 +4128,7 @@
       : null;
     if (autoSpeak && previewNextItem && currentUser) {
       pendingInitialSpeak = false;
-      speakCleanTextReliable(previewNextItem.lemma, preferredAccent, 0.92);
+      speakCleanTextReliable(previewNextItem.lemma, preferredAccent, 0.92, { engine: 'youdao' });
     }
     scene.classList.add('shifting');
     motionWrap.classList.add(outCls);
@@ -4363,9 +4366,14 @@
     }
   }
 
-  function speakCleanTextReliable(text, targetAccent, rate = 0.92) {
+  function speakCleanTextReliable(text, targetAccent, rate = 0.92, opts = {}) {
     if (window.AppCore?.audio) {
-      window.AppCore.audio.speak(text, { accent: targetAccent, rate });
+      window.AppCore.audio.speak(text, {
+        accent: targetAccent,
+        rate,
+        engine: opts?.engine || 'browser',
+        respectCustom: opts?.respectCustom !== false,
+      });
       return;
     }
     const clean = String(text || '').replace(/\s*\/\s*/g, ' or ').trim();
@@ -4379,7 +4387,7 @@
     } catch (_) {}
   }
 
-  function speakCurrentWord(accent = preferredAccent, event) {
+  function speakCurrentWord(accent = preferredAccent, event, engineOverride) {
     if (event && typeof event.stopPropagation === 'function') {
       event.stopPropagation();
     }
@@ -4391,8 +4399,12 @@
       clearTimeout(speakTimeout);
       speakTimeout = null;
     }
-    // Call synchronously inside user gesture so Mobile Chrome / iOS Safari allow TTS playback
-    speakCleanTextReliable(item.lemma, targetAccent, 0.92);
+    // Front auto-speak -> Youdao; Back auto-speak & manual UK/US clicks -> default warm female browser voice
+    const chosenEngine = engineOverride || (event ? 'browser' : (isCardFlipped ? 'browser' : 'youdao'));
+    speakCleanTextReliable(item.lemma, targetAccent, 0.92, {
+      engine: chosenEngine,
+      respectCustom: !event,
+    });
   }
 
   /* =========================================================
@@ -5563,10 +5575,10 @@
     return addedCount;
   }
 
-  function speakTextWithAccent(text, accent) {
+  function speakTextWithAccent(text, accent, opts = {}) {
     if (!text) return;
     const targetAccent = (accent === 'en-GB' || accent === 'en-US') ? accent : (preferredAccent || 'en-US');
-    speakCleanTextReliable(text, targetAccent, 0.92);
+    speakCleanTextReliable(text, targetAccent, 0.92, opts);
   }
 
   function setWordWeakLevel(wordId, level = 1) {

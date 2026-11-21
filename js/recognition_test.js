@@ -92,23 +92,25 @@
     try { window.AppCore?.audio?.stop?.(); } catch (_) {}
   }
 
-  function speakWordAudio(lemma, accentOverride) {
+  function speakWordAudio(lemma, accentOverride, engine = 'youdao') {
     if (!lemma) return;
     ensureSfxContext();
     try {
       const accent = accentOverride || B()?.getPreferredAccent?.() || 'en-US';
+      const opts = { engine, respectCustom: !accentOverride };
       if (B()?.speakText) {
-        B().speakText(lemma, accent);
+        B().speakText(lemma, accent, opts);
       } else if (window.AppCore?.audio?.speak) {
-        window.AppCore.audio.speak(lemma, { accent, rate: 0.94 });
+        window.AppCore.audio.speak(lemma, { accent, rate: 0.92, ...opts });
       }
     } catch (_) {}
   }
 
-  function speakCurrentWord(accentOverride) {
+  function speakCurrentWord(accentOverride, engineOverride) {
     const lemma = session?.currentItem?.lemma;
     if (!lemma) return;
-    speakWordAudio(lemma, accentOverride);
+    const chosenEngine = engineOverride || (accentOverride ? 'browser' : 'youdao');
+    speakWordAudio(lemma, accentOverride, chosenEngine);
   }
 
   function syncSoundToggleButton() {
