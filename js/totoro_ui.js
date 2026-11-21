@@ -10,9 +10,19 @@
   const MODE_KEY = 'ielts_totoro_mode_v1';
   const PALETTE_KEY = 'ielts_totoro_palette_v1';
   const MOTION_KEY = 'ielts_totoro_motion_v1';
+  const ACTIVE_VIEW_SESSION_KEY = 'ielts_totoro_active_view_v1';
 
   const html = document.documentElement;
-  let activeView = 'flashcard';
+  function resolveInitialView() {
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      if (sp.get('task') || sp.get('tasks') || sp.get('adminTest')) return 'flashcard';
+      const saved = sessionStorage.getItem(ACTIVE_VIEW_SESSION_KEY) || '';
+      if (['home', 'flashcard', 'task', 'practice'].includes(saved)) return saved;
+    } catch (_) {}
+    return 'home';
+  }
+  let activeView = resolveInitialView();
   let activeHomeChartPeriod = 'week';
   let activeHomeLbPeriod = 'week';
   let activeInlineTaskSuite = 'paraphrase';
@@ -331,13 +341,15 @@
   }
 
   // --- 3. 4-TAB NAVIGATION (HOME | FLASHCARD | TASK | PRACTICE) ---
-  function switchView(viewName) {
+  function switchView(viewName, opts = {}) {
     const B = window.__VOCAB_BRIDGE__;
     const teacherScreen = document.getElementById('screen-teacher');
     const teacherActive = teacherScreen && teacherScreen.style.display !== 'none' && getComputedStyle(teacherScreen).display !== 'none';
     if (teacherActive && B?.isTeacherUser?.()) return;
 
-    activeView = ['home', 'flashcard', 'task', 'practice'].includes(viewName) ? viewName : 'flashcard';
+    const prevView = activeView;
+    activeView = ['home', 'flashcard', 'task', 'practice'].includes(viewName) ? viewName : 'home';
+    try { sessionStorage.setItem(ACTIVE_VIEW_SESSION_KEY, activeView); } catch (_) {}
     const studyEl = document.getElementById('screen-study');
     const homeEl = document.getElementById('screen-home');
     const taskHubEl = document.getElementById('screen-tasks-hub');
@@ -357,7 +369,15 @@
 
     if (activeView === 'home') renderHomeDashboard();
     if (activeView === 'task') renderInlineTaskHub();
+    if (activeView === 'flashcard' && opts.fromUser && prevView !== 'flashcard' && B?.getCurrentUser?.() && B?.isAutoSpeakOn?.()) {
+      B?.speakCurrentWord?.();
+    }
     window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function onUserEntered() {
+    const target = resolveInitialView();
+    switchView(target, { fromUser: false });
   }
 
   // --- 4. LIVE REAL-DATA HOME DASHBOARD ---
@@ -858,7 +878,7 @@
 
     // 4-Tab Nav buttons (Desktop + Mobile Bottom Bar + Home Jump CTAs)
     document.querySelectorAll('[data-tot-view]').forEach((b) => {
-      b.addEventListener('click', () => switchView(b.dataset.totView));
+      b.addEventListener('click', () => switchView(b.dataset.totView, { fromUser: true }));
     });
 
     // Skill options
@@ -1007,6 +1027,7 @@
     syncCinemaRainLoop();
     requestAnimationFrame(positionLoginCardUnderUmbrella);
     syncHeaderAndAccount();
+    switchView(resolveInitialView(), { fromUser: false });
     syncFlashcardHankoSeal();
     syncChronographRing();
     syncVocabDonutRing();
@@ -1015,6 +1036,8 @@
 
   window.TotoroUI = {
     switchView,
+    getActiveView: () => activeView,
+    onUserEntered,
     setStyleMode,
     setPalette,
     setMotion,

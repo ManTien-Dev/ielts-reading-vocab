@@ -186,11 +186,11 @@
     </div>
 
     <nav class="tot-nav-tabs" aria-label="Điều hướng chính">
-      <button type="button" class="tot-nav-tab" data-tot-view="home">
+      <button type="button" class="tot-nav-tab active" data-tot-view="home">
         <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M5 10.5L12 4l7 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-3v6H6a1 1 0 0 1-1-1v-9.5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/></svg>
         Home
       </button>
-      <button type="button" class="tot-nav-tab active" data-tot-view="flashcard">
+      <button type="button" class="tot-nav-tab" data-tot-view="flashcard">
         <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" fill="currentColor" fill-opacity=".15" stroke="currentColor" stroke-width="1.95"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.95"/></svg>
         Flashcard
       </button>
@@ -327,7 +327,7 @@
 
   <!-- Main Container: Chỉ giữ duy nhất màn hình Flashcard Từ vựng -->
   <main class="app-main">
-    <section class="screen active" id="screen-study" role="main" aria-label="Học từ vựng IELTS Reading">
+    <section class="screen" id="screen-study" role="main" aria-label="Học từ vựng IELTS Reading" style="display:none;">
 
       <div class="study-heading">
         <div class="study-heading-copy"><h1>Flashcards</h1></div>
@@ -962,7 +962,7 @@
     <!-- ==================================================================
          TAB 1: HOME DASHBOARD — 1-TO-1 MATCH WITH ielts_master_redesign_demo_v3.html
          ================================================================== -->
-    <section class="tot-screen" id="screen-home" aria-label="Trang chủ tiến độ học tập">
+    <section class="tot-screen active" id="screen-home" aria-label="Trang chủ tiến độ học tập">
       <div class="tot-home-layout">
         <div class="tot-home-top">
           <div class="tot-hero-card ink-brackets has-stamp">
@@ -1746,11 +1746,11 @@
 
   <!-- Native-App Bottom Navigation Bar for Mobile Phones (<= 767px) -->
   <nav class="mobile-bottom-nav" aria-label="Điều hướng di động">
-    <button type="button" class="mob-nav-item" data-tot-view="home">
+    <button type="button" class="mob-nav-item active" data-tot-view="home">
       <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M5 10.5L12 4l7 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-3v6H6a1 1 0 0 1-1-1v-9.5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/></svg>
       <span>Home</span>
     </button>
-    <button type="button" class="mob-nav-item active" data-tot-view="flashcard">
+    <button type="button" class="mob-nav-item" data-tot-view="flashcard">
       <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" fill="currentColor" fill-opacity=".15" stroke="currentColor" stroke-width="1.95"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.95"/></svg>
       <span>Flashcard</span>
     </button>
@@ -1808,15 +1808,15 @@
   <script src="js/motion.js?v=20261121c"></script>
   <script src="js/core/EventBus.js?v=20261119t"></script>
   <script src="js/core/LazyDataLoader.js?v=20261119t"></script>
-  <script src="js/core/AudioEngine.js?v=20261121c"></script>
+  <script src="js/core/AudioEngine.js?v=20261121d"></script>
   <script src="js/core/AntiCheatGuard.js?v=20261119t"></script>
   <script src="js/core/BaseSkillMode.js?v=20261119t"></script>
   <script src="js/skills/reading/ReadingMode.js?v=20261119t"></script>
   <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119t"></script>
   <script src="js/core/AppCore.js?v=20261121c"></script>
   <script src="js/recognition_test.js?v=20261121c"></script>
-  <script src="js/app.js?v=20261121c"></script>
+  <script src="js/app.js?v=20261121d"></script>
   <script src="js/tasks.js?v=20261121c"></script>
-  <script src="js/totoro_ui.js?v=20261121c"></script>
+  <script src="js/totoro_ui.js?v=20261121d"></script>
 </body>
 </html>
