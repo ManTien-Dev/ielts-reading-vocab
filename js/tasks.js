@@ -60,6 +60,8 @@
 
   let t3ReadingQuestions = [];
   let t3ReadingAnswers = {};
+  let t3ReadingSubmitted = false;
+  let t3ReadingReviewOpen = false;
 
   function shuffleArray(arr) {
     const out = Array.isArray(arr) ? arr.slice() : [];
@@ -3931,9 +3933,34 @@
     });
     t3ReadingQuestions = shuffleArray(cloned);
     t3ReadingAnswers = {};
+    t3ReadingSubmitted = false;
+    t3ReadingReviewOpen = false;
+  }
+
+  function updateT3ReadingProgressUI() {
+    const total = t3ReadingQuestions.length;
+    const cnt = t3ReadingQuestions.filter((x) => Boolean(t3ReadingAnswers[x.id])).length;
+    const allDone = total > 0 && cnt >= total;
+    const badge = document.getElementById('t3-reading-progress-badge');
+    if (badge) {
+      badge.textContent = `${cnt} / ${total}`;
+      badge.classList.toggle('is-done', allDone);
+    }
+    const hint = document.getElementById('t3-reading-step-hint');
+    if (hint) {
+      hint.textContent = allDone
+        ? `Đã chọn đủ ${total}/${total} câu — bấm nộp để mở phần Dịch & Tóm tắt.`
+        : `Đã chọn ${cnt}/${total} câu — hoàn thành hết để nộp Đọc hiểu.`;
+      hint.classList.toggle('is-ready', allDone);
+    }
+    const btn = document.getElementById('btn-t3-submit-reading');
+    if (btn) {
+      btn.classList.toggle('is-ready', allDone);
+    }
   }
 
   function pickT3ReadingAns(qId, optIdx) {
+    if (t3ReadingSubmitted) return;
     const q = t3ReadingQuestions.find((x) => x.id === qId);
     if (!q || !Array.isArray(q.options)) return;
     const pickedVal = String(q.options[optIdx] ?? '');
@@ -3942,16 +3969,163 @@
 
     const card = document.getElementById(`t3-rq-card-${qId}`);
     if (card) {
+      card.classList.remove('is-missing');
       card.querySelectorAll('.t3-rq-opt-btn').forEach((btn, i) => {
         btn.classList.toggle('is-selected', i === Number(optIdx));
       });
     }
-    const badge = document.getElementById('t3-reading-progress-badge');
-    if (badge) {
-      const cnt = t3ReadingQuestions.filter((x) => Boolean(t3ReadingAnswers[x.id])).length;
-      badge.textContent = `${cnt} / ${t3ReadingQuestions.length}`;
-      badge.classList.toggle('is-done', cnt >= t3ReadingQuestions.length && t3ReadingQuestions.length > 0);
+    updateT3ReadingProgressUI();
+  }
+
+  function syncT3StepVisibility() {
+    const hasReading = t3ReadingQuestions.length > 0;
+    const done = !hasReading || t3ReadingSubmitted;
+    const rqTotal = t3ReadingQuestions.length;
+    const rqAnswered = t3ReadingQuestions.filter((q) => Boolean(t3ReadingAnswers[q.id])).length;
+    const rqCorrect = t3ReadingQuestions.filter((q) => t3ReadingAnswers[q.id] === q.answer).length;
+
+    const pill1 = document.getElementById('t3-step-pill-1');
+    const pill2 = document.getElementById('t3-step-pill-2');
+    if (pill1) {
+      pill1.classList.toggle('is-active', !done);
+      pill1.classList.toggle('is-done', done);
+      pill1.textContent = done
+        ? (rqAnswered > 0 ? `✓ 1. Đọc hiểu (${rqCorrect}/${rqTotal})` : '✓ 1. Đọc hiểu')
+        : '1. Đọc hiểu đoạn trích';
     }
+    if (pill2) {
+      pill2.classList.toggle('is-active', done);
+      pill2.classList.toggle('is-locked', !done);
+    }
+
+    const rqBox = document.getElementById('t3-reading-quiz-box');
+    const rqHeader = document.getElementById('t3-reading-quiz-header');
+    const rqList = document.getElementById('t3-reading-quiz-list');
+    const rqFooter = document.getElementById('t3-reading-quiz-footer');
+    const doneBar = document.getElementById('t3-reading-done-bar');
+    const writeWrap = document.getElementById('t3-writing-step-wrap');
+
+    if (rqBox) {
+      rqBox.classList.toggle('is-submitted', done && hasReading);
+      rqBox.classList.toggle('is-collapsed', done && hasReading && !t3ReadingReviewOpen);
+    }
+    if (rqHeader) {
+      rqHeader.style.display = (done && hasReading) ? 'none' : 'flex';
+    }
+    if (doneBar) {
+      if (done && hasReading) {
+        const passedRq = rqAnswered >= rqTotal && rqCorrect >= 6;
+        const skippedRq = rqAnswered === 0;
+        const statusCls = passedRq ? 'is-pass' : (skippedRq ? 'is-neutral' : 'is-warn');
+        const statusTxt = skippedRq
+          ? 'Đã bỏ qua Đọc hiểu (Chế độ xem thử)'
+          : (passedRq
+            ? `✓ Đã nộp Đọc hiểu · ${rqCorrect}/${rqTotal} câu đúng`
+            : `Đã nộp Đọc hiểu · ${rqCorrect}/${rqTotal} câu đúng (cần >= 6/${rqTotal} để đạt)`);
+        const retryBtnHtml = !passedRq
+          ? `<button type="button" class="t3-rq-done-btn is-retry" id="btn-t3-reopen-reading" onclick="TasksModule.reopenT3ReadingStep()">${skippedRq ? 'Mở lại Đọc hiểu' : 'Làm lại Đọc hiểu'}</button>`
+          : '';
+        const reviewBtnHtml = rqAnswered > 0
+          ? `<button type="button" class="t3-rq-done-btn" id="btn-t3-toggle-rq-review" onclick="TasksModule.toggleT3ReadingReview()">${t3ReadingReviewOpen ? 'Thu gọn' : 'Xem lại'}</button>`
+          : '';
+        doneBar.className = `t3-rq-done-bar ${statusCls}`;
+        doneBar.style.display = 'flex';
+        doneBar.innerHTML = `
+          <span class="t3-rq-done-text">${statusTxt}</span>
+          <div class="t3-rq-done-actions">${retryBtnHtml}${reviewBtnHtml}</div>
+        `;
+      } else {
+        doneBar.style.display = 'none';
+        doneBar.innerHTML = '';
+      }
+    }
+    if (rqList) {
+      rqList.style.display = (!done || t3ReadingReviewOpen) ? 'flex' : 'none';
+      rqList.classList.toggle('is-locked', done);
+      rqList.querySelectorAll('.t3-rq-opt-btn').forEach((btn) => {
+        btn.disabled = done;
+      });
+    }
+    if (rqFooter) {
+      rqFooter.style.display = done ? 'none' : 'flex';
+    }
+    if (writeWrap) {
+      writeWrap.style.display = done ? 'flex' : 'none';
+    }
+  }
+
+  function submitT3ReadingStep(skipForTeacher = false) {
+    if (!activeTask) return;
+    const isTeacherSession = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
+    const rqTotal = t3ReadingQuestions.length;
+    const rqAnswered = t3ReadingQuestions.filter((q) => Boolean(t3ReadingAnswers[q.id])).length;
+    const rqCorrect = t3ReadingQuestions.filter((q) => t3ReadingAnswers[q.id] === q.answer).length;
+
+    if (rqTotal > 0 && !(skipForTeacher && isTeacherSession) && rqAnswered < rqTotal) {
+      B()?.showToast?.(`Vui lòng hoàn thành đủ ${rqTotal} câu Đọc hiểu (hiện ${rqAnswered}/${rqTotal}) trước khi nộp!`);
+      const firstMissing = t3ReadingQuestions.find((q) => !t3ReadingAnswers[q.id]);
+      if (firstMissing) {
+        const card = document.getElementById(`t3-rq-card-${firstMissing.id}`);
+        if (card) {
+          card.classList.add('is-missing');
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => card.classList.remove('is-missing'), 2400);
+        }
+      }
+      return;
+    }
+
+    t3ReadingSubmitted = true;
+    t3ReadingReviewOpen = false;
+    syncT3StepVisibility();
+
+    const writePane = document.getElementById('t3-pane-write');
+    if (writePane) writePane.scrollTop = 0;
+
+    if (skipForTeacher && isTeacherSession && rqAnswered < rqTotal) {
+      B()?.showToast?.('Đã mở phần Dịch toàn đoạn & Tóm tắt ý chính (Xem thử).');
+    } else if (rqCorrect >= 6) {
+      B()?.showToast?.(`Đã nộp Đọc hiểu (${rqCorrect}/${rqTotal} câu đúng)! Tiếp tục Dịch toàn đoạn và Tóm tắt ý chính nhé.`);
+    } else {
+      B()?.showToast?.(`Đã nộp Đọc hiểu (${rqCorrect}/${rqTotal} câu đúng — cần >= 6/${rqTotal} để đạt). Bạn có thể làm lại Đọc hiểu hoặc dịch bài bên dưới.`);
+    }
+
+    setTimeout(() => {
+      const ta = document.getElementById('task-trans-input');
+      if (ta) {
+        try {
+          ta.focus({ preventScroll: true });
+        } catch (_) {
+          ta.focus();
+        }
+      }
+      if (window.innerWidth <= 960) {
+        const modalBody = document.querySelector('#screen-task .task-exam-dialog > .modal-body');
+        const writingPaper = document.querySelector('#screen-task .translation-workspace .writing-paper');
+        if (modalBody && writingPaper) {
+          const delta = writingPaper.getBoundingClientRect().top - modalBody.getBoundingClientRect().top;
+          modalBody.scrollTop = Math.max(0, modalBody.scrollTop + delta);
+        } else {
+          const stepsEl = document.getElementById('t3-steps-bar') || document.getElementById('t3-reading-done-bar');
+          stepsEl?.scrollIntoView?.({ behavior: 'auto', block: 'start' });
+        }
+      }
+    }, 60);
+  }
+
+  function toggleT3ReadingReview() {
+    if (!t3ReadingSubmitted) return;
+    t3ReadingReviewOpen = !t3ReadingReviewOpen;
+    syncT3StepVisibility();
+  }
+
+  function reopenT3ReadingStep() {
+    t3ReadingSubmitted = false;
+    t3ReadingReviewOpen = false;
+    syncT3StepVisibility();
+    updateT3ReadingProgressUI();
+    const writePane = document.getElementById('t3-pane-write');
+    if (writePane) writePane.scrollTop = 0;
   }
 
   function startFinalTranslation() {
@@ -3992,13 +4166,29 @@
     } catch (_) {}
 
     const letters = ['A', 'B', 'C', 'D'];
+    const hasReading = t3ReadingQuestions.length > 0;
+    const readingDone = !hasReading || t3ReadingSubmitted;
+    const isTeacherSession = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
     const answeredCnt = t3ReadingQuestions.filter((q) => Boolean(t3ReadingAnswers[q.id])).length;
-    const rqHtml = t3ReadingQuestions.length > 0
+    const allAnswered = hasReading && answeredCnt >= t3ReadingQuestions.length;
+
+    const stepperHtml = hasReading
+      ? `
+        <div class="t3-steps-bar" id="t3-steps-bar" aria-label="Tiến trình Test 3">
+          <span class="t3-step-pill ${readingDone ? 'is-done' : 'is-active'}" id="t3-step-pill-1">1. Đọc hiểu đoạn trích</span>
+          <span class="t3-step-arrow" aria-hidden="true">→</span>
+          <span class="t3-step-pill ${readingDone ? 'is-active' : 'is-locked'}" id="t3-step-pill-2">2. Dịch &amp; Tóm tắt</span>
+        </div>
+      `
+      : '';
+
+    const rqHtml = hasReading
       ? `
         <div class="t3-reading-quiz-box" id="t3-reading-quiz-box">
-          <div class="t3-rq-header">
-            <span class="t3-rq-title">Đọc hiểu đoạn trích</span>
-            <span class="t3-rq-badge ${answeredCnt >= t3ReadingQuestions.length ? 'is-done' : ''}" id="t3-reading-progress-badge">${answeredCnt} / ${t3ReadingQuestions.length}</span>
+          <div class="t3-rq-done-bar" id="t3-reading-done-bar" style="display:none;"></div>
+          <div class="t3-rq-header" id="t3-reading-quiz-header">
+            <span class="t3-rq-title">Bước 1 · Đọc hiểu đoạn trích</span>
+            <span class="t3-rq-badge ${allAnswered ? 'is-done' : ''}" id="t3-reading-progress-badge">${answeredCnt} / ${t3ReadingQuestions.length}</span>
           </div>
           <div class="t3-rq-list" id="t3-reading-quiz-list">
             ${t3ReadingQuestions.map((q, qIdx) => {
@@ -4020,6 +4210,15 @@
                 </div>
               `;
             }).join('')}
+          </div>
+          <div class="t3-rq-footer" id="t3-reading-quiz-footer">
+            <span class="t3-rq-step-hint ${allAnswered ? 'is-ready' : ''}" id="t3-reading-step-hint">${allAnswered ? `Đã chọn đủ ${t3ReadingQuestions.length}/${t3ReadingQuestions.length} câu — bấm nộp để mở phần Dịch &amp; Tóm tắt.` : `Đã chọn ${answeredCnt}/${t3ReadingQuestions.length} câu — hoàn thành hết để nộp Đọc hiểu.`}</span>
+            <div class="t3-rq-footer-actions">
+              ${isTeacherSession ? `<button type="button" class="btn-subtle t3-rq-skip-btn" id="btn-t3-skip-reading" onclick="TasksModule.submitT3ReadingStep(true)">Bỏ qua → Dịch bài</button>` : ''}
+              <button type="button" class="btn btn-primary t3-rq-submit-btn ${allAnswered ? 'is-ready' : ''}" id="btn-t3-submit-reading" onclick="TasksModule.submitT3ReadingStep(false)">
+                Nộp Đọc hiểu →
+              </button>
+            </div>
           </div>
         </div>
       `
@@ -4048,27 +4247,30 @@
           </div>
 
           <div id="t3-pane-write">
+            ${stepperHtml}
             ${rqHtml}
-            <div class="t3-trans-field">
-              <label class="writing-label" for="task-trans-input">
-                <span>Dịch toàn đoạn</span>
-                <span id="task-trans-wc" style="color:var(--text-muted); font-size:14.5px;">0 từ</span>
-              </label>
-              <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Nhập bản dịch tiếng Việt...">${esc(savedDraft.trans || '')}</textarea>
-            </div>
+            <div id="t3-writing-step-wrap" class="t3-writing-step-wrap" style="display:${readingDone ? 'flex' : 'none'};">
+              <div class="t3-trans-field">
+                <label class="writing-label" for="task-trans-input">
+                  <span>Dịch toàn đoạn</span>
+                  <span id="task-trans-wc" style="color:var(--text-muted); font-size:14.5px;">0 từ</span>
+                </label>
+                <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Nhập bản dịch tiếng Việt...">${esc(savedDraft.trans || '')}</textarea>
+              </div>
 
-            <div class="t3-sum-field">
-              <label class="writing-label" for="task-summary-input">
-                <span>Tóm tắt ý chính</span>
-                <span id="task-sum-wc" style="color:var(--text-muted); font-size:14.5px;">0 từ</span>
-              </label>
-              <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Tóm tắt ý chính đoạn văn...">${esc(savedDraft.summary || '')}</textarea>
-            </div>
+              <div class="t3-sum-field">
+                <label class="writing-label" for="task-summary-input">
+                  <span>Tóm tắt ý chính</span>
+                  <span id="task-sum-wc" style="color:var(--text-muted); font-size:14.5px;">0 từ</span>
+                </label>
+                <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Tóm tắt ý chính đoạn văn...">${esc(savedDraft.summary || '')}</textarea>
+              </div>
 
-            <div style="display:flex; justify-content:flex-end; flex-shrink:0;">
-              <button type="button" class="btn btn-primary" id="btn-submit-ai-grade" style="font-size:16.5px; padding:11px 26px;" onclick="TasksModule.submitTranslationForAi()">
-                Nộp &amp; AI chấm
-              </button>
+              <div style="display:flex; justify-content:flex-end; flex-shrink:0;">
+                <button type="button" class="btn btn-primary" id="btn-submit-ai-grade" style="font-size:16.5px; padding:11px 26px;" onclick="TasksModule.submitTranslationForAi()">
+                  Nộp &amp; AI chấm
+                </button>
+              </div>
             </div>
           </div>
 
@@ -4076,8 +4278,8 @@
             <div id="task-ai-grade-result" class="ai-grade-box" style="display:block; background:var(--bg-soft); border-color:var(--card-border);">
               <div style="text-align:center; padding:36px 16px; color:var(--text-muted);">
                 <div style="font-size:18px; font-weight:750; color:var(--text-bright); margin-bottom:8px;">Chưa có bài nộp</div>
-                <div style="font-size:15.5px; margin-bottom:18px;">Hoàn thành 10 câu đọc hiểu cùng bản dịch và tóm tắt ở tab Bài làm rồi nhấn Nộp &amp; AI chấm.</div>
-                <button type="button" class="btn btn-primary" onclick="TasksModule.switchT3Tab('write')">← Quay lại viết bài</button>
+                <div style="font-size:15.5px; margin-bottom:18px;">Hoàn thành và nộp Bước 1 (Đọc hiểu đoạn trích), sau đó hoàn thành Dịch toàn đoạn &amp; Tóm tắt ý chính rồi nhấn Nộp &amp; AI chấm.</div>
+                <button type="button" class="btn btn-primary" onclick="TasksModule.switchT3Tab('write')">← Quay lại bài làm</button>
               </div>
             </div>
           </div>
@@ -4108,6 +4310,7 @@
       B()?.bindNoPasteGuards?.(sumEl, 'Không được dán (paste) khi tóm tắt — hãy tự viết trực tiếp!');
     }
     updateCounts();
+    syncT3StepVisibility();
   }
 
   function highlightPassageAfterGrading() {
@@ -4757,7 +4960,11 @@
       B()?.showToast('Vui lòng nhập nội dung bản dịch hoặc tóm tắt ý chính để AI chấm!');
       return;
     }
-    if (rqTotal > 0 && (!isTeacherSession ? rqAnswered < rqTotal : (rqAnswered > 0 && rqAnswered < rqTotal))) {
+    if (rqTotal > 0 && !isTeacherSession && (!t3ReadingSubmitted || rqAnswered < rqTotal)) {
+      B()?.showToast(`Vui lòng hoàn thành và nộp đủ ${rqTotal} câu Đọc hiểu (hiện ${rqAnswered}/${rqTotal}) trước khi nộp bài dịch!`);
+      return;
+    }
+    if (rqTotal > 0 && isTeacherSession && rqAnswered > 0 && rqAnswered < rqTotal) {
       B()?.showToast(`Vui lòng hoàn thành đủ ${rqTotal} câu Đọc hiểu (hiện ${rqAnswered}/${rqTotal}) trước khi nộp bài!`);
       return;
     }
@@ -4903,8 +5110,9 @@
           ${linesHtml}
           ${g.modelTranslation ? `<details style="margin-top:14px; font-size:15.5px;"><summary style="cursor:pointer; font-weight:750;">Xem bản dịch chuẩn tham khảo</summary><div style="margin-top:8px; line-height:1.65;">${esc(g.modelTranslation)}</div></details>` : ''}
           ${masteryNote}
-          <div style="display:flex; justify-content:flex-start; margin-top:16px;">
+          <div style="display:flex; justify-content:flex-start; gap:10px; flex-wrap:wrap; margin-top:16px;">
             <button type="button" class="btn-subtle" id="btn-t3-back-to-write" style="font-size:15px; padding:10px 18px;" onclick="TasksModule.switchT3Tab('write')">← Quay lại sửa bài</button>
+            ${rqFailed ? `<button type="button" class="btn-subtle" id="btn-t3-retry-reading-from-grade" style="font-size:15px; padding:10px 18px;" onclick="TasksModule.reopenT3ReadingStep(); TasksModule.switchT3Tab('write');">↻ Làm lại Đọc hiểu</button>` : ''}
           </div>
         `;
       }
@@ -5406,6 +5614,9 @@
     onT2Drop,
     switchT3Tab,
     pickT3ReadingAns,
+    submitT3ReadingStep,
+    toggleT3ReadingReview,
+    reopenT3ReadingStep,
     submitTranslationForAi,
     promptGeminiApiKey,
     onUserEntered,
