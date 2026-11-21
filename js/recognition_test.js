@@ -319,13 +319,13 @@
       const masteredCnt = info.list.reduce((s, w) => s + (amap[w.id] === 3 ? 1 : 0), 0);
       const remaining = Math.max(0, total - masteredCnt);
       if (remaining === 0) {
-        btn.innerHTML = `<span>✓ Đủ ${total}/${total} · Ôn Speed Quiz</span>`;
+        btn.innerHTML = `<span>Vào Speed Quiz</span>`;
         btn.classList.remove('active');
       } else if (masteredCnt > 0) {
-        btn.innerHTML = `<span>Speed Quiz (${remaining} từ chưa thuộc)</span>`;
+        btn.innerHTML = `<span>Vào Speed Quiz</span>`;
         btn.classList.add('active');
       } else {
-        btn.innerHTML = `<span>Vào Speed Quiz (${total} từ)</span>`;
+        btn.innerHTML = `<span>Vào Speed Quiz</span>`;
         btn.classList.remove('active');
       }
       return;
@@ -341,7 +341,7 @@
       btn.innerHTML = `<span>✓ Đạt (${cert.pct}%)</span>`;
       btn.classList.remove('active');
     } else {
-      btn.innerHTML = `<span>Vào Speed Quiz ngay</span>`;
+      btn.innerHTML = `<span>Vào Speed Quiz</span>`;
       btn.classList.remove('active');
     }
   }
