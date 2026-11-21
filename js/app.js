@@ -3096,73 +3096,6 @@
     return shuffleArray(options);
   }
 
-  function getCleanAntonyms(item) {
-    if (Array.isArray(item?.clean_antonyms) && item.clean_antonyms.length > 0) {
-      return item.clean_antonyms.map((s) => String(s || '').trim()).filter(Boolean);
-    }
-    return splitCsvItems(item?.antonyms);
-  }
-
-  function buildRecallAntonymOptions(item) {
-    const lemmaNorm = String(item?.lemma || '').trim().toLowerCase();
-    const used = new Set([lemmaNorm]);
-    const options = [];
-
-    const addOption = (rawText, isCorrect) => {
-      const text = String(rawText || '').trim();
-      const norm = text.toLowerCase();
-      if (!text || used.has(norm)) return false;
-      used.add(norm);
-      options.push({ text, isCorrect });
-      return true;
-    };
-
-    const cleanAnts = shuffleArray(
-      getCleanAntonyms(item).filter((a) => a && a.toLowerCase() !== lemmaNorm)
-    );
-    const chosenAnts = cleanAnts.slice(0, 3);
-    chosenAnts.forEach((a) => addOption(a, true));
-    cleanAnts.forEach((a) => used.add(a.toLowerCase()));
-
-    // High-value semantic traps: include up to 2 of the word's own synonyms as distractors
-    const cleanSyns = shuffleArray(
-      getCleanSynonyms(item).filter((s) => s && s.toLowerCase() !== lemmaNorm)
-    );
-    for (const s of cleanSyns.slice(0, 2)) {
-      if (options.length >= 7) break;
-      addOption(s, false);
-    }
-
-    const pool = (currentScopeList && currentScopeList.length >= 30)
-      ? currentScopeList
-      : [...(APP_DATA?.file1_paraphrase_1500 || []), ...(APP_DATA?.file2_families_3500 || [])];
-    const targetPos = getCleanPos(item);
-    const samePos = [];
-    const diffPos = [];
-    const step = Math.max(1, Math.floor(pool.length / 120));
-    const offset = Math.floor(Math.random() * pool.length);
-    for (let k = 0; k < pool.length && options.length < 8; k++) {
-      const idx = (offset + k * step + Math.floor(k / 40)) % pool.length;
-      const cand = pool[idx];
-      if (!cand || cand.id === item.id) continue;
-      const cLem = String(cand.lemma || '').trim();
-      if (!cLem || used.has(cLem.toLowerCase())) continue;
-      if (getCleanPos(cand) === targetPos) samePos.push(cLem);
-      else diffPos.push(cLem);
-      if (samePos.length >= 10) break;
-    }
-    for (const dLem of [...samePos, ...diffPos]) {
-      if (options.length >= 8) break;
-      addOption(dLem, false);
-    }
-    for (let i = 0; i < pool.length && options.length < 8; i++) {
-      const cand = pool[i];
-      if (!cand || cand.id === item.id) continue;
-      addOption(cand.lemma, false);
-    }
-    return shuffleArray(options);
-  }
-
   function buildRecallWordFamilyOptions(item) {
     const lemmaNorm = String(item?.lemma || '').trim().toLowerCase();
     const stemOf = (word) => {
@@ -3215,37 +3148,12 @@
   function buildRecallWordBoxExercise(item) {
     const lem = String(item?.lemma || '').trim();
     const lemLow = lem.toLowerCase();
+    // 1. Try to reuse exact verified Task Word Box item if available in APP_TASKS_DATA
     let sentenceBlank = '';
     let examTitle = '';
     let correctSurface = lem;
     let trapForms = [];
-    // 0. Priority: fresh sentence from qa_example (different from exam_citations[0] shown on flashcard back)
-    const shownCit = String(item?.exam_citations?.[0]?.sentence || '').trim().toLowerCase();
-    const qaSents = [item?.qa_example?.passage, item?.qa_example?.question]
-      .map((s) => String(s || '').replace(/\s+/g, ' ').trim())
-      .filter((s) => s.length >= 25 && s.toLowerCase() !== shownCit);
-    if (qaSents.length > 0) {
-      const inflects0 = [lemLow, lemLow + 's', lemLow + 'es', lemLow + 'ed', lemLow + 'd', lemLow + 'ing'];
-      if (lemLow.endsWith('e') && lemLow.length >= 3) inflects0.push(lemLow.slice(0, -1) + 'ing');
-      if (lemLow.endsWith('y') && lemLow.length >= 3) inflects0.push(lemLow.slice(0, -1) + 'ies', lemLow.slice(0, -1) + 'ied');
-      const sorted0 = Array.from(new Set(inflects0)).sort((a, b) => b.length - a.length);
-      for (const s of qaSents) {
-        for (const fm of sorted0) {
-          const rx = new RegExp(`\\b${fm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-          const m = s.match(rx);
-          if (m) {
-            sentenceBlank = s.replace(rx, '______');
-            examTitle = String(item?.qa_example?.exam_title || 'IELTS Academic Reading');
-            correctSurface = m[0].toLowerCase();
-            break;
-          }
-        }
-        if (sentenceBlank) break;
-      }
-    }
 
-    // 1. Try to reuse exact verified Task Word Box item if available in APP_TASKS_DATA
-    if (!sentenceBlank) {
     const allTasks = window.APP_TASKS_DATA?.tasks || [];
     for (const tk of allTasks) {
       for (const bd of (tk.test2WordBoxBoards || [])) {
@@ -3261,7 +3169,6 @@
         }
       }
       if (sentenceBlank) break;
-    }
     }
 
     // 2. Fallback: blank out target lemma / inflection directly from verbatim exam_citations
@@ -3492,17 +3399,6 @@
         }
         return;
       }
-      if (recallStage2Type === 'antonym') {
-        if (recallAttemptsLeft <= 0) {
-          p2.innerHTML = 'Đã hết lượt thử.';
-        } else {
-          const baseText = rule.strict
-            ? 'Chọn các từ TRÁI NGHĨA (còn 1 lần):'
-            : `Chọn các từ TRÁI NGHĨA (còn ${recallAttemptsLeft} lần):`;
-          p2.innerHTML = escapeHtml(baseText) + selBadge;
-        }
-        return;
-      }
       if (recallAttemptsLeft <= 0) {
         p2.innerHTML = 'Đã hết lượt thử.';
       } else {
@@ -3515,14 +3411,6 @@
   }
 
   function enterRecallStage2Step(item, stepType) {
-    if (stepType === 'wordbox') {
-      const wb = buildRecallWordBoxExercise(item);
-      if (wb) {
-        enterRecallStage2(item, wb);
-        return;
-      }
-      stepType = 'meaning_vi';
-    }
     if (stepType === 'meaning_vi') {
       const choices = window.RecognitionTestModule?.buildMeaningDistractors?.(item, currentScopeList, 3) || [];
       if (choices.length < 2) {
@@ -3584,7 +3472,7 @@
     recallWbTitle = '';
     recallSynOptions = stepType === 'wordfamily'
       ? buildRecallWordFamilyOptions(item)
-      : (stepType === 'antonym' ? buildRecallAntonymOptions(item) : buildRecallSynonymOptions(item));
+      : buildRecallSynonymOptions(item);
     recallSynSelected = new Set();
 
     const limitSec = getRecallTimeLimitSec(item, 2);
@@ -3601,11 +3489,7 @@
     const fb = document.getElementById('recall-feedback');
 
     document.getElementById('recall-word-input')?.blur();
-    if (stageBadge) {
-      stageBadge.textContent = stepType === 'wordfamily'
-        ? 'Test 2 · Word Family'
-        : (stepType === 'antonym' ? 'Test 2 · Antonyms' : 'Test 2 · Synonyms');
-    }
+    if (stageBadge) stageBadge.textContent = stepType === 'wordfamily' ? 'Test 2 · Word Family' : 'Test 2 · Synonyms';
     if (timerBadge) {
       timerBadge.textContent = `${limitSec}s`;
       timerBadge.classList.remove('is-urgent');
@@ -3614,9 +3498,7 @@
     if (targetSubEl) {
       targetSubEl.textContent = stepType === 'wordfamily'
         ? 'Click các từ cùng gia đình từ (Word Family) của'
-        : (stepType === 'antonym'
-          ? 'Click các từ TRÁI NGHĨA (Antonyms) của'
-          : (stepType === 'signal_equiv' ? 'Click các từ nối tương đương của' : 'Click các từ đồng nghĩa (Synonyms) của'));
+        : (stepType === 'signal_equiv' ? 'Click các từ nối tương đương của' : 'Click các từ đồng nghĩa (Synonyms) của');
     }
     if (targetWordEl) {
       targetWordEl.className = 'recall-stage-word';
@@ -3640,7 +3522,6 @@
     stopRecallInputTimer();
     recallStage = 2;
     recallSubmitted = false;
-    recallMode = 'standard';
     recallAttemptsLeft = getRecallRule(item).maxAttempts;
     recallStage2Type = wbExercise ? 'wordbox' : 'synonym';
     recallWbSentence = wbExercise ? wbExercise.sentenceBlank : '';
@@ -3658,7 +3539,6 @@
     const targetWordEl = document.getElementById('recall-stage2-word');
     const stage1Body = document.getElementById('recall-stage1-body');
     const stage2Body = document.getElementById('recall-stage2-body');
-    const btnSubmit = document.getElementById('btn-recall-submit');
     const inp = document.getElementById('recall-word-input');
     const fb = document.getElementById('recall-feedback');
 
@@ -3670,7 +3550,7 @@
     }
     if (hintBox) hintBox.style.display = 'block';
     if (wbExercise) {
-      if (targetSubEl) targetSubEl.textContent = 'Chọn từ đúng để hoàn thành câu';
+      if (targetSubEl) targetSubEl.textContent = `Điền từ vào câu trích đề thật (${wbExercise.examTitle})`;
       if (targetWordEl) {
         targetWordEl.className = 'recall-wb-sentence';
         targetWordEl.innerHTML = escapeHtml(wbExercise.sentenceBlank).replace(/______/g, '<span class="wb-inline-blank">______</span>');
@@ -3684,7 +3564,6 @@
     }
     if (stage1Body) stage1Body.style.display = 'none';
     if (stage2Body) stage2Body.style.display = 'block';
-    if (btnSubmit) btnSubmit.style.display = 'inline-flex';
     if (fb) {
       fb.style.display = 'none';
       fb.className = 'recall-feedback';
@@ -3741,9 +3620,6 @@
       } else if (recallStage === 2 && recallStage2Type === 'wordfamily') {
         const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
         fb.innerHTML = `${escapeHtml(reasonPrefix)} Các gia đình từ đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
-      } else if (recallStage === 2 && recallStage2Type === 'antonym') {
-        const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
-        fb.innerHTML = `${escapeHtml(reasonPrefix)} Các từ trái nghĩa đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
       } else if (recallStage === 2) {
         const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
         fb.innerHTML = `${escapeHtml(reasonPrefix)} Các từ đồng nghĩa đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
@@ -3954,32 +3830,20 @@
               const sl = String(s || '').trim().toLowerCase();
               return sl && sl !== expected;
             });
-        const hasAntTargets = !isSignal && getCleanAntonyms(item).some((a) => {
-          const al = String(a || '').trim().toLowerCase();
-          return al && al !== expected;
-        });
         const hasFormTargets = !isSignal && (Array.isArray(item?.clean_forms) ? item.clean_forms : []).some((f) => {
           const fl = String(f || '').trim().toLowerCase();
           return fl && fl !== expected;
         });
+        const hasMeaningChoices = !isSignal && Boolean(window.RecognitionTestModule?.buildMeaningDistractors) &&
+          (window.RecognitionTestModule.buildMeaningDistractors(item, currentScopeList, 3)?.length >= 2);
 
         recallStage2Queue = [];
         if (isSignal) {
           if (hasSynTargets) recallStage2Queue.push('signal_equiv');
         } else {
-          // Randomly alternate between Synonym & Antonym when both exist to prevent rote guessing
-          if (hasSynTargets && hasAntTargets) {
-            recallStage2Queue.push(Math.random() < 0.5 ? 'antonym' : 'synonym');
-          } else if (hasSynTargets) {
-            recallStage2Queue.push('synonym');
-          } else if (hasAntTargets) {
-            recallStage2Queue.push('antonym');
-          }
+          if (hasSynTargets) recallStage2Queue.push('synonym');
           if (hasFormTargets) recallStage2Queue.push('wordfamily');
-          // For words with neither Synonyms/Antonyms nor Word Family (~12%), test 1-sentence context gap-fill (preferring fresh qa_example)
-          if (recallStage2Queue.length === 0) {
-            recallStage2Queue.push('wordbox');
-          }
+          if (hasMeaningChoices) recallStage2Queue.push('meaning_vi');
         }
         advanceRecallStage2Queue(item);
         return;
@@ -4011,9 +3875,7 @@
           ? 'Vui lòng click chọn 1 từ trong Word Box để điền vào câu trước khi xác nhận.'
           : (recallStage2Type === 'wordfamily'
             ? 'Vui lòng click chọn ít nhất 1 từ cùng gia đình từ (Word Family) trước khi xác nhận.'
-            : (recallStage2Type === 'antonym'
-              ? 'Vui lòng click chọn ít nhất 1 từ trái nghĩa trước khi xác nhận.'
-              : 'Vui lòng click chọn ít nhất 1 từ đồng nghĩa trước khi xác nhận.'));
+            : 'Vui lòng click chọn ít nhất 1 từ đồng nghĩa trước khi xác nhận.');
       }
       return;
     }
@@ -4042,9 +3904,7 @@
         fb.className = 'recall-feedback err';
         fb.textContent = recallStage2Type === 'wordfamily'
           ? `Chưa chính xác! Hãy chọn lại các từ cùng gia đình từ (còn ${recallAttemptsLeft} lần thử).`
-          : (recallStage2Type === 'antonym'
-            ? `Chưa chính xác! Hãy chọn lại các từ trái nghĩa (còn ${recallAttemptsLeft} lần thử).`
-            : `Chưa chính xác! Hãy chọn lại các từ đồng nghĩa (còn ${recallAttemptsLeft} lần thử).`);
+          : `Chưa chính xác! Hãy chọn lại các từ đồng nghĩa (còn ${recallAttemptsLeft} lần thử).`;
       }
       return;
     }

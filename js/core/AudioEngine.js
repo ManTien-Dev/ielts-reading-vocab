@@ -130,47 +130,61 @@
         return this.playDictionaryFallback(clean, accent, rate);
       }
       try {
-        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        const wasBusy = Boolean(window.speechSynthesis.speaking || window.speechSynthesis.pending);
+        if (wasBusy) {
           window.speechSynthesis.cancel();
         }
-        window.speechSynthesis.resume?.();
-        const utt = new SpeechSynthesisUtterance(clean);
-        utt.lang = accent;
-        utt.rate = Math.max(0.65, Math.min(1.5, Number(rate) || 0.92));
-        if (bestVoice) utt.voice = bestVoice;
-        let started = false;
-        this._activeUtterance = utt;
-        utt.onstart = () => {
-          started = true;
-          if (this._watchdog) {
-            clearTimeout(this._watchdog);
-            this._watchdog = null;
+        const runSpeak = () => {
+          if (this._speakSeq !== seq) return;
+          try {
+            window.speechSynthesis.resume?.();
+            const utt = new SpeechSynthesisUtterance(clean);
+            utt.lang = accent;
+            utt.rate = Math.max(0.65, Math.min(1.5, Number(rate) || 0.92));
+            if (bestVoice) utt.voice = bestVoice;
+            let started = false;
+            this._activeUtterance = utt;
+            utt.onstart = () => {
+              started = true;
+              if (this._watchdog) {
+                clearTimeout(this._watchdog);
+                this._watchdog = null;
+              }
+            };
+            utt.onend = () => {
+              if (this._activeUtterance === utt) this._activeUtterance = null;
+            };
+            utt.onerror = (ev) => {
+              if (this._activeUtterance === utt) this._activeUtterance = null;
+              if (this._watchdog) {
+                clearTimeout(this._watchdog);
+                this._watchdog = null;
+              }
+              const code = String(ev?.error || '');
+              if (code === 'interrupted' || code === 'canceled') return;
+              if (this._speakSeq === seq) {
+                this.playDictionaryFallback(clean, accent, rate);
+              }
+            };
+            window.speechSynthesis.speak(utt);
+            // Watchdog for silent Chrome/Edge speechSynthesis stalls: fallback to dictionary audio if onstart never fires
+            this._watchdog = setTimeout(() => {
+              if (!started && this._speakSeq === seq) {
+                this._watchdog = null;
+                try { window.speechSynthesis.cancel(); } catch (_) {}
+                this.playDictionaryFallback(clean, accent, rate);
+              }
+            }, 650);
+          } catch (_) {
+            if (this._speakSeq === seq) this.playDictionaryFallback(clean, accent, rate);
           }
         };
-        utt.onend = () => {
-          if (this._activeUtterance === utt) this._activeUtterance = null;
-        };
-        utt.onerror = (ev) => {
-          if (this._activeUtterance === utt) this._activeUtterance = null;
-          if (this._watchdog) {
-            clearTimeout(this._watchdog);
-            this._watchdog = null;
-          }
-          const code = String(ev?.error || '');
-          if (code === 'interrupted' || code === 'canceled') return;
-          if (this._speakSeq === seq) {
-            this.playDictionaryFallback(clean, accent, rate);
-          }
-        };
-        window.speechSynthesis.speak(utt);
-        // Watchdog for silent Chrome/Edge speechSynthesis stalls: fallback to dictionary audio if onstart never fires
-        this._watchdog = setTimeout(() => {
-          if (!started && this._speakSeq === seq) {
-            this._watchdog = null;
-            try { window.speechSynthesis.cancel(); } catch (_) {}
-            this.playDictionaryFallback(clean, accent, rate);
-          }
-        }, 650);
+        if (wasBusy) {
+          // 40ms micro-gap avoids Chromium bug where cancel() silently swallows an immediately queued speak()
+          setTimeout(runSpeak, 40);
+        } else {
+          runSpeak();
+        }
         return true;
       } catch (_) {
         return this.playDictionaryFallback(clean, accent, rate);
