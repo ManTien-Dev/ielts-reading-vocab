@@ -1759,6 +1759,7 @@
     if (!pendingTaskId) return;
     const lockEl = document.getElementById('brief-task-lock');
     const startBtn = document.getElementById('btn-start-task');
+    const speedBtn = document.getElementById('btn-brief-speed-test');
     const viewBtn = document.getElementById('btn-view-expired-result');
     const reviewBtn = document.getElementById('btn-review-old-before-task');
     const dlLine = document.getElementById('brief-deadline-line');
@@ -1773,6 +1774,7 @@
 
     if (!isTeacherOrBypassed() && exp.expired) {
       if (reviewBtn) reviewBtn.style.display = 'none';
+      if (speedBtn) speedBtn.style.display = 'none';
       if (lockEl) {
         lockEl.style.display = 'flex';
         lockEl.style.alignItems = 'center';
@@ -1810,6 +1812,7 @@
 
     const remMs = getTaskLockRemainingMs(pendingTaskId);
     if (remMs > 0) {
+      if (speedBtn) speedBtn.style.display = 'none';
       if (lockEl) {
         lockEl.style.display = 'flex';
         lockEl.style.alignItems = 'center';
@@ -1825,6 +1828,7 @@
     if (!isTeacherOrBypassed()) {
       const dueOld = getOldWordsToReviewForTask(pendingTaskId);
       if (dueOld.length > 0) {
+        if (speedBtn) speedBtn.style.display = 'none';
         if (lockEl) {
           lockEl.style.display = 'flex';
           lockEl.style.alignItems = 'center';
@@ -1847,6 +1851,10 @@
 
     if (lockEl) lockEl.style.display = 'none';
     if (startBtn) startBtn.disabled = false;
+    if (speedBtn) {
+      speedBtn.style.display = '';
+      speedBtn.disabled = false;
+    }
   }
 
   function viewExpiredTaskResult() {
@@ -1897,6 +1905,39 @@
     if (!t) return;
     closeTaskBriefModal();
     enterTaskWorkspace(t);
+  }
+
+  function startPendingTaskSpeedQuiz() {
+    if (!pendingTaskId) return;
+    if (!isTeacherOrBypassed()) {
+      const exp = getTaskExpiryState(pendingTaskId);
+      if (exp.expired) {
+        updateBriefLockUI();
+        B()?.showToast?.(exp.completed
+          ? 'Task đã hết hạn — không thể làm lại nữa, hãy bấm Xem kết quả bài làm.'
+          : 'Task đã kết thúc! Hết thời hạn làm bài.');
+        return;
+      }
+      if (getTaskLockRemainingMs(pendingTaskId) > 0) {
+        updateBriefLockUI();
+        return;
+      }
+      const dueOld = getOldWordsToReviewForTask(pendingTaskId);
+      if (dueOld.length > 0) {
+        updateBriefLockUI();
+        B()?.showToast?.(`Cần hoàn thành Speed Quiz ${dueOld.length} từ vựng cũ trước khi vào ${getTaskById(pendingTaskId)?.label || 'Task'}!`);
+        return;
+      }
+    }
+    const t = getTaskById(pendingTaskId);
+    if (!t) return;
+    closeTaskBriefModal();
+    enterTaskWorkspace(t, { silentToast: true });
+    if (!activeTask || activeTask.id !== t.id) return;
+    window.AppCore?.audio?.stop?.();
+    if (window.RecognitionTestModule?.startListFinalExam) {
+      window.RecognitionTestModule.startListFinalExam(t.id);
+    }
   }
 
   function getTaskMasteredCount(task) {
@@ -2159,7 +2200,7 @@
     }
   }
 
-  function enterTaskWorkspace(task) {
+  function enterTaskWorkspace(task, opts = {}) {
     if (!isTeacherOrBypassed()) {
       const exp = getTaskExpiryState(task?.id);
       if (exp.expired) {
@@ -2236,10 +2277,12 @@
     const masteredCount = getTaskMasteredCount(task);
     if (reloadPenaltyNotice) {
       B()?.showToast?.(reloadPenaltyNotice);
-    } else if (masteredCount >= total) {
-      B()?.showToast?.(`Đã mở ${task.label} (${masteredCount}/${total} từ đã thuộc). Ôn nhanh trên Flashcard rồi bấm "Làm Test →" khi sẵn sàng!`);
-    } else {
-      B()?.showToast?.(`Đã mở ${task.label} (${masteredCount}/${total} từ đã thuộc). Học thuộc đủ ${total} từ trên Flashcard rồi làm Test nhé!`);
+    } else if (!opts?.silentToast) {
+      if (masteredCount >= total) {
+        B()?.showToast?.(`Đã mở ${task.label} (${masteredCount}/${total} từ đã thuộc). Ôn nhanh trên Flashcard rồi bấm "Làm Test →" khi sẵn sàng!`);
+      } else {
+        B()?.showToast?.(`Đã mở ${task.label} (${masteredCount}/${total} từ đã thuộc). Học thuộc đủ ${total} từ trên Flashcard rồi làm Test nhé!`);
+      }
     }
   }
 
@@ -5238,6 +5281,7 @@
     onScopeChanged,
     onStudyAssessmentChanged,
     startPendingTask,
+    startPendingTaskSpeedQuiz,
     exitTaskWorkspace,
     dismissTaskExitWarn,
     confirmTaskExamAbort,
