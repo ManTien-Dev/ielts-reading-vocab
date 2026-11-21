@@ -111,6 +111,128 @@
     return Boolean(raw && /^(task|fnd|acd|adv)_\d{2}$/i.test(String(raw).trim()));
   }
 
+  const SHORT_EN_TASK_TOPICS = {
+    // Foundation (30)
+    fnd_01: 'Urban Cycling',
+    fnd_02: 'Brain & New Words',
+    fnd_03: 'Traditional Pottery',
+    fnd_04: 'Island Ecosystems',
+    fnd_05: 'Community Choirs',
+    fnd_06: 'Urban Orchards',
+    fnd_07: 'Coral Reef Conservation',
+    fnd_08: 'Public Libraries',
+    fnd_09: 'Seed Banks',
+    fnd_10: 'Glaciers & Runoff',
+    fnd_11: 'Timber Framing',
+    fnd_12: 'Monarch Migration',
+    fnd_13: 'Smart Greenhouses',
+    fnd_14: 'Dolphin Acoustics',
+    fnd_15: 'History of Silk',
+    fnd_16: 'Urban Bird Nesting',
+    fnd_17: 'Ancient Artifacts',
+    fnd_18: 'High-Altitude Villages',
+    fnd_19: 'Cave Formations',
+    fnd_20: 'Story of Coffee',
+    fnd_21: 'Soil & Composting',
+    fnd_22: 'Honeybee Decline',
+    fnd_23: 'Rainforest Canopies',
+    fnd_24: 'Migratory Shorebirds',
+    fnd_25: 'Exercise & Cognition',
+    fnd_26: 'Vertical Gardens',
+    fnd_27: 'Mangrove Wetlands',
+    fnd_28: 'Passive Solar Homes',
+    fnd_29: 'Rice Terraces',
+    fnd_30: 'Shallow Lake Oxygen',
+    // Academic (20)
+    acd_01: 'Pneumatic Transit',
+    acd_02: 'Infant Auditory Brain',
+    acd_03: 'Invasive Cane Toads',
+    acd_04: 'Synthetic Chemistry',
+    acd_05: 'Marine Nutrient Cycling',
+    acd_06: 'Coastal Foraging',
+    acd_07: 'Nuclear Isotopes',
+    acd_08: 'Tropical Agroforestry',
+    acd_09: 'Maritime Cartography',
+    acd_10: 'Coastal Dune Recovery',
+    acd_11: 'Biophilic Workplaces',
+    acd_12: 'Bird Bioacoustics',
+    acd_13: 'Nitrogen & Farming',
+    acd_14: 'Congenital Amusia',
+    acd_15: 'Viking Navigation',
+    acd_16: 'Industrial Mechanization',
+    acd_17: 'Bat Echolocation',
+    acd_18: 'Synesthesia Sensation',
+    acd_19: 'Metal Fatigue',
+    acd_20: 'Syntactic Evolution',
+    // Paraphrase (30)
+    task_01: 'Dog Domestication',
+    task_02: 'Flavour Neuroscience',
+    task_03: 'Vertical Farming',
+    task_04: 'Modern Printmaking',
+    task_05: 'Plant Pollinators',
+    task_06: 'Visual Archives',
+    task_07: 'Science of Yawning',
+    task_08: 'Music & Language Brain',
+    task_09: 'Wisdom of Crowds',
+    task_10: 'Urban Food Deserts',
+    task_11: 'Online Consulting',
+    task_12: 'Carbon Sequestration',
+    task_13: 'Maori Medicine',
+    task_14: 'Adolescent Autonomy',
+    task_15: 'Healthy Centenarians',
+    task_16: 'Elephant Island Penguins',
+    task_17: 'Childhood & Health',
+    task_18: 'Footwear Biomechanics',
+    task_19: 'Limits of E-Learning',
+    task_20: 'History of La Bise',
+    task_21: 'Heritage Seed Savers',
+    task_22: 'Earworms & Memory',
+    task_23: 'Print Publishing',
+    task_24: 'Academic Evidence',
+    task_25: 'Social Research Data',
+    task_26: 'Isolated Ecosystems',
+    task_27: 'Ancient Navigation',
+    task_28: 'Research Governance',
+    task_29: 'Scientific Validity',
+    task_30: 'Estuary Pollution',
+    // Advanced (30)
+    adv_01: 'Scientific Paradigms',
+    adv_02: 'Pain Neuroplasticity',
+    adv_03: 'Extended Mind Thesis',
+    adv_04: 'Hyperbolic Discounting',
+    adv_05: 'Legal Positivism',
+    adv_06: 'Polar Ice Cores',
+    adv_07: 'Archival Provenance',
+    adv_08: 'Algorithmic Due Process',
+    adv_09: 'Genome Editing Ethics',
+    adv_10: 'Financial Fragility',
+    adv_11: 'Aesthetic Formalism',
+    adv_12: 'Complex Emergence',
+    adv_13: 'Language Shift',
+    adv_14: 'Multilateral Diplomacy',
+    adv_15: 'Inflationary Cosmology',
+    adv_16: 'Climate Governance',
+    adv_17: 'Bayesian Epistemology',
+    adv_18: 'Nudge Architecture',
+    adv_19: 'Constitutional Checks',
+    adv_20: 'Default Mode Network',
+    adv_21: 'Sedimentary Feedbacks',
+    adv_22: 'Microhistory Studies',
+    adv_23: 'Explainable AI',
+    adv_24: 'Epigenetic Ethics',
+    adv_25: 'Monetary Transmission',
+    adv_26: 'Philosophical Hermeneutics',
+    adv_27: 'Network Fragility',
+    adv_28: 'Dialect Levelling',
+    adv_29: 'Strategic Deterrence',
+    adv_30: 'Planetary Boundaries',
+  };
+
+  function getShortTaskTopic(id, fallback = '') {
+    if (id && SHORT_EN_TASK_TOPICS[id]) return SHORT_EN_TASK_TOPICS[id];
+    return String(fallback || '').trim();
+  }
+
   function buildReadingSuiteTasks(scopeKey, prefix, shortLabel, themeLabel, rawList, numTasks) {
     const out = [];
     const total = rawList.length;
@@ -139,7 +261,7 @@
         test1Boards.push(words.slice(b, b + 5).map((w) => ({ id: w.id, word: w.lemma, meaning: w.meaning })));
       }
       const extra = examMap[id] || {};
-      const passageTopic = extra.passage?.topic ? `${themeLabel} · ${extra.passage.topic}` : themeLabel;
+      const passageTopic = getShortTaskTopic(id, extra.passage?.topic || themeLabel);
       out.push({
         id,
         num,
@@ -178,6 +300,7 @@
           t.num = idx + 1;
           t.scopeKey = 'paraphrase';
           t.taskKind = 'paraphrase_full';
+          t.theme = getShortTaskTopic(t.id, t.theme);
           if (examMap[t.id] && Array.isArray(examMap[t.id].test3ReadingQuestions)) {
             t.test3ReadingQuestions = examMap[t.id].test3ReadingQuestions;
           } else if (!Array.isArray(t.test3ReadingQuestions)) {
