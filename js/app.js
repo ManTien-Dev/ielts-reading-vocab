@@ -5504,7 +5504,12 @@
     });
 
     window.addEventListener('blur', () => {
-      handleLeaveAttempt('Phát hiện rời khỏi cửa sổ kiểm tra!');
+      const fire = () => handleLeaveAttempt('Phát hiện rời khỏi cửa sổ kiểm tra!');
+      if (window.CoreAntiCheatGuard?.handleSafeWindowBlur) {
+        window.CoreAntiCheatGuard.handleSafeWindowBlur(fire);
+      } else {
+        fire();
+      }
     });
 
     window.addEventListener('focus', () => {

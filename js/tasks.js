@@ -2640,6 +2640,10 @@
   }
 
   function onTaskWindowBlur() {
+    if (window.CoreAntiCheatGuard?.handleSafeWindowBlur) {
+      window.CoreAntiCheatGuard.handleSafeWindowBlur(() => handleTaskTabLeave());
+      return;
+    }
     handleTaskTabLeave();
   }
 

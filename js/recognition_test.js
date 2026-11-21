@@ -389,7 +389,15 @@
       window.addEventListener('blur', () => {
         if (!session || session.phase !== 'quiz' || session.paused || isTeacher()) return;
         if (document.hidden) return;
-        handleTabLeaveViolation('Bạn vừa rời cửa sổ bài Test phản xạ');
+        const fire = () => {
+          if (!session || session.phase !== 'quiz' || session.paused || isTeacher() || document.hidden) return;
+          handleTabLeaveViolation('Bạn vừa rời cửa sổ bài Test phản xạ');
+        };
+        if (window.CoreAntiCheatGuard?.handleSafeWindowBlur) {
+          window.CoreAntiCheatGuard.handleSafeWindowBlur(fire);
+        } else {
+          fire();
+        }
       });
     }
   }
