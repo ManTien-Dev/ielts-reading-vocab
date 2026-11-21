@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
   <link rel="stylesheet" href="css/enhancements.css?v=20261121y">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261121y">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261121z">
 </head>
 <body>
 
@@ -303,10 +303,39 @@
         <svg class="hdr-btn-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
         <span>Làm mới</span>
       </button>
-      <button class="btn-icon-glass btn-header-task tot-hdr-ghost" id="btn-open-student-tasks" onclick="TasksModule.openStudentTasksModal()" style="display:none;" aria-label="Mở hộp thoại Task bài tập" title="Mở nhanh danh sách Task">
-        <svg class="hdr-btn-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+      <button class="btn-icon-glass btn-header-task tot-task-mascot-btn" id="btn-open-student-tasks" onclick="TasksModule.openStudentTasksModal()" style="display:none;" aria-label="Mở hộp thoại Task bài tập" title="Danh sách Task bài tập">
+        <svg class="tot-task-mascot-svg" aria-hidden="true" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Totoro ears -->
+          <path d="M12.2 12.6L9.4 5.2C9.1 4.4 10 3.8 10.7 4.3L15.4 8.2" fill="#637067" stroke="#2F3B34" stroke-width="1.4" stroke-linejoin="round"/>
+          <path d="M23.8 12.6L26.6 5.2C26.9 4.4 26 3.8 25.3 4.3L20.6 8.2" fill="#637067" stroke="#2F3B34" stroke-width="1.4" stroke-linejoin="round"/>
+          <!-- Leaf on head -->
+          <path d="M18 7.8C18 5.4 20.1 4.1 22.1 4.6C21.6 6.8 19.9 8.1 18 7.8Z" fill="#528A4E" stroke="#2E542E" stroke-width="1" stroke-linejoin="round"/>
+          <path d="M18 7.8V9.4" stroke="#2E542E" stroke-width="1.1" stroke-linecap="round"/>
+          <!-- Totoro head peeking above homework board -->
+          <path d="M9.6 17.5C9.6 11.7 13.1 8.4 18 8.4C22.9 8.4 26.4 11.7 26.4 17.5" fill="#738278" stroke="#2F3B34" stroke-width="1.4" stroke-linecap="round"/>
+          <!-- Eyes -->
+          <circle cx="14.3" cy="13.6" r="1.55" fill="#FFFDF8"/>
+          <circle cx="14.4" cy="13.6" r="0.85" fill="#232B26"/>
+          <circle cx="21.7" cy="13.6" r="1.55" fill="#FFFDF8"/>
+          <circle cx="21.6" cy="13.6" r="0.85" fill="#232B26"/>
+          <!-- Nose & Whiskers -->
+          <ellipse cx="18" cy="14.3" rx="1.25" ry="0.7" fill="#232B26"/>
+          <path d="M8.8 14.3L11.2 14.6M8.9 15.9L11.3 15.8M27.2 14.3L24.8 14.6M27.1 15.9L24.7 15.8" stroke="#2F3B34" stroke-width="0.95" stroke-linecap="round"/>
+          <!-- Homework notebook / task sheet -->
+          <rect x="7" y="16.4" width="22" height="16.2" rx="3.4" fill="#FFFDF6" stroke="#3B593F" stroke-width="1.6"/>
+          <!-- Clipboard top bar -->
+          <rect x="13.5" y="15.1" width="9" height="2.7" rx="1.35" fill="#547D55" stroke="#2F4D31" stroke-width="1.1"/>
+          <!-- Homework lines -->
+          <path d="M11 21.4H21.2M11 25H18.4M11 28.5H16.2" stroke="#5A725E" stroke-width="1.5" stroke-linecap="round"/>
+          <!-- Checkmark badge -->
+          <circle cx="24.2" cy="27.2" r="4.1" fill="#467A49" stroke="#FFFDF6" stroke-width="1.3"/>
+          <path d="M22.4 27.2L23.7 28.5L26.2 25.8" stroke="#FFFFFF" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Little Totoro paws holding the homework -->
+          <ellipse cx="7.4" cy="21.5" rx="1.8" ry="2.2" fill="#738278" stroke="#2F3B34" stroke-width="1.2"/>
+          <ellipse cx="28.6" cy="21.5" rx="1.8" ry="2.2" fill="#738278" stroke="#2F3B34" stroke-width="1.2"/>
+        </svg>
       </button>
-      <button class="tot-hdr-btn tot-hdr-ghost" id="btn-open-menu" onclick="openMenuModal()" aria-label="Mở menu tùy chọn" title="Tùy chọn âm thanh & học tập">
+      <button class="tot-hdr-btn tot-hdr-ghost" id="btn-open-menu" onclick="openMenuModal()" aria-label="Mở menu cài đặt" title="Cài đặt &amp; Tài khoản">
         <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6" stroke-linecap="round"/><line x1="4" y1="12" x2="20" y2="12" stroke-linecap="round"/><line x1="4" y1="18" x2="20" y2="18" stroke-linecap="round"/></svg>
       </button>
 
@@ -406,7 +435,7 @@
               <svg class="tot-ico-sm" style="width:15px;height:15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><line x1="4" y1="7" x2="20" y2="7" stroke-linecap="round"/><circle cx="9" cy="7" r="2.2" fill="var(--surface)"/><line x1="4" y1="12" x2="20" y2="12" stroke-linecap="round"/><circle cx="15" cy="12" r="2.2" fill="var(--surface)"/><line x1="4" y1="17" x2="20" y2="17" stroke-linecap="round"/><circle cx="10" cy="17" r="2.2" fill="var(--surface)"/></svg>
             </button>
             <div class="tot-kbd-help-pop" id="card-settings-popover">
-              <div class="tot-pop-sec-hdr">Thiết lập thẻ</div>
+              <div class="tot-pop-sec-hdr">Học thẻ &amp; Phát âm</div>
               <button type="button" class="tot-ctrl-row" id="btn-widget-autospeak" onclick="toggleAutoSpeak(event)">
                 <span class="tot-ctrl-lbl">Tự đọc khi chuyển thẻ</span>
                 <span class="tot-fc-pill" id="widget-autospeak-state">Bật</span>
@@ -418,13 +447,18 @@
                   <button type="button" class="tot-mini-seg-btn" id="btn-widget-accent-uk" onclick="setAutoSpeakAccent('en-GB')">UK</button>
                 </div>
               </div>
+              <div class="tot-ctrl-row is-static tot-voice-pop-row">
+                <span class="tot-ctrl-lbl">Người đọc</span>
+                <div class="tot-voice-pop-controls">
+                  <select class="scope-select tot-voice-pop-select" id="settings-voice-select" onchange="onPreferredVoiceChange(this.value)" aria-label="Chọn người đọc">
+                    <option value="">Tự động (Nữ ấm áp)</option>
+                  </select>
+                  <button type="button" class="tot-voice-try-btn" onclick="previewSelectedVoice()" title="Nghe thử giọng đang chọn">Thử</button>
+                </div>
+              </div>
               <button type="button" class="tot-ctrl-row" id="btn-widget-front-ctx" onclick="window.TotoroUI?.toggleFrontContextFromWidget?.()">
                 <span class="tot-ctrl-lbl">Ví dụ ở mặt trước</span>
                 <span class="tot-fc-pill" id="widget-front-ctx-state">Ẩn</span>
-              </button>
-              <button type="button" class="btn-widget-jump" id="btn-widget-next-unlearned" onclick="window.__VOCAB_BRIDGE__?.jumpToNextUnlearned?.()">
-                <span>Tới từ chưa thuộc tiếp theo</span>
-                <span aria-hidden="true">→</span>
               </button>
 
               <div class="tot-pop-divider"></div>
@@ -1582,34 +1616,6 @@
               <button type="button" class="btn-subtle danger-soft" id="btn-menu-logout" onclick="closeMenuModal(); logoutCurrentAccount();">Đăng xuất / Đổi ID</button>
             </div>
           </div>
-
-          <div class="tot-settings-card">
-            <div class="tot-set-head">Học thẻ &amp; Phát âm</div>
-            <label class="tot-switch-row">
-              <span class="tot-set-lbl">Tự động đọc khi chuyển thẻ</span>
-              <input type="checkbox" class="tot-switch-input" id="chk-auto-speak" checked onchange="toggleAutoSpeak(this.checked)">
-            </label>
-            <div class="tot-set-row">
-              <span class="tot-set-lbl">Giọng đọc mặc định</span>
-              <div class="tot-accent-seg">
-                <button type="button" class="btn-voice-speak btn-accent-choice active" id="btn-auto-accent-us" onclick="setAutoSpeakAccent('en-US')">US</button>
-                <button type="button" class="btn-voice-speak btn-accent-choice" id="btn-auto-accent-uk" onclick="setAutoSpeakAccent('en-GB')">UK</button>
-              </div>
-            </div>
-            <div class="tot-set-row" style="gap:8px; flex-wrap:wrap;">
-              <span class="tot-set-lbl">Người đọc</span>
-              <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:180px; justify-content:flex-end;">
-                <select class="scope-select" id="settings-voice-select" onchange="onPreferredVoiceChange(this.value)" style="max-width:210px; height:32px; font-size:12.5px; padding:0 26px 0 10px;" aria-label="Chọn giọng đọc">
-                  <option value="">Tự động (Nữ ấm áp)</option>
-                </select>
-                <button type="button" class="btn-voice-speak" onclick="previewSelectedVoice()" title="Nghe thử giọng đang chọn"><span>Thử</span></button>
-              </div>
-            </div>
-            <label class="tot-switch-row">
-              <span class="tot-set-lbl">Hiện câu ví dụ ở mặt trước</span>
-              <input type="checkbox" class="tot-switch-input" id="chk-show-front-context" onchange="toggleFrontContext(this.checked)">
-            </label>
-          </div>
         </div>
 
         <div class="tot-settings-card">
@@ -1851,8 +1857,8 @@
   <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119t"></script>
   <script src="js/core/AppCore.js?v=20261121c"></script>
   <script src="js/recognition_test.js?v=20261121v"></script>
-  <script src="js/app.js?v=20261121y"></script>
+  <script src="js/app.js?v=20261121z"></script>
   <script src="js/tasks.js?v=20261121x"></script>
-  <script src="js/totoro_ui.js?v=20261121s"></script>
+  <script src="js/totoro_ui.js?v=20261121z"></script>
 </body>
 </html>

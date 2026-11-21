@@ -5203,7 +5203,7 @@
     toggleUnmasteredFilter, activateUnmasteredOnly, restartScopeStudy,
     toggleDueReviewFilter, activateDueReviewOnly, dismissAnkiReminder,
     shuffleCurrentScope, speakCurrentWord, toggleAutoSpeak, setAutoSpeakAccent,
-    onPreferredVoiceChange, previewSelectedVoice,
+    onPreferredVoiceChange, previewSelectedVoice, populateVoiceSelectUI,
     openWordListModal, closeWordListModal,
     filterWordListByStatus, onWordListSearch, loadMoreWordsInList, jumpToWord,
     studySignalAndJump, openSignalWordsModal, closeSignalWordsModal, filterSignalWordsByCategory,

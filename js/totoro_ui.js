@@ -849,6 +849,7 @@
     if (ukBtn) ukBtn.classList.toggle('active', isUk);
     if (ctxBtn) ctxBtn.classList.toggle('active', frontCtxOn);
     if (ctxTxt) ctxTxt.textContent = frontCtxOn ? 'Hiện' : 'Ẩn';
+    window.populateVoiceSelectUI?.();
 
     // 2. Widget 4 (Bottom-Right): Mục Tiêu Phiên Học
     document.querySelectorAll('#widget-four-decks [data-session-goal]').forEach((b) => {
