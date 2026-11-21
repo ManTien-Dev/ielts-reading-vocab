@@ -4315,6 +4315,33 @@
     showToast(`Đã chọn giọng tự đọc: ${preferredAccent === 'en-GB' ? 'UK' : 'US'}`);
   }
 
+  function populateVoiceSelectUI() {
+    const sel = document.getElementById('settings-voice-select');
+    const audio = window.AppCore?.audio;
+    if (!sel || !audio) return;
+    const enVoices = audio.getEnglishVoices?.() || [];
+    const saved = audio.getPreferredVoiceName?.() || '';
+    const opts = ['<option value="">Tự động (Nữ ấm áp)</option>'];
+    enVoices.forEach((v) => {
+      const label = `${v.name} (${v.lang})`;
+      opts.push(`<option value="${escapeHtml(v.name)}"${v.name === saved ? ' selected' : ''}>${escapeHtml(label)}</option>`);
+    });
+    sel.innerHTML = opts.join('');
+    sel.value = saved;
+  }
+
+  function onPreferredVoiceChange(voiceName) {
+    window.AppCore?.audio?.setPreferredVoiceName?.(voiceName || '');
+    previewSelectedVoice();
+    showToast(voiceName ? `Đã chọn giọng: ${voiceName}` : 'Đã đặt về Tự động (Nữ ấm áp)');
+  }
+
+  function previewSelectedVoice() {
+    const sample = currentScopeList?.[currentCardIndex]?.lemma || 'researcher';
+    window.AppCore?.audio?.speak?.(sample, { accent: preferredAccent || 'en-US', rate: 0.92, respectCustom: true });
+  }
+  window.addEventListener('app:voices-updated', populateVoiceSelectUI);
+
   function toggleAutoSpeak(arg) {
     if (arg && typeof arg.stopPropagation === 'function') {
       arg.stopPropagation();
@@ -4710,6 +4737,7 @@
 
   function openMenuModal() {
     updateAutoSpeakUI();
+    populateVoiceSelectUI();
     syncThemeUIControls();
     updateClassReportHeaderAndActions();
     const chk = document.getElementById('chk-show-front-context');
@@ -5125,7 +5153,9 @@
     onScopeChange, flipCurrentCard, nextCard, prevCard, assessCurrentWord,
     toggleUnmasteredFilter, activateUnmasteredOnly, restartScopeStudy,
     toggleDueReviewFilter, activateDueReviewOnly, dismissAnkiReminder,
-    shuffleCurrentScope, speakCurrentWord, toggleAutoSpeak, setAutoSpeakAccent, openWordListModal, closeWordListModal,
+    shuffleCurrentScope, speakCurrentWord, toggleAutoSpeak, setAutoSpeakAccent,
+    onPreferredVoiceChange, previewSelectedVoice,
+    openWordListModal, closeWordListModal,
     filterWordListByStatus, onWordListSearch, loadMoreWordsInList, jumpToWord,
     studySignalAndJump, openSignalWordsModal, closeSignalWordsModal, filterSignalWordsByCategory,
     filterSignalWordsList, studySignalWordsAsDeck, openReadingTipModal, closeReadingTipModal,
