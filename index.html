@@ -13,7 +13,7 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="css/style.css?v=20261120a">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261121j">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261121p">
   <link rel="stylesheet" href="css/totoro_theme.css?v=20261121k">
 </head>
 <body>
@@ -207,13 +207,13 @@
     <div class="task-study-bar" id="task-study-bar" style="display:none;">
       <div class="task-study-bar-info">
         <span class="tip-pill" id="task-study-pill" style="margin:0;">TASK 1</span>
-        <span class="task-study-bar-status" id="task-study-status">Đã thuộc 0 / 50 từ</span>
-        <span class="task-idle-mini" id="task-study-idle-badge" title="Không thao tác quá 10 phút sẽ khóa 30 phút">00:00 / 10:00</span>
+        <span class="task-study-bar-status" id="task-study-status" style="display:none;">Đã thuộc 0 / 50 từ</span>
+        <span class="task-idle-mini" id="task-study-idle-badge" style="display:none;" title="Không thao tác quá 10 phút sẽ khóa 30 phút">00:00 / 10:00</span>
         <span class="task-deadline-mini" id="task-study-deadline-badge" style="display:none;" title="Thời hạn làm Task còn lại"></span>
       </div>
       <div class="task-study-bar-actions">
-        <button type="button" class="btn btn-primary btn-sm-task" id="btn-task-to-test1" onclick="TasksModule.onClickStartTaskExam()">Mở Test (0/50)</button>
-        <button type="button" class="btn-subtle btn-sm-task" id="btn-task-study-exit" onclick="TasksModule.exitTaskWorkspace(true)">Thoát Task</button>
+        <button type="button" class="btn btn-primary btn-sm-task" id="btn-task-to-test1" onclick="TasksModule.onClickStartTaskExam()">TEST (0/50)</button>
+        <button type="button" class="btn-subtle btn-sm-task" id="btn-task-study-exit" onclick="TasksModule.exitTaskWorkspace(true)" title="Thoát chế độ Task">Thoát</button>
       </div>
     </div>
 
@@ -1283,9 +1283,9 @@
             <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" name="teacher_filter_query" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Tìm nhanh học viên theo tên hoặc mã ID..." oninput="TasksModule.renderTeacherDashboard()">
           </div>
           <div class="teacher-view-tabs" id="teacher-view-tabs" role="tablist" aria-label="Chế độ xem danh sách học viên">
-            <button type="button" class="teacher-view-tab" data-view="today" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('today')">Hôm nay</button>
+            <button type="button" class="teacher-view-tab active" data-view="today" role="tab" aria-selected="true" onclick="TasksModule.setTeacherTableView('today')">Hôm nay</button>
             <button type="button" class="teacher-view-tab" data-view="month" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('month')">Tháng này</button>
-            <button type="button" class="teacher-view-tab active" data-view="full" role="tab" aria-selected="true" onclick="TasksModule.setTeacherTableView('full')">Full</button>
+            <button type="button" class="teacher-view-tab" data-view="full" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('full')">Full</button>
           </div>
         </div>
         <div class="class-report-table-wrap">
@@ -1294,11 +1294,8 @@
               <tr>
                 <th>#</th>
                 <th>Học viên</th>
-                <th>Hôm nay</th>
-                <th>Tuần này</th>
-                <th>Tháng này</th>
-                <th>Chuỗi ngày</th>
-                <th>Từ đã thuộc</th>
+                <th>Số phút học</th>
+                <th>Số từ</th>
                 <th>Task hoàn thành</th>
                 <th>Trạng thái</th>
               </tr>
@@ -1827,7 +1824,7 @@
   <script src="js/core/AppCore.js?v=20261121c"></script>
   <script src="js/recognition_test.js?v=20261121o"></script>
   <script src="js/app.js?v=20261121o"></script>
-  <script src="js/tasks.js?v=20261121j"></script>
+  <script src="js/tasks.js?v=20261121p"></script>
   <script src="js/totoro_ui.js?v=20261121d"></script>
 </body>
 </html>

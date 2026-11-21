@@ -1100,7 +1100,7 @@
     bridge.showToast?.('Đã xuất file Excel (.csv) báo cáo lớp!');
   }
 
-  let teacherTableView = 'full';
+  let teacherTableView = 'today';
 
   function setTeacherTableView(mode) {
     const next = (mode === 'today' || mode === 'month' || mode === 'full') ? mode : 'full';
@@ -1493,9 +1493,9 @@
       : 'Test 2 (Điền từ)';
     if (info) {
       info.innerHTML = `
-        <div><strong>Nội dung:</strong> Học ${t.words.length} từ vựng gốc (kèm Word Family) trên Flashcard chính.</div>
-        <div style="margin-top:6px;"><strong>Quy trình (~${t.estMinutes} phút):</strong> Thuộc đủ ${t.words.length}/${t.words.length} từ → Làm <strong>Test 1 (Ghép từ) → ${test2FlowDesc} → Test 3 (Đọc hiểu &amp; Dịch bài)</strong>.</div>
-        <div style="margin-top:6px;"><strong>Kỷ luật thi:</strong> Không rời tab hoặc treo máy 10 phút khi làm bài (vi phạm đủ <strong>3 lần</strong> sẽ bị <strong>khóa Task 30 phút</strong> và phải làm lại từ đầu).</div>
+        <div><strong>Bước 1 — Học từ vựng:</strong> Học thuộc đủ <strong>${t.words.length}/${t.words.length} từ</strong> trên Flashcard trước (học xong mới mở được bài Test).</div>
+        <div style="margin-top:6px;"><strong>Bước 2 — Làm Test (~${t.estMinutes} phút):</strong> Thuộc đủ ${t.words.length}/${t.words.length} từ → Làm <strong>Test 1 (Ghép từ) → ${test2FlowDesc} → Test 3 (Đọc hiểu &amp; Dịch bài)</strong>.</div>
+        <div style="margin-top:6px;"><strong>Kỷ luật thi:</strong> Không rời tab hoặc ngưng thao tác quá 10 phút khi làm bài (vi phạm đủ <strong>3 lần</strong> sẽ bị <strong>khóa Task 30 phút</strong> và phải làm lại từ đầu).</div>
         ${deadlineLine}
         ${doneNote}
       `;
@@ -1642,7 +1642,7 @@
     if (reviewBtn) reviewBtn.style.display = 'none';
     if (startBtn) {
       startBtn.style.display = 'inline-flex';
-      startBtn.textContent = 'Bắt đầu làm Task';
+      startBtn.textContent = 'Bắt đầu học từ vựng →';
     }
 
     const remMs = getTaskLockRemainingMs(pendingTaskId);
@@ -1798,15 +1798,16 @@
       testBtn.disabled = false;
       testBtn.classList.toggle('btn-primary', allReady);
       testBtn.classList.toggle('btn-subtle', !allReady);
-      testBtn.textContent = allReady ? 'Làm Test →' : `Mở Test (${masteredCount}/${total})`;
+      testBtn.classList.toggle('is-test-ready', allReady);
+      testBtn.textContent = allReady ? 'Làm Test →' : `TEST (${masteredCount}/${total})`;
     }
     const dlBadge = document.getElementById('task-study-deadline-badge');
     if (dlBadge) {
       const dl = !isTeacherOrBypassed() ? getTaskDeadlineInfo(task.id) : { hasDeadline: false };
       if (dl.hasDeadline) {
-        dlBadge.style.display = 'inline-block';
+        dlBadge.style.display = 'inline-flex';
         dlBadge.classList.toggle('is-urgent', dl.remainingMs <= 5 * 60 * 1000);
-        dlBadge.textContent = dl.expired ? 'Hết giờ' : `Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
+        dlBadge.textContent = dl.expired ? '⏱ Hết giờ' : `⏱ Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
       } else {
         dlBadge.style.display = 'none';
       }
@@ -2031,9 +2032,10 @@
     document.getElementById('task-leave-warn-banner')?.remove();
     closeStudentTasksModal();
 
-    // Load 50 words of this Task directly inside the unified main #screen-study UI!
+    // Load 50 words of this Task directly inside the unified main #screen-study UI (Flashcard vocabulary study first!)
     syncAssignedTaskScopes(task);
     B()?.activateTaskScope?.(task.id);
+    window.TotoroUI?.switchView?.('flashcard', { fromUser: true });
 
     startIdleMonitor();
     updateTaskStudyBar();
@@ -2042,12 +2044,10 @@
     const masteredCount = getTaskMasteredCount(task);
     if (reloadPenaltyNotice) {
       B()?.showToast?.(reloadPenaltyNotice);
-    }
-    if (masteredCount >= total) {
-      examReadyPromptShownForTaskId = task.id;
-      openTaskExamReadyModal(task);
-    } else if (!reloadPenaltyNotice) {
-      B()?.showToast?.(`Đã mở ${task.label} (${masteredCount}/${total} từ đã thuộc). Học xong 50 từ để làm Test kết thúc!`);
+    } else if (masteredCount >= total) {
+      B()?.showToast?.(`Đã mở ${task.label} (${masteredCount}/${total} từ đã thuộc). Ôn nhanh trên Flashcard rồi bấm "Làm Test →" khi sẵn sàng!`);
+    } else {
+      B()?.showToast?.(`Đã mở ${task.label} (${masteredCount}/${total} từ đã thuộc). Học thuộc đủ ${total} từ trên Flashcard rồi làm Test nhé!`);
     }
   }
 
@@ -2354,12 +2354,12 @@
       }
       const exp = getTaskExpiryState(activeTask.id);
       if (exp.hasDeadline) {
-        const remText = exp.expired ? 'Hết giờ' : `Còn ${formatDeadlineRemaining(exp.remainingMs)}`;
+        const remText = exp.expired ? '⏱ Hết giờ' : `⏱ Còn ${formatDeadlineRemaining(exp.remainingMs)}`;
         const urgent = exp.expired || exp.remainingMs <= 5 * 60 * 1000;
         ['task-study-deadline-badge', 'task-exam-deadline-badge'].forEach((id) => {
           const el = document.getElementById(id);
           if (el) {
-            el.style.display = 'inline-block';
+            el.style.display = 'inline-flex';
             el.classList.toggle('is-urgent', urgent);
             el.textContent = remText;
           }
