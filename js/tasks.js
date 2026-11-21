@@ -11,6 +11,8 @@
   const TEACHER_SENT_TASKS_KEY = 'ielts_teacher_sent_tasks_v1';
   const ACTIVE_TASK_EXAM_KEY_BASE = 'ielts_active_task_exam_';
   const TASK_DEADLINE_KEY_BASE = 'ielts_task_deadlines_';
+  const ASSIGNED_TASKS_KEY_BASE = 'ielts_assigned_tasks_';
+  const TEACHER_LIVE_DEADLINES_KEY = 'ielts_teacher_live_deadlines_v1';
 
   let teacherSelectedIds = new Set();
   let teacherFilterPendingOnly = false;
@@ -23,6 +25,8 @@
   let viewedWordIds = new Set();
 
   let t1BoardIndex = 0;
+  let _runtimeT1Boards = [];
+  let t1LeftOrder = [];
   let t1ShuffledRight = [];
   let t1SelectedLeft = null;
   let t1MatchedIds = new Set();
@@ -36,6 +40,7 @@
   let t2ParaPairs = [];
   let t2ParaBoards = [];
   let t2ParaBoardIndex = 0;
+  let t2ParaLeftOrder = [];
   let t2ParaShuffledRight = [];
   let t2ParaSelectedLeft = null;
   let t2ParaSelectedRight = null;
@@ -52,6 +57,18 @@
   let t2WbSubmitted = false;
   let t2WbMistakes = 0;
   let t2ContextQs = [];
+
+  let t3ReadingQuestions = [];
+  let t3ReadingAnswers = {};
+
+  function shuffleArray(arr) {
+    const out = Array.isArray(arr) ? arr.slice() : [];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  }
 
   let idleTimer = null;
   let lastActivityAt = 0;
@@ -80,10 +97,10 @@
   }
 
   const TASK_SUITES_META = [
-    { key: 'foundation', prefix: 'fnd', label: 'Nền Tảng', count: 30, desc: 'Nhận diện mặt chữ & nghĩa', kind: 'recognition' },
-    { key: 'academic', prefix: 'acd', label: 'Học Thuật', count: 20, desc: 'Học thuật Reading', kind: 'recognition' },
-    { key: 'paraphrase', prefix: 'task', label: 'Paraphrase', count: 30, desc: 'Paraphrase đề thật & Dịch bài', kind: 'paraphrase_full' },
-    { key: 'advanced', prefix: 'adv', label: 'Chuyên Sâu', count: 30, desc: 'Chuyên sâu C1–C2', kind: 'recognition' },
+    { key: 'foundation', prefix: 'fnd', label: 'Nền Tảng', count: 30, desc: 'Test 1 · Summary Word Box · Đọc hiểu & Dịch', kind: 'reading_full' },
+    { key: 'academic', prefix: 'acd', label: 'Học Thuật', count: 20, desc: 'Test 1 · Summary Word Box · Đọc hiểu & Dịch', kind: 'reading_full' },
+    { key: 'paraphrase', prefix: 'task', label: 'Paraphrase', count: 30, desc: 'Test 1 · Synonyms & Word Box · Đọc hiểu & Dịch', kind: 'paraphrase_full' },
+    { key: 'advanced', prefix: 'adv', label: 'Chuyên Sâu', count: 30, desc: 'Test 1 · Summary Word Box · Đọc hiểu & Dịch', kind: 'reading_full' },
   ];
 
   let _generatedSuiteCache = null;
@@ -97,6 +114,7 @@
   function buildReadingSuiteTasks(scopeKey, prefix, shortLabel, themeLabel, rawList, numTasks) {
     const out = [];
     const total = rawList.length;
+    const examMap = window.APP_READING_TASKS_EXAM_DATA || {};
     for (let i = 0; i < numTasks; i++) {
       const start = i * 50;
       const end = (i === numTasks - 1) ? total : Math.min(total, start + 50);
@@ -116,16 +134,34 @@
         example: (Array.isArray(it.exam_citations) && it.exam_citations[0]?.sentence) ? it.exam_citations[0].sentence : '',
         linkedIds: [it.id],
       }));
+      const test1Boards = [];
+      for (let b = 0; b < words.length; b += 5) {
+        test1Boards.push(words.slice(b, b + 5).map((w) => ({ id: w.id, word: w.lemma, meaning: w.meaning })));
+      }
+      const extra = examMap[id] || {};
+      const passageTopic = extra.passage?.topic ? `${themeLabel} · ${extra.passage.topic}` : themeLabel;
       out.push({
         id,
         num,
         scopeKey,
-        taskKind: 'recognition',
+        taskKind: 'reading_full',
         label: `${shortLabel} · Task ${num}`,
-        theme: themeLabel,
-        estMinutes: 15,
+        theme: passageTopic,
+        estMinutes: 30,
         words,
         linkedIds: words.map((w) => w.id),
+        test1Boards,
+        test2WordBoxBoards: Array.isArray(extra.test2WordBoxBoards) ? extra.test2WordBoxBoards : [],
+        passage: extra.passage || {
+          id: `${id}_passage`,
+          topic: themeLabel,
+          title: `${shortLabel.toUpperCase()} READING CASE ${num}`,
+          wordCount: 150,
+          text: words.slice(0, 10).map((w) => w.example).filter(Boolean).join(' '),
+          anchorWords: words.slice(0, 10).map((w) => w.lemma),
+          signalClues: ['However', 'Consequently', 'Furthermore'],
+        },
+        test3ReadingQuestions: Array.isArray(extra.test3ReadingQuestions) ? extra.test3ReadingQuestions : [],
       });
     }
     return out;
@@ -136,16 +172,22 @@
     const f2 = (window.APP_DATA && Array.isArray(window.APP_DATA.file2_families_3500))
       ? window.APP_DATA.file2_families_3500
       : [];
+    const examMap = window.APP_READING_TASKS_EXAM_DATA || {};
     const paraRaw = (window.APP_TASKS_DATA && Array.isArray(window.APP_TASKS_DATA.tasks))
       ? window.APP_TASKS_DATA.tasks.map((t, idx) => {
           t.num = idx + 1;
           t.scopeKey = 'paraphrase';
           t.taskKind = 'paraphrase_full';
+          if (examMap[t.id] && Array.isArray(examMap[t.id].test3ReadingQuestions)) {
+            t.test3ReadingQuestions = examMap[t.id].test3ReadingQuestions;
+          } else if (!Array.isArray(t.test3ReadingQuestions)) {
+            t.test3ReadingQuestions = [];
+          }
           return t;
         })
       : [];
     _generatedSuiteCache = {
-      foundation: buildReadingSuiteTasks('foundation', 'fnd', 'Nền Tảng', 'Nhận diện mặt chữ & nghĩa', f2.slice(0, 1500), 30),
+      foundation: buildReadingSuiteTasks('foundation', 'fnd', 'Nền Tảng', 'Nền tảng Reading', f2.slice(0, 1500), 30),
       academic: buildReadingSuiteTasks('academic', 'acd', 'Học Thuật', 'Học thuật Reading', f2.slice(1500, 2500), 20),
       paraphrase: paraRaw,
       advanced: buildReadingSuiteTasks('advanced', 'adv', 'Chuyên Sâu', 'Chuyên sâu C1–C2', f2.slice(2500), 30),
@@ -345,13 +387,137 @@
     } catch (_) {}
   }
 
+  function loadAssignedTasksMap() {
+    const uid = getScopedStorageUid();
+    if (!uid) return {};
+    try {
+      return JSON.parse(localStorage.getItem(`${ASSIGNED_TASKS_KEY_BASE}${uid}`) || '{}') || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function saveAssignedTasksMap(map) {
+    const uid = getScopedStorageUid();
+    if (!uid || !map || typeof map !== 'object') return;
+    try {
+      localStorage.setItem(`${ASSIGNED_TASKS_KEY_BASE}${uid}`, JSON.stringify(map));
+    } catch (_) {}
+  }
+
+  function loadTeacherLiveDeadlines() {
+    try {
+      return JSON.parse(localStorage.getItem(TEACHER_LIVE_DEADLINES_KEY) || '{}') || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function saveTeacherLiveDeadlines(map) {
+    if (!map || typeof map !== 'object') return;
+    try {
+      localStorage.setItem(TEACHER_LIVE_DEADLINES_KEY, JSON.stringify(map));
+    } catch (_) {}
+  }
+
+  function updateTasksLiveDeadline(taskIds, newDeadlineAt, toastMsg = '') {
+    const ids = (Array.isArray(taskIds) ? taskIds : [taskIds]).map(normalizeTaskId).filter(Boolean);
+    if (!ids.length) {
+      B()?.showToast?.('Vui lòng tick ít nhất 1 Task để cập nhật thời hạn!');
+      return false;
+    }
+    const nowTs = Date.now();
+    const map = loadTeacherLiveDeadlines();
+    const cleanDl = (Number.isFinite(Number(newDeadlineAt)) && Number(newDeadlineAt) > 0) ? Number(newDeadlineAt) : 0;
+    ids.forEach((tid) => {
+      map[tid] = { deadlineAt: cleanDl, issuedAt: nowTs };
+    });
+    saveTeacherLiveDeadlines(map);
+
+    // Also update any locally cached student deadline maps on the same browser for instant local sync
+    try {
+      const students = B()?.getStudentAccounts?.() || [];
+      students.forEach((st) => {
+        const uid = B()?.getScopedUid?.(st.id);
+        if (!uid) return;
+        const dKey = `${TASK_DEADLINE_KEY_BASE}${uid}`;
+        const aKey = `${ASSIGNED_TASKS_KEY_BASE}${uid}`;
+        const dMap = JSON.parse(localStorage.getItem(dKey) || '{}') || {};
+        const aMap = JSON.parse(localStorage.getItem(aKey) || '{}') || {};
+        ids.forEach((tid) => {
+          dMap[tid] = { deadlineAt: cleanDl, issuedAt: nowTs };
+          if (cleanDl > nowTs || cleanDl === 0) {
+            if (!aMap[tid]) aMap[tid] = { assignedAt: nowTs, deadlineAt: cleanDl };
+            else aMap[tid].deadlineAt = cleanDl;
+          }
+        });
+        localStorage.setItem(dKey, JSON.stringify(dMap));
+        localStorage.setItem(aKey, JSON.stringify(aMap));
+      });
+    } catch (_) {}
+
+    B()?.broadcastTeacherTaskDeadlines?.(map);
+    renderTeacherTasksGrid();
+    updateTeacherLinkPreview();
+    if (toastMsg) B()?.showToast?.(toastMsg);
+    return true;
+  }
+
+  function applyTeacherLiveDeadline(targetIds = null) {
+    const ids = targetIds ? (Array.isArray(targetIds) ? targetIds : [targetIds]) : [...teacherSelectedIds];
+    if (!ids.length) {
+      B()?.showToast?.('Vui lòng tick ít nhất 1 Task trước khi cập nhật hạn!');
+      return;
+    }
+    const presetVal = document.getElementById('teacher-task-deadline-preset')?.value || '0';
+    const nowTs = Date.now();
+    const dlMs = computeSelectedDeadlineMs(nowTs);
+    if (presetVal === 'custom' && dlMs <= nowTs) {
+      B()?.showToast?.('Vui lòng chọn thời điểm đóng ở tương lai!');
+      return;
+    }
+    const labelStr = dlMs > 0 ? `đến ${formatDeadlineTimestamp(dlMs)}` : 'Không giới hạn thời gian';
+    updateTasksLiveDeadline(ids, dlMs, `Đã cập nhật hạn mới (${labelStr}) cho ${ids.length} Task!`);
+  }
+
+  function extendTaskDeadlineByMinutes(taskId, addMinutes = 60) {
+    const tid = normalizeTaskId(taskId);
+    if (!tid) return;
+    const live = loadTeacherLiveDeadlines()[tid];
+    const nowTs = Date.now();
+    const baseTs = (live && Number(live.deadlineAt || 0) > nowTs) ? Number(live.deadlineAt) : nowTs;
+    const nextDl = baseTs + Math.max(1, Number(addMinutes || 60)) * 60 * 1000;
+    updateTasksLiveDeadline([tid], nextDl, `Đã gia hạn ${tid.toUpperCase()} đến ${formatDeadlineTimestamp(nextDl)}!`);
+  }
+
+  function endSelectedTasksNow(targetIds = null) {
+    const ids = targetIds ? (Array.isArray(targetIds) ? targetIds : [targetIds]) : [...teacherSelectedIds];
+    if (!ids.length) {
+      B()?.showToast?.('Vui lòng tick ít nhất 1 Task cần kết thúc ngay!');
+      return;
+    }
+    const endedAt = Date.now() - 1000;
+    updateTasksLiveDeadline(ids, endedAt, `Đã kết thúc ngay ${ids.length} Task — học viên không thể vào làm mới hoặc sửa bài!`);
+  }
+
   function recordUrlTaskDeadlines(taskIds) {
     if (!Array.isArray(taskIds) || !taskIds.length) return;
     try {
       const sp = new URLSearchParams(window.location.search || '');
       const rawDl = Number(sp.get('deadline') || sp.get('due') || 0);
-      if (!Number.isFinite(rawDl) || rawDl <= 1e11) return;
       const issuedAt = Math.max(0, Number(sp.get('issued') || 0));
+      const assignedMap = loadAssignedTasksMap();
+      let assignedChanged = false;
+      taskIds.forEach((tid) => {
+        assignedMap[tid] = {
+          assignedAt: Date.now(),
+          deadlineAt: (Number.isFinite(rawDl) && rawDl > 1e11) ? rawDl : (assignedMap[tid]?.deadlineAt || 0),
+        };
+        assignedChanged = true;
+      });
+      if (assignedChanged) saveAssignedTasksMap(assignedMap);
+
+      if (!Number.isFinite(rawDl) || rawDl <= 1e11) return;
       const map = loadTaskDeadlines();
       let changed = false;
       taskIds.forEach((tid) => {
@@ -375,17 +541,64 @@
     } catch (_) {}
   }
 
-  function getTaskDeadlineInfo(taskId) {
-    if (!taskId) return { hasDeadline: false, deadlineAt: 0, remainingMs: 0, expired: false, formattedAt: '' };
-    const map = loadTaskDeadlines();
-    let deadlineAt = Number(map?.[taskId]?.deadlineAt || 0);
-    if (deadlineAt <= 0 && assignedUrlTaskIds.includes(taskId)) {
+  function resolveNewestDeadlineEntry(taskId) {
+    const localMap = loadTaskDeadlines();
+    const liveMap = loadTeacherLiveDeadlines();
+    const localRec = localMap?.[taskId];
+    const liveRec = liveMap?.[taskId];
+
+    // If URL carried a deadline/issued, consider it too
+    let urlRec = null;
+    if (assignedUrlTaskIds.includes(taskId)) {
       try {
         const sp = new URLSearchParams(window.location.search || '');
         const rawDl = Number(sp.get('deadline') || sp.get('due') || 0);
-        if (Number.isFinite(rawDl) && rawDl > 1e11) deadlineAt = rawDl;
+        const rawIssued = Number(sp.get('issued') || 0);
+        if (Number.isFinite(rawDl) && rawDl > 1e11) {
+          urlRec = { deadlineAt: rawDl, issuedAt: rawIssued };
+        }
       } catch (_) {}
     }
+
+    const candidates = [localRec, liveRec, urlRec].filter((r) => r && typeof r === 'object');
+    if (!candidates.length) return null;
+
+    // Pick candidate with highest issuedAt; tie-breaker: liveRec wins
+    let best = null;
+    candidates.forEach((cand) => {
+      const ci = Number(cand.issuedAt || 0);
+      const bi = best ? Number(best.issuedAt || 0) : -1;
+      if (!best || ci >= bi) best = cand;
+    });
+    return best;
+  }
+
+  function getActiveAssignedTasks() {
+    const orderedIds = [];
+    const seen = new Set();
+    const pushId = (tid) => {
+      const id = normalizeTaskId(tid);
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        orderedIds.push(id);
+      }
+    };
+    assignedUrlTaskIds.forEach(pushId);
+    Object.keys(loadAssignedTasksMap()).forEach(pushId);
+    Object.keys(loadTaskDeadlines()).forEach(pushId);
+    Object.keys(loadTeacherLiveDeadlines()).forEach((tid) => {
+      const rec = loadTeacherLiveDeadlines()[tid];
+      if (rec && Number(rec.deadlineAt || 0) > Date.now()) pushId(tid);
+    });
+    return orderedIds
+      .map(getTaskById)
+      .filter((t) => t && !getTaskExpiryState(t.id).expired);
+  }
+
+  function getTaskDeadlineInfo(taskId) {
+    if (!taskId) return { hasDeadline: false, deadlineAt: 0, remainingMs: 0, expired: false, formattedAt: '' };
+    const best = resolveNewestDeadlineEntry(taskId);
+    const deadlineAt = Number(best?.deadlineAt || 0);
     if (deadlineAt <= 0) {
       return { hasDeadline: false, deadlineAt: 0, remainingMs: 0, expired: false, formattedAt: '' };
     }
@@ -526,18 +739,28 @@
         subStatusHtml = `<div class="teacher-task-missing">Chưa ai xong (0/${st.totalStudents} HS)</div>`;
       }
 
-      const previewBtns = t.taskKind === 'recognition'
-        ? `<button type="button" class="btn-subtle" style="padding:2px 8px; font-size:11px;" onclick="TasksModule.openRecognitionTaskPreview('${esc(t.id)}')">Xem Speed Quiz</button>`
-        : `
+      const liveDlMap = loadTeacherLiveDeadlines();
+      const liveDl = liveDlMap[t.id];
+      let liveDlBadge = '';
+      if (liveDl && Number(liveDl.deadlineAt || 0) > 0) {
+        const rem = Number(liveDl.deadlineAt) - Date.now();
+        liveDlBadge = rem > 0
+          ? `<span class="teacher-task-dl-badge">⏱ Còn ${esc(formatDeadlineRemaining(rem))}</span>`
+          : `<span class="teacher-task-dl-badge is-ended">Đã kết thúc</span>`;
+      }
+
+      const previewBtns = `
           <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(1, '${esc(t.id)}')">Test 1</button>
           <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(2, '${esc(t.id)}')">Test 2</button>
-          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(3, '${esc(t.id)}')">Test 3</button>`;
+          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(3, '${esc(t.id)}')">Test 3</button>
+          <button type="button" class="btn-subtle" style="padding:2px 6px; font-size:10.5px;" onclick="TasksModule.extendTaskDeadlineByMinutes('${esc(t.id)}', 60)" title="Gia hạn thêm 1 giờ cho Task này">+1h</button>
+          <button type="button" class="btn-subtle" style="padding:2px 6px; font-size:10.5px; color:#b91c1c;" onclick="TasksModule.endSelectedTasksNow(['${esc(t.id)}'])" title="Kết thúc ngay Task này">Đóng</button>`;
 
       return `
         <label class="teacher-task-item ${st.allDone ? 'is-all-done' : ''}" style="align-items:flex-start;">
           <input type="checkbox" style="margin-top:3px;" value="${esc(t.id)}" ${checked} onchange="TasksModule.toggleTeacherTask('${esc(t.id)}', this.checked)">
           <div style="min-width:0; flex:1;">
-            <div class="teacher-task-title">${esc(t.label)}${badgeHtml}</div>
+            <div class="teacher-task-title">${esc(t.label)}${badgeHtml}${liveDlBadge}</div>
             <div class="teacher-task-sub">${esc(t.theme)}</div>
             ${subStatusHtml}
             <div style="margin-top:7px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;" onclick="event.stopPropagation()">
@@ -769,24 +992,75 @@
 
   function isRecognitionTaskEntry(tid, rec) {
     return rec?.taskKind === 'recognition'
-      || /^(fnd|acd|adv)_/i.test(String(tid || ''))
       || (rec?.recognitionScore != null && rec?.translationScore == null);
   }
 
   function formatTaskDoneTag(tid, rec) {
     const idStr = String(tid || '');
     const num = Number(idStr.replace(/\D/g, '')) || idStr;
-    if (/^fnd_/i.test(idStr)) return `NT${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
-    if (/^acd_/i.test(idStr)) return `HT${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
-    if (/^adv_/i.test(idStr)) return `CS${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
-    if (isRecognitionTaskEntry(idStr, rec)) return `T${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
-    return `P${num} (${Number(rec?.translationScore || 0).toFixed(1)})`;
+    if (isRecognitionTaskEntry(idStr, rec)) {
+      if (/^fnd_/i.test(idStr)) return `NT${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
+      if (/^acd_/i.test(idStr)) return `HT${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
+      if (/^adv_/i.test(idStr)) return `CS${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
+      return `T${num} (${Math.round(Number(rec?.recognitionScore || 0))}%)`;
+    }
+    const sc = Number(rec?.translationScore || 0).toFixed(1);
+    if (/^fnd_/i.test(idStr)) return `NT${num} (${sc})`;
+    if (/^acd_/i.test(idStr)) return `HT${num} (${sc})`;
+    if (/^adv_/i.test(idStr)) return `CS${num} (${sc})`;
+    return `P${num} (${sc})`;
   }
 
   function computeAvgAiScore(doneEntries) {
     const paraEntries = (doneEntries || []).filter(([tid, v]) => !isRecognitionTaskEntry(tid, v) && v?.translationScore != null);
     if (!paraEntries.length) return '';
     return (paraEntries.reduce((sum, [, v]) => sum + Number(v.translationScore || 0), 0) / paraEntries.length).toFixed(1);
+  }
+
+  function renderCompactCompletedTasksCell(doneEntries, totalTasks, esc, isSummaryModal = false) {
+    if (!doneEntries || !doneEntries.length) {
+      return isSummaryModal
+        ? 'Chưa hoàn thành Task nào'
+        : '<span style="color:var(--text-muted);">Chưa xong Task</span>';
+    }
+    const sorted = doneEntries.slice().sort(([a], [b]) => {
+      const rankOf = (id) => (/^fnd_/i.test(id) ? 1 : /^acd_/i.test(id) ? 2 : /^task_/i.test(id) ? 3 : 4) * 100 + getTaskNumberOrder(id);
+      return rankOf(a) - rankOf(b);
+    });
+    const tags = sorted.map(([tid, v]) => formatTaskDoneTag(tid, v));
+    if (sorted.length <= 4) {
+      return isSummaryModal
+        ? esc(tags.join(', '))
+        : `<strong>${sorted.length}/${totalTasks}</strong> · ${esc(tags.join(', '))}`;
+    }
+
+    const counts = { fnd: 0, acd: 0, para: 0, adv: 0 };
+    sorted.forEach(([tid]) => {
+      if (/^fnd_/i.test(tid)) counts.fnd += 1;
+      else if (/^acd_/i.test(tid)) counts.acd += 1;
+      else if (/^adv_/i.test(tid)) counts.adv += 1;
+      else counts.para += 1;
+    });
+    const suitePills = [
+      counts.fnd > 0 ? `<span class="teacher-suite-mini-pill ${counts.fnd >= 30 ? 'is-full' : ''}">NT ${counts.fnd}/30</span>` : '',
+      counts.acd > 0 ? `<span class="teacher-suite-mini-pill ${counts.acd >= 20 ? 'is-full' : ''}">HT ${counts.acd}/20</span>` : '',
+      counts.para > 0 ? `<span class="teacher-suite-mini-pill ${counts.para >= 30 ? 'is-full' : ''}">P ${counts.para}/30</span>` : '',
+      counts.adv > 0 ? `<span class="teacher-suite-mini-pill ${counts.adv >= 30 ? 'is-full' : ''}">CS ${counts.adv}/30</span>` : '',
+    ].filter(Boolean).join('');
+
+    const chipsHtml = tags.map((t) => `<span class="teacher-task-done-chip">${esc(t)}</span>`).join('');
+    return `
+      <div class="teacher-task-compact-cell">
+        <div class="teacher-task-compact-top">
+          ${!isSummaryModal ? `<strong>${sorted.length}/${totalTasks}</strong>` : ''}
+          ${suitePills}
+        </div>
+        <details class="teacher-task-more-details">
+          <summary>Xem chi tiết ${sorted.length} Task</summary>
+          <div class="teacher-task-more-grid">${chipsHtml}</div>
+        </details>
+      </div>
+    `;
   }
 
   function exportClassReportCsv() {
@@ -854,6 +1128,7 @@
         return { item, streak, doneEntries, tl };
       });
 
+      const chestnutUnit = `<span class="tot-chestnut-unit" aria-label="hạt dẻ"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.4C13 4.6 19.8 8.2 21 13.8C21.8 17.6 18.6 21 12 21C5.4 21 2.2 17.6 3 13.8C4.2 8.2 11 4.6 12 2.4Z" fill="#8B3A14" stroke="#531F07" stroke-width="1.4" stroke-linejoin="round"/><path d="M5 17.5C7 15.8 17 15.8 19 17.5C17.6 19.9 15 20.8 12 20.8C9 20.8 6.4 19.9 5 17.5Z" fill="#E8CCA0"/><path d="M7.2 12.2C7.8 9.6 9.8 7.8 11.4 6.6" stroke="#DF8B56" stroke-width="1.6" stroke-linecap="round" opacity=".85"/></svg></span>`;
       const kpiStrip = document.getElementById('teacher-kpi-strip');
       if (kpiStrip) {
         const totalStudents = allEnriched.length;
@@ -861,24 +1136,24 @@
         const totalDoneTasks = allEnriched.reduce((s, r) => s + r.doneEntries.length, 0);
         const topRow = allEnriched[0];
         const topLabel = (topRow && Number(topRow.item.score || 0) > 0)
-          ? `${esc(topRow.item.name.split(' ').slice(-2).join(' '))} (${Number(topRow.item.score).toLocaleString('vi-VN')}đ)`
-          : 'Chưa có';
+          ? `${esc(topRow.item.name.split(' ').slice(-2).join(' '))} <span class="teacher-kpi-score">(${Number(topRow.item.score).toLocaleString('vi-VN')}${chestnutUnit})</span>`
+          : 'Chưa phát sinh';
         kpiStrip.innerHTML = `
           <div class="teacher-kpi-card is-mint">
             <div class="teacher-kpi-label">Học viên</div>
-            <div class="teacher-kpi-val">${totalStudents}</div>
+            <div class="teacher-kpi-val tabular">${totalStudents}</div>
           </div>
           <div class="teacher-kpi-card is-gold">
             <div class="teacher-kpi-label">Tổng từ đã thuộc</div>
-            <div class="teacher-kpi-val">${totalMastered} từ</div>
+            <div class="teacher-kpi-val tabular">${totalMastered.toLocaleString('vi-VN')} <span class="teacher-kpi-unit">từ</span></div>
           </div>
           <div class="teacher-kpi-card is-coral">
             <div class="teacher-kpi-label">Lượt Task hoàn thành</div>
-            <div class="teacher-kpi-val">${totalDoneTasks}</div>
+            <div class="teacher-kpi-val tabular">${totalDoneTasks.toLocaleString('vi-VN')}</div>
           </div>
           <div class="teacher-kpi-card is-teal">
             <div class="teacher-kpi-label">Dẫn đầu tuần</div>
-            <div class="teacher-kpi-val" style="font-size:14.5px;">${topLabel}</div>
+            <div class="teacher-kpi-val teacher-kpi-leader tabular">${topLabel}</div>
           </div>
         `;
       }
@@ -899,11 +1174,8 @@
       };
 
       tbody.innerHTML = enriched.map(({ item, streak, doneEntries, tl }, idx) => {
-        const tags = doneEntries.map(([tid, v]) => formatTaskDoneTag(tid, v)).join(', ');
         const activeLocks = Object.entries(tl).filter(([, until]) => Number(until || 0) > now);
-        const taskSummary = doneEntries.length > 0
-          ? `<strong>${doneEntries.length}/${totalTasks}</strong> · ${esc(tags)}`
-          : '<span style="color:var(--text-muted);">Chưa xong Task</span>';
+        const taskSummary = renderCompactCompletedTasksCell(doneEntries, totalTasks, esc, false);
         const statusCell = activeLocks.length > 0
           ? `<div class="teacher-status-cell is-locked">
               ${activeLocks.map(([tid, until]) => `<span class="teacher-lock-pill">Khóa T${Number(tid.replace(/\D/g, '')) || tid} (${formatMmSs(Number(until) - now)})</span>`).join('')}
@@ -913,13 +1185,13 @@
 
         return `
           <tr>
-            <td>${item.rankLabel || `#${item.rank}`}</td>
-            <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(getMonogram(item.name))}</span><div><strong>${esc(item.name)}</strong><div style="font-size:11.5px;color:var(--text-muted);font-weight:600;">${Number(item.score || 0).toLocaleString('vi-VN')} điểm</div></div></div></td>
-            <td>${item.todayMins}p</td>
-            <td>${item.weekMins}p</td>
-            <td>${item.monthMins}p</td>
-            <td>${streak} ngày</td>
-            <td><strong>${item.mastered} từ</strong></td>
+            <td class="tabular">${item.rankLabel || `#${item.rank}`}</td>
+            <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(getMonogram(item.name))}</span><div style="min-width:0;"><strong>${esc(item.name)}</strong><div class="teacher-student-score tabular">${Number(item.score || 0).toLocaleString('vi-VN')}${chestnutUnit}</div></div></div></td>
+            <td class="tabular">${item.todayMins}p</td>
+            <td class="tabular">${item.weekMins}p</td>
+            <td class="tabular">${item.monthMins}p</td>
+            <td class="tabular">${streak} ngày</td>
+            <td class="tabular"><strong>${item.mastered} từ</strong></td>
             <td style="font-size:12.5px;">${taskSummary}</td>
             <td style="font-size:12.5px;">${statusCell}</td>
           </tr>
@@ -958,36 +1230,39 @@
     if (!grid) return;
     const progress = loadTaskProgress();
     const esc = B()?.escapeHtml || ((x) => String(x));
-    const hasAssigned = assignedUrlTaskIds.length > 0;
-    if (tabsEl) {
-      if (hasAssigned) {
-        tabsEl.style.display = 'none';
+    if (tabsEl) tabsEl.style.display = 'none';
+
+    const listToShow = getActiveAssignedTasks();
+
+    if (progEl) {
+      if (listToShow.length === 0) {
+        progEl.style.display = 'none';
       } else {
-        tabsEl.style.display = 'flex';
-        tabsEl.innerHTML = TASK_SUITES_META.map((m) => {
-          return `<button type="button" class="task-suite-tab ${activeStudentTaskTab === m.key ? 'active' : ''}" data-suite="${m.key}" onclick="TasksModule.switchStudentTaskTab('${m.key}')">${esc(m.label)}</button>`;
-        }).join('');
+        const doneCnt = listToShow.filter((t) => progress[t.id]?.status === 'completed').length;
+        const totCnt = listToShow.length;
+        const pct = Math.round((doneCnt / totCnt) * 100);
+        progEl.style.display = 'flex';
+        progEl.innerHTML = `
+          <div class="task-suite-prog-top">
+            <span>Tiến độ bài được giao còn hạn</span>
+            <strong>${doneCnt} / ${totCnt} hoàn thành (${pct}%)</strong>
+          </div>
+          <div class="task-suite-prog-track"><div class="task-suite-prog-fill" style="width:${pct}%"></div></div>
+        `;
       }
     }
 
-    const listToShow = hasAssigned
-      ? assignedUrlTaskIds.map(getTaskById).filter(Boolean)
-      : getTasksByScope(activeStudentTaskTab);
-
-    if (progEl) {
-      const doneCnt = listToShow.filter((t) => progress[t.id]?.status === 'completed').length;
-      const totCnt = listToShow.length || 1;
-      const pct = Math.round((doneCnt / totCnt) * 100);
-      const suiteMeta = TASK_SUITES_META.find((m) => m.key === activeStudentTaskTab);
-      const titleTxt = hasAssigned ? 'Tiến độ bài được giao' : `Tiến độ ${suiteMeta ? suiteMeta.label : ''}`;
-      progEl.style.display = 'flex';
-      progEl.innerHTML = `
-        <div class="task-suite-prog-top">
-          <span>${esc(titleTxt)}</span>
-          <strong>${doneCnt} / ${totCnt} hoàn thành (${pct}%)</strong>
+    if (listToShow.length === 0) {
+      grid.innerHTML = `
+        <div style="grid-column:1 / -1; text-align:center; padding:30px 18px; border:1px dashed var(--border-strong); border-radius:14px; background:var(--surface-item);">
+          <div style="font-size:15.5px; font-weight:800; color:var(--ink); margin-bottom:6px;">Hiện chưa có Task nào đang được giao còn trong thời hạn làm</div>
+          <div style="font-size:13px; color:var(--ink-2); line-height:1.55; max-width:460px; margin:0 auto 14px;">
+            Khi giáo viên gửi link giao bài (hoặc còn hạn làm bài), các Task sẽ hiển thị tại đây. Bạn có thể tự luyện bất kỳ Task nào trong mục Task.
+          </div>
+          <button type="button" class="btn btn-primary" onclick="TasksModule.closeStudentTasksModal(); window.TotoroUI?.switchView?.('task');">Mở kho 110 Task tự luyện →</button>
         </div>
-        <div class="task-suite-prog-track"><div class="task-suite-prog-fill" style="width:${pct}%"></div></div>
       `;
+      return;
     }
 
     grid.innerHTML = listToShow.map((t, idx) => {
@@ -1070,10 +1345,8 @@
 
     const progress = loadTaskProgress()[t.id];
     const exp = getTaskExpiryState(t.id);
-    const isRecog = t.taskKind === 'recognition';
-    const doneScoreStr = isRecog
-      ? `Test phản xạ: ${progress?.recognitionScore ?? '--'}%`
-      : `Test 3 dịch bài: ${progress?.translationScore ?? '--'}/10`;
+    const isParaSuite = t.scopeKey === 'paraphrase' || /^task_/i.test(t.id || '');
+    const doneScoreStr = `Test 3: ${progress?.translationScore ?? '--'}/10`;
     const doneNote = progress?.status === 'completed'
       ? `<div class="task-text-ok" style="margin-top:8px; font-weight:700;">✓ Bạn đã hoàn thành Task này (${doneScoreStr}).${exp.expired ? ' Đã hết thời hạn — chỉ có thể xem lại kết quả.' : ' Còn hạn: có thể làm lại để ôn tập.'}</div>`
       : '';
@@ -1081,17 +1354,14 @@
       ? `<div id="brief-deadline-line" style="margin-top:6px; font-weight:700; color:${exp.expired ? '#dc2626' : 'var(--accent)'};">${exp.expired ? `Đã hết hạn lúc ${esc(exp.formattedAt)}` : `⏱ Thời hạn: còn ${esc(formatDeadlineRemaining(exp.remainingMs))} (đóng lúc ${esc(exp.formattedAt)})`}</div>`
       : '';
 
+    const test2FlowDesc = isParaSuite
+      ? 'Test 2 (Synonyms &amp; Điền từ)'
+      : 'Test 2 (Điền từ)';
     if (info) {
-      info.innerHTML = isRecog ? `
-        <div><strong>Nội dung:</strong> Học ${t.words.length} từ vựng đã gom theo cụm gốc từ (Word Family) ngay trên Flashcard. Từ nào biết sẵn bấm <strong>Đã thuộc</strong> (chọn nghĩa 1 chạm trong 5 giây).</div>
-        <div style="margin-top:6px;"><strong>Quy trình &amp; Thời lượng (~${t.estMinutes} phút):</strong> Bấm <strong>Đã thuộc đủ ${t.words.length}/${t.words.length} từ</strong> → Làm <strong>Test Phản Xạ Reading (${t.words.length} từ · 5s/từ · &ge; 94% + Sửa lỗi 100%)</strong>.</div>
-        <div style="margin-top:6px;"><strong>Yêu cầu kỷ luật:</strong> Tập trung hoàn thành bài; nếu ngưng thao tác quá <strong>10 phút</strong> (hoặc rời tab quá 2 lần khi đang làm Test), Task sẽ bị <strong>khóa 30 phút</strong> mới được làm lại.</div>
-        ${deadlineLine}
-        ${doneNote}
-      ` : `
-        <div><strong>Nội dung:</strong> Học ${t.words.length} từ vựng gốc (kèm Word Family) ngay trên giao diện Flashcard chính.</div>
-        <div style="margin-top:6px;"><strong>Quy trình &amp; Thời lượng (~${t.estMinutes} phút):</strong> Bấm <strong>Đã thuộc đủ ${t.words.length}/${t.words.length} từ</strong> → Tự mở Cửa sổ Bài Test gồm <strong>Test 1 ghép từ → Test 2 Paraphrase đề thật &amp; Word Box → Test 3 dịch bài</strong>.</div>
-        <div style="margin-top:6px;"><strong>Yêu cầu kỷ luật:</strong> Tập trung hoàn thành bài; nếu ngưng thao tác quá <strong>10 phút</strong> (hoặc rời tab quá 2 lần khi đang làm Test), Task sẽ bị <strong>khóa 30 phút</strong> mới được làm lại.</div>
+      info.innerHTML = `
+        <div><strong>Nội dung:</strong> Học ${t.words.length} từ vựng gốc (kèm Word Family) trên Flashcard chính.</div>
+        <div style="margin-top:6px;"><strong>Quy trình (~${t.estMinutes} phút):</strong> Thuộc đủ ${t.words.length}/${t.words.length} từ → Làm <strong>Test 1 (Ghép từ) → ${test2FlowDesc} → Test 3 (Đọc hiểu &amp; Dịch bài)</strong>.</div>
+        <div style="margin-top:6px;"><strong>Kỷ luật thi:</strong> Không rời tab hoặc treo máy 10 phút khi làm bài (vi phạm đủ <strong>3 lần</strong> sẽ bị <strong>khóa Task 30 phút</strong> và phải làm lại từ đầu).</div>
         ${deadlineLine}
         ${doneNote}
       `;
@@ -1181,6 +1451,10 @@
       return;
     }
     closeTaskBriefModal();
+    if (window.RecognitionTestModule?.startOldReviewQuiz) {
+      window.RecognitionTestModule.startOldReviewQuiz(dueOld, tid, t?.label || tid);
+      return;
+    }
     B()?.startOldVocabReview?.(dueOld, tid, t?.label || tid);
   }
 
@@ -1260,15 +1534,15 @@
           lockEl.style.justifyContent = 'space-between';
           lockEl.style.gap = '10px';
           lockEl.style.flexWrap = 'wrap';
-          lockEl.innerHTML = `<span>Yêu cầu ôn tập từ vựng cũ: Bạn còn <strong>${dueOld.length} từ cũ</strong> (thuộc các Task trước) chưa thuộc hết hoặc đến hạn ôn tập. Hãy ôn thuộc hết trước khi vào Task này!</span>`;
+          lockEl.innerHTML = `<span>Yêu cầu Speed Quiz từ cũ: Bạn còn <strong>${dueOld.length} từ cũ</strong> (thuộc các Task trước) chưa thuộc hết hoặc đến hạn ôn tập. Chỉ cần hoàn thành nhanh bài Speed Quiz ôn tập là được mở khóa!</span>`;
         }
         if (reviewBtn) {
           reviewBtn.style.display = 'inline-flex';
-          reviewBtn.textContent = `Ôn tập ${dueOld.length} từ cũ ngay →`;
+          reviewBtn.textContent = `Speed Quiz ${dueOld.length} từ cũ ngay →`;
         }
         if (startBtn) {
           startBtn.disabled = true;
-          startBtn.textContent = `Cần ôn ${dueOld.length} từ cũ trước`;
+          startBtn.textContent = `Cần Speed Quiz ${dueOld.length} từ cũ trước`;
         }
         return;
       }
@@ -1318,7 +1592,7 @@
       const dueOld = getOldWordsToReviewForTask(pendingTaskId);
       if (dueOld.length > 0) {
         updateBriefLockUI();
-        B()?.showToast?.(`Cần ôn thuộc hết ${dueOld.length} từ vựng cũ trước khi vào ${getTaskById(pendingTaskId)?.label || 'Task'}!`);
+        B()?.showToast?.(`Cần hoàn thành Speed Quiz ${dueOld.length} từ vựng cũ trước khi vào ${getTaskById(pendingTaskId)?.label || 'Task'}!`);
         return;
       }
     }
@@ -1362,10 +1636,7 @@
     const allReady = masteredCount >= total;
     const prog = loadTaskProgress()[task.id];
     const isCompleted = Boolean(prog && prog.status === 'completed') || taskTestPassed;
-    const isRecog = task.taskKind === 'recognition';
-    const examDesc = isRecog
-      ? 'Test Phản Xạ Reading (5s/từ · &ge; 94% + Sửa lỗi 100%)'
-      : 'Test 1 + Test 2 + Test 3';
+    const examDesc = 'Test 1 + Test 2 + Test 3';
     if (finWarnEl) {
       const esc = B()?.escapeHtml || ((x) => String(x));
       if (!isCompleted && !isTeacherOrBypassed()) {
@@ -1416,16 +1687,15 @@
     const heading = document.getElementById('exam-ready-heading');
     const desc = document.getElementById('exam-ready-desc');
     const startBtn = document.getElementById('btn-confirm-open-task-exam');
-    const isRecog = task.taskKind === 'recognition';
+    const isParaSuite = task.scopeKey === 'paraphrase' || /^task_/i.test(task.id || '');
+    const t2SummaryDesc = isParaSuite ? 'Synonyms &amp; Điền từ' : 'Điền từ';
     if (pill) pill.textContent = task.label.toUpperCase();
-    if (heading) heading.textContent = `Bạn đã học và bấm Đã thuộc đủ ${task.words.length}/${task.words.length} từ (${task.label})!`;
+    if (heading) heading.textContent = `Đã thuộc đủ ${task.words.length}/${task.words.length} từ (${task.label})`;
     if (desc) {
-      desc.innerHTML = isRecog
-        ? `Bước cuối để hoàn tất Task: vượt qua <strong>Test Phản Xạ Reading (${task.words.length} từ · 5s/từ · &ge; 94% + Sửa lỗi 100%)</strong>. Chú ý không rời tab khi làm bài nhé!`
-        : `Bước cuối để hoàn tất Task: vượt qua <strong>Test 1 (Ghép từ) → Test 2 (Paraphrase &amp; Word Box) → Test 3 (Dịch bài)</strong>. Chú ý không rời tab khi làm bài nhé!`;
+      desc.innerHTML = `Bước cuối: <strong>Test 1 (Ghép từ) → Test 2 (${t2SummaryDesc}) → Test 3 (Đọc hiểu &amp; Dịch bài)</strong>.`;
     }
     if (startBtn) {
-      startBtn.textContent = isRecog ? 'Bắt đầu Test Phản Xạ →' : 'Bắt đầu làm Test 1 →';
+      startBtn.textContent = 'Bắt đầu làm Test 1 →';
     }
     modal.classList.add('open');
   }
@@ -1487,27 +1757,6 @@
     }
     activeTask = task;
     closeTaskExamReadyModal();
-    if (task.taskKind === 'recognition' && window.RecognitionTestModule?.startTaskFinalExam) {
-      window.RecognitionTestModule.startTaskFinalExam(task, (res) => {
-        const prog = loadTaskProgress();
-        prog[task.id] = {
-          status: 'completed',
-          taskKind: 'recognition',
-          recognitionScore: res.round1Pct,
-          correctCount: res.correctCount,
-          totalWords: res.totalWords,
-          elapsedSec: res.elapsedSec,
-          completedAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        saveTaskProgress(prog);
-        taskTestPassed = true;
-        clearActiveExamSession();
-        updateTaskStudyBar();
-        B()?.saveAndSync?.();
-      });
-      return;
-    }
     startTest1();
   }
 
@@ -1624,9 +1873,9 @@
         taskLeaveWarnings = Number(savedExam.leaveWarnings || 0);
         if (savedExam.inExam) {
           taskLeaveWarnings += 1;
-          if (taskLeaveWarnings >= 2) {
+          if (taskLeaveWarnings >= 3) {
             clearActiveExamSession();
-            lockAndExitActiveTask('Thoát/tải lại trang lần 2 khi đang làm Test — Task bị khóa 30 phút!');
+            lockAndExitActiveTask('Thoát/tải lại trang lần 3 khi đang làm Test — Task bị khóa 30 phút!');
             return;
           }
           saveActiveExamSession({
@@ -1635,7 +1884,7 @@
             inExam: false,
             updatedAt: Date.now(),
           });
-          reloadPenaltyNotice = `Phát hiện tải lại trang khi đang làm Test (${task.label}) — ghi nhận cảnh báo 1/2 (thêm 1 lần sẽ khóa Task 30 phút).`;
+          reloadPenaltyNotice = `Phát hiện tải lại trang khi đang làm Test (${task.label}) — cảnh báo ${taskLeaveWarnings}/3 (lần 3 sẽ khóa Task 30 phút và mất bài làm).`;
         }
       }
     }
@@ -1841,6 +2090,7 @@
   function bumpIdleActivity() {
     if (evaluateTaskIdleTimeout()) return;
     lastActivityAt = Date.now();
+    B()?.syncStudyIdleClockUI?.(0, IDLE_LIMIT_MS, true);
   }
 
   function lockAndExitActiveTask(toastMsg) {
@@ -1865,7 +2115,7 @@
     lastTaskLeaveAt = now;
     taskLeaveWarnings += 1;
     persistActiveExamSnapshot();
-    if (taskLeaveWarnings === 1) {
+    if (taskLeaveWarnings < 3) {
       const host = document.getElementById('screen-task');
       const container = document.getElementById('task-stage-container');
       if (activeStage === 1) t1SelectedLeft = null;
@@ -1878,15 +2128,18 @@
           banner.className = 'task-lock-banner';
           container.parentNode.insertBefore(banner, container);
         }
-        banner.textContent = 'Cảnh báo (lần 1/2): Đã phát hiện rời màn hình khi đang làm Test! Còn 1 lần thử cuối — rời thêm lần nữa sẽ bị khóa Task 30 phút.';
+        const leftTries = 3 - taskLeaveWarnings;
+        banner.textContent = `Cảnh báo (lần ${taskLeaveWarnings}/3): Không chuyển tab hay bấm ra ngoài! Còn ${leftTries} lần — lần 3 sẽ khóa Task 30 phút và mất hết bài làm.`;
       }
       B()?.openCheatWarningModal?.(
-        customReason || 'Phát hiện bạn vừa chuyển tab hoặc rời khỏi cửa sổ khi đang làm Test Task! Bài thi đã tạm ẩn để chống gian lận.',
+        customReason || 'Không bấm ra ngoài hay chuyển tab khi đang làm Test!',
         () => {
           lastActivityAt = Date.now();
           if (container) container.style.removeProperty('visibility');
           if (activeStage === 1) renderTest1Stage();
-        }
+        },
+        taskLeaveWarnings,
+        3
       );
       return;
     }
@@ -1998,6 +2251,7 @@
       if (studyIdle) {
         studyIdle.textContent = `${formatMmSs(idleMs)} / 10:00`;
       }
+      B()?.syncStudyIdleClockUI?.(idleMs, IDLE_LIMIT_MS, true);
       evaluateTaskIdleTimeout();
     }, 1000);
   }
@@ -2126,7 +2380,10 @@
     const targetStage = Math.max(1, Math.min(3, Number(_stage) || 1));
     activeStage = targetStage;
     if (activeStage === 1) {
+      buildRuntimeT1Boards(t);
       setupT1Board();
+    } else if (activeStage === 3) {
+      initTest3ReadingQuiz(t);
     }
     renderTaskStage();
   }
@@ -2135,8 +2392,20 @@
     B()?.speakText?.(text, accent);
   }
 
+  function buildRuntimeT1Boards(task) {
+    const words = Array.isArray(task?.words) ? task.words : [];
+    const pool = shuffleArray(words.map((w) => ({ id: w.id, word: w.lemma, meaning: w.meaning })));
+    _runtimeT1Boards = [];
+    for (let i = 0; i < pool.length; i += 5) {
+      _runtimeT1Boards.push(pool.slice(i, i + 5));
+    }
+    if (_runtimeT1Boards.length === 0 && Array.isArray(task?.test1Boards)) {
+      _runtimeT1Boards = shuffleArray(task.test1Boards.map((b) => shuffleArray(b)));
+    }
+  }
+
   // =========================================================
-  // STAGE 1: TEST 1 — 10 MINI MATCHING BOARDS x 5 PAIRS
+  // STAGE 1: TEST 1 — 10 MINI MATCHING BOARDS x 5 PAIRS (RANDOMIZED)
   // =========================================================
   function startTest1() {
     if (!activeTask) return;
@@ -2167,24 +2436,28 @@
     t1BoardIndex = 0;
     t1Mistakes = 0;
     t1WrongWordIds = new Set();
+    buildRuntimeT1Boards(activeTask);
     setupT1Board();
     renderTaskStage();
   }
 
   function setupT1Board() {
-    const pairs = activeTask?.test1Boards?.[t1BoardIndex] || [];
+    const boards = _runtimeT1Boards.length ? _runtimeT1Boards : (activeTask?.test1Boards || []);
+    const pairs = (boards[t1BoardIndex] || []).slice();
     t1SelectedLeft = null;
     t1MatchedIds = new Set();
-    t1ShuffledRight = pairs.slice().sort(() => Math.random() - 0.5);
+    t1LeftOrder = shuffleArray(pairs);
+    t1ShuffledRight = shuffleArray(pairs);
   }
 
   function renderTest1Stage() {
     const container = document.getElementById('task-stage-container');
     if (!container || !activeTask) return;
     const esc = B()?.escapeHtml || ((x) => String(x));
-    const pairs = activeTask.test1Boards[t1BoardIndex] || [];
+    const boards = _runtimeT1Boards.length ? _runtimeT1Boards : (activeTask.test1Boards || []);
+    const leftPairs = t1LeftOrder.length ? t1LeftOrder : (boards[t1BoardIndex] || []);
 
-    const leftHtml = pairs.map((p) => {
+    const leftHtml = leftPairs.map((p) => {
       const matched = t1MatchedIds.has(p.id);
       const active = t1SelectedLeft === p.id;
       return `<button type="button" class="task-match-btn ${matched ? 'is-matched' : ''} ${active ? 'is-active' : ''}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT1Left('${esc(p.id)}')">${esc(p.word)}</button>`;
@@ -2195,7 +2468,8 @@
       return `<button type="button" class="task-match-btn ${matched ? 'is-matched' : ''}" id="t1-right-${esc(p.id)}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT1Right('${esc(p.id)}')">${esc(p.meaning)}</button>`;
     }).join('');
 
-    const t1Pct = Math.round(((t1BoardIndex + (t1MatchedIds.size / Math.max(1, pairs.length))) / 10) * 100);
+    const totalBoards = Math.max(1, boards.length);
+    const t1Pct = Math.round(((t1BoardIndex + (t1MatchedIds.size / Math.max(1, leftPairs.length))) / totalBoards) * 100);
 
     container.innerHTML = `
       <div class="task-card-panel">
@@ -2204,16 +2478,16 @@
         </div>
         <div class="task-exam-header-row">
           <div class="task-exam-title-group">
-            <h2 class="task-exam-title">Ghép từ · Bảng ${t1BoardIndex + 1} / 10</h2>
+            <h2 class="task-exam-title">Ghép từ · Bảng ${t1BoardIndex + 1} / ${totalBoards}</h2>
           </div>
           <div class="task-stat-pills">
             <span class="task-err-pill ${t1Mistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t1-err-cnt">${t1Mistakes}</strong></span>
-            <span class="recall-stage-pill">${t1MatchedIds.size} / ${pairs.length} cặp</span>
+            <span class="recall-stage-pill">${t1MatchedIds.size} / ${leftPairs.length} cặp</span>
           </div>
         </div>
         <div class="task-match-head">
-          <span>Từ vựng gốc (English)</span>
-          <span>Nghĩa tiếng Việt</span>
+          <span>Tiếng Anh</span>
+          <span>Tiếng Việt</span>
         </div>
         <div class="task-match-wrap">
           <div class="task-match-col">${leftHtml}</div>
@@ -2230,12 +2504,13 @@
   }
 
   function setupT2ParaBoard() {
-    const pairs = t2ParaBoards[t2ParaBoardIndex] || [];
+    const pairs = (t2ParaBoards[t2ParaBoardIndex] || []).slice();
     t2ParaSelectedLeft = null;
     t2ParaSelectedRight = null;
     t2DraggingRightId = null;
     t2ParaMatchedIds = new Set();
-    t2ParaShuffledRight = pairs.slice().sort(() => Math.random() - 0.5);
+    t2ParaLeftOrder = shuffleArray(pairs);
+    t2ParaShuffledRight = shuffleArray(pairs);
   }
 
   function hasStemOverlap(a, b) {
@@ -2262,22 +2537,44 @@
     return false;
   }
 
+  function isParaphraseTask(task) {
+    return Boolean(task && (task.scopeKey === 'paraphrase' || /^task_/i.test(task.id || '')));
+  }
+
+  function buildRandomizedWbBoards(rawBoards, maxBoards) {
+    const src = Array.isArray(rawBoards) ? shuffleArray(rawBoards).slice(0, maxBoards) : [];
+    const keys = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    return src.map((board) => {
+      const items = shuffleArray((board?.items || []).slice()).map((it, idx) => ({
+        ...it,
+        slotNum: idx + 1,
+      }));
+      const wordBox = shuffleArray((board?.wordBox || []).slice()).map((opt, idx) => ({
+        ...opt,
+        key: keys[idx] || opt.key || String(idx + 1),
+      }));
+      return {
+        ...board,
+        items,
+        wordBox,
+      };
+    });
+  }
+
   function getTaskTest2Total(task, rec = null) {
     if (rec && Number(rec.test2Total) > 0) return Number(rec.test2Total);
     if (task) {
+      const wbArr = Array.isArray(task.test2WordBoxBoards) ? task.test2WordBoxBoards : [];
+      if (!isParaphraseTask(task)) {
+        const pickedBoards = wbArr.slice(0, 3);
+        const wbCount = pickedBoards.reduce((sum, b) => sum + (Array.isArray(b?.items) ? b.items.length : 0), 0);
+        return wbCount || 12;
+      }
       const pairCount = Array.isArray(task.test2ParaphrasePairs) ? task.test2ParaphrasePairs.length : 0;
-      const wbCount = Array.isArray(task.test2WordBoxBoards)
-        ? task.test2WordBoxBoards.reduce((sum, b) => sum + (Array.isArray(b?.items) ? b.items.length : 0), 0)
-        : 0;
-      const effectiveWordCount = (pairCount + wbCount) > 0
-        ? (pairCount + wbCount)
-        : (Array.isArray(task.words) ? Math.min(50, task.words.length) : 50);
-      const qs = Array.isArray(task.test2Questions) ? task.test2Questions : [];
-      const nonParaCount = qs.filter((q) => q.type !== 'paraphrase').length;
-      const mcqCount = nonParaCount > 0 ? Math.min(6, nonParaCount) : Math.min(6, qs.length);
-      return effectiveWordCount + mcqCount;
+      const wbCount = wbArr.slice(0, 2).reduce((sum, b) => sum + (Array.isArray(b?.items) ? b.items.length : 0), 0);
+      return (pairCount + wbCount) || 50;
     }
-    return 56;
+    return 50;
   }
 
   function setupT2WbBoard() {
@@ -2288,15 +2585,14 @@
   }
 
   function initTest2State(task) {
-    const qs = Array.isArray(task?.test2Questions) ? task.test2Questions : [];
+    const isPara = isParaphraseTask(task);
     const pairs = [];
     const usedL = new Set();
     const usedR = new Set();
 
-    const hasCuratedWb = Array.isArray(task?.test2WordBoxBoards) && task.test2WordBoxBoards.length > 0;
-
-    // 1. Primary: consume curated task.test2ParaphrasePairs (real-exam paraphrases only when Word Box is present)
-    if (Array.isArray(task?.test2ParaphrasePairs) && (task.test2ParaphrasePairs.length > 0 || hasCuratedWb)) {
+    // Paraphrase suite keeps Synonym/Paraphrase matching + Summary Word Box (strictly NO "Phần A/B" labels).
+    // Foundation / Academic / Advanced suites go straight into Summary / Sentence Completion Word Box.
+    if (isPara && Array.isArray(task?.test2ParaphrasePairs) && task.test2ParaphrasePairs.length > 0) {
       task.test2ParaphrasePairs.forEach((p, idx) => {
         const left = String(p?.left || '').trim();
         const right = String(p?.right || '').trim();
@@ -2313,86 +2609,13 @@
           explain: String(p.explain || `${left} ↔ ${right}`),
         });
       });
-    } else {
-      // 2. Fallback: build 50 non-overlapping pairs covering all task.words (no 20-pair cap)
-      const words = Array.isArray(task?.words) ? task.words : [];
-      const allTaskLemmas = new Set(
-        words.map((w) => String(w?.lemma || '').trim().toLowerCase()).filter(Boolean)
-      );
-
-      words.forEach((w) => {
-        if (pairs.length >= 50) return;
-        const left = String(w?.lemma || '').trim();
-        const lKey = left.toLowerCase();
-        if (!left || usedL.has(lKey)) return;
-        const syns = Array.isArray(w?.synonyms) ? w.synonyms : [];
-        let picked = '';
-
-        // Tier 1: clean alphabetic IELTS synonym, no stem overlap, not colliding with another task lemma
-        for (const rawSyn of syns) {
-          const syn = String(rawSyn || '').trim();
-          const rKey = syn.toLowerCase();
-          if (
-            syn &&
-            !/[0-9=<>@#$%^&*_+]/u.test(syn) &&
-            /[a-zA-Z]{2,}/.test(syn) &&
-            rKey !== lKey &&
-            !allTaskLemmas.has(rKey) &&
-            !usedL.has(rKey) &&
-            !usedR.has(rKey) &&
-            !hasStemOverlap(left, syn)
-          ) {
-            picked = syn;
-            break;
-          }
-        }
-
-        // Tier 2: allow clean alphanumeric tokens (e.g., 18th/17th) except comma-split "000 ..."
-        if (!picked) {
-          for (const rawSyn of syns) {
-            const syn = String(rawSyn || '').trim();
-            const rKey = syn.toLowerCase();
-            if (
-              syn &&
-              !/^000\b/i.test(syn) &&
-              /[a-zA-Z]{2,}/.test(syn) &&
-              rKey !== lKey &&
-              !usedL.has(rKey) &&
-              !usedR.has(rKey) &&
-              !hasStemOverlap(left, syn)
-            ) {
-              picked = syn;
-              break;
-            }
-          }
-        }
-
-        // Tier 3: clean Vietnamese meaning gloss fallback (e.g., chemistry, canadian)
-        if (!picked && w?.meaning) {
-          const gloss = String(w.meaning).split(';')[0].trim() || String(w.meaning).trim();
-          const gKey = gloss.toLowerCase();
-          if (gloss && gKey !== lKey && !usedL.has(gKey) && !usedR.has(gKey)) {
-            picked = gloss;
-          }
-        }
-
-        if (picked) {
-          usedL.add(lKey);
-          usedR.add(picked.toLowerCase());
-          pairs.push({
-            id: `p_${pairs.length}`,
-            left,
-            right: picked,
-            explain: `${left} đồng nghĩa / paraphrase với ${picked}`,
-          });
-        }
-      });
     }
 
-    t2ParaPairs = pairs;
+    const shuffledPairs = shuffleArray(pairs);
+    t2ParaPairs = shuffledPairs;
     t2ParaBoards = [];
-    for (let i = 0; i < pairs.length; i += 5) {
-      t2ParaBoards.push(pairs.slice(i, i + 5));
+    for (let i = 0; i < shuffledPairs.length; i += 5) {
+      t2ParaBoards.push(shuffledPairs.slice(i, i + 5));
     }
     t2ParaBoardIndex = 0;
     t2ParaSelectedLeft = null;
@@ -2401,13 +2624,15 @@
     t2ParaMistakes = 0;
     t2ParaDone = t2ParaBoards.length === 0;
     setupT2ParaBoard();
-    t2WbBoards = Array.isArray(task?.test2WordBoxBoards) ? task.test2WordBoxBoards : [];
+
+    const maxWbBoards = isPara ? 2 : 3;
+    t2WbBoards = buildRandomizedWbBoards(task?.test2WordBoxBoards || [], maxWbBoards);
     t2WbBoardIndex = 0;
     t2WbMistakes = 0;
     t2WbDone = t2WbBoards.length === 0;
     setupT2WbBoard();
-    t2ContextQs = qs.filter((q) => q.type !== 'paraphrase').slice(0, 6);
-    if (t2ContextQs.length === 0 && pairs.length === 0 && t2WbBoards.length === 0) t2ContextQs = qs.slice();
+
+    t2ContextQs = [];
     t2Index = 0;
     t2Correct = 0;
     t2Answered = false;
@@ -2467,9 +2692,10 @@
     if (t1SelectedLeft === rightId) {
       t1MatchedIds.add(rightId);
       t1SelectedLeft = null;
-      const curBoard = activeTask.test1Boards[t1BoardIndex] || [];
+      const boards = _runtimeT1Boards.length ? _runtimeT1Boards : (activeTask.test1Boards || []);
+      const curBoard = boards[t1BoardIndex] || [];
       if (t1MatchedIds.size >= curBoard.length) {
-        if (t1BoardIndex < activeTask.test1Boards.length - 1) {
+        if (t1BoardIndex < boards.length - 1) {
           t1BoardIndex++;
           setupT1Board();
           renderTest1Stage();
@@ -2678,8 +2904,27 @@
     renderTest2Stage();
   }
 
+  function placeT2WbOptionInSlot(optKey, targetSlotId) {
+    if (t2WbSubmitted || !optKey || !targetSlotId) return;
+    const curBoard = t2WbBoards[t2WbBoardIndex];
+    if (!curBoard || !Array.isArray(curBoard.items)) return;
+    if (!curBoard.items.some((x) => x.id === targetSlotId)) return;
+
+    for (const [sid, key] of Object.entries(t2WbFills)) {
+      if (key === optKey) {
+        delete t2WbFills[sid];
+      }
+    }
+    t2WbFills[targetSlotId] = optKey;
+    const nextEmpty = curBoard.items.find((x) => !t2WbFills[x.id]);
+    t2WbActiveSlotId = nextEmpty ? nextEmpty.id : targetSlotId;
+    renderTest2Stage();
+  }
+
   function pickT2WbOption(optKey) {
     if (t2WbSubmitted) return;
+    const chipEl = document.getElementById(`t2-wb-chip-${optKey}`);
+    if (chipEl && Number(chipEl.dataset.suppressClickUntil || 0) > Date.now()) return;
     const curBoard = t2WbBoards[t2WbBoardIndex];
     if (!curBoard || !Array.isArray(curBoard.items) || curBoard.items.length === 0) return;
 
@@ -2711,6 +2956,130 @@
     const nextEmpty = curBoard.items.find((x) => !t2WbFills[x.id]);
     if (nextEmpty) t2WbActiveSlotId = nextEmpty.id;
     renderTest2Stage();
+  }
+
+  function bindT2WbDrag() {
+    cleanupT2FloatingDrag();
+    if (t2WbSubmitted) return;
+    let html5DraggedKey = '';
+
+    document.querySelectorAll('#t2-wb-wordbox .t2-wb-chip:not(:disabled)').forEach((chip) => {
+      if (chip.dataset.wbDragBound === '1') return;
+      chip.dataset.wbDragBound = '1';
+      const optKey = chip.dataset.wbKey || '';
+      if (!optKey) return;
+
+      chip.addEventListener('dragstart', (e) => {
+        html5DraggedKey = optKey;
+        try { e.dataTransfer?.setData('text/plain', optKey); } catch (_) {}
+      });
+
+      chip.addEventListener('pointerdown', (e) => {
+        if (e.button && e.button !== 0) return;
+        const rect = chip.getBoundingClientRect();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const offX = startX - rect.left;
+        const offY = startY - rect.top;
+        let dragging = false;
+        let ghost = null;
+        let activeDropEl = null;
+
+        const clearDropHighlights = () => {
+          document.querySelectorAll('.t2-wb-slot.is-drop-over, .t2-wb-sent-row.is-drop-over').forEach((el) => {
+            el.classList.remove('is-drop-over');
+          });
+        };
+
+        const resolveDropTarget = (x, y) => {
+          const el = document.elementFromPoint(x, y);
+          if (!el) return null;
+          return el.closest('.t2-wb-slot[data-slot-id]') || el.closest('.t2-wb-sent-row[data-slot-id]') || null;
+        };
+
+        const onMove = (mv) => {
+          const dx = mv.clientX - startX;
+          const dy = mv.clientY - startY;
+          if (!dragging && Math.hypot(dx, dy) > 4) {
+            dragging = true;
+            chip.classList.add('is-source-lifted');
+            ghost = document.createElement('div');
+            ghost.className = 't2-floating-block';
+            ghost.style.width = `${Math.max(120, rect.width)}px`;
+            ghost.style.minHeight = `${rect.height}px`;
+            ghost.style.left = `${mv.clientX - offX}px`;
+            ghost.style.top = `${mv.clientY - offY}px`;
+            ghost.innerHTML = chip.innerHTML;
+            document.body.appendChild(ghost);
+          }
+          if (dragging && ghost) {
+            ghost.style.left = `${mv.clientX - offX}px`;
+            ghost.style.top = `${mv.clientY - offY}px`;
+            const hit = resolveDropTarget(mv.clientX, mv.clientY);
+            if (activeDropEl && activeDropEl !== hit) {
+              activeDropEl.classList.remove('is-drop-over');
+            }
+            activeDropEl = hit;
+            if (activeDropEl) activeDropEl.classList.add('is-drop-over');
+          }
+        };
+
+        const cleanupListeners = () => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+          window.removeEventListener('pointercancel', onCancel);
+        };
+
+        const onCancel = () => {
+          cleanupListeners();
+          clearDropHighlights();
+          chip.classList.remove('is-source-lifted');
+          cleanupT2FloatingDrag();
+        };
+
+        const onUp = (up) => {
+          cleanupListeners();
+          if (!dragging) return;
+          up.preventDefault();
+          const hit = resolveDropTarget(up.clientX, up.clientY) || activeDropEl;
+          const slotId = hit?.dataset?.slotId || '';
+          chip.dataset.suppressClickUntil = String(Date.now() + 200);
+          clearDropHighlights();
+          chip.classList.remove('is-source-lifted');
+          cleanupT2FloatingDrag();
+          if (slotId) {
+            placeT2WbOptionInSlot(optKey, slotId);
+          }
+        };
+
+        window.addEventListener('pointermove', onMove, { passive: true });
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onCancel);
+      });
+    });
+
+    document.querySelectorAll('#t2-wb-list .t2-wb-slot[data-slot-id], #t2-wb-list .t2-wb-sent-row[data-slot-id]').forEach((target) => {
+      if (target.dataset.wbDropBound === '1') return;
+      target.dataset.wbDropBound = '1';
+      target.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        target.classList.add('is-drop-over');
+      });
+      target.addEventListener('dragleave', () => {
+        target.classList.remove('is-drop-over');
+      });
+      target.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        target.classList.remove('is-drop-over');
+        let k = html5DraggedKey;
+        try { k = e.dataTransfer?.getData('text/plain') || k; } catch (_) {}
+        const slotId = target.dataset.slotId || '';
+        if (k && slotId) {
+          placeT2WbOptionInSlot(k, slotId);
+        }
+      });
+    });
   }
 
   function submitT2WbBoard() {
@@ -2761,7 +3130,7 @@
       return;
     }
     t2WbDone = true;
-    B()?.showToast?.('Xong Summary Word Box! Tiếp tục 6 câu trắc nghiệm.');
+    B()?.showToast?.(t2ContextQs.length > 0 ? 'Xong Summary Word Box! Tiếp tục câu trắc nghiệm.' : 'Hoàn thành Test 2!');
     renderTest2Stage();
   }
 
@@ -2776,7 +3145,8 @@
 
     if (!t2ParaDone && t2ParaBoards.length > 0) {
       const curBoard = t2ParaBoards[t2ParaBoardIndex] || [];
-      const leftHtml = curBoard.map((p) => {
+      const leftOrder = t2ParaLeftOrder.length ? t2ParaLeftOrder : curBoard;
+      const leftHtml = leftOrder.map((p) => {
         const matched = t2ParaMatchedIds.has(p.id);
         const active = t2ParaSelectedLeft === p.id;
         return `<button type="button" class="task-match-btn t2-dropzone ${matched ? 'is-matched' : ''} ${active ? 'is-active' : ''}" id="t2-para-left-${esc(p.id)}" data-left-id="${esc(p.id)}" ${matched ? 'disabled' : ''} onclick="TasksModule.pickT2ParaLeft('${esc(p.id)}')"><span class="t2-drop-word">${esc(p.left)}</span><span class="t2-drop-slot ${matched ? 'is-filled' : ''}">${matched ? `✓ ${esc(p.right)}` : 'Thả vào đây'}</span></button>`;
@@ -2792,7 +3162,7 @@
       const teacherWbBtn = (isTeacherOrBypassed() && t2WbBoards.length > 0)
         ? `<button type="button" class="btn-subtle" id="btn-teacher-t2-wb-preview" style="padding:5px 11px; font-size:12.5px;" onclick="TasksModule.jumpToT2WbPreview()">Xem Word Box →</button>`
         : '';
-      const teacherMcqBtn = isTeacherOrBypassed()
+      const teacherMcqBtn = (isTeacherOrBypassed() && t2ContextQs.length > 0)
         ? `<button type="button" class="btn-subtle" id="btn-teacher-t2-mcq-preview" style="padding:5px 11px; font-size:12.5px;" onclick="TasksModule.jumpToT2McqPreview()">Xem 6 câu A/B/C/D →</button>`
         : '';
 
@@ -2803,7 +3173,7 @@
           </div>
           <div class="task-exam-header-row">
             <div class="task-exam-title-group">
-              <h2 class="task-exam-title">Nối Paraphrase đề thật · Bảng ${t2ParaBoardIndex + 1} / ${t2ParaBoards.length}</h2>
+              <h2 class="task-exam-title">Nối Paraphrase · Bảng ${t2ParaBoardIndex + 1} / ${t2ParaBoards.length}</h2>
             </div>
             <div class="task-stat-pills">
               <span class="task-err-pill ${t2ParaMistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t2-err-cnt">${t2ParaMistakes}</strong></span>
@@ -2813,8 +3183,8 @@
             </div>
           </div>
           <div class="task-match-head">
-            <span>Từ vựng trong Task (Hộp chứa)</span>
-            <span>Paraphrase từ đề thi thật (Kéo sang trái)</span>
+            <span>Từ vựng</span>
+            <span>Synonyms / Paraphrase</span>
           </div>
           <div class="task-match-wrap is-t2-dnd">
             <div class="task-match-col">${leftHtml}</div>
@@ -2837,29 +3207,21 @@
       const wbPct = Math.round(((t2WbBoardIndex + (t2WbSubmitted ? 1 : (filledCount / Math.max(1, items.length)) * 0.85)) / Math.max(1, t2WbBoards.length)) * 100);
 
       const teacherNavBtns = isTeacherOrBypassed()
-        ? `${t2ParaBoards.length > 0 ? `<button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.jumpToT2ParaPreview()">← Paraphrase</button>` : ''}
-           <button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.jumpToT2McqPreview()">6 câu A/B/C/D →</button>`
+        ? `${t2ParaBoards.length > 0 ? `<button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.jumpToT2ParaPreview()">← Paraphrase</button>` : ''}${t2ContextQs.length > 0 ? `<button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.jumpToT2McqPreview()">6 câu A/B/C/D →</button>` : ''}`
         : '';
 
       const boxHtml = wordBox.map((opt) => {
         const isUsed = usedKeys.has(opt.key);
         let stateCls = isUsed ? 'is-used' : '';
-        let roleBadge = '';
         if (t2WbSubmitted) {
-          if (opt.role === 'answer') {
-            stateCls = 'is-wb-ans';
-          } else if (opt.role === 'wf_trap') {
-            stateCls = 'is-wb-trap';
-            roleBadge = '<span class="t2-wb-role-tag">Bẫy từ loại</span>';
-          } else {
-            stateCls = 'is-wb-dist';
-            roleBadge = '<span class="t2-wb-role-tag">Từ nhiễu</span>';
-          }
+          if (opt.role === 'answer') stateCls = 'is-wb-ans';
+          else if (opt.role === 'wf_trap') stateCls = 'is-wb-trap';
+          else stateCls = 'is-wb-dist';
         }
-        return `<button type="button" class="t2-wb-chip ${stateCls}" data-wb-key="${esc(opt.key)}" ${t2WbSubmitted ? 'disabled' : ''} onclick="TasksModule.pickT2WbOption('${esc(opt.key)}')">
+        return `<button type="button" class="t2-wb-chip ${stateCls}" id="t2-wb-chip-${esc(opt.key)}" data-wb-key="${esc(opt.key)}" draggable="${!t2WbSubmitted}" ${t2WbSubmitted ? 'disabled' : ''} onclick="TasksModule.pickT2WbOption('${esc(opt.key)}')">
+          <span class="t2-drag-grip" aria-hidden="true">⋮⋮</span>
           <span class="t2-wb-chip-key">${esc(opt.key)}</span>
           <span class="t2-wb-chip-word">${esc(opt.text)}</span>
-          ${roleBadge}
         </button>`;
       }).join('');
 
@@ -2880,7 +3242,7 @@
           ? `<span><strong>${esc(chosenOpt.key)}.</strong> ${esc(chosenOpt.text)}</span>${!t2WbSubmitted ? `<span class="t2-wb-slot-x" onclick="TasksModule.clearT2WbSlot('${esc(it.id)}', event)" title="Xóa ô này">×</span>` : (isRight ? ' ✓' : ' ✗')}`
           : `<span>(${it.slotNum}) ______</span>`;
 
-        const slotBtn = `<button type="button" class="${slotCls}" id="t2-wb-slot-${esc(it.id)}" ${t2WbSubmitted ? 'disabled' : ''} onclick="TasksModule.selectT2WbSlot('${esc(it.id)}')">${slotInner}</button>`;
+        const slotBtn = `<button type="button" class="${slotCls}" id="t2-wb-slot-${esc(it.id)}" data-slot-id="${esc(it.id)}" ${t2WbSubmitted ? 'disabled' : ''} onclick="TasksModule.selectT2WbSlot('${esc(it.id)}')">${slotInner}</button>`;
         const sentRendered = esc(it.sentenceBlank).replace('______', slotBtn);
 
         let fbHtml = '';
@@ -2894,12 +3256,8 @@
         }
 
         return `
-          <div class="t2-wb-sent-row ${isActive ? 'is-active-row' : ''} ${isRight ? 'is-ok-row' : ''} ${isWrong ? 'is-err-row' : ''}">
-            <div class="t2-wb-sent-head">
-              <span class="t2-wb-num">Câu ${it.slotNum}</span>
-              <span class="t2-wb-src">Đề thật: ${esc(it.examTitle || 'IELTS Reading')}</span>
-            </div>
-            <div class="t2-wb-sent-text">${sentRendered}</div>
+          <div class="t2-wb-sent-row ${isActive ? 'is-active-row' : ''} ${isRight ? 'is-ok-row' : ''} ${isWrong ? 'is-err-row' : ''}" data-slot-id="${esc(it.id)}">
+            <div class="t2-wb-sent-text"><span class="t2-wb-num">Câu ${it.slotNum}.</span> ${sentRendered}</div>
             ${fbHtml}
           </div>
         `;
@@ -2912,7 +3270,7 @@
           </div>
           <div class="task-exam-header-row">
             <div class="task-exam-title-group">
-              <h2 class="task-exam-title">Summary Word Box · Bảng ${t2WbBoardIndex + 1} / ${t2WbBoards.length}</h2>
+              <h2 class="task-exam-title">Điền từ ngữ cảnh · Bảng ${t2WbBoardIndex + 1} / ${t2WbBoards.length}</h2>
             </div>
             <div class="task-stat-pills">
               <span class="task-err-pill ${t2WbMistakes > 0 ? 'has-err' : ''}">Lỗi: <strong id="t2-wb-err-cnt">${t2WbMistakes}</strong></span>
@@ -2921,17 +3279,17 @@
             </div>
           </div>
           <div class="t2-wb-box" id="t2-wb-wordbox">
-            <div class="t2-wb-box-label">KHO TỪ (WORD BOX) · Có bẫy họ từ / từ loại &amp; từ nhiễu trong Task — bấm chọn từ để điền vào ô đang chọn</div>
             <div class="t2-wb-chip-grid">${boxHtml}</div>
           </div>
           <div class="t2-wb-list" id="t2-wb-list">${sentsHtml}</div>
           <div class="t2-wb-footer">
             ${!t2WbSubmitted
-              ? `<button type="button" class="btn btn-primary" id="btn-t2-wb-submit" onclick="TasksModule.submitT2WbBoard()">Kiểm tra bảng này (${filledCount}/${items.length})</button>`
-              : `<button type="button" class="btn btn-primary" id="btn-t2-wb-next" onclick="TasksModule.nextT2WbBoard()">${t2WbBoardIndex < t2WbBoards.length - 1 ? 'Bảng Word Box tiếp theo →' : 'Sang 6 câu trắc nghiệm →'}</button>`}
+              ? `<button type="button" class="btn btn-primary" id="btn-t2-wb-submit" onclick="TasksModule.submitT2WbBoard()">Kiểm tra (${filledCount}/${items.length})</button>`
+              : `<button type="button" class="btn btn-primary" id="btn-t2-wb-next" onclick="TasksModule.nextT2WbBoard()">${t2WbBoardIndex < t2WbBoards.length - 1 ? 'Bảng tiếp theo →' : (t2ContextQs.length > 0 ? 'Sang câu trắc nghiệm →' : 'Xem kết quả Test 2 →')}</button>`}
           </div>
         </div>
       `;
+      bindT2WbDrag();
       return;
     }
 
@@ -3055,6 +3413,11 @@
     if (!activeTask || !isTeacherOrBypassed()) return;
     t2ParaDone = true;
     t2WbDone = true;
+    if (t2ContextQs.length === 0) {
+      const qs = Array.isArray(activeTask.test2Questions) ? activeTask.test2Questions : [];
+      const nonPara = qs.filter((q) => q.type !== 'paraphrase').slice(0, 6);
+      t2ContextQs = shuffleArray(nonPara.length > 0 ? nonPara : qs.slice(0, 6));
+    }
     t2Index = 0;
     t2Answered = false;
     renderTest2Stage();
@@ -3089,9 +3452,48 @@
     renderTest2Stage();
   }
 
+  function initTest3ReadingQuiz(task) {
+    const raw = Array.isArray(task?.test3ReadingQuestions) ? task.test3ReadingQuestions : [];
+    const cloned = raw.map((q) => {
+      const copy = { ...q };
+      if (copy.type === 'mcq' && Array.isArray(copy.options)) {
+        copy.options = shuffleArray(copy.options);
+      } else if (Array.isArray(copy.options)) {
+        copy.options = copy.options.slice();
+      } else {
+        copy.options = ['TRUE', 'FALSE', 'NOT GIVEN'];
+      }
+      return copy;
+    });
+    t3ReadingQuestions = shuffleArray(cloned);
+    t3ReadingAnswers = {};
+  }
+
+  function pickT3ReadingAns(qId, optIdx) {
+    const q = t3ReadingQuestions.find((x) => x.id === qId);
+    if (!q || !Array.isArray(q.options)) return;
+    const pickedVal = String(q.options[optIdx] ?? '');
+    if (!pickedVal) return;
+    t3ReadingAnswers[qId] = pickedVal;
+
+    const card = document.getElementById(`t3-rq-card-${qId}`);
+    if (card) {
+      card.querySelectorAll('.t3-rq-opt-btn').forEach((btn, i) => {
+        btn.classList.toggle('is-selected', i === Number(optIdx));
+      });
+    }
+    const badge = document.getElementById('t3-reading-progress-badge');
+    if (badge) {
+      const cnt = t3ReadingQuestions.filter((x) => Boolean(t3ReadingAnswers[x.id])).length;
+      badge.textContent = `${cnt} / ${t3ReadingQuestions.length}`;
+      badge.classList.toggle('is-done', cnt >= t3ReadingQuestions.length && t3ReadingQuestions.length > 0);
+    }
+  }
+
   function startFinalTranslation() {
     if (!activeTask) return;
     activeStage = 3;
+    initTest3ReadingQuiz(activeTask);
     renderTaskStage();
   }
 
@@ -3108,19 +3510,56 @@
   }
 
   // =========================================================
-  // STAGE 3: FINAL 2-COLUMN TRANSLATION + DEDICATED AI GRADING TAB
+  // STAGE 3: FINAL 2-COLUMN READING (10 QS: 5 TFNG + 5 MCQ) + TRANSLATION
   // =========================================================
   function renderFinalTranslationStage() {
     const container = document.getElementById('task-stage-container');
     if (!container || !activeTask) return;
     const esc = B()?.escapeHtml || ((x) => String(x));
     const p = activeTask.passage;
+    if (t3ReadingQuestions.length === 0 && Array.isArray(activeTask.test3ReadingQuestions) && activeTask.test3ReadingQuestions.length > 0) {
+      initTest3ReadingQuiz(activeTask);
+    }
 
     const draftKey = `ielts_task_draft_${getScopedStorageUid()}_${activeTask.id}`;
     let savedDraft = { trans: '', summary: '' };
     try {
       savedDraft = JSON.parse(localStorage.getItem(draftKey) || '{}') || savedDraft;
     } catch (_) {}
+
+    const letters = ['A', 'B', 'C', 'D'];
+    const answeredCnt = t3ReadingQuestions.filter((q) => Boolean(t3ReadingAnswers[q.id])).length;
+    const rqHtml = t3ReadingQuestions.length > 0
+      ? `
+        <div class="t3-reading-quiz-box" id="t3-reading-quiz-box">
+          <div class="t3-rq-header">
+            <span class="t3-rq-title">Đọc hiểu đoạn trích</span>
+            <span class="t3-rq-badge ${answeredCnt >= t3ReadingQuestions.length ? 'is-done' : ''}" id="t3-reading-progress-badge">${answeredCnt} / ${t3ReadingQuestions.length}</span>
+          </div>
+          <div class="t3-rq-list" id="t3-reading-quiz-list">
+            ${t3ReadingQuestions.map((q, qIdx) => {
+              const isMcq = q.type === 'mcq';
+              const curAns = t3ReadingAnswers[q.id] || '';
+              return `
+                <div class="t3-rq-card" id="t3-rq-card-${esc(q.id)}">
+                  <div class="t3-rq-card-top">
+                    <span class="t3-rq-num">Câu ${qIdx + 1}</span>
+                  </div>
+                  <div class="t3-rq-prompt">${esc(q.prompt)}</div>
+                  <div class="t3-rq-opts ${isMcq ? 'is-mcq' : ''}">
+                    ${(q.options || []).map((opt, oIdx) => {
+                      const selCls = curAns === opt ? 'is-selected' : '';
+                      const labelTxt = isMcq ? `${letters[oIdx] || oIdx + 1}. ${opt}` : opt;
+                      return `<button type="button" class="t3-rq-opt-btn ${selCls}" data-q-id="${esc(q.id)}" data-opt-idx="${oIdx}" onclick="TasksModule.pickT3ReadingAns('${esc(q.id)}', ${oIdx})">${esc(labelTxt)}</button>`;
+                    }).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `
+      : '';
 
     container.innerHTML = `
       <div class="translation-workspace">
@@ -3145,9 +3584,10 @@
           </div>
 
           <div id="t3-pane-write">
+            ${rqHtml}
             <div class="t3-trans-field">
               <label class="writing-label" for="task-trans-input">
-                <span>01. Dịch toàn đoạn</span>
+                <span>Dịch toàn đoạn</span>
                 <span id="task-trans-wc" style="color:var(--text-muted); font-size:14.5px;">0 từ</span>
               </label>
               <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Nhập bản dịch tiếng Việt...">${esc(savedDraft.trans || '')}</textarea>
@@ -3155,7 +3595,7 @@
 
             <div class="t3-sum-field">
               <label class="writing-label" for="task-summary-input">
-                <span>02. Tóm tắt ý chính (1–3 câu)</span>
+                <span>Tóm tắt ý chính</span>
                 <span id="task-sum-wc" style="color:var(--text-muted); font-size:14.5px;">0 từ</span>
               </label>
               <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Tóm tắt ý chính đoạn văn...">${esc(savedDraft.summary || '')}</textarea>
@@ -3172,7 +3612,7 @@
             <div id="task-ai-grade-result" class="ai-grade-box" style="display:block; background:var(--bg-soft); border-color:var(--card-border);">
               <div style="text-align:center; padding:36px 16px; color:var(--text-muted);">
                 <div style="font-size:18px; font-weight:750; color:var(--text-bright); margin-bottom:8px;">Chưa có bài nộp</div>
-                <div style="font-size:15.5px; margin-bottom:18px;">Hoàn thành bản dịch và tóm tắt ở tab Bài làm rồi nhấn Nộp &amp; AI chấm.</div>
+                <div style="font-size:15.5px; margin-bottom:18px;">Hoàn thành 10 câu đọc hiểu cùng bản dịch và tóm tắt ở tab Bài làm rồi nhấn Nộp &amp; AI chấm.</div>
                 <button type="button" class="btn btn-primary" onclick="TasksModule.switchT3Tab('write')">← Quay lại viết bài</button>
               </div>
             </div>
@@ -3845,8 +4285,16 @@
     const transWords = trans.split(/\s+/).filter(Boolean).length;
     const sumWords = summary.split(/\s+/).filter(Boolean).length;
 
+    const rqTotal = t3ReadingQuestions.length;
+    const rqAnswered = t3ReadingQuestions.filter((q) => Boolean(t3ReadingAnswers[q.id])).length;
+    const rqCorrect = t3ReadingQuestions.filter((q) => t3ReadingAnswers[q.id] === q.answer).length;
+
     if (transWords === 0 && sumWords === 0) {
       B()?.showToast('Vui lòng nhập nội dung bản dịch hoặc tóm tắt ý chính để AI chấm!');
+      return;
+    }
+    if (rqTotal > 0 && (!isTeacherSession ? rqAnswered < rqTotal : (rqAnswered > 0 && rqAnswered < rqTotal))) {
+      B()?.showToast(`Vui lòng hoàn thành đủ ${rqTotal} câu Đọc hiểu (hiện ${rqAnswered}/${rqTotal}) trước khi nộp bài!`);
       return;
     }
 
@@ -3881,9 +4329,30 @@
       }
 
       const g = res.grade;
+      const rqFailed = rqTotal > 0 && rqAnswered === rqTotal && rqCorrect < 6;
+      if (rqFailed) g.passed = false;
+      g.readingQuiz = rqAnswered > 0 ? { total: rqTotal, correct: rqCorrect } : null;
       highlightPassageAfterGrading();
       const esc = B()?.escapeHtml || ((x) => String(x));
       const c = g.criteria || {};
+      const rqReviewHtml = (rqAnswered > 0 && rqTotal > 0)
+        ? `<div class="t3-rq-review-list">
+            <div style="font-size:15px; font-weight:800; color:var(--text-bright);">
+              Đọc hiểu đoạn trích: ${rqCorrect} / ${rqTotal} câu đúng ${rqFailed ? '(Cần >= 6/10)' : '✓'}
+            </div>
+            ${t3ReadingQuestions.map((q, idx) => {
+              const stu = t3ReadingAnswers[q.id] || '';
+              const isOk = stu === q.answer;
+              return `
+                <div class="t3-rq-review-item ${isOk ? '' : 'is-wrong'}">
+                  <div><strong>Câu ${idx + 1} (${esc(q.type === 'mcq' ? 'MCQ' : 'TFNG')}):</strong> ${isOk ? '✓ Đúng' : '✗ Sai'} — ${esc(q.prompt)}</div>
+                  ${!isOk ? `<div class="task-text-err">Bạn chọn: <strong>${esc(stu)}</strong> · Đáp án: <strong>${esc(q.answer)}</strong></div>` : ''}
+                  ${q.explain ? `<div style="color:var(--text-muted); margin-top:2px;">${esc(q.explain)}</div>` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>`
+        : '';
       const linesHtml = (g.lineFeedback || []).slice(0, 6).map((lf) => `
         <div style="padding:12px 15px; border-radius:12px; background:var(--card-bg); border:1px solid var(--card-border); margin-top:10px; font-size:15.5px; line-height:1.55;">
           <div><strong>Cụm / câu cần sửa:</strong> ${esc(lf.issue || '')}</div>
@@ -3966,6 +4435,7 @@
             <div class="ai-crit-pill"><span>Tóm tắt ý chính</span><span>${c.summary ?? '--'}/10</span></div>
           </div>
           <div style="font-size:16.5px; line-height:1.6;"><strong>Nhận xét:</strong> ${esc(g.overallComment || '')}</div>
+          ${rqReviewHtml}
           ${linesHtml}
           ${g.modelTranslation ? `<details style="margin-top:14px; font-size:15.5px;"><summary style="cursor:pointer; font-weight:750;">Xem bản dịch chuẩn tham khảo</summary><div style="margin-top:8px; line-height:1.65;">${esc(g.modelTranslation)}</div></details>` : ''}
           ${masteryNote}
@@ -4024,13 +4494,13 @@
       const interruptedExam = loadActiveExamSession();
       if (interruptedExam && interruptedExam.taskId && interruptedExam.inExam && (Date.now() - Number(interruptedExam.updatedAt || 0)) < LOCK_PENALTY_MS) {
         const nextWarn = Number(interruptedExam.leaveWarnings || 0) + 1;
-        if (nextWarn >= 2) {
+        if (nextWarn >= 3) {
           clearActiveExamSession();
           const locks = loadTaskLocks();
           locks[interruptedExam.taskId] = Date.now() + LOCK_PENALTY_MS;
           saveTaskLocks(locks);
           B()?.saveAndSync?.();
-          setTimeout(() => B()?.showToast?.('Phát hiện tải lại trang lần 2 khi đang làm Test — Task đã bị khóa 30 phút!'), 250);
+          setTimeout(() => B()?.showToast?.('Phát hiện tải lại trang lần 3 khi đang làm Test — Task đã bị khóa 30 phút!'), 250);
         } else {
           saveActiveExamSession({
             ...interruptedExam,
@@ -4038,7 +4508,7 @@
             inExam: false,
             updatedAt: Date.now(),
           });
-          setTimeout(() => B()?.showToast?.('Phát hiện tải lại trang khi đang làm Test — ghi nhận cảnh báo 1/2 (thêm 1 lần sẽ khóa Task 30 phút)!'), 250);
+          setTimeout(() => B()?.showToast?.(`Cảnh báo ${nextWarn}/3: Không tải lại trang khi đang làm Test (lần 3 sẽ khóa Task 30 phút và mất bài)!`), 250);
         }
       }
     }
@@ -4139,15 +4609,13 @@
         }
         const doneEntries = Object.entries(tp).filter(([, v]) => v?.status === 'completed');
         const avgAi = computeAvgAiScore(doneEntries) || '--';
-        const tags = doneEntries.length
-          ? doneEntries.map(([tid, v]) => formatTaskDoneTag(tid, v)).join(', ')
-          : 'Chưa hoàn thành Task nào';
+        const detailHtml = renderCompactCompletedTasksCell(doneEntries, totalTasks, esc, true);
         return `
           <tr>
             <td><strong>${esc(st.name)}</strong></td>
             <td><strong>${doneEntries.length} / ${totalTasks}</strong></td>
             <td>${avgAi}</td>
-            <td style="font-size:12.5px;">${esc(tags)}</td>
+            <td style="font-size:12.5px;">${detailHtml}</td>
           </tr>
         `;
       }).join('');
@@ -4223,7 +4691,7 @@
       <div class="task-summary-highlight">
         <div class="task-sum-hero-row">
           <div class="task-sum-panda-ring">
-            <img src="assets/images/panda_leaderboard.jpg" alt="" class="task-summary-panda">
+            <img src="assets/images/totoro_professor.png" alt="" class="task-summary-panda">
           </div>
           <div class="task-sum-hero-main">
             <div class="task-sum-badges">
@@ -4249,14 +4717,14 @@
           <div class="task-sum-stat-sub">${focusRec.test1Mistakes ?? 0} lỗi trên 10 bảng</div>
         </div>
         <div class="task-sum-stat is-teal">
-          <div class="task-sum-stat-label">Test 2 · Paraphrase</div>
+          <div class="task-sum-stat-label">Test 2 · ${isParaphraseTask(focusTask) ? 'Paraphrase' : 'Word Box'}</div>
           <div class="task-sum-stat-val">${focusRec.test2Score ?? 0} / ${t2Total}</div>
-          <div class="task-sum-stat-sub">Paraphrase + Word Box + 6 trắc nghiệm</div>
+          <div class="task-sum-stat-sub">${isParaphraseTask(focusTask) ? 'Nối Synonyms + Word Box' : 'Summary / Sentence Completion'}</div>
         </div>
         <div class="task-sum-stat is-gold">
-          <div class="task-sum-stat-label">Test 3 · Dịch bài</div>
+          <div class="task-sum-stat-label">Test 3 · Đọc hiểu &amp; Dịch</div>
           <div class="task-sum-stat-val">${Number(focusRec.translationScore || 0).toFixed(1)} / 10</div>
-          <div class="task-sum-stat-sub">Dịch đoạn &amp; tóm tắt ý chính</div>
+          <div class="task-sum-stat-sub">${focusRec.test3ReadingScore != null ? `Đọc hiểu ${focusRec.test3ReadingScore}/${focusRec.test3ReadingTotal || 10} · ` : ''}Dịch đoạn &amp; tóm tắt</div>
         </div>
         <div class="task-sum-stat is-coral">
           <div class="task-sum-stat-label">Từ vựng · Tiến độ</div>
@@ -4370,6 +4838,8 @@
       test1AccuracyPct: t1AccuracyPct,
       test2Score: t2Correct,
       test2Total: totalT2,
+      test3ReadingScore: lastT3Grade?.readingQuiz?.correct ?? null,
+      test3ReadingTotal: lastT3Grade?.readingQuiz?.total ?? (t3ReadingQuestions.length || 10),
       translationScore: lastT3Grade.score,
       durationSec,
       linkedCount: activeTask.linkedIds.length,
@@ -4409,10 +4879,15 @@
     onTeacherDeadlinePresetChange,
     updateTeacherLinkPreview,
     copyTeacherTaskLink,
+    applyTeacherLiveDeadline,
+    extendTaskDeadlineByMinutes,
+    endSelectedTasksNow,
+    updateTasksLiveDeadline,
     saveLocalGeminiKey,
     openStudentTasksModal,
     closeStudentTasksModal,
     openTaskBriefModal,
+    getTasksByScope,
     closeTaskBriefModal,
     checkTaskUnlockNow,
     viewExpiredTaskResult,
@@ -4464,6 +4939,7 @@
     onT2DragLeave,
     onT2Drop,
     switchT3Tab,
+    pickT3ReadingAns,
     submitTranslationForAi,
     promptGeminiApiKey,
     onUserEntered,

@@ -18,6 +18,7 @@
       if (!scene || !this.enabled || scene.style.display === 'none') return;
       scene.getAnimations?.().forEach(animation => animation.cancel());
       if (typeof scene.animate !== 'function') return;
+      // Mode 4 ("Trượt nảy"): exact original index.html spring entrance
       scene.animate([
         { opacity: 0, transform: `translate3d(${direction * 38}px, 0, 0) scale(.975)` },
         { opacity: 1, transform: 'translate3d(0, 0, 0) scale(1)' }

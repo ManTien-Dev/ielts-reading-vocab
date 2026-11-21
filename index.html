@@ -1,88 +1,208 @@
 <!DOCTYPE html>
-<html lang="vi" data-theme="light">
+<html lang="vi" data-mode="calm" data-theme="light" data-motion="pro">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IELTS Reading Vocab — Paraphrase &amp; 95,5% Coverage</title>
-  <link rel="icon" type="image/png" href="assets/images/panda_mascot_favicon.png">
-  <link rel="apple-touch-icon" href="assets/images/panda_mascot.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>IELTS Master - Academic Reading Vocab</title>
+  <link rel="icon" type="image/svg+xml" href="assets/images/totoro_favicon.svg">
+  <link rel="alternate icon" type="image/png" href="assets/images/totoro_favicon.png">
+  <link rel="apple-touch-icon" href="assets/images/totoro_favicon.png">
   <meta name="description" content="Ứng dụng học từ vựng IELTS Academic Reading thực chiến từ 617 đề thi: 1.500 từ Paraphrase Q&A, 3.500 họ từ phủ 95,5% bài đọc và 40 từ nối.">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261119t">
-  <link rel="stylesheet" href="css/motion.css?v=20261119t">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261119v">
+  <link rel="stylesheet" href="css/style.css?v=20261120a">
+  <link rel="stylesheet" href="css/motion.css?v=20261120a">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261121c">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261121c">
 </head>
 <body>
 
   <div class="toast-notice" id="app-toast" role="status" aria-live="polite"></div>
 
-  <!-- Cổng Đăng Nhập Bằng ID & Mật Khẩu Set Sẵn -->
+  <!-- Cổng Đăng Nhập: Editorial Pastel Stage · Thẻ Giữa Rộng + Totoro 2 Bên -->
   <section class="auth-gate" id="auth-gate" aria-label="Đăng nhập học viên">
-    <div class="auth-theme-corner">
-      <button type="button" class="btn-icon-glass" id="btn-auth-theme" onclick="toggleTheme()" aria-label="Đổi giao diện Sáng / Tối">
-        <span id="auth-theme-label">Giao diện: Sáng</span>
-      </button>
-    </div>
-    <div class="auth-card auth-split">
-      <div class="auth-showcase">
-        <div class="auth-showcase-bg" aria-hidden="true"></div>
-        <img src="assets/images/panda_mascot.jpg" alt="Linh vật IELTS Vocab Master" class="auth-showcase-panda">
-        <div class="auth-showcase-pill">Reading 95,5% · Paraphrase 1.500</div>
-        <div class="auth-showcase-title">IELTS Vocab Master</div>
-        <p class="auth-showcase-copy">Học từ vựng Academic Reading thực chiến từ 617 đề thi, lưu chuỗi ngày học &amp; xếp hạng cùng cả lớp.</p>
-      </div>
+    <svg class="auth-botanical-tl" viewBox="0 0 220 220" fill="none" aria-hidden="true">
+      <path d="M18 200C38 134 94 78 184 44C162 126 112 180 18 200Z" stroke="currentColor" stroke-width="2.2" fill="currentColor" fill-opacity=".12"/>
+      <path d="M18 200L138 94" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M62 162C66 138 78 122 96 110M92 136C112 134 128 126 144 114" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </svg>
+    <svg class="auth-botanical-br" viewBox="0 0 220 220" fill="none" aria-hidden="true">
+      <path d="M18 200C38 134 94 78 184 44C162 126 112 180 18 200Z" stroke="currentColor" stroke-width="2.2" fill="currentColor" fill-opacity=".12"/>
+      <path d="M18 200L138 94" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
 
-      <div class="auth-form-pane">
-        <h1 class="auth-heading">Đăng nhập lớp học</h1>
-        <p class="auth-desc">Nhập ID và mật khẩu được giáo viên cấp để lưu tiến độ học và tính giờ xếp hạng.</p>
+    <div class="auth-stage-center">
+      <div class="auth-card-wrap">
+        <img
+          class="auth-flank-img auth-flank-left"
+          src="assets/images/totoro_vocab_atelier.png"
+          alt="Totoro ngồi bàn học từ vựng bên trái khung đăng nhập"
+          draggable="false"
+        />
+        <img
+          class="auth-flank-img auth-flank-right"
+          src="assets/images/totoro_sitting_branch.png"
+          alt="Totoro ngồi cành cây bên phải khung đăng nhập"
+          draggable="false"
+        />
 
-        <form id="auth-login-form" method="post" action="javascript:void(0)" onsubmit="handleLoginSubmit(event)" novalidate>
-          <div class="auth-field">
-            <label class="auth-label" for="login-id-input">Mã học viên (ID)</label>
-            <input class="auth-input" id="login-id-input" name="username" type="text" placeholder="Ví dụ: hv01" autocomplete="username" autocapitalize="none" spellcheck="false" required>
-          </div>
+        <!-- Signature Peeking Totoro SVG atop login card -->
+        <svg class="auth-peeker" viewBox="0 0 88 50" fill="none" aria-hidden="true">
+          <path class="ear-l" d="M24 22L16 5C15.4 3.6 17.2 2.6 18.2 3.8L30 16Z" fill="#595753"/>
+          <path class="ear-r" d="M64 22L72 5C72.6 3.6 70.8 2.6 69.8 3.8L58 16Z" fill="#595753"/>
+          <path d="M12 46C12 27 24 14 44 14C64 14 76 27 76 46Z" fill="#595753"/>
+          <path d="M36 14.5C39 8.5 47 8 52 12.5C47.5 15.5 41 16 36 14.5Z" fill="#4E7A51"/>
+          <path d="M44 14V10.5" stroke="#4E7A51" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="31" cy="28" r="4.6" fill="#FFFFFF"/><circle cx="31.5" cy="28" r="2.2" fill="#181A1F"/><circle cx="30.6" cy="27" r="0.8" fill="#FFFFFF"/>
+          <circle cx="57" cy="28" r="4.6" fill="#FFFFFF"/><circle cx="56.5" cy="28" r="2.2" fill="#181A1F"/><circle cx="55.6" cy="27" r="0.8" fill="#FFFFFF"/>
+          <ellipse cx="44" cy="29.5" rx="3" ry="1.6" fill="#181A1F"/>
+          <path d="M18 32L7 30M18 36L6 37M70 32L81 30M70 36L82 37" stroke="#595753" stroke-width="1.8" stroke-linecap="round"/>
+          <ellipse cx="26" cy="45" rx="7" ry="4.2" fill="#595753"/><ellipse cx="62" cy="45" rx="7" ry="4.2" fill="#595753"/>
+        </svg>
 
-          <div class="auth-field">
-            <label class="auth-label" for="login-pass-input">Mật khẩu</label>
-            <div class="auth-input-wrap">
-              <input class="auth-input" id="login-pass-input" name="password" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password" style="padding-right: 64px;" required>
-              <button type="button" class="auth-pass-toggle" id="btn-toggle-pass" onclick="togglePasswordVisibility()">Hiện</button>
+        <div class="auth-card auth-washi-card" id="auth-washi-card">
+          <svg class="auth-card-hanko" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="29" stroke="currentColor" stroke-width="1.8" stroke-dasharray="4 3"/>
+            <path d="M20 25L17 13L25 20C29 18.8 35 18.8 39 20L47 13L44 25C49 28.5 51.5 34.5 51.5 41C51.5 50 43.5 55 32 55C20.5 55 12.5 50 12.5 41C12.5 34.5 15 28.5 20 25Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+            <path d="M32 14.5C35 11 39.5 10.6 42 13C39 15.5 35 16 32 14.5Z" fill="currentColor" fill-opacity=".22" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="25" cy="31" r="2" fill="currentColor"/><circle cx="39" cy="31" r="2" fill="currentColor"/>
+            <path d="M22.5 43L25.5 40L28.5 43M29.5 42L32 39.5L34.5 42M35.5 43L38.5 40L41.5 43" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+
+          <div class="auth-brand-row">
+            <svg class="brand-mark-svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+              <path d="M32 4V10" stroke="#362F4D" stroke-width="2.4" stroke-linecap="round"/>
+              <path d="M9 22C13 11 21.5 8 32 8C42.5 8 51 11 55 22C49.5 19.5 44 19.5 39 21.5C34.5 19.3 29.5 19.3 25 21.5C20 19.5 14.5 19.5 9 22Z" fill="#3B3355" stroke="#231E33" stroke-width="1.6" stroke-linejoin="round"/>
+              <path d="M16 17.5C20.5 11.5 26 9.8 32 9.8C38 9.8 43.5 11.5 48 17.5C42 15 37 14.5 32 14.5C27 14.5 22 15 16 17.5Z" fill="#635887" opacity="0.45"/>
+              <path d="M32 20V38.5C32 41 34.5 41.8 35.5 39.8" stroke="#231E33" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M23 26L20 18.5C19.6 17.5 20.8 16.9 21.6 17.6L27 22.8Z" fill="#595651"/>
+              <path d="M41 26L44 18.5C44.4 17.5 43.2 16.9 42.4 17.6L37 22.8Z" fill="#595651"/>
+              <path d="M18 29C21 24 26 22 32 22C38 22 43 24 46 29C50 35 52 43 51 50C50 57.5 42.5 61 32 61C21.5 61 14 57.5 13 50C12 43 14 35 18 29Z" fill="#595651"/>
+              <path d="M27.5 23.2C29.8 19.8 34.8 19.6 37.5 22.4C34.5 24.4 30.2 24.6 27.5 23.2Z" fill="#4E7E52"/>
+              <ellipse cx="32" cy="47.5" rx="14.5" ry="11.5" fill="#EFE5CE"/>
+              <path d="M22.5 44.8L25 42.2L27.5 44.8M29.5 43.8L32 41.2L34.5 43.8M36.5 44.8L39 42.2L41.5 44.8" stroke="#595651" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M26 50.2L28.5 47.8L31 50.2M33 50.2L35.5 47.8L38 50.2" stroke="#595651" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="24.8" cy="30.5" r="3.4" fill="#FFFFFF"/><circle cx="25.2" cy="30.5" r="1.6" fill="#181818"/>
+              <circle cx="39.2" cy="30.5" r="3.4" fill="#FFFFFF"/><circle cx="38.8" cy="30.5" r="1.6" fill="#181818"/>
+              <ellipse cx="32" cy="31.5" rx="2.3" ry="1.2" fill="#1F1E1C"/>
+              <path d="M16 32.5L9.5 31M15.5 35.5L9 36M48 32.5L54.5 31M48.5 35.5L55 36" stroke="#363431" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M42.5 37.5C39.5 37.5 34.5 37.5 33.2 39.2C32 40.8 34.5 43.2 37.8 42.5C40.5 41.8 43 40 42.5 37.5Z" fill="#4C4944"/>
+            </svg>
+            <div>
+              <div class="auth-brand-name">IELTS Master</div>
+              <div class="auth-brand-sub">Hệ thống học Từ Vựng IELTS</div>
             </div>
           </div>
 
-          <label class="auth-remember">
-            <input type="checkbox" id="login-remember-chk" checked>
-            <span>Ghi nhớ đăng nhập (30 ngày) trên thiết bị này</span>
-          </label>
+          <h1 class="auth-heading">Đăng nhập</h1>
 
-          <div class="auth-error" id="login-error-msg" role="alert"></div>
+          <form id="auth-login-form" method="post" action="javascript:void(0)" onsubmit="handleLoginSubmit(event)" novalidate>
+            <div class="auth-field">
+              <label class="auth-label" for="login-id-input">Mã học viên</label>
+              <div class="auth-input-wrap">
+                <span class="auth-input-ico">
+                  <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0" stroke-linecap="round"/></svg>
+                </span>
+                <input class="auth-input" id="login-id-input" name="username" type="text" placeholder="Ví dụ: hv01" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+              </div>
+            </div>
 
-          <button type="submit" class="btn-auth-submit" id="btn-login-submit">Vào học ngay</button>
-        </form>
+            <div class="auth-field">
+              <label class="auth-label" for="login-pass-input">Mật khẩu</label>
+              <div class="auth-input-wrap">
+                <span class="auth-input-ico">
+                  <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round"/></svg>
+                </span>
+                <input class="auth-input" id="login-pass-input" name="password" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password" style="padding-right: 64px;" required>
+                <button type="button" class="auth-pass-toggle" id="btn-toggle-pass" onclick="togglePasswordVisibility()">Hiện</button>
+              </div>
+            </div>
 
-        <div class="auth-hint-footer">
-          Mỗi mã ID lưu riêng giờ học, chuỗi ngày và số từ đã thuộc.
+            <label class="auth-remember">
+              <input type="checkbox" id="login-remember-chk" checked>
+              <span>Ghi nhớ đăng nhập (30 ngày)</span>
+            </label>
+
+            <div class="auth-error" id="login-error-msg" role="alert"></div>
+
+            <button type="submit" class="btn-auth-submit" id="btn-login-submit">
+              <span>Vào học ngay</span>
+              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M5 12h14m-6-6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </form>
+
+          <div class="auth-card-footer-note">
+            <span class="auth-live-pill"><span class="auth-live-dot"></span>Sẵn sàng học offline</span>
+            <span>Lưu tiến độ tự động</span>
+          </div>
         </div>
       </div>
+
+      <div class="auth-meta-line tabular">IELTS Master · 4.489 họ từ chọn lọc · 110 bài Task</div>
     </div>
   </section>
 
   <!-- Main App Shell (Ẩn cho tới khi đăng nhập thành công) -->
   <div id="app-shell" style="display: none;">
-  <!-- Vocab-only Botanical Header (giữ đúng phong cách cũ, bỏ 4-skill & AI rườm rà) -->
+  <!-- Flagship 1-Row Header: Totoro Holding Umbrella Logo + 4 Big Nav Tabs + Popovers -->
   <header class="app-header">
     <div class="header-left">
-      <div class="brand-title">
-        <img src="assets/images/panda_mascot.jpg" alt="" class="brand-logo-icon">
-        <span>IELTS Vocab Master</span>
-        <span class="brand-status-chip">
-          <span class="status-dot-pulse"></span>
-          <span id="header-mode-chip-text">Reading 95,5%</span>
-        </span>
+      <button type="button" class="brand-mark-btn" onclick="window.TotoroUI?.switchView('home')" title="Trang chủ IELTS Master">
+        <svg class="brand-mark-svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <path d="M32 4V10" stroke="#362F4D" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M9 22C13 11 21.5 8 32 8C42.5 8 51 11 55 22C49.5 19.5 44 19.5 39 21.5C34.5 19.3 29.5 19.3 25 21.5C20 19.5 14.5 19.5 9 22Z" fill="#3B3355" stroke="#231E33" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M16 17.5C20.5 11.5 26 9.8 32 9.8C38 9.8 43.5 11.5 48 17.5C42 15 37 14.5 32 14.5C27 14.5 22 15 16 17.5Z" fill="#635887" opacity="0.45"/>
+          <path d="M32 20V38.5C32 41 34.5 41.8 35.5 39.8" stroke="#231E33" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M23 26L20 18.5C19.6 17.5 20.8 16.9 21.6 17.6L27 22.8Z" fill="#595651"/>
+          <path d="M41 26L44 18.5C44.4 17.5 43.2 16.9 42.4 17.6L37 22.8Z" fill="#595651"/>
+          <path d="M18 29C21 24 26 22 32 22C38 22 43 24 46 29C50 35 52 43 51 50C50 57.5 42.5 61 32 61C21.5 61 14 57.5 13 50C12 43 14 35 18 29Z" fill="#595651"/>
+          <path d="M27.5 23.2C29.8 19.8 34.8 19.6 37.5 22.4C34.5 24.4 30.2 24.6 27.5 23.2Z" fill="#4E7E52"/>
+          <ellipse cx="32" cy="47.5" rx="14.5" ry="11.5" fill="#EFE5CE"/>
+          <path d="M22.5 44.8L25 42.2L27.5 44.8M29.5 43.8L32 41.2L34.5 43.8M36.5 44.8L39 42.2L41.5 44.8" stroke="#595651" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M26 50.2L28.5 47.8L31 50.2M33 50.2L35.5 47.8L38 50.2" stroke="#595651" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="24.8" cy="30.5" r="3.4" fill="#FFFFFF"/><circle cx="25.2" cy="30.5" r="1.6" fill="#181818"/>
+          <circle cx="39.2" cy="30.5" r="3.4" fill="#FFFFFF"/><circle cx="38.8" cy="30.5" r="1.6" fill="#181818"/>
+          <ellipse cx="32" cy="31.5" rx="2.3" ry="1.2" fill="#1F1E1C"/>
+          <path d="M16 32.5L9.5 31M15.5 35.5L9 36M48 32.5L54.5 31M48.5 35.5L55 36" stroke="#363431" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M42.5 37.5C39.5 37.5 34.5 37.5 33.2 39.2C32 40.8 34.5 43.2 37.8 42.5C40.5 41.8 43 40 42.5 37.5Z" fill="#4C4944"/>
+        </svg>
+        <span class="brand-name-txt">IELTS Master</span>
+      </button>
+
+      <div class="tot-pop-wrap tot-skill-wrap">
+        <button type="button" class="tot-skill-trigger" id="btn-skill-trigger">
+          <span class="tot-skill-dot"></span>
+          <span id="header-mode-chip-text">Reading</span>
+          <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="tot-popover" id="skill-popover">
+          <button type="button" class="tot-skill-opt active" data-tot-skill="Reading"><div><div style="font-size:13px;font-weight:750;">IELTS Reading</div><div style="font-size:11px;color:var(--ink-3);">4.489 họ từ · 110 Tasks</div></div><span class="tot-tag">Đang mở</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Listening"><div><div style="font-size:13px;font-weight:750;">IELTS Listening</div><div style="font-size:11px;color:var(--ink-3);">Dictation · Section 1–4</div></div><span class="tot-tag soon">Sắp mở</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Writing"><div><div style="font-size:13px;font-weight:750;">IELTS Writing</div><div style="font-size:11px;color:var(--ink-3);">Flow Ideas · Task 1 &amp; 2</div></div><span class="tot-tag soon">Sắp mở</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Speaking"><div><div style="font-size:13px;font-weight:750;">IELTS Speaking</div><div style="font-size:11px;color:var(--ink-3);">Spoken Chunks · Part 1–3</div></div><span class="tot-tag soon">Sắp mở</span></button>
+        </div>
       </div>
     </div>
+
+    <nav class="tot-nav-tabs" aria-label="Điều hướng chính">
+      <button type="button" class="tot-nav-tab" data-tot-view="home">
+        <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M5 10.5L12 4l7 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-3v6H6a1 1 0 0 1-1-1v-9.5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/></svg>
+        Home
+      </button>
+      <button type="button" class="tot-nav-tab active" data-tot-view="flashcard">
+        <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" fill="currentColor" fill-opacity=".15" stroke="currentColor" stroke-width="1.95"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.95"/></svg>
+        Flashcard
+      </button>
+      <button type="button" class="tot-nav-tab" data-tot-view="task">
+        <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.95"/><path d="M8.5 12.2l2.3 2.3 4.8-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Task
+      </button>
+      <button type="button" class="tot-nav-tab" data-tot-view="practice">
+        <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3z" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/><path d="M9 12h6M9 16h4" stroke="currentColor" stroke-width="1.95" stroke-linecap="round"/></svg>
+        Practice
+      </button>
+    </nav>
 
     <div class="task-study-bar" id="task-study-bar" style="display:none;">
       <div class="task-study-bar-info">
@@ -98,7 +218,55 @@
     </div>
 
     <div class="header-actions">
-      <span class="header-user-id" id="header-user-id" title="Tài khoản đang học">THANHNGOC</span>
+      <button type="button" class="tot-streak-pill tabular" id="hdr-streak-pill" onclick="window.TotoroUI?.switchView('home')" title="Chuỗi hạt sồi thực học">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <g transform="rotate(-24 12 12)">
+            <path d="M12 4.8V2.1" stroke="#5B3B1E" stroke-width="2" stroke-linecap="round"/>
+            <path d="M5.4 10.6C5.4 6.7 8.4 4.5 12 4.5C15.6 4.5 18.6 6.7 18.6 10.6C14.8 11.4 9.2 11.4 5.4 10.6Z" fill="#8D653E" stroke="#57391C" stroke-width="1.45" stroke-linejoin="round"/>
+            <path d="M7.4 7.6L9.4 10.2M10.4 5.6L12.6 10.3M13.6 5.6L15.4 10.2M16.6 7.4L14.2 10.2M13.4 5.6L11 10.2M10 6L7.8 9.8" stroke="#4D3015" stroke-width="0.95" stroke-linecap="round" opacity=".72"/>
+            <path d="M7.2 10.8C7 15.8 9 19.6 12 21.5C15 19.6 17 15.8 16.8 10.8C13.6 11.5 10.4 11.5 7.2 10.8Z" fill="#AC5D28" stroke="#633210" stroke-width="1.45" stroke-linejoin="round"/>
+            <path d="M12 21.3V22.4" stroke="#633210" stroke-width="1.4" stroke-linecap="round"/>
+            <path d="M9.4 12.8C9.3 15 9.8 17 10.6 18.2" stroke="#F8D9B8" stroke-width="1.4" stroke-linecap="round" opacity=".82"/>
+          </g>
+        </svg>
+        <span id="hdr-streak-days">0 ngày</span>
+      </button>
+
+      <div class="tot-pop-wrap">
+        <button type="button" class="tot-hdr-btn" id="btn-appearance-pop" aria-label="Tùy chỉnh giao diện">
+          <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="1.85"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="currentColor" stroke-width="1.75"/></svg>
+          <span class="hdr-lbl-hide-sm">Giao diện</span>
+        </button>
+        <div class="tot-popover right" id="appearance-popover" style="width:304px;">
+          <div class="tot-pop-lbl">Phong cách bề mặt</div>
+          <div class="tot-seg" style="margin-bottom:12px;">
+            <button type="button" class="tot-seg-btn active" data-set-mode="calm">Calm Washi</button>
+            <button type="button" class="tot-seg-btn" data-set-mode="vibrant">Vibrant Slate</button>
+          </div>
+          <div class="tot-pop-lbl">Chế độ hiển thị</div>
+          <div class="tot-seg" style="margin-bottom:12px;">
+            <button type="button" class="tot-seg-btn active" data-set-theme="light">Sáng</button>
+            <button type="button" class="tot-seg-btn" data-set-theme="dark">Tối</button>
+          </div>
+          <div class="tot-pop-lbl">Bảng màu chủ đạo</div>
+          <div class="tot-pal-grid" style="margin-bottom:12px;">
+            <button type="button" class="tot-pal-chip active" data-set-palette="auto"><span class="tot-pal-dot" style="background:linear-gradient(135deg,#EAECEF,#B6BEC8);"></span><span>Auto</span></button>
+            <button type="button" class="tot-pal-chip" data-set-palette="sage"><span class="tot-pal-dot" style="background:#4E7A51;"></span><span>Sage</span></button>
+            <button type="button" class="tot-pal-chip" data-set-palette="dusk"><span class="tot-pal-dot" style="background:#6658AD;"></span><span>Dusk</span></button>
+            <button type="button" class="tot-pal-chip" data-set-palette="sakura"><span class="tot-pal-dot" style="background:#B85B6C;"></span><span>Sakura</span></button>
+            <button type="button" class="tot-pal-chip" data-set-palette="ink"><span class="tot-pal-dot" style="background:#262930;"></span><span>Ink</span></button>
+          </div>
+          <div class="tot-pop-divider"></div>
+          <div class="tot-pop-lbl">Hiệu ứng lật thẻ</div>
+          <div class="tot-seg tot-seg-grid4" id="motion-switcher">
+            <button type="button" class="tot-seg-btn active" data-set-motion="pro">Lật 3D</button>
+            <button type="button" class="tot-seg-btn" data-set-motion="classic">Cổ điển</button>
+            <button type="button" class="tot-seg-btn" data-set-motion="morph">Tức thì</button>
+            <button type="button" class="tot-seg-btn" data-set-motion="original">Trượt nảy</button>
+          </div>
+        </div>
+      </div>
+
       <button class="btn-icon-glass btn-header-task" id="btn-teacher-preview" onclick="toggleTeacherStudyPreview()" style="display:none;">
         <svg class="hdr-btn-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         <span id="btn-teacher-preview-text">Xem trang học</span>
@@ -107,14 +275,53 @@
         <svg class="hdr-btn-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
         <span>Làm mới</span>
       </button>
-      <button class="btn-icon-glass btn-header-task" id="btn-open-student-tasks" onclick="TasksModule.openStudentTasksModal()" style="display:none;">
-        <svg class="hdr-btn-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
-        <span>Task bài tập</span>
+      <button class="btn-icon-glass btn-header-task tot-hdr-ghost" id="btn-open-student-tasks" onclick="TasksModule.openStudentTasksModal()" style="display:none;" aria-label="Mở hộp thoại Task bài tập" title="Mở nhanh danh sách Task">
+        <svg class="hdr-btn-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
       </button>
-      <button class="btn-icon-glass" id="btn-open-menu" onclick="openMenuModal()" aria-label="Mở menu tùy chọn">
-        <svg class="hdr-btn-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.79 1.02 1.44 1.05H21a2 2 0 0 1 0 4h-.09c-.66.03-1.2.45-1.51 1.05z"/></svg>
-        <span>Tùy chọn</span>
+      <button class="tot-hdr-btn tot-hdr-ghost" id="btn-open-menu" onclick="openMenuModal()" aria-label="Mở menu tùy chọn" title="Tùy chọn âm thanh & học tập">
+        <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6" stroke-linecap="round"/><line x1="4" y1="12" x2="20" y2="12" stroke-linecap="round"/><line x1="4" y1="18" x2="20" y2="18" stroke-linecap="round"/></svg>
       </button>
+
+      <div class="tot-pop-wrap">
+        <button type="button" class="tot-account-trigger" id="btn-account-pop" aria-label="Tài khoản học viên">
+          <span class="tot-account-av" id="hdr-acc-av">HV</span>
+          <span class="header-user-id" id="header-user-id" title="Tài khoản đang học">THANHNGOC</span>
+          <svg class="tot-ico-sm" style="width:13px;height:13px;opacity:.75;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="tot-popover right" id="account-popover" style="width:274px;">
+          <div class="tot-acc-head">
+            <span class="tot-acc-av-lg" id="pop-acc-av">HV</span>
+            <div style="min-width:0;flex:1;">
+              <div style="font-size:13.5px;font-weight:800;color:var(--ink);" id="pop-acc-name">Học viên</div>
+              <div style="font-size:11px;color:var(--ink-3);" id="pop-acc-id">Mã ID</div>
+            </div>
+          </div>
+          <div class="tot-acc-stats">
+            <div class="tot-acc-stat"><div class="tot-acc-stat-val tabular"><span class="tot-acorn-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><g transform="rotate(-24 12 12)"><path d="M12 4.8V2.1" stroke="#5B3B1E" stroke-width="2" stroke-linecap="round"/><path d="M5.4 10.6C5.4 6.7 8.4 4.5 12 4.5C15.6 4.5 18.6 6.7 18.6 10.6C14.8 11.4 9.2 11.4 5.4 10.6Z" fill="#8D653E" stroke="#57391C" stroke-width="1.45" stroke-linejoin="round"/><path d="M7.4 7.6L9.4 10.2M10.4 5.6L12.6 10.3M13.6 5.6L15.4 10.2M16.6 7.4L14.2 10.2M13.4 5.6L11 10.2M10 6L7.8 9.8" stroke="#4D3015" stroke-width="0.95" stroke-linecap="round" opacity=".72"/><path d="M7.2 10.8C7 15.8 9 19.6 12 21.5C15 19.6 17 15.8 16.8 10.8C13.6 11.5 10.4 11.5 7.2 10.8Z" fill="#AC5D28" stroke="#633210" stroke-width="1.45" stroke-linejoin="round"/><path d="M12 21.3V22.4" stroke="#633210" stroke-width="1.4" stroke-linecap="round"/><path d="M9.4 12.8C9.3 15 9.8 17 10.6 18.2" stroke="#F8D9B8" stroke-width="1.4" stroke-linecap="round" opacity=".82"/></g></svg></span><span id="pop-stat-streak">0 ngày</span></div><div class="tot-acc-stat-lbl">Chuỗi học</div></div>
+            <div class="tot-acc-stat"><div class="tot-acc-stat-val tabular" id="pop-stat-rank">—</div><div class="tot-acc-stat-lbl">Xếp hạng</div></div>
+            <div class="tot-acc-stat"><div class="tot-acc-stat-val tabular" id="pop-stat-mastered">0</div><div class="tot-acc-stat-lbl">Từ thuộc</div></div>
+          </div>
+          <div class="tot-acc-menu">
+            <button type="button" class="tot-acc-item" onclick="window.TotoroUI?.closePopovers(); window.TotoroUI?.switchView('home');">
+              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0" stroke-linecap="round"/></svg>
+              Hồ sơ &amp; tiến độ học
+            </button>
+            <button type="button" class="tot-acc-item" onclick="window.TotoroUI?.closePopovers(); openClassReportModal();">
+              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0V4z"/></svg>
+              Bảng xếp hạng cả lớp
+            </button>
+            <button type="button" class="tot-acc-item" onclick="window.TotoroUI?.closePopovers(); openMenuModal();">
+              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3"/></svg>
+              Tùy chọn âm thanh &amp; học tập
+            </button>
+            <div style="height:1px;background:var(--border);margin:4px 6px;"></div>
+            <button type="button" class="tot-acc-item danger" onclick="window.TotoroUI?.closePopovers(); logoutCurrentAccount();">
+              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7" stroke-linecap="round" stroke-linejoin="round"/><line x1="21" x2="9" y1="12" y2="12" stroke-linecap="round"/></svg>
+              Đăng xuất
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -126,38 +333,84 @@
         <div class="study-heading-copy"><h1>Flashcards</h1></div>
       </div>
 
-      <!-- 1. Thanh chọn phạm vi & Tiến độ (Không dùng icon, chỉ chữ rõ ràng) -->
+      <!-- 1. Thanh chọn phạm vi & Tìm nhanh thẻ / Công cụ (giữ nguyên bố cục toàn chiều rộng) -->
       <div class="study-top-bar">
-        <div class="scope-select-wrap">
-          <select class="scope-select" id="study-scope-select" onchange="onScopeChange()" aria-label="Chọn phạm vi từ vựng">
-            <!-- Populated dynamically via JS -->
-          </select>
+        <div class="study-bar-left">
+          <div class="scope-select-wrap">
+            <select class="scope-select" id="study-scope-select" onchange="onScopeChange()" aria-label="Chọn phạm vi từ vựng">
+              <!-- Populated dynamically via JS -->
+            </select>
+          </div>
+
+          <div class="tot-idle-clock-pill" id="study-idle-clock" role="status" aria-live="off" title="Thời gian không thao tác (tự động đăng xuất sau 10 phút ngưng hoạt động)">
+            <span class="tot-idle-left">
+              <span class="tot-idle-dot" aria-hidden="true"></span>
+              <svg class="tot-ico-sm tot-idle-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+              <span class="tot-idle-lbl">Không thao tác</span>
+            </span>
+            <span class="tot-idle-readout tabular">
+              <strong id="study-idle-clock-val">00:00</strong>
+              <span class="tot-idle-limit" id="study-idle-clock-limit">/ 10:00</span>
+            </span>
+            <span class="tot-idle-progress-track" aria-hidden="true"><span class="tot-idle-progress-fill" id="study-idle-clock-bar"></span></span>
+          </div>
         </div>
 
         <div class="study-top-actions">
-          <button class="btn-deck-tool" id="btn-filter-due" onclick="toggleDueReviewFilter()" title="Ôn tập các từ đã đến hạn">
-            <span>Cần ôn (<span id="top-due-count">0</span>)</span>
-          </button>
-          <button class="btn-deck-tool" id="btn-filter-unmastered" onclick="toggleUnmasteredFilter()" title="Chỉ ôn các từ chưa thuộc">
-            <span>Chưa thuộc</span>
-          </button>
-          <button class="btn-deck-tool" id="btn-top-wordlist" onclick="openWordListModal()" title="Xem danh sách từ &amp; từ nối">
+          <button type="button" class="btn-deck-tool tot-tool-quiet" id="btn-top-wordlist" onclick="openWordListModal()" title="Xem danh sách từ &amp; từ nối">
+            <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg>
             <span>Từ vựng</span>
           </button>
-          <button class="btn-deck-tool" id="btn-top-signalwords" onclick="openSignalWordsModal()" title="Xem bảng phân loại từ nối chỉ hướng nghĩa" style="display:none;">
+          <button type="button" class="btn-deck-tool tot-tool-quiet" id="btn-top-signalwords" onclick="openSignalWordsModal()" title="Xem bảng phân loại từ nối chỉ hướng nghĩa" style="display:none;">
             <span>Bảng từ nối</span>
           </button>
-          <button class="btn-deck-tool btn-deck-tool-accent" id="btn-top-list-final-test" onclick="RecognitionTestModule.startListFinalExam()" title="Speed Quiz toàn bộ danh sách (5 giây/từ, tự động lưu mốc 50 từ)">
-            <span>Speed Quiz</span>
-          </button>
-          <button class="btn-deck-tool" id="btn-top-shuffle" onclick="shuffleCurrentScope()" title="Trộn ngẫu nhiên thứ tự">
+          <button type="button" class="btn-deck-tool tot-tool-quiet" id="btn-top-shuffle" onclick="shuffleCurrentScope()" title="Trộn ngẫu nhiên thứ tự">
+            <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="16 3 21 3 21 8"/><line x1="4" x2="21" y1="20" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" x2="21" y1="15" y2="21"/></svg>
             <span>Trộn</span>
           </button>
-          <button class="btn-deck-tool btn-focus-toggle" id="btn-top-focus-mode" onclick="toggleFocusMode()" title="Thu gọn 2 cột bên để tập trung học Flashcard">
+          <button type="button" class="btn-deck-tool tot-tool-quiet btn-focus-toggle" id="btn-top-focus-mode" onclick="toggleFocusMode()" title="Thu gọn 2 cột bên để tập trung học Flashcard">
+            <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
             <span>Tập trung</span>
           </button>
+
+          <div class="tot-kbd-help-wrap" id="card-settings-wrap">
+            <button type="button" class="btn-deck-tool tot-tool-quiet tot-kbd-btn" id="btn-card-settings-pop" aria-label="Thiết lập thẻ &amp; Phím tắt" title="Thiết lập thẻ &amp; Phím tắt">
+              <svg class="tot-ico-sm" style="width:15px;height:15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><line x1="4" y1="7" x2="20" y2="7" stroke-linecap="round"/><circle cx="9" cy="7" r="2.2" fill="var(--surface)"/><line x1="4" y1="12" x2="20" y2="12" stroke-linecap="round"/><circle cx="15" cy="12" r="2.2" fill="var(--surface)"/><line x1="4" y1="17" x2="20" y2="17" stroke-linecap="round"/><circle cx="10" cy="17" r="2.2" fill="var(--surface)"/></svg>
+            </button>
+            <div class="tot-kbd-help-pop" id="card-settings-popover">
+              <div class="tot-pop-sec-hdr">Thiết lập thẻ</div>
+              <button type="button" class="tot-ctrl-row" id="btn-widget-autospeak" onclick="toggleAutoSpeak(event)">
+                <span class="tot-ctrl-lbl">Tự đọc khi chuyển thẻ</span>
+                <span class="tot-fc-pill" id="widget-autospeak-state">Bật</span>
+              </button>
+              <div class="tot-ctrl-row is-static" role="group" aria-label="Chọn giọng phát âm">
+                <span class="tot-ctrl-lbl">Giọng đọc</span>
+                <div class="tot-mini-seg">
+                  <button type="button" class="tot-mini-seg-btn active" id="btn-widget-accent-us" onclick="setAutoSpeakAccent('en-US')">US</button>
+                  <button type="button" class="tot-mini-seg-btn" id="btn-widget-accent-uk" onclick="setAutoSpeakAccent('en-GB')">UK</button>
+                </div>
+              </div>
+              <button type="button" class="tot-ctrl-row" id="btn-widget-front-ctx" onclick="window.TotoroUI?.toggleFrontContextFromWidget?.()">
+                <span class="tot-ctrl-lbl">Ví dụ ở mặt trước</span>
+                <span class="tot-fc-pill" id="widget-front-ctx-state">Ẩn</span>
+              </button>
+              <button type="button" class="btn-widget-jump" id="btn-widget-next-unlearned" onclick="window.__VOCAB_BRIDGE__?.jumpToNextUnlearned?.()">
+                <span>Tới từ chưa thuộc tiếp theo</span>
+                <span aria-hidden="true">→</span>
+              </button>
+
+              <div class="tot-pop-divider"></div>
+
+              <div class="tot-pop-sec-hdr">Phím tắt học nhanh</div>
+              <div class="tot-kbd-help-row"><span>Lật thẻ</span><kbd>Space</kbd></div>
+              <div class="tot-kbd-help-row"><span>Thẻ trước / tiếp</span><span><kbd>←</kbd> <kbd>→</kbd></span></div>
+              <div class="tot-kbd-help-row"><span>Chấm mức nhớ</span><span><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></span></div>
+              <div class="tot-kbd-help-row"><span>Nghe phát âm</span><kbd>R</kbd></div>
+            </div>
+          </div>
+
           <div class="study-progress-wrap">
-            <span class="study-progress" id="study-progress-text">1 / 1500</span>
+            <span class="study-progress tabular" id="study-progress-text">1 / 1500</span>
           </div>
         </div>
       </div>
@@ -186,24 +439,46 @@
 
         <!-- LEFT DECK: STUDY TIMER & LEADERBOARD -->
         <aside class="study-deck study-deck-left" id="study-deck-left" aria-label="Tiện ích đếm giờ và bảng thi đua">
-          <!-- Widget 1: Sage Mint Study Timer -->
-          <div class="deck-widget widget-theme-mint" id="widget-study-timer">
+          <!-- Widget 1: Sage Mint Study Timer + Interactive Peeking Totoro -->
+          <div class="deck-widget widget-theme-mint ink-brackets" id="widget-study-timer">
+            <svg class="totoro-peeker" viewBox="0 0 88 50" fill="none" aria-hidden="true">
+              <path class="ear-l" d="M24 22L16 5C15.4 3.6 17.2 2.6 18.2 3.8L30 16Z" fill="#595753"/>
+              <path class="ear-r" d="M64 22L72 5C72.6 3.6 70.8 2.6 69.8 3.8L58 16Z" fill="#595753"/>
+              <path d="M12 46C12 27 24 14 44 14C64 14 76 27 76 46Z" fill="#595753"/>
+              <path d="M36 14.5C39 8.5 47 8 52 12.5C47.5 15.5 41 16 36 14.5Z" fill="#4E7A51"/>
+              <path d="M44 14V10.5" stroke="#4E7A51" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="31" cy="28" r="4.6" fill="#FFFFFF"/><circle cx="31.5" cy="28" r="2.2" fill="#181A1F"/><circle cx="30.6" cy="27" r="0.8" fill="#FFFFFF"/>
+              <circle cx="57" cy="28" r="4.6" fill="#FFFFFF"/><circle cx="56.5" cy="28" r="2.2" fill="#181A1F"/><circle cx="55.6" cy="27" r="0.8" fill="#FFFFFF"/>
+              <ellipse cx="44" cy="29.5" rx="3" ry="1.6" fill="#181A1F"/>
+              <path d="M18 32L7 30M18 36L6 37M70 32L81 30M70 36L82 37" stroke="#595753" stroke-width="1.8" stroke-linecap="round"/>
+              <ellipse cx="26" cy="45" rx="7" ry="4.2" fill="#595753"/><ellipse cx="62" cy="45" rx="7" ry="4.2" fill="#595753"/>
+            </svg>
             <div class="widget-header">
               <div class="widget-panda-lockup">
                 <img src="assets/images/panda_timer.jpg" alt="" class="widget-panda-img">
               </div>
+              <span class="tot-icon-tile" aria-hidden="true">
+                <svg viewBox="2.5 1 19 21.5" fill="none">
+                  <circle cx="12" cy="13.8" r="7.8" fill="#FFFFFF" stroke="var(--accent)" stroke-width="2"/>
+                  <circle cx="12" cy="13.8" r="5.6" fill="var(--accent-soft)"/>
+                  <path d="M12 9.8V13.8L14.8 15.4" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="13.8" r="1.2" fill="var(--streak)"/>
+                  <path d="M12 6C13.8 2.8 16.8 2.2 18.8 3.9C16.8 5.8 14.2 6.5 12 6Z" fill="#4E9460" stroke="#2F663D" stroke-width="1.1" stroke-linejoin="round"/>
+                </svg>
+              </span>
               <div class="widget-title-group">
-                <div class="widget-title">Đồng Hồ Học Tập</div>
-                <div class="widget-subtitle">Tập trung</div>
+                <div class="widget-title">Đồng hồ tập trung</div>
+                <div class="widget-subtitle">Phiên mục tiêu 25 phút</div>
               </div>
-              <button class="btn-sound-toggle" id="btn-timer-sound" onclick="toggleTimerSound()" title="Bật/Tắt chuông" aria-label="Bật/Tắt chuông" style="font-size:11.5px; font-weight:700; padding:3px 7px; border:1px solid var(--card-border); color:var(--text-muted); white-space:nowrap;">
-                <span id="timer-sound-icon">Âm: Bật</span>
+              <button class="btn-sound-toggle tot-timer-sound-ico" id="btn-timer-sound" onclick="toggleTimerSound()" title="Bật/Tắt chuông" aria-label="Bật/Tắt chuông">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                <span id="timer-sound-icon" class="sr-only">Âm: Bật</span>
               </button>
             </div>
 
             <div class="timer-mode-pills">
               <button class="timer-mode-btn active" id="timer-mode-up" onclick="setTimerMode('countup')">Đếm xuôi</button>
-              <button class="timer-mode-btn" id="timer-mode-down" onclick="setTimerMode('countdown')">Đếm ngược</button>
+              <button class="timer-mode-btn" id="timer-mode-down" onclick="setTimerMode('countdown')">Pomodoro</button>
             </div>
 
             <div class="timer-presets" id="timer-presets" style="display: none;">
@@ -213,35 +488,93 @@
               <button class="preset-btn" onclick="setCountdownMinutes(45)">45p</button>
             </div>
 
-            <div class="timer-display-box">
-              <div class="timer-digits" id="timer-digits">00:00</div>
-              <div class="timer-status-text" id="timer-status-text">Đang tính giờ...</div>
+            <div class="timer-display-box chrono-wrap" id="chrono-wrap">
+              <svg class="chrono-svg" viewBox="0 0 140 140" aria-hidden="true">
+                <defs>
+                  <linearGradient id="chronoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="var(--streak)" />
+                    <stop offset="100%" stop-color="var(--accent)" />
+                  </linearGradient>
+                </defs>
+                <circle cx="70" cy="70" r="65" fill="none" stroke="var(--border-strong)" stroke-width="1.5" stroke-dasharray="1.5 8.7" />
+                <circle class="chrono-track" cx="70" cy="70" r="56" />
+                <circle class="chrono-progress" id="chrono-arc" cx="70" cy="70" r="56" />
+              </svg>
+              <div class="chrono-center">
+                <div class="timer-digits chrono-digits tabular" id="timer-digits">00:00</div>
+                <div class="chrono-state" id="chrono-state">
+                  <span class="live-dot" id="chrono-live-dot"></span>
+                  <span class="timer-status-text" id="timer-status-text">Đang học</span>
+                </div>
+              </div>
             </div>
 
             <div class="timer-actions">
               <button class="btn-timer-ctrl primary" id="btn-timer-toggle" onclick="toggleTimer()">
                 <span id="timer-play-text">Tạm dừng</span>
               </button>
-              <button class="btn-timer-ctrl" id="btn-timer-reset" onclick="resetTimer()" title="Đặt lại" style="font-size:12px;">
+              <button class="btn-timer-ctrl" id="btn-timer-reset" onclick="resetTimer()" title="Đặt lại">
                 Đặt lại
               </button>
             </div>
 
             <div class="timer-footer-stat">
-              <span>Hôm nay:</span>
-              <strong id="timer-today-total">0 phút</strong>
+              <span>Hôm nay đã học</span>
+              <strong class="tabular" id="timer-today-total">0 phút</strong>
             </div>
           </div>
 
-          <!-- Widget 2: Champagne Gold Leaderboard -->
-          <div class="deck-widget widget-theme-gold" id="widget-leaderboard">
+          <!-- Widget 2 (Bottom-Left): Speed Quiz · 5 giây (theo đúng demo_v3.html) -->
+          <div class="deck-widget widget-theme-gold ink-brackets has-stamp" id="widget-focus-drill">
+            <div class="widget-header">
+              <span class="tot-icon-tile warm" aria-hidden="true">
+                <svg viewBox="2.8 3.5 23.6 22" fill="none">
+                  <circle cx="12.5" cy="15.2" r="7" fill="#2A2C32"/>
+                  <path d="M12.5 6.2V8.8M12.5 21.6V24.2M3.8 15.2H6.4M18.6 15.2H21.2M6.4 9.1L8.2 10.9M16.8 19.5L18.6 21.3M18.6 9.1L16.8 10.9M8.2 19.5L6.4 21.3" stroke="#2A2C32" stroke-width="1.9" stroke-linecap="round"/>
+                  <circle cx="10.2" cy="14.6" r="2.2" fill="#FFFFFF"/><circle cx="10.5" cy="14.6" r="1.05" fill="#111111"/>
+                  <circle cx="14.8" cy="14.6" r="2.2" fill="#FFFFFF"/><circle cx="14.5" cy="14.6" r="1.05" fill="#111111"/>
+                  <path d="M21.8 4.8L22.9 7.4L25.6 7.8L23.6 9.6L24.1 12.2L21.8 10.9L19.5 12.2L20 9.6L18 7.8L20.7 7.4L21.8 4.8Z" fill="#F59E0B" stroke="#B45309" stroke-width="0.8" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <div class="widget-title-group">
+                <div class="widget-title">Speed Quiz · 5 giây</div>
+                <div class="widget-subtitle">Đúng → Đã thuộc · Sai → Cần ôn</div>
+              </div>
+            </div>
+
+            <div class="tot-speedquiz-meta">
+              <div class="tot-sq-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2h5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>5 giây / từ</span>
+              </div>
+              <div class="tot-sq-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" stroke-linejoin="round"/></svg>
+                <span>Lưu mốc 50 từ</span>
+              </div>
+            </div>
+
+            <button type="button" class="btn-widget-speedquiz" id="btn-top-list-final-test" onclick="RecognitionTestModule.startListFinalExam()" title="Speed Quiz toàn bộ danh sách (5 giây/từ, tự động lưu mốc 50 từ)">
+              <span>Vào Speed Quiz ngay</span>
+            </button>
+          </div>
+
+          <!-- Hidden on #screen-study (preserved in DOM for JS/Home/Report sync) -->
+          <div class="deck-widget widget-theme-gold ink-brackets has-stamp is-home-only-widget" id="widget-leaderboard">
             <div class="widget-header">
               <div class="widget-panda-lockup">
                 <img src="assets/images/panda_leaderboard.jpg" alt="" class="widget-panda-img">
               </div>
+              <span class="tot-icon-tile warm" aria-hidden="true">
+                <svg viewBox="2 2 20 20" fill="none">
+                  <path d="M7 6.5H4.2C4.2 9.4 5.4 11 7.2 11.2M17 6.5H19.8C19.8 9.4 18.6 11 16.8 11.2" stroke="#C78A20" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M7 4.2H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4.2Z" fill="#F2BE54" stroke="#B67B14" stroke-width="1.4" stroke-linejoin="round"/>
+                  <path d="M12 15V18.8M8.5 19.5H15.5" stroke="#B67B14" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 6.8L12.7 8.4L14.4 8.6L13.1 9.7L13.5 11.4L12 10.5L10.5 11.4L10.9 9.7L9.6 8.6L11.3 8.4L12 6.8Z" fill="#FFF8E2"/>
+                </svg>
+              </span>
               <div class="widget-title-group">
                 <div class="widget-title">Bảng Thi Đua</div>
-                <div class="widget-subtitle">Xếp hạng</div>
+                <div class="widget-subtitle">Xếp hạng lớp</div>
               </div>
               <button type="button" class="btn-board-all" id="btn-open-class-report" onclick="openClassReportModal()">Cả lớp</button>
             </div>
@@ -265,6 +598,9 @@
         <div class="study-center-col">
         <!-- 3D Flashcard Container -->
         <div class="fc-scene" id="fc-scene" onclick="flipCurrentCard(event)">
+          <div class="deck-ghost-2" aria-hidden="true"></div>
+          <div class="deck-ghost-1" aria-hidden="true"></div>
+          <div class="fc-motion-wrap" id="fc-motion-wrap">
           <div class="card-progress-bar">
             <div class="card-progress-fill" id="card-progress-fill"></div>
           </div>
@@ -279,6 +615,10 @@
 
               <div class="fc-center-front">
                 <div class="fc-word" id="fc-front-word">loading...</div>
+                <svg class="calm-hand-underline" viewBox="0 0 160 14" fill="none" aria-hidden="true">
+                  <path d="M6 9.5C38 4.2 108 3.2 154 8.2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+                  <path d="M24 12.2C58 9.2 106 8.8 138 10.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.55"/>
+                </svg>
                 <div class="fc-pronounce-row" id="fc-front-pronounce-row">
                   <span class="fc-ipa-badge" id="fc-front-ipa" title="Phiên âm IPA quốc tế">/.../</span>
                   <button type="button" class="btn-voice-speak" id="btn-speak-front-uk" onclick="speakCurrentWord('en-GB', event)" title="Nghe phát âm chuẩn Anh - Anh (UK)">
@@ -291,6 +631,22 @@
 
                 <div class="fc-sentence-box" id="fc-front-sentence" style="display: none;"></div>
               </div>
+
+              <!-- Ghibli Botanical Leaf & Acorn Stamp (Bottom-Left) + Totoro Ink Stamp (Bottom-Right) -->
+              <svg class="ghibli-stamp" style="left:20px;bottom:16px;width:46px;height:46px;opacity:0.15;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                <path d="M10 38C13 26 22 17 36 12C33 25 25 34 10 38Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" fill="currentColor" fill-opacity=".08"/>
+                <path d="M10 38L27 21" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                <path d="M31 28C31 25.5 33.2 24 35.5 24C37.8 24 40 25.5 40 28H31Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M32.2 28C32.2 32.5 33.8 35.6 35.5 36.8C37.2 35.6 38.8 32.5 38.8 28" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M35.5 24V21.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              <svg class="totoro-ink-stamp" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <path d="M18 22L14 8L24 16C29 14.5 35 14.5 40 16L50 8L46 22C52 26 55 33 55 41C55 52 45.5 58 32 58C18.5 58 9 52 9 41C9 33 12 26 18 22Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+                <path d="M32 10C35.5 6 41 5.5 44 8.5C40 11.5 35.5 12 32 10Z" fill="currentColor" fill-opacity=".22" stroke="currentColor" stroke-width="2"/>
+                <circle cx="23.5" cy="29" r="2.2" fill="currentColor"/><circle cx="40.5" cy="29" r="2.2" fill="currentColor"/>
+                <path d="M29 31.5C30.8 32.8 33.2 32.8 35 31.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M21 43L24.5 39.5L28 43M29 41.5L32 38.5L35 41.5M36 43L39.5 39.5L43 43" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
 
               <div class="fc-flip-prompt">
                 <span>Chạm thẻ để lật · Vuốt ⇄ đổi từ</span>
@@ -329,6 +685,21 @@
                 </div>
               </div>
 
+              <!-- Back Face Chibi-Totoro Ink Stamp + Live Hanko Mastery Seal -->
+              <svg class="ghibli-stamp" id="fc-back-chibi-stamp" style="right:22px;bottom:74px;width:50px;height:50px;opacity:0.13;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <path d="M22 21L18 9L27 17C30.2 16 33.8 16 37 17L46 9L42 21C47.5 25 50 32 50 40C50 50.5 42 56 32 56C22 56 14 50.5 14 40C14 32 16.5 25 22 21Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+                <circle cx="25" cy="29" r="2.2" fill="currentColor"/><circle cx="39" cy="29" r="2.2" fill="currentColor"/>
+                <ellipse cx="32" cy="34" rx="2.4" ry="1.5" fill="currentColor"/>
+              </svg>
+              <div class="hanko-seal" id="fc-hanko-seal" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 64 64" fill="none">
+                  <path d="M18 22L14 9L24 17C29 15.5 35 15.5 40 17L50 9L46 22C51 26 54 33 54 41C54 51 45 57 32 57C19 57 10 51 10 41C10 33 13 26 18 22Z" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/>
+                  <circle cx="24" cy="29" r="3" fill="currentColor"/><circle cx="40" cy="29" r="3" fill="currentColor"/>
+                  <path d="M23 42L27 38.5L31 42M33 42L37 38.5L41 42" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="hanko-seal-txt">Đã thuộc</span>
+              </div>
+
               <!-- 3 Nấc đánh giá Spaced Repetition -->
               <div class="assessment-row">
                 <button class="btn-assess btn-assess-unremembered" id="btn-assess-1" onclick="assessCurrentWord(1, event)" aria-label="Đánh giá 1: Chưa nhớ">
@@ -346,11 +717,12 @@
               </div>
             </div>
           </div>
+          </div>
         </div>
 
           <!-- Khung hoàn thành bộ từ -->
           <div class="fc-finished-box" id="fc-finished-box">
-            <img src="assets/images/panda_leaderboard.jpg" alt="Hoàn thành xuất sắc" class="celebrate-panda-img">
+            <img src="assets/images/totoro_sitting_branch.png" alt="Hoàn thành xuất sắc" class="celebrate-panda-img celebrate-totoro-img">
             <div class="fc-finished-title">Bạn đã hoàn thành lượt thẻ này!</div>
             <div class="fc-finished-desc">Tất cả các thẻ trong danh sách đã được bạn xem qua. Bạn có thể ôn lại từ đầu hoặc lọc riêng các từ chưa thuộc.</div>
             <div class="task-lock-banner" id="fc-finished-task-warn" style="display:none; max-width:460px; margin:2px auto 6px; text-align:left; font-size:13.5px; line-height:1.5;"></div>
@@ -379,20 +751,194 @@
           <div class="keyboard-hint">Phím tắt: <strong>Space</strong> Lật thẻ · <strong>← / →</strong> Chuyển thẻ · <strong>1 / 2 / 3</strong> Chấm điểm · <strong>R</strong> Nghe lại</div>
         </div>
 
-        <!-- RIGHT DECK: HABIT STREAK & MASTERY PROGRESS -->
-        <aside class="study-deck study-deck-right" id="study-deck-right" aria-label="Tiện ích chỉ số chăm chỉ và tiến độ thuộc từ">
-          <!-- Widget 3: Peach Coral Study Streak & Chart -->
-          <div class="deck-widget widget-theme-coral" id="widget-study-streak">
+        <!-- RIGHT DECK: TOP = MASTERY DONUT PROGRESS (symmetrical with Chrono Clock) | BOTTOM = HABIT STREAK -->
+        <aside class="study-deck study-deck-right" id="study-deck-right" aria-label="Tiện ích tiến độ thuộc từ và chỉ số chăm chỉ">
+          <!-- Widget 3 (Top-Right): Vocabulary Mastery Progress with SVG Donut Ring from demo_v3 -->
+          <div class="deck-widget widget-theme-teal ink-brackets has-stamp" id="widget-vocab-progress">
+            <svg class="ghibli-stamp" style="top:10px;right:12px;width:40px;height:40px;opacity:0.14;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <circle cx="24" cy="24" r="11" stroke="currentColor" stroke-width="2.2"/>
+              <path d="M24 9V13M24 35V39M9 24H13M35 24H39M13.5 13.5L16.5 16.5M31.5 31.5L34.5 34.5M34.5 13.5L31.5 16.5M16.5 31.5L13.5 34.5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
+              <circle cx="20" cy="23" r="2.2" fill="currentColor"/><circle cx="28" cy="23" r="2.2" fill="currentColor"/>
+            </svg>
+            <div class="widget-header">
+              <div class="widget-panda-lockup">
+                <img src="assets/images/panda_vocab.jpg" alt="" class="widget-panda-img">
+              </div>
+              <span class="tot-icon-tile" aria-hidden="true">
+                <svg viewBox="3 5.5 26 23.5" fill="none">
+                  <path d="M10.2 14L8.8 7.2L13.2 10.8C15 10.2 17 10.2 18.8 10.8L23.2 7.2L21.8 14C23.4 15.4 24 17.4 24 19H8C8 17.4 8.6 15.4 10.2 14Z" fill="#595651"/>
+                  <path d="M14.2 10.2C15.8 7.5 19.2 7.4 20.6 9.5C18.5 11 15.8 11.2 14.2 10.2Z" fill="#4E9460"/>
+                  <circle cx="13" cy="14.3" r="1.9" fill="#FFFFFF"/><circle cx="13.2" cy="14.3" r="0.95" fill="#181A1F"/>
+                  <circle cx="19" cy="14.3" r="1.9" fill="#FFFFFF"/><circle cx="18.8" cy="14.3" r="0.95" fill="#181A1F"/>
+                  <path d="M4.2 18.8C4.2 17.7 5.2 17 6.3 17.2L16 18.8L25.7 17.2C26.8 17 27.8 17.7 27.8 18.8V26.4C27.8 27.2 27 27.8 26.2 27.6L16 26L5.8 27.6C5 27.8 4.2 27.2 4.2 26.4V18.8Z" fill="#FBF8F0" stroke="#3F6E4A" stroke-width="1.6" stroke-linejoin="round"/>
+                  <path d="M16 18.8V26" stroke="#3F6E4A" stroke-width="1.5"/>
+                </svg>
+              </span>
+              <div class="widget-title-group">
+                <div class="widget-title">Tiến Độ Thuộc Từ</div>
+                <div class="widget-subtitle" id="widget-scope-name">Từ Vựng Paraphrase</div>
+              </div>
+            </div>
+
+            <div class="tot-vocab-donut-row">
+              <div class="tot-donut-wrap">
+                <svg class="tot-donut-svg" viewBox="0 0 80 80" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="donutOkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#3F8E59"/>
+                      <stop offset="100%" stop-color="#22683E"/>
+                    </linearGradient>
+                  </defs>
+                  <circle cx="40" cy="40" r="37.5" fill="none" stroke="var(--border-strong)" stroke-width="1.2" stroke-dasharray="1.5 4.2" opacity=".75"/>
+                  <circle cx="40" cy="40" r="31" fill="none" stroke="var(--bg-subtle)" stroke-width="9.5" />
+                  <circle id="vocab-donut-warm" cx="40" cy="40" r="31" fill="none" stroke="var(--streak)" stroke-width="9.5" stroke-dasharray="194.8" stroke-dashoffset="194.8" />
+                  <circle id="vocab-donut-ok" cx="40" cy="40" r="31" fill="none" stroke="url(#donutOkGrad)" stroke-width="9.5" stroke-linecap="round" stroke-dasharray="194.8" stroke-dashoffset="194.8" />
+                </svg>
+                <div class="tot-donut-center">
+                  <span class="tot-donut-pct tabular" id="vocab-donut-pct">0%</span>
+                  <span class="tot-donut-lbl">Thuộc</span>
+                </div>
+              </div>
+
+              <div class="vocab-stats-list">
+                <div class="vocab-stat-row is-ok">
+                  <div class="vocab-stat-label">
+                    <span class="tot-stat-ico ok" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="1.6"/><path d="M6.5 10.3l2.3 2.3 4.8-4.9" stroke="var(--ok)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    <span>Đã thuộc</span>
+                  </div>
+                  <div class="vocab-stat-value tabular">
+                    <strong id="stat-count-mastered">0</strong>
+                    <span class="stat-pct" id="stat-pct-mastered">(0%)</span>
+                  </div>
+                </div>
+
+                <div class="vocab-stat-row is-warm">
+                  <div class="vocab-stat-label">
+                    <span class="tot-stat-ico warm" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="var(--streak-soft)" stroke="var(--streak)" stroke-width="1.6"/><path d="M10 6v4.3l2.7 1.6" stroke="var(--streak)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                    <span>Nhớ chậm</span>
+                  </div>
+                  <div class="vocab-stat-value tabular">
+                    <strong id="stat-count-slow">0</strong>
+                    <span class="stat-pct" id="stat-pct-slow">(0%)</span>
+                  </div>
+                </div>
+
+                <button type="button" class="vocab-stat-row is-muted is-filter-row" id="btn-filter-unmastered" onclick="toggleUnmasteredFilter()" title="Bấm để lọc chỉ học các từ chưa thuộc">
+                  <div class="vocab-stat-label">
+                    <span class="tot-stat-ico muted" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none"><rect x="3.5" y="3.5" width="13" height="13" rx="4" fill="var(--surface-muted)" stroke="var(--ink-3)" stroke-width="1.5"/><path d="M7.5 10h5" stroke="var(--ink-3)" stroke-width="1.7" stroke-linecap="round"/></svg>
+                    </span>
+                    <span>Chưa thuộc</span>
+                  </div>
+                  <div class="vocab-stat-value tabular">
+                    <strong id="stat-count-unlearned">0</strong>
+                    <span class="stat-pct" id="stat-pct-unlearned">(100%)</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <button type="button" class="vocab-stat-row due-review-row is-filter-row" id="btn-filter-due" onclick="toggleDueReviewFilter()" title="Bấm để lọc các từ đến hạn ôn tập">
+              <div class="vocab-stat-label">
+                <span class="tot-stat-ico due" aria-hidden="true">
+                  <svg viewBox="0 0 20 20" fill="none"><path d="M10 3.2a4.8 4.8 0 0 1 4.8 4.8v2.7l1.3 2a.7.7 0 0 1-.6 1.1H4.5a.7.7 0 0 1-.6-1.1l1.3-2V8A4.8 4.8 0 0 1 10 3.2z" fill="var(--streak-soft)" stroke="var(--streak)" stroke-width="1.5" stroke-linejoin="round"/><path d="M8.2 15.2a2 2 0 0 0 3.6 0" stroke="var(--streak)" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </span>
+                <span>Từ cần ôn</span>
+              </div>
+              <div class="vocab-stat-value" style="display:flex; align-items:center; gap:6px;">
+                <strong id="stat-count-due">0</strong>
+                <span id="top-due-count" style="display:none;">0</span>
+                <span class="btn-due-quick" id="btn-due-quick" style="display:none;">Ôn ngay</span>
+              </div>
+            </button>
+
+            <div class="bamboo-progress-bar">
+              <div class="bamboo-seg-mastered" id="bar-mastered" style="width: 0%;" title="Đã thuộc"></div>
+              <div class="bamboo-seg-slow" id="bar-slow" style="width: 0%;" title="Nhớ chậm"></div>
+              <div class="bamboo-seg-unlearned" id="bar-unlearned" style="width: 100%;" title="Chưa thuộc"></div>
+            </div>
+          </div>
+
+          <!-- Widget 4 (Study Focus Bottom-Right): Mục Tiêu Phiên Học (Không trùng Top Bar / Home) -->
+          <div class="deck-widget widget-theme-coral ink-brackets has-stamp" id="widget-four-decks">
+            <div class="widget-header">
+              <span class="tot-icon-tile" aria-hidden="true">
+                <svg viewBox="2 2 20 20" fill="none">
+                  <circle cx="12" cy="12" r="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.8"/>
+                  <circle cx="12" cy="12" r="4.2" fill="var(--surface)" stroke="var(--streak)" stroke-width="1.7"/>
+                  <circle cx="12" cy="12" r="1.5" fill="var(--accent)"/>
+                </svg>
+              </span>
+              <div class="widget-title-group">
+                <div class="widget-title">Mục Tiêu Phiên Học</div>
+                <div class="widget-subtitle">Giữ nhịp hoàn thành từng chặng</div>
+              </div>
+            </div>
+
+            <div class="tot-session-target-row" role="group" aria-label="Chọn mục tiêu số từ phiên này">
+              <span class="tot-session-lbl">Chỉ tiêu phiên</span>
+              <div class="tot-mini-seg">
+                <button type="button" class="tot-mini-seg-btn" data-session-goal="15">15</button>
+                <button type="button" class="tot-mini-seg-btn active" data-session-goal="20">20</button>
+                <button type="button" class="tot-mini-seg-btn" data-session-goal="30">30</button>
+              </div>
+            </div>
+
+            <div class="tot-session-progress-box">
+              <div class="tot-session-row-top">
+                <span class="tabular" id="session-goal-progress-txt">0 / 20 từ đã chấm</span>
+                <span class="tot-session-pct tabular" id="session-goal-pct">0%</span>
+              </div>
+              <div class="tot-deck-bar"><div class="seg-ok" id="session-goal-bar" style="width:0%"></div></div>
+            </div>
+
+            <div class="tot-session-metrics">
+              <div class="tot-session-pill">
+                <strong class="tabular" id="session-stat-mastered">0</strong>
+                <span>Thuộc ngay</span>
+              </div>
+              <div class="tot-session-pill">
+                <strong class="tabular" id="session-stat-review">0</strong>
+                <span>Cần ôn lại</span>
+              </div>
+              <div class="tot-session-pill">
+                <strong class="tabular" id="session-stat-rate">—</strong>
+                <span>Từ / phút</span>
+              </div>
+            </div>
+
+            <div class="tot-session-caption" id="session-goal-caption">Chấm 1 / 2 / 3 sau khi lật thẻ để tính nhịp học.</div>
+          </div>
+
+          <!-- Hidden on #screen-study (preserved in DOM for JS/Home/Streak sync) -->
+          <div class="deck-widget widget-theme-coral ink-brackets has-stamp is-home-only-widget" id="widget-study-streak">
+            <svg class="ghibli-stamp warm" style="top:10px;right:12px;width:40px;height:40px;opacity:0.14;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <path d="M24 12V6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M12 22C12 15.5 17 11.5 24 11.5C31 11.5 36 15.5 36 22H12Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".12"/>
+              <path d="M15 22C15 32.5 19 39 24 41.5C29 39 33 32.5 33 22" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+            </svg>
             <div class="widget-header">
               <div class="widget-panda-lockup">
                 <img src="assets/images/panda_streak.jpg" alt="" class="widget-panda-img">
               </div>
+              <span class="tot-icon-tile warm" aria-hidden="true">
+                <svg viewBox="2 2 20 20" fill="none">
+                  <rect x="3.5" y="13" width="3.8" height="7" rx="1.6" fill="#D99B58"/>
+                  <rect x="10.1" y="9" width="3.8" height="11" rx="1.6" fill="#4E9460"/>
+                  <rect x="16.7" y="5.5" width="3.8" height="14.5" rx="1.6" fill="#E67E35"/>
+                  <path d="M12 9C12 6 14.2 4 16.5 4.2C15.8 6.8 14 8.5 12 9Z" fill="#4E9460"/>
+                </svg>
+              </span>
               <div class="widget-title-group">
                 <div class="widget-title">Chỉ Số Chăm Chỉ</div>
                 <div class="widget-subtitle">Biểu đồ học tập</div>
               </div>
               <div class="streak-badge" id="streak-count-badge">
-                Chuỗi <span id="streak-days-num">0</span> ngày
+                <span class="tot-acorn-inline" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><g transform="rotate(-24 12 12)"><path d="M12 4.8V2.1" stroke="#5B3B1E" stroke-width="2" stroke-linecap="round"/><path d="M5.4 10.6C5.4 6.7 8.4 4.5 12 4.5C15.6 4.5 18.6 6.7 18.6 10.6C14.8 11.4 9.2 11.4 5.4 10.6Z" fill="#8D653E" stroke="#57391C" stroke-width="1.45" stroke-linejoin="round"/><path d="M7.4 7.6L9.4 10.2M10.4 5.6L12.6 10.3M13.6 5.6L15.4 10.2M16.6 7.4L14.2 10.2M13.4 5.6L11 10.2M10 6L7.8 9.8" stroke="#4D3015" stroke-width="0.95" stroke-linecap="round" opacity=".72"/><path d="M7.2 10.8C7 15.8 9 19.6 12 21.5C15 19.6 17 15.8 16.8 10.8C13.6 11.5 10.4 11.5 7.2 10.8Z" fill="#AC5D28" stroke="#633210" stroke-width="1.45" stroke-linejoin="round"/><path d="M12 21.3V22.4" stroke="#633210" stroke-width="1.4" stroke-linecap="round"/><path d="M9.4 12.8C9.3 15 9.8 17 10.6 18.2" stroke="#F8D9B8" stroke-width="1.4" stroke-linecap="round" opacity=".82"/></g></svg></span> Chuỗi <span id="streak-days-num">0</span> ngày
               </div>
             </div>
 
@@ -409,69 +955,295 @@
               <strong id="streak-week-summary">0 / 7 ngày</strong>
             </div>
           </div>
+        </aside>
+      </div>
+    </section>
 
-          <!-- Widget 4: Dew Teal Vocabulary Mastery Progress -->
-          <div class="deck-widget widget-theme-teal" id="widget-vocab-progress">
-            <div class="widget-header">
-              <div class="widget-panda-lockup">
-                <img src="assets/images/panda_vocab.jpg" alt="" class="widget-panda-img">
-              </div>
-              <div class="widget-title-group">
-                <div class="widget-title">Tiến Độ Thuộc Từ</div>
-                <div class="widget-subtitle" id="widget-scope-name">Từ Vựng Paraphrase</div>
-              </div>
+    <!-- ==================================================================
+         TAB 1: HOME DASHBOARD — 1-TO-1 MATCH WITH ielts_master_redesign_demo_v3.html
+         ================================================================== -->
+    <section class="tot-screen" id="screen-home" aria-label="Trang chủ tiến độ học tập">
+      <div class="tot-home-layout">
+        <div class="tot-home-top">
+          <div class="tot-hero-card ink-brackets has-stamp">
+            <svg class="ghibli-stamp" style="right:308px;bottom:-6px;width:78px;height:78px;opacity:0.13;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+              <path d="M32 5V10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M10 22C14 12 22 9 32 9C42 9 50 12 54 22C48.5 19.8 43 19.8 38.5 21.6C34 19.5 30 19.5 25.5 21.6C21 19.8 15.5 19.8 10 22Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" fill="currentColor" fill-opacity=".1"/>
+              <path d="M32 20V38C32 40.5 34.4 41.2 35.4 39.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M22 28L19 19L26 24C29.5 23 34.5 23 38 24L45 19L42 28C47.5 32.5 50 40 49.5 48.5C48.8 55.5 42 59 32 59C22 59 15.2 55.5 14.5 48.5C14 40 16.5 32.5 22 28Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/>
+              <circle cx="25" cy="31" r="2" fill="currentColor"/><circle cx="39" cy="31" r="2" fill="currentColor"/>
+              <path d="M22 45L25 42L28 45M29 44L32 41L35 44M36 45L39 42L42 45" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div>
+              <div style="font-size:11px;font-weight:750;color:var(--accent);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">Đang học · IELTS Reading</div>
+              <h1 class="tot-hero-title" id="home-hero-greeting">Chào bạn, bắt đầu phiên học hôm nay nhé</h1>
+              <p class="tot-hero-sub" id="home-hero-sub">Đang đồng bộ dữ liệu học tập...</p>
             </div>
-
-            <div class="bamboo-progress-bar">
-              <div class="bamboo-seg-mastered" id="bar-mastered" style="width: 0%;" title="Đã thuộc"></div>
-              <div class="bamboo-seg-slow" id="bar-slow" style="width: 0%;" title="Nhớ chậm"></div>
-              <div class="bamboo-seg-unlearned" id="bar-unlearned" style="width: 100%;" title="Chưa thuộc"></div>
-            </div>
-
-            <div class="vocab-stats-list">
-              <div class="vocab-stat-row">
-                <div class="vocab-stat-label">
-                  <span class="dot-status mastered"></span>
-                  <span>Đã thuộc</span>
-                </div>
-                <div class="vocab-stat-value">
-                  <strong id="stat-count-mastered">0</strong> <span class="stat-pct" id="stat-pct-mastered">(0%)</span>
-                </div>
-              </div>
-
-              <div class="vocab-stat-row">
-                <div class="vocab-stat-label">
-                  <span class="dot-status slow"></span>
-                  <span>Nhớ chậm</span>
-                </div>
-                <div class="vocab-stat-value">
-                  <strong id="stat-count-slow">0</strong> <span class="stat-pct" id="stat-pct-slow">(0%)</span>
-                </div>
-              </div>
-
-              <div class="vocab-stat-row">
-                <div class="vocab-stat-label">
-                  <span class="dot-status unlearned"></span>
-                  <span>Chưa thuộc</span>
-                </div>
-                <div class="vocab-stat-value">
-                  <strong id="stat-count-unlearned">0</strong> <span class="stat-pct" id="stat-pct-unlearned">(100%)</span>
-                </div>
-              </div>
-
-              <div class="vocab-stat-row due-review-row" id="due-review-row">
-                <div class="vocab-stat-label">
-                  <span class="dot-status due"></span>
-                  <span>Từ cần ôn</span>
-                </div>
-                <div class="vocab-stat-value" style="display:flex; align-items:center; gap:6px;">
-                  <strong id="stat-count-due">0</strong>
-                  <button type="button" class="btn-due-quick" id="btn-due-quick" onclick="activateDueReviewOnly()" style="display:none;">Ôn ngay</button>
-                </div>
-              </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+              <button type="button" class="btn btn-primary tot-demo-btn" data-tot-view="flashcard">Học tiếp</button>
+              <button type="button" class="tot-demo-btn tot-btn-streak" onclick="RecognitionTestModule.startListFinalExam()">Speed Quiz</button>
+              <button type="button" class="tot-demo-btn" data-tot-view="practice">Luyện đề</button>
             </div>
           </div>
-        </aside>
+
+          <div class="tot-goal-card ink-brackets has-stamp">
+            <svg class="ghibli-stamp warm" style="right:10px;top:3px;width:36px;height:36px;opacity:0.15;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <path d="M24 12V6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
+              <path d="M12 22C12 15.5 17 11.5 24 11.5C31 11.5 36 15.5 36 22H12Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" fill="currentColor" fill-opacity=".1"/>
+              <path d="M15 22C15 32.5 19 39 24 41.5C29 39 33 32.5 33 22" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/>
+              <path d="M24 11.5C27 7 32 6 35 8.5C32 11.5 28 12.5 24 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+            <div class="tot-goal-ring">
+              <svg viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg-subtle)" stroke-width="8"/>
+                <circle id="home-goal-arc" cx="40" cy="40" r="32" fill="none" stroke="var(--streak)" stroke-width="8" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="160"/>
+              </svg>
+              <div class="tot-goal-center">
+                <span class="tabular" id="home-goal-pct" style="font-size:16.5px;font-weight:800;color:var(--streak);line-height:1;">0%</span>
+                <span style="font-size:9.5px;font-weight:650;color:var(--ink-3);text-transform:uppercase;margin-top:2px;">Hôm nay</span>
+              </div>
+            </div>
+            <div class="tot-goal-pills">
+              <div class="tot-goal-pill"><div class="tot-goal-num tabular" id="home-goal-mastered">0</div><div class="tot-goal-lbl">Từ vựng</div></div>
+              <div class="tot-goal-pill"><div class="tot-goal-num tabular" id="home-goal-tasks">0</div><div class="tot-goal-lbl">Task xong</div></div>
+              <div class="tot-goal-pill"><div class="tot-goal-num tabular" id="home-goal-mins">0/30p</div><div class="tot-goal-lbl">Tập trung</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 SKILLS HUB (EXACT demo_v3: Option B Full-Color Totoro Icons + 3 Quick-Jump Chips on ALL 4 cards!) -->
+        <div class="tot-skills-grid">
+          <div class="tot-skill-card active-skill ink-brackets has-stamp">
+            <svg class="ghibli-stamp" style="right:10px;bottom:6px;width:44px;height:44px;opacity:0.12;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <path d="M8 35C11 24 19 16 33 11C30 23 22 31 8 35Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" fill-opacity=".08"/>
+              <path d="M8 35L25 18M17 26L22 25" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="35" cy="31" r="6" stroke="currentColor" stroke-width="1.8" stroke-dasharray="2.5 2.5"/>
+            </svg>
+            <div class="tot-skill-top">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <span class="tot-icon-tile" title="Totoro đọc sách"><svg viewBox="3 5.5 26 23.5" fill="none"><path d="M10.2 14L8.8 7.2L13.2 10.8C15 10.2 17 10.2 18.8 10.8L23.2 7.2L21.8 14C23.4 15.4 24 17.4 24 19H8C8 17.4 8.6 15.4 10.2 14Z" fill="#595651"/><path d="M14.2 10.2C15.8 7.5 19.2 7.4 20.6 9.5C18.5 11 15.8 11.2 14.2 10.2Z" fill="#4E9460"/><circle cx="13" cy="14.3" r="1.9" fill="#FFFFFF"/><circle cx="13.2" cy="14.3" r="0.95" fill="#181A1F"/><circle cx="19" cy="14.3" r="1.9" fill="#FFFFFF"/><circle cx="18.8" cy="14.3" r="0.95" fill="#181A1F"/><ellipse cx="16" cy="15.2" rx="1.2" ry="0.7" fill="#181A1F"/><path d="M4.2 18.8C4.2 17.7 5.2 17 6.3 17.2L16 18.8L25.7 17.2C26.8 17 27.8 17.7 27.8 18.8V26.4C27.8 27.2 27 27.8 26.2 27.6L16 26L5.8 27.6C5 27.8 4.2 27.2 4.2 26.4V18.8Z" fill="#FBF8F0" stroke="#3F6E4A" stroke-width="1.6" stroke-linejoin="round"/><path d="M16 18.8V26" stroke="#3F6E4A" stroke-width="1.5"/><path d="M7.5 21.2L13.2 22M7.5 23.8L13.2 24.4M24.5 21.2L18.8 22M24.5 23.8L18.8 24.4" stroke="#7EA386" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+                <div style="min-width:0;"><div class="tot-skill-name">Reading</div><div class="tot-skill-sub tabular" id="home-reading-sub">0 từ · 0/110 Tasks</div></div>
+              </div>
+              <strong class="tabular" id="home-reading-pct" style="font-size:15.5px;color:var(--accent);flex-shrink:0;">0%</strong>
+            </div>
+            <div class="tot-mastery-bar"><div class="tot-seg-ok" id="home-reading-bar-ok" style="width:0%"></div><div class="tot-seg-warm" id="home-reading-bar-warm" style="width:0%"></div></div>
+            <div style="display:flex;gap:5px;"><button type="button" class="tot-mini-chip" data-tot-view="flashcard">Flashcard</button><button type="button" class="tot-mini-chip" data-tot-view="task">Task</button><button type="button" class="tot-mini-chip" data-tot-view="practice">Practice</button></div>
+          </div>
+
+          <div class="tot-skill-card has-stamp">
+            <svg class="ghibli-stamp info" style="right:10px;bottom:6px;width:42px;height:42px;opacity:0.12;" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M12 27V24C12 17.4 17.4 12 24 12C30.6 12 36 17.4 36 24V27" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><rect x="9" y="25" width="6" height="10" rx="3" stroke="currentColor" stroke-width="2"/><rect x="33" y="25" width="6" height="10" rx="3" stroke="currentColor" stroke-width="2"/><path d="M19 30C21.5 28 26.5 28 29 30" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <div class="tot-skill-top">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <span class="tot-icon-tile info" title="Totoro đeo tai nghe"><svg viewBox="2.5 5 27 23.2" fill="none"><path d="M6.4 17.5V15.8C6.4 10.6 10.7 6.4 16 6.4C21.3 6.4 25.6 10.6 25.6 15.8V17.5" stroke="#53469E" stroke-width="2.2" stroke-linecap="round"/><path d="M10.8 13.8L9.5 8.8L13.6 11.8C15.1 11.3 16.9 11.3 18.4 11.8L22.5 8.8L21.2 13.8C23.2 15.4 24 17.8 24 20.6C24 24.6 20.6 27 16 27C11.4 27 8 24.6 8 20.6C8 17.8 8.8 15.4 10.8 13.8Z" fill="#595651"/><ellipse cx="16" cy="22.4" rx="6" ry="3.8" fill="#EFE5CE"/><path d="M12.6 22.2L14 20.9L15.4 22.2M16.6 22.2L18 20.9L19.4 22.2" stroke="#595651" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="16.4" r="1.8" fill="#FFFFFF"/><circle cx="13.2" cy="16.4" r="0.9" fill="#181A1F"/><circle cx="19" cy="16.4" r="1.8" fill="#FFFFFF"/><circle cx="18.8" cy="16.4" r="0.9" fill="#181A1F"/><rect x="3.8" y="16.2" width="4.4" height="7.6" rx="2.2" fill="#6356B5" stroke="#3F3482" stroke-width="1.3"/><rect x="23.8" y="16.2" width="4.4" height="7.6" rx="2.2" fill="#6356B5" stroke="#3F3482" stroke-width="1.3"/></svg></span>
+                <div style="min-width:0;"><div class="tot-skill-name">Listening</div><div class="tot-skill-sub">Dictation · Section 1–4</div></div>
+              </div>
+              <span class="tot-tag soon">Sắp mở</span>
+            </div>
+            <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:0%"></div></div>
+            <div style="display:flex;gap:5px;"><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Listening')">Flashcard</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Listening')">Task</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Listening')">Practice</button></div>
+          </div>
+
+          <div class="tot-skill-card has-stamp">
+            <svg class="ghibli-stamp warm" style="right:10px;bottom:6px;width:42px;height:42px;opacity:0.12;" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M14 36L34 11C36 8.5 39 10.5 37 13L21 36H14Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" fill-opacity=".08"/><path d="M10 38H34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="38" cy="34" r="2.2" fill="currentColor"/></svg>
+            <div class="tot-skill-top">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <span class="tot-icon-tile warm" title="Totoro & bút lông thư họa"><svg viewBox="4.5 4.2 24.2 23.2" fill="none"><path d="M8.4 14.5L7.2 9.2L10.8 12.1C12.1 11.7 13.5 11.7 14.8 12.1L18.4 9.2L17.2 14.5C18.8 15.9 19.6 18 19.6 20.5C19.6 24.2 16.7 26.2 12.8 26.2C8.9 26.2 6 24.2 6 20.5C6 18 6.8 15.9 8.4 14.5Z" fill="#595651"/><ellipse cx="12.8" cy="21.8" rx="4.8" ry="3.4" fill="#EFE5CE"/><circle cx="10.4" cy="16.6" r="1.65" fill="#FFFFFF"/><circle cx="10.6" cy="16.6" r="0.8" fill="#181A1F"/><circle cx="15.2" cy="16.6" r="1.65" fill="#FFFFFF"/><circle cx="15" cy="16.6" r="0.8" fill="#181A1F"/><path d="M18.8 23.8L26.8 8C27.8 6.2 25.8 4.8 24.2 6.2C21.6 8.6 19.8 13.2 18.8 17.8V23.8Z" fill="#E69A3A" stroke="#9C5818" stroke-width="1.4" stroke-linejoin="round"/><path d="M17.5 26H27.4" stroke="#9C5818" stroke-width="1.9" stroke-linecap="round"/></svg></span>
+                <div style="min-width:0;"><div class="tot-skill-name">Writing</div><div class="tot-skill-sub">Flow Ideas · Task 1 &amp; 2</div></div>
+              </div>
+              <span class="tot-tag soon">Sắp mở</span>
+            </div>
+            <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:0%"></div></div>
+            <div style="display:flex;gap:5px;"><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Writing')">Flashcard</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Writing')">Task</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Writing')">Practice</button></div>
+          </div>
+
+          <div class="tot-skill-card has-stamp">
+            <svg class="ghibli-stamp" style="right:10px;bottom:6px;width:42px;height:42px;opacity:0.12;" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M15 21L12 12L19 17.5C21.5 16.8 24.5 16.8 27 17.5L34 12L31 21C35 24 37 29 37 34.5C37 41.5 31 45 23 45C15 45 9 41.5 9 34.5C9 29 11 24 15 21Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="18.5" cy="27" r="1.6" fill="currentColor"/><circle cx="27.5" cy="27" r="1.6" fill="currentColor"/></svg>
+            <div class="tot-skill-top">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <span class="tot-icon-tile neutral" title="Chibi-Totoro phát âm & sóng âm"><svg viewBox="4.5 6.2 25 21.5" fill="none"><path d="M8.6 13.4L7.3 8L11.2 11C12.5 10.5 14.1 10.5 15.4 11L19.3 8L18 13.4C19.8 14.9 20.6 17.2 20.6 19.9C20.6 24 17.5 26.4 13.3 26.4C9.1 26.4 6 24 6 19.9C6 17.2 6.8 14.9 8.6 13.4Z" fill="#FFFFFF" stroke="#4D5159" stroke-width="1.65" stroke-linejoin="round"/><circle cx="10.8" cy="16.4" r="1.3" fill="#1F2429"/><circle cx="15.8" cy="16.4" r="1.3" fill="#1F2429"/><ellipse cx="13.3" cy="19.8" rx="1.6" ry="1.2" fill="#D97A7A"/><path d="M22.6 13.2C24.4 15 24.4 18.8 22.6 20.6" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/><path d="M25.6 10.4C28.6 13.6 28.6 20.2 25.6 23.4" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" opacity=".65"/></svg></span>
+                <div style="min-width:0;"><div class="tot-skill-name">Speaking</div><div class="tot-skill-sub">Spoken Chunks · Part 1–3</div></div>
+              </div>
+              <span class="tot-tag soon">Sắp mở</span>
+            </div>
+            <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:0%"></div></div>
+            <div style="display:flex;gap:5px;"><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Speaking')">Flashcard</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Speaking')">Task</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Speaking')">Practice</button></div>
+          </div>
+        </div>
+
+        <!-- BOTTOM 3 DATA-RICH PANELS (EXACT demo_v3: Tuần/Tháng/Năm Chart + Medal Leaderboard + History) -->
+        <div class="tot-home-bottom">
+          <div class="tot-home-panel ink-brackets has-stamp">
+            <svg class="ghibli-stamp warm" style="left:54%;bottom:7px;width:30px;height:30px;opacity:0.2;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <path d="M24 38V18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+              <path d="M24 24C16 23 11 17 11 11C18 11 23 16 24 24Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".12"/>
+              <path d="M24 20C32 19 37 13 37 7C30 7 25 12 24 20Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".12"/>
+              <path d="M14 38H34" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+            <div class="tot-panel-head">
+              <div class="tot-panel-title-wrap">
+                <span class="tot-icon-tile warm"><svg viewBox="2 2 20 20" fill="none"><rect x="3.5" y="13" width="3.8" height="7" rx="1.6" fill="#D99B58"/><rect x="10.1" y="9" width="3.8" height="11" rx="1.6" fill="#4E9460"/><rect x="16.7" y="5.5" width="3.8" height="14.5" rx="1.6" fill="#E67E35"/><path d="M12 9C12 6 14.2 4 16.5 4.2C15.8 6.8 14 8.5 12 9Z" fill="#4E9460"/></svg></span>
+                <div><div class="tot-panel-title">Biểu đồ nhịp học</div><div class="tot-panel-sub tabular" id="home-chart-sub">0 / 7 ngày · 0 phút tuần này</div></div>
+              </div>
+              <div class="tot-seg" id="home-chart-period-tabs" style="padding:2px;">
+                <button type="button" class="tot-seg-btn active" data-home-chart="week" style="height:23px;padding:0 7px;font-size:10.5px;">Tuần</button>
+                <button type="button" class="tot-seg-btn" data-home-chart="month" style="height:23px;padding:0 7px;font-size:10.5px;">Tháng</button>
+                <button type="button" class="tot-seg-btn" data-home-chart="year" style="height:23px;padding:0 7px;font-size:10.5px;">Năm</button>
+              </div>
+            </div>
+            <div class="tot-chart-wrap" id="home-chart-bars"></div>
+            <div class="tot-panel-foot">
+              <span class="tot-foot-meta">Trung bình <strong class="tabular" id="home-chart-avg">0 phút / ngày</strong></span>
+              <span class="tot-foot-pill tabular" id="home-chart-badge">Thực học</span>
+            </div>
+          </div>
+
+          <div class="tot-home-panel ink-brackets has-stamp">
+            <svg class="ghibli-stamp" style="left:52%;bottom:7px;width:30px;height:30px;opacity:0.2;" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+              <circle cx="28" cy="28" r="22" stroke="currentColor" stroke-width="2.2" stroke-dasharray="4 3"/>
+              <circle cx="28" cy="28" r="16.5" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M28 16L31 23L38.5 24L33 29L34.5 36.5L28 33L21.5 36.5L23 29L17.5 24L25 23L28 16Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            <div class="tot-panel-head">
+              <div class="tot-panel-title-wrap">
+                <span class="tot-icon-tile"><svg viewBox="2 2 20 20" fill="none"><path d="M7 6.5H4.2C4.2 9.4 5.4 11 7.2 11.2M17 6.5H19.8C19.8 9.4 18.6 11 16.8 11.2" stroke="#C78A20" stroke-width="1.8" stroke-linecap="round"/><path d="M7 4.2H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4.2Z" fill="#F2BE54" stroke="#B67B14" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 15V18.8M8.5 19.5H15.5" stroke="#B67B14" stroke-width="2" stroke-linecap="round"/><path d="M12 6.8L12.7 8.4L14.4 8.6L13.1 9.7L13.5 11.4L12 10.5L10.5 11.4L10.9 9.7L9.6 8.6L11.3 8.4L12 6.8Z" fill="#FFF8E2"/></svg></span>
+                <div><div class="tot-panel-title">Bảng thi đua lớp</div><div class="tot-panel-sub">Điểm thực học · Chống treo máy</div></div>
+              </div>
+              <div class="tot-seg" style="padding:2px;">
+                <button type="button" class="tot-seg-btn active" data-home-lb="week" style="height:23px;padding:0 7px;font-size:10.5px;">Tuần</button>
+                <button type="button" class="tot-seg-btn" data-home-lb="month" style="height:23px;padding:0 7px;font-size:10.5px;">Tháng</button>
+              </div>
+            </div>
+            <div class="tot-list-stack" id="home-lb-list"></div>
+            <div class="tot-panel-foot">
+              <span class="tot-foot-meta">Hạng của bạn <strong class="tabular" id="home-lb-myrank">—</strong></span>
+              <button type="button" class="tot-foot-btn" onclick="openClassReportModal()">Xem cả lớp →</button>
+            </div>
+          </div>
+
+          <div class="tot-home-panel ink-brackets has-stamp">
+            <svg class="ghibli-stamp info" style="top:11px;right:15px;width:42px;height:42px;opacity:0.16;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+              <path d="M18 10H30M18 38H30M24 6V10M24 38V42" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
+              <rect x="14" y="13" width="20" height="22" rx="8" stroke="currentColor" stroke-width="2.1"/>
+              <path d="M14 20H34M14 28H34" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            <div class="tot-panel-head">
+              <div class="tot-panel-title-wrap">
+                <span class="tot-icon-tile info"><svg viewBox="2 2 20 20" fill="none"><circle cx="12" cy="12" r="8.2" fill="#FFFFFF" stroke="#6658AD" stroke-width="1.8"/><circle cx="12" cy="12" r="6" fill="#EBE8FA"/><path d="M12 7.8V12L15.2 13.8" stroke="#53469E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="1.2" fill="#E67E35"/></svg></span>
+                <div><div class="tot-panel-title">Lịch sử làm bài gần đây</div><div class="tot-panel-sub">Task bài tập &amp; Đề Practice</div></div>
+              </div>
+            </div>
+            <div class="tot-list-stack" id="home-history-list"></div>
+            <div class="tot-panel-foot">
+              <span class="tot-foot-meta">Tổng <strong class="tabular" id="home-history-total">0 bài</strong> đã nộp</span>
+              <button type="button" class="tot-foot-btn" data-tot-view="task">Xem tất cả →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         TAB 3: TASK HUB — 1-TO-1 MATCH WITH ielts_master_redesign_demo_v3.html
+         ================================================================== -->
+    <section class="tot-screen" id="screen-tasks-hub" aria-label="Danh sách 110 Task bài tập">
+      <div class="tot-section-shell ink-brackets has-stamp">
+        <svg class="ghibli-stamp" style="right:26px;bottom:22px;width:116px;height:116px;opacity:0.09;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <circle cx="32" cy="32" r="29" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <path d="M19 25L16 12L25 19.5C29 18.2 35 18.2 39 19.5L48 12L45 25C50 28.5 52.5 34.5 52.5 41C52.5 50.5 44 55.5 32 55.5C20 55.5 11.5 50.5 11.5 41C11.5 34.5 14 28.5 19 25Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/>
+          <path d="M32 14C35 10.5 39.5 10 42 12.5C39 15 35 15.5 32 14Z" fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="1.7"/>
+          <circle cx="24.5" cy="31" r="2" fill="currentColor"/><circle cx="39.5" cy="31" r="2" fill="currentColor"/>
+          <path d="M22 43.5L25 40.5L28 43.5M29 42.5L32 39.5L35 42.5M36 43.5L39 40.5L42 43.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="tot-shell-head">
+          <div>
+            <h2 class="tot-shell-title">Task bài tập · Reading</h2>
+            <p class="tot-shell-sub" id="inline-task-sub">110 bài tập chia theo 4 cấp độ từ vựng.</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div class="tot-seg" id="inline-task-suites"></div>
+            <button type="button" class="tot-demo-btn" style="height:34px;padding:0 12px;font-size:12px;" onclick="TasksModule.openTaskSummaryModal()">Bảng thống kê</button>
+          </div>
+        </div>
+        <div class="tot-tasks-grid" id="inline-tasks-grid"></div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         TAB 4: PRACTICE — 1-TO-1 MATCH WITH ielts_master_redesign_demo_v3.html
+         ================================================================== -->
+    <section class="tot-screen" id="screen-practice" aria-label="Luyện đề IELTS Reading">
+      <div class="tot-section-shell ink-brackets has-stamp">
+        <svg class="ghibli-stamp" style="right:26px;bottom:22px;width:116px;height:116px;opacity:0.09;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <circle cx="32" cy="32" r="29" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <path d="M32 7V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M12 24C16 14 23 11 32 11C41 11 48 14 52 24C47 21.8 42 21.8 38 23.5C34 21.6 30 21.6 26 23.5C22 21.8 17 21.8 12 24Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" fill-opacity=".1"/>
+          <path d="M32 22V39C32 41.2 34.4 42 35.4 40" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+          <path d="M22 29L19.5 21L26 25.5C29.5 24.5 34.5 24.5 38 25.5L44.5 21L42 29C47 33 49 40 48.5 47.5C47.8 53.5 41.5 56.5 32 56.5C22.5 56.5 16.2 53.5 15.5 47.5C15 40 17 33 22 29Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="25.5" cy="32.5" r="1.9" fill="currentColor"/><circle cx="38.5" cy="32.5" r="1.9" fill="currentColor"/>
+        </svg>
+        <div class="tot-shell-head">
+          <div>
+            <h2 class="tot-shell-title">Luyện đề IELTS · Reading</h2>
+            <p class="tot-shell-sub">Làm đề bấm giờ chuẩn phòng thi, tự động lưu lịch sử &amp; rút từ sai vào Flashcard.</p>
+          </div>
+          <div class="tot-seg" id="practice-filter-tabs">
+            <button type="button" class="tot-seg-btn active" data-practice-filter="all">Tất cả đề</button>
+            <button type="button" class="tot-seg-btn" data-practice-filter="live">Đang mở</button>
+            <button type="button" class="tot-seg-btn" data-practice-filter="cambridge">Đề Cambridge</button>
+          </div>
+        </div>
+        <div class="tot-practice-grid" id="practice-cards-grid">
+          <div class="tot-exam-card ink-brackets has-stamp" data-practice-cat="live">
+            <svg class="ghibli-stamp warm" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.12;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+              <path d="M32 6V12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M10 26C14 14 22 11 32 11C42 11 50 14 54 26C48 23.5 43 23.5 38 25.5C34 23.5 30 23.5 26 25.5C21 23.5 16 23.5 10 26Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".08"/>
+              <path d="M32 24V48C32 52 36 53 38 49.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+            </svg>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="tot-pos-badge">Speed Quiz</span><span class="tot-hist-badge tabular">5 giây / từ</span></div>
+              <div style="font-size:15px;font-weight:750;margin-top:8px;color:var(--ink);">Kiểm tra phản xạ toàn bộ từ vựng</div>
+              <div style="font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5;">Đúng → Đã thuộc · Sai → tự đẩy về Cần ôn &amp; tự động lưu mốc mỗi 50 từ.</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid var(--border);">
+              <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="openWordListModal()">Xem từ vựng</button>
+              <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="RecognitionTestModule.startListFinalExam()">Bắt đầu ngay</button>
+            </div>
+          </div>
+
+          <div class="tot-exam-card ink-brackets has-stamp" data-practice-cat="live">
+            <svg class="ghibli-stamp ok" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.13;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+              <circle cx="32" cy="32" r="26" stroke="currentColor" stroke-width="2.2" stroke-dasharray="4 3"/>
+              <path d="M20 26L17 15L25 21.5C29 20.5 35 20.5 39 21.5L47 15L44 26C48.5 29.5 51 35 51 41C51 49.5 43 54 32 54C21 54 13 49.5 13 41C13 35 15.5 29.5 20 26Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/>
+              <circle cx="25" cy="32" r="2" fill="currentColor"/><circle cx="39" cy="32" r="2" fill="currentColor"/>
+            </svg>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="tot-pos-badge">Signal Words</span><span class="tot-hist-badge tabular">40 từ nối</span></div>
+              <div style="font-size:15px;font-weight:750;margin-top:8px;color:var(--ink);">Bảng Từ Nối Chỉ Hướng Nghĩa</div>
+              <div style="font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5;">Nhận diện bẫy đảo chiều, quan hệ tương phản &amp; nhân quả trong Academic Reading.</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid var(--border);">
+              <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" data-tot-view="task">Làm Task</button>
+              <button type="button" class="tot-demo-btn tot-btn-soft" style="height:31px;font-size:12px;" onclick="openSignalWordsModal()">Mở bảng từ nối</button>
+            </div>
+          </div>
+
+          <div class="tot-exam-card ink-brackets has-stamp" data-practice-cat="cambridge">
+            <svg class="ghibli-stamp" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.11;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+              <path d="M18 22L14 8L24 16C29 14.5 35 14.5 40 16L50 8L46 22C52 26 55 33 55 41C55 52 45.5 58 32 58C18.5 58 9 52 9 41C9 33 12 26 18 22Z" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/>
+              <circle cx="23.5" cy="29" r="2.2" fill="currentColor"/><circle cx="40.5" cy="29" r="2.2" fill="currentColor"/>
+              <path d="M21 43L24.5 39.5L28 43M29 41.5L32 38.5L35 41.5M36 43L39.5 39.5L43 43" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="tot-pos-badge">Cambridge 19</span><span class="tot-hist-badge info">Sắp mở</span></div>
+              <div style="font-size:15px;font-weight:750;margin-top:8px;color:var(--ink);">Academic Reading · Full Test (60p)</div>
+              <div style="font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5;">Urban Farming · Deep Sea Mining · Cognitive Biases — rút từ sai về Flashcard.</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid var(--border);">
+              <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="window.TotoroUI?.notifySkillSoon('Đề Cambridge 19')">Chọn Passage</button>
+              <button type="button" class="tot-demo-btn tot-btn-soft" style="height:31px;font-size:12px;" onclick="window.TotoroUI?.notifySkillSoon('Đề Cambridge 19')">Làm Full Test</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -481,21 +1253,35 @@
       <div class="teacher-panel">
         <div class="teacher-panel-head">
           <div class="teacher-panel-brand">
-            <img src="assets/images/panda_leaderboard.jpg" alt="" class="teacher-panda-badge">
+            <div class="teacher-mascot-pedestal" aria-hidden="true">
+              <img src="assets/images/totoro_professor.png" alt="" class="teacher-totoro-badge">
+            </div>
             <div>
               <h2 class="teacher-panel-title">Theo Dõi Học Sinh</h2>
               <div class="teacher-panel-sub" id="teacher-sync-status">Đang đồng bộ dữ liệu lớp...</div>
             </div>
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn-subtle" id="btn-teacher-task-stats" onclick="TasksModule.openTaskSummaryModal()">Thống kê Task cả lớp</button>
-            <button type="button" class="btn-subtle" id="btn-teacher-export-csv" onclick="TasksModule.exportClassReportCsv()">Xuất Excel (.csv)</button>
-            <button type="button" class="btn btn-primary" id="btn-teacher-copy-report" onclick="copyFullClassReport()">Sao chép báo cáo lớp</button>
+          <div class="teacher-head-actions">
+            <button type="button" class="btn-subtle" id="btn-teacher-task-stats" onclick="TasksModule.openTaskSummaryModal()">
+              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19V11" stroke-linecap="round"/></svg>
+              <span>Thống kê Task</span>
+            </button>
+            <button type="button" class="btn-subtle" id="btn-teacher-export-csv" onclick="TasksModule.exportClassReportCsv()">
+              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Xuất CSV</span>
+            </button>
+            <button type="button" class="btn btn-primary" id="btn-teacher-copy-report" onclick="copyFullClassReport()">
+              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/></svg>
+              <span>Sao chép báo cáo</span>
+            </button>
           </div>
         </div>
         <div class="teacher-kpi-strip" id="teacher-kpi-strip"></div>
         <div class="teacher-toolbar-row">
-          <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" placeholder="Tìm nhanh học viên theo tên..." oninput="TasksModule.renderTeacherDashboard()">
+          <div class="teacher-search-wrap">
+            <svg class="tot-ico-sm teacher-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/></svg>
+            <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" placeholder="Tìm nhanh học viên theo tên hoặc mã ID..." oninput="TasksModule.renderTeacherDashboard()">
+          </div>
           <select class="scope-select teacher-sort-select" id="teacher-student-sort" onchange="TasksModule.renderTeacherDashboard()" aria-label="Sắp xếp danh sách học viên">
             <option value="rank">Sắp xếp: Xếp hạng tuần</option>
             <option value="mastered">Sắp xếp: Từ đã thuộc</option>
@@ -526,58 +1312,65 @@
       <div class="teacher-panel">
         <div class="teacher-panel-head">
           <div class="teacher-panel-brand">
-            <img src="assets/images/panda_vocab.jpg" alt="" class="teacher-panda-badge">
+            <span class="tot-icon-tile warm teacher-ledger-tile" aria-hidden="true">
+              <svg viewBox="3 5 26 24" fill="none"><path d="M10.2 13.8L8.8 7.2L13.2 10.6C15 10 17 10 18.8 10.6L23.2 7.2L21.8 13.8C23.4 15.2 24 17.2 24 18.8H8C8 17.2 8.6 15.2 10.2 13.8Z" fill="#595651"/><path d="M14.2 10C15.8 7.5 19.2 7.4 20.6 9.5C18.5 11 15.8 11.2 14.2 10Z" fill="#4E9460"/><circle cx="13" cy="14.2" r="1.8" fill="#FFFFFF"/><circle cx="13.2" cy="14.2" r="0.9" fill="#181A1F"/><circle cx="19" cy="14.2" r="1.8" fill="#FFFFFF"/><circle cx="18.8" cy="14.2" r="0.9" fill="#181A1F"/><path d="M4.5 18.8H27.5L26 26.5H6L4.5 18.8Z" fill="#EFE4CE" stroke="#8C5926" stroke-width="1.6" stroke-linejoin="round"/><path d="M16 19.2V26.2" stroke="#8C5926" stroke-width="1.5"/></svg>
+            </span>
             <div>
               <h2 class="teacher-panel-title">Giao Task theo Link (50 từ / Task)</h2>
-              <div class="teacher-panel-sub">Tick chọn Task 1..30 rồi copy link gửi học sinh. Hoàn thành trọn Task tự động cập nhật Đã thuộc sang bộ từ chính.</div>
+              <div class="teacher-panel-sub">Tick chọn Task rồi copy link gửi học sinh. Hoàn thành trọn Task tự động đồng bộ từ đã thuộc sang bộ chính.</div>
             </div>
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-            <button type="button" class="btn-subtle" id="btn-teacher-filter-pending" onclick="TasksModule.toggleTeacherPendingFilter()">Chỉ hiện Task chưa xong hết</button>
-            <button type="button" class="btn-subtle" onclick="TasksModule.selectTeacherTaskRange(1, 5)">Tick Task 1–5</button>
+          <div class="teacher-sel-actions">
+            <button type="button" class="btn-subtle" id="btn-teacher-filter-pending" onclick="TasksModule.toggleTeacherPendingFilter()">Chưa xong hết</button>
+            <button type="button" class="btn-subtle" onclick="TasksModule.selectTeacherTaskRange(1, 5)">Tick 1–5</button>
             <button type="button" class="btn-subtle" onclick="TasksModule.clearTeacherTaskSelection()">Bỏ tick hết</button>
-            <span id="teacher-dash-sel-count" style="font-size:13px; font-weight:700; color:var(--text-muted);">Đã chọn: 0 Task</span>
+            <span id="teacher-dash-sel-count" class="teacher-sel-pill">Đã chọn: 0 Task</span>
           </div>
         </div>
 
-        <div class="teacher-deadline-row">
-          <label for="teacher-task-deadline-preset" class="teacher-deadline-label">Thời hạn Task (tùy chọn):</label>
-          <select class="scope-select" id="teacher-task-deadline-preset" onchange="TasksModule.onTeacherDeadlinePresetChange()">
-            <option value="0">Không giới hạn thời gian</option>
-            <option value="30">30 phút (từ lúc gửi)</option>
-            <option value="60">1 giờ (từ lúc gửi)</option>
-            <option value="120">2 giờ (từ lúc gửi)</option>
-            <option value="360">6 giờ (từ lúc gửi)</option>
-            <option value="720">12 giờ (từ lúc gửi)</option>
-            <option value="1440">24 giờ (1 ngày)</option>
-            <option value="2880">48 giờ (2 ngày)</option>
-            <option value="4320">72 giờ (3 ngày)</option>
-            <option value="custom">Chọn ngày giờ đóng cụ thể...</option>
-          </select>
-          <input type="datetime-local" class="task-link-input teacher-deadline-custom" id="teacher-task-deadline-custom" style="display:none;" onchange="TasksModule.updateTeacherLinkPreview()">
-          <span class="teacher-deadline-hint" id="teacher-task-deadline-hint">Học viên có thể làm bất kỳ lúc nào</span>
-        </div>
-
-        <div class="task-link-box" style="margin-top:0; margin-bottom:10px;">
-          <input type="text" class="task-link-input" id="teacher-dash-link-preview" readonly placeholder="Tick ít nhất 1 Task bên dưới để tạo link...">
-          <button type="button" class="btn btn-primary" onclick="TasksModule.copyTeacherTaskLink()">Copy Link Task</button>
-        </div>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:12px; padding:8px 12px; border-radius:12px; background:var(--bg-soft); border:1px solid var(--card-border);">
-          <span style="font-size:13px; font-weight:700; color:var(--text-muted);">Xem trước nội dung Test (theo Task đang tick):</span>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-primary btn-sm-task" id="btn-teacher-test-1" onclick="TasksModule.openAdminTestPreview(1)" title="Xem Test 1">Test 1</button>
-            <button type="button" class="btn btn-primary btn-sm-task" id="btn-teacher-test-2" onclick="TasksModule.openAdminTestPreview(2)" title="Xem Test 2">Test 2</button>
-            <button type="button" class="btn btn-primary btn-sm-task" id="btn-teacher-test-3" onclick="TasksModule.openAdminTestPreview(3)" title="Xem Test 3">Test 3</button>
+        <!-- Unified Link & Deadline Composer -->
+        <div class="teacher-composer-card">
+          <div class="teacher-composer-grid">
+            <div class="teacher-deadline-group">
+              <label for="teacher-task-deadline-preset" class="teacher-deadline-label">Hạn nộp</label>
+              <select class="scope-select" id="teacher-task-deadline-preset" onchange="TasksModule.onTeacherDeadlinePresetChange()">
+                <option value="0">Không giới hạn</option>
+                <option value="30">30 phút</option>
+                <option value="60">1 giờ</option>
+                <option value="120">2 giờ</option>
+                <option value="360">6 giờ</option>
+                <option value="720">12 giờ</option>
+                <option value="1440">24 giờ (1 ngày)</option>
+                <option value="2880">48 giờ (2 ngày)</option>
+                <option value="4320">72 giờ (3 ngày)</option>
+                <option value="custom">Ngày giờ cụ thể...</option>
+              </select>
+              <input type="datetime-local" class="task-link-input teacher-deadline-custom" id="teacher-task-deadline-custom" style="display:none;" onchange="TasksModule.updateTeacherLinkPreview()">
+            </div>
+            <div class="task-link-box teacher-link-inline">
+              <input type="text" class="task-link-input" id="teacher-dash-link-preview" readonly placeholder="Tick ít nhất 1 Task bên dưới để tạo link...">
+              <button type="button" class="btn btn-primary" onclick="TasksModule.copyTeacherTaskLink()">Copy Link Task</button>
+              <button type="button" class="btn-subtle" id="btn-teacher-apply-deadline" onclick="TasksModule.applyTeacherLiveDeadline()" title="Áp dụng hạn nộp đang chọn cho các Task đã tick (gia hạn / rút ngắn / bỏ hạn)">Cập nhật hạn</button>
+              <button type="button" class="btn-subtle" id="btn-teacher-end-task-now" style="color:#b91c1c; border-color:rgba(220,38,38,0.3);" onclick="TasksModule.endSelectedTasksNow()" title="Đóng thời hạn ngay lập tức cho các Task đã tick">Kết thúc ngay</button>
+            </div>
+          </div>
+          <div class="teacher-composer-foot">
+            <span class="teacher-deadline-hint" id="teacher-task-deadline-hint">Học viên có thể làm bất kỳ lúc nào</span>
+            <div class="teacher-quick-preview">
+              <span class="teacher-preview-lbl">Xem Test nhanh:</span>
+              <button type="button" class="btn-subtle teacher-preview-btn" id="btn-teacher-test-1" onclick="TasksModule.openAdminTestPreview(1)" title="Xem Test 1">Test 1</button>
+              <button type="button" class="btn-subtle teacher-preview-btn" id="btn-teacher-test-2" onclick="TasksModule.openAdminTestPreview(2)" title="Xem Test 2">Test 2</button>
+              <button type="button" class="btn-subtle teacher-preview-btn" id="btn-teacher-test-3" onclick="TasksModule.openAdminTestPreview(3)" title="Xem Test 3">Test 3</button>
+            </div>
           </div>
         </div>
 
-        <div class="task-suite-tabs" id="teacher-task-suite-tabs" style="margin-bottom:10px;"></div>
+        <div class="task-suite-tabs" id="teacher-task-suite-tabs"></div>
         <div class="teacher-task-dash-grid" id="teacher-dash-task-grid"></div>
 
-        <details style="margin-top:14px; padding-top:12px; border-top:1px solid var(--card-border);">
-          <summary style="cursor:pointer; font-size:13px; font-weight:700; color:var(--text-muted);">Cấu hình Google AI Studio Key dự phòng trên trình duyệt này</summary>
-          <div style="display:flex; gap:8px; margin-top:8px;">
+        <details class="teacher-ai-key-details">
+          <summary>Cấu hình Google AI Studio Key dự phòng trên trình duyệt này</summary>
+          <div class="teacher-ai-key-row">
             <input type="password" class="task-link-input" id="teacher-dash-gemini-key" placeholder="Dán key Google AI Studio nếu chưa cấu hình GEMINI_API_KEY trong Google Apps Script...">
             <button type="button" class="btn-subtle" onclick="TasksModule.saveLocalGeminiKey()">Lưu key</button>
           </div>
@@ -726,7 +1519,7 @@
           </table>
         </div>
         <div style="font-size:12.5px; color:var(--text-muted); margin-top:10px; line-height:1.5;">
-          Cách tính điểm: <strong>+10đ/từ gốc</strong> (đã khử trùng) · <strong>+100–200đ/Task</strong> · <strong>+300đ/Speed Quiz</strong> · <strong>+15đ/ngày streak</strong> · <strong>+1đ/phút học</strong> (có trần theo hiệu suất chống treo tab).
+          Cách tính điểm (đơn vị <span class="tot-chestnut-unit" style="width:14px;height:13px;" aria-label="hạt dẻ"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.4C13 4.6 19.8 8.2 21 13.8C21.8 17.6 18.6 21 12 21C5.4 21 2.2 17.6 3 13.8C4.2 8.2 11 4.6 12 2.4Z" fill="#8B3A14" stroke="#531F07" stroke-width="1.4" stroke-linejoin="round"/><path d="M5 17.5C7 15.8 17 15.8 19 17.5C17.6 19.9 15 20.8 12 20.8C9 20.8 6.4 19.9 5 17.5Z" fill="#E8CCA0"/><path d="M7.2 12.2C7.8 9.6 9.8 7.8 11.4 6.6" stroke="#DF8B56" stroke-width="1.6" stroke-linecap="round" opacity=".85"/></svg></span> hạt dẻ): <strong>+10/từ gốc</strong> (đã khử trùng) · <strong>+100–200/Task</strong> · <strong>+300/Speed Quiz</strong> · <strong>+15/ngày streak</strong> · <strong>+1/phút học</strong> (có trần theo hiệu suất chống treo tab).
         </div>
         <div id="class-report-actions" style="display:none; gap:10px; flex-wrap:wrap; margin-top:14px; justify-content:flex-end;">
           <button type="button" class="btn btn-primary" id="btn-copy-full-report" onclick="copyFullClassReport()">Sao chép bảng cả lớp</button>
@@ -737,67 +1530,63 @@
 
   <!-- MODAL: SETTINGS -->
   <div class="modal-overlay" id="modal-menu" onclick="closeMenuModal(event)">
-    <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-card tot-menu-modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <div class="modal-title">Tùy chọn</div>
-        <button class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="closeMenuModal()">✕</button>
+        <div class="tot-menu-hdr-left">
+          <div class="modal-title">Cài đặt &amp; Tùy chọn</div>
+          <div id="menu-account-summary" class="tot-menu-acc-sub">Đang đăng nhập</div>
+        </div>
+        <button type="button" class="btn-icon-glass" style="width:32px; height:32px; font-size:1rem;" onclick="closeMenuModal()" aria-label="Đóng cài đặt">✕</button>
       </div>
-      <div class="modal-body">
-        <div style="margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--card-border);">
-          <div style="font-weight: 700; color: var(--text-bright); margin-bottom: 8px;">Tài khoản học viên</div>
-          <div id="menu-account-summary" style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 10px;">Đang đăng nhập</div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn" id="btn-menu-class-report" style="flex:1; justify-content:center;" onclick="closeMenuModal(); openClassReportModal();">
-              Bảng xếp hạng
-            </button>
-            <button type="button" class="btn" id="btn-menu-logout" style="flex:1; justify-content:center;" onclick="closeMenuModal(); logoutCurrentAccount();">
-              Đăng xuất / Đổi ID
-            </button>
-          </div>
-        </div>
-        <div style="margin-bottom: 18px;">
-          <div style="font-weight: 700; color: var(--text-bright); margin-bottom: 8px;">Giao diện</div>
-          <div class="theme-seg-toggle" role="group" aria-label="Chọn giao diện Sáng hoặc Tối">
-            <button type="button" class="theme-seg-btn active" id="btn-theme-light" onclick="setThemeMode('light')">Sáng (Mặc định)</button>
-            <button type="button" class="theme-seg-btn" id="btn-theme-dark" onclick="setThemeMode('dark')">Tối (Ban đêm)</button>
-          </div>
-        </div>
-        <div style="margin-bottom: 18px;">
-          <div style="font-weight: 700; color: var(--text-bright); margin-bottom: 8px;">Chế độ kỹ năng (IELTS 4 Kỹ năng)</div>
-          <div class="skill-modes-list" id="menu-skill-modes-list"></div>
-        </div>
-        <div style="margin-bottom: 18px;">
-          <div style="font-weight: 700; color: var(--text-bright); margin-bottom: 8px;">Công cụ nhanh</div>
-          <button type="button" class="btn" style="width: 100%; justify-content: center;" onclick="closeMenuModal(); openSignalWordsModal();">
-            Mở bảng Từ Nối Chỉ Hướng Nghĩa
-          </button>
-        </div>
-        <div style="margin-bottom: 18px;">
-          <div style="font-weight: 700; color: var(--text-bright); margin-bottom: 8px;">Phát âm từ vựng</div>
-          <label class="fc-front-opt-toggle" style="margin-bottom: 10px;">
-            <input type="checkbox" id="chk-auto-speak" checked onchange="toggleAutoSpeak(this.checked)">
-            <span>Tự động đọc từ vựng khi chuyển sang thẻ mới (phím R để nghe lại)</span>
-          </label>
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding-left:2px;">
-            <span style="font-size:13.5px; font-weight:650; color:var(--text);">Tự đọc:</span>
-            <div style="display:inline-flex; gap:8px;">
-              <button type="button" class="btn-voice-speak btn-accent-choice active" id="btn-auto-accent-us" onclick="setAutoSpeakAccent('en-US')">US</button>
-              <button type="button" class="btn-voice-speak btn-accent-choice" id="btn-auto-accent-uk" onclick="setAutoSpeakAccent('en-GB')">UK</button>
+      <div class="modal-body tot-menu-body">
+        <div class="tot-settings-grid">
+          <div class="tot-settings-card">
+            <div class="tot-set-head">Hiển thị &amp; Tài khoản</div>
+            <div class="tot-set-row">
+              <span class="tot-set-lbl">Chế độ nền</span>
+              <div class="theme-seg-toggle tot-set-seg" role="group" aria-label="Chọn giao diện Sáng hoặc Tối">
+                <button type="button" class="theme-seg-btn active" id="btn-theme-light" onclick="setThemeMode('light')">Sáng</button>
+                <button type="button" class="theme-seg-btn" id="btn-theme-dark" onclick="setThemeMode('dark')">Tối</button>
+              </div>
+            </div>
+            <div class="tot-set-btn-row">
+              <button type="button" class="btn-subtle" id="btn-menu-class-report" onclick="closeMenuModal(); openClassReportModal();">Bảng xếp hạng</button>
+              <button type="button" class="btn-subtle" onclick="closeMenuModal(); openSignalWordsModal();">Bảng từ nối</button>
+              <button type="button" class="btn-subtle danger-soft" id="btn-menu-logout" onclick="closeMenuModal(); logoutCurrentAccount();">Đăng xuất / Đổi ID</button>
             </div>
           </div>
+
+          <div class="tot-settings-card">
+            <div class="tot-set-head">Học thẻ &amp; Phát âm</div>
+            <label class="tot-switch-row">
+              <span class="tot-set-lbl">Tự động đọc khi chuyển thẻ</span>
+              <input type="checkbox" class="tot-switch-input" id="chk-auto-speak" checked onchange="toggleAutoSpeak(this.checked)">
+            </label>
+            <div class="tot-set-row">
+              <span class="tot-set-lbl">Giọng đọc mặc định</span>
+              <div class="tot-accent-seg">
+                <button type="button" class="btn-voice-speak btn-accent-choice active" id="btn-auto-accent-us" onclick="setAutoSpeakAccent('en-US')">US</button>
+                <button type="button" class="btn-voice-speak btn-accent-choice" id="btn-auto-accent-uk" onclick="setAutoSpeakAccent('en-GB')">UK</button>
+              </div>
+            </div>
+            <label class="tot-switch-row">
+              <span class="tot-set-lbl">Hiện câu ví dụ ở mặt trước</span>
+              <input type="checkbox" class="tot-switch-input" id="chk-show-front-context" onchange="toggleFrontContext(this.checked)">
+            </label>
+          </div>
         </div>
-        <div style="margin-bottom: 18px;">
-          <div style="font-weight: 700; color: var(--text-bright); margin-bottom: 8px;">Hiển thị mặt trước</div>
-          <label class="fc-front-opt-toggle">
-            <input type="checkbox" id="chk-show-front-context" onchange="toggleFrontContext(this.checked)">
-            <span>Hiện câu dẫn chứng ở mặt trước (luyện đoán nghĩa từ ngữ cảnh)</span>
-          </label>
+
+        <div class="tot-settings-card">
+          <div class="tot-set-head">Chế độ kỹ năng IELTS</div>
+          <div class="skill-modes-list" id="menu-skill-modes-list"></div>
         </div>
-        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--card-border);">
-          <div style="font-weight: 700; color: var(--danger); margin-bottom: 8px;">Đặt lại tiến độ (ID hiện tại)</div>
-          <button class="btn" style="width: 100%; color: var(--danger); border-color: var(--danger-border); justify-content: center;" onclick="resetAllProgress()">
-            Xóa toàn bộ tiến độ học
-          </button>
+
+        <div class="tot-settings-danger-bar">
+          <div>
+            <div class="tot-set-danger-title">Đặt lại dữ liệu học</div>
+            <div class="tot-set-danger-sub">Xóa tiến độ đã thuộc &amp; lịch ôn trên thiết bị này</div>
+          </div>
+          <button type="button" class="btn-subtle tot-danger-reset-btn" onclick="resetAllProgress()">Xóa toàn bộ tiến độ</button>
         </div>
       </div>
     </div>
@@ -857,7 +1646,7 @@
         <button class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="TasksModule.closeTaskExamReadyModal()">✕</button>
       </div>
       <div class="modal-body" style="padding:20px 24px 24px; text-align:center;">
-        <img src="assets/images/panda_leaderboard.jpg" alt="" class="celebrate-panda-img" style="width:86px; height:86px; margin-bottom:12px;">
+        <img src="assets/images/totoro_sitting_branch.png" alt="" class="celebrate-panda-img celebrate-totoro-img" style="width:94px; height:86px; margin-bottom:10px;">
         <div style="font-size:20px; font-weight:850; color:var(--text-bright); line-height:1.35;" id="exam-ready-heading">Bạn đã học và bấm Đã thuộc đủ 50 từ!</div>
         <p style="font-size:16.5px; color:var(--text-muted); line-height:1.6; margin:10px 0 20px;" id="exam-ready-desc">
           Bước cuối để hoàn tất Task: vượt qua <strong>Test 1 (Ghép từ) → Test 2 (Kéo thả &amp; Ngữ cảnh) → Test 3 (Dịch bài)</strong>. Chú ý không rời tab khi làm bài nhé!
@@ -917,17 +1706,17 @@
   <div class="modal-overlay cheat-warn-overlay" id="modal-cheat-warn">
     <div class="modal-card cheat-warn-card" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <span class="tip-pill" style="background:#dc2626; color:#fff; border-color:#dc2626; margin:0;">CẢNH BÁO VI PHẠM · LẦN 1 / 2</span>
+        <span class="tip-pill" id="cheat-warn-pill" style="background:#dc2626; color:#fff; border-color:#dc2626; margin:0;">CẢNH BÁO VI PHẠM · LẦN 1 / 3</span>
       </div>
       <div class="modal-body" style="padding:18px 24px 22px;">
         <div class="task-lock-banner" id="cheat-warn-msg" style="margin-bottom:14px;">
-          Phát hiện bạn vừa chuyển tab hoặc rời khỏi màn hình bài kiểm tra! Bài kiểm tra đã tạm ẩn để đảm bảo công bằng.
+          Phát hiện bạn vừa chuyển tab hoặc bấm ra ngoài màn hình làm bài!
         </div>
-        <div style="font-size:16.5px; color:var(--text); line-height:1.6; margin-bottom:18px;">
-          Vui lòng đóng hộp thoại này để quay lại thử nốt <strong>1 lần nữa</strong>. Nếu bạn chuyển tab hoặc rời màn hình thêm lần thứ 2, hệ thống sẽ tự động <strong>tính sai / khóa bài</strong> ngay lập tức!
+        <div id="cheat-warn-detail" style="font-size:15.5px; color:var(--text); line-height:1.6; margin-bottom:18px;">
+          <strong>Lưu ý:</strong> Không mở tab khác hay bấm ra ngoài khi đang làm bài. Nếu vi phạm đủ <strong>3 lần</strong>, Task sẽ bị <strong>KHÓA 30 PHÚT</strong> — <strong>mất hết bài đang làm</strong> và khi mở lại phải <strong>làm lại từ đầu</strong>!
         </div>
         <div style="display:flex; justify-content:flex-end;">
-          <button type="button" class="btn btn-primary" id="btn-cheat-warn-close">Đóng cảnh báo &amp; Quay lại thử lại</button>
+          <button type="button" class="btn btn-primary" id="btn-cheat-warn-close">Đã hiểu · Tiếp tục làm bài</button>
         </div>
       </div>
     </div>
@@ -954,6 +1743,26 @@
       </div>
     </div>
   </div>
+
+  <!-- Native-App Bottom Navigation Bar for Mobile Phones (<= 767px) -->
+  <nav class="mobile-bottom-nav" aria-label="Điều hướng di động">
+    <button type="button" class="mob-nav-item" data-tot-view="home">
+      <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M5 10.5L12 4l7 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-3v6H6a1 1 0 0 1-1-1v-9.5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/></svg>
+      <span>Home</span>
+    </button>
+    <button type="button" class="mob-nav-item active" data-tot-view="flashcard">
+      <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" fill="currentColor" fill-opacity=".15" stroke="currentColor" stroke-width="1.95"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.95"/></svg>
+      <span>Flashcard</span>
+    </button>
+    <button type="button" class="mob-nav-item" data-tot-view="task">
+      <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.95"/><path d="M8.5 12.2l2.3 2.3 4.8-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Task</span>
+    </button>
+    <button type="button" class="mob-nav-item" data-tot-view="practice">
+      <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3z" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/><path d="M9 12h6M9 16h4" stroke="currentColor" stroke-width="1.95" stroke-linecap="round"/></svg>
+      <span>Practice</span>
+    </button>
+  </nav>
 
   </div><!-- /#app-shell -->
 
@@ -994,18 +1803,20 @@
   <script src="data/accounts.js?v=20261119t"></script>
   <script src="data/vocab_data.js?v=20261119t"></script>
   <script src="data/tasks_data.js?v=20261119t"></script>
+  <script src="data/reading_tasks_exam_data.js?v=20261121c"></script>
   <script src="data/ipa_dict.js?v=20261119t"></script>
-  <script src="js/motion.js?v=20261119t"></script>
+  <script src="js/motion.js?v=20261121c"></script>
   <script src="js/core/EventBus.js?v=20261119t"></script>
   <script src="js/core/LazyDataLoader.js?v=20261119t"></script>
-  <script src="js/core/AudioEngine.js?v=20261119t"></script>
+  <script src="js/core/AudioEngine.js?v=20261121c"></script>
   <script src="js/core/AntiCheatGuard.js?v=20261119t"></script>
   <script src="js/core/BaseSkillMode.js?v=20261119t"></script>
   <script src="js/skills/reading/ReadingMode.js?v=20261119t"></script>
   <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119t"></script>
-  <script src="js/core/AppCore.js?v=20261119t"></script>
-  <script src="js/recognition_test.js?v=20261119t"></script>
-  <script src="js/app.js?v=20261119t"></script>
-  <script src="js/tasks.js?v=20261119t"></script>
+  <script src="js/core/AppCore.js?v=20261121c"></script>
+  <script src="js/recognition_test.js?v=20261121c"></script>
+  <script src="js/app.js?v=20261121c"></script>
+  <script src="js/tasks.js?v=20261121c"></script>
+  <script src="js/totoro_ui.js?v=20261121c"></script>
 </body>
 </html>

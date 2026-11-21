@@ -9,8 +9,13 @@
   const CHECKPOINT_KEY_BASE = 'ielts_recog_checkpoint_v1_';
   const CERT_KEY_BASE = 'ielts_list_certs_v1_';
   const WORD_TIME_LIMIT_MS = 5000;
+  const OLD_REVIEW_TIME_LIMIT_MS = 4000;
   const ROUND_SIZE = 50;
   const PASS_THRESHOLD_PCT = 94;
+
+  function getWordTimeLimitMs() {
+    return session?.mode === 'old_review' ? OLD_REVIEW_TIME_LIMIT_MS : WORD_TIME_LIMIT_MS;
+  }
 
   function B() { return window.__VOCAB_BRIDGE__ || null; }
   function esc(s) {
@@ -185,7 +190,7 @@
       btn.innerHTML = `<span>✓ Đạt (${cert.pct}%)</span>`;
       btn.classList.remove('active');
     } else {
-      btn.innerHTML = `<span>Speed Quiz</span>`;
+      btn.innerHTML = `<span>Vào Speed Quiz ngay</span>`;
       btn.classList.remove('active');
     }
   }
@@ -241,21 +246,29 @@
     leaveWarnings += 1;
     pauseWordClock();
 
-    if (leaveWarnings === 1 && B()?.showCheatWarningModal) {
+    if (leaveWarnings < 3 && B()?.showCheatWarningModal) {
       B().showCheatWarningModal(
-        `${reason}! Đọc nhanh không cho phép tra từ điển. Vi phạm thêm 1 lần nữa sẽ hủy lượt hiện tại!`,
+        `${reason}! Không bấm ra ngoài hay rời tab khi đang kiểm tra.`,
         () => {
           if (session && session.phase === 'quiz') resumeWordClock();
-        }
+        },
+        leaveWarnings,
+        3
       );
       return;
     }
-    // 2nd strike: void current round (for list_final) or fail current task exam cleanly
+    // 3rd strike: void current round (for list_final) or fail current task exam cleanly
     B()?.closeCheatWarningModal?.();
     if (session.mode === 'task_final') {
       const tid = session.taskId;
       closeModalShell();
-      window.TasksModule?.triggerExternalAntiCheatLock?.(tid, `${reason} (Lần 2)`);
+      window.TasksModule?.triggerExternalAntiCheatLock?.(tid, `${reason} (Lần 3)`);
+    } else if (session.mode === 'old_review') {
+      session.cursor = 0;
+      session.correctCount = 0;
+      session.wrongIds = [];
+      closeModalShell();
+      B()?.showToast?.('Đã hủy lượt Speed Quiz ôn tập do rời màn hình kiểm tra!');
     } else {
       // Void current 50-word round back to start of this round (keeps prior completed rounds intact)
       const roundStart = Math.floor(session.cursor / ROUND_SIZE) * ROUND_SIZE;
@@ -278,7 +291,7 @@
   function resumeWordClock() {
     if (!session || !session.paused) return;
     session.paused = false;
-    wordDeadlineAt = Date.now() + (wordPausedRemainingMs || WORD_TIME_LIMIT_MS);
+    wordDeadlineAt = Date.now() + (wordPausedRemainingMs || getWordTimeLimitMs());
     startCountdownRaf();
   }
 
@@ -364,8 +377,8 @@
 
     if (saved && Array.isArray(saved.orderIds) && saved.orderIds.length === info.list.length && saved.cursor > 0 && saved.cursor < saved.orderIds.length) {
       if (saved.orderIds.every((id) => itemById.has(id))) {
-        orderIds = saved.orderIds;
         cursor = saved.cursor;
+        orderIds = saved.orderIds.slice(0, cursor).concat(shuffleArr(saved.orderIds.slice(cursor)));
         correctCount = Number(saved.correctCount || 0);
         wrongIds = Array.isArray(saved.wrongIds) ? saved.wrongIds.filter((id) => itemById.has(id)) : [];
         startedAt = Number(saved.startedAt || Date.now());
@@ -380,7 +393,7 @@
       mode: 'list_final',
       scopeKey: info.key,
       scopeName: info.name,
-      title: `Test Tổng Kết · ${info.name}`,
+      title: `Speed Quiz · ${info.name}`,
       pool: info.list,
       itemById,
       orderIds,
@@ -404,13 +417,56 @@
     renderIntroScreen();
   }
 
+  // ---- Entry 3: Pre-Task Old-Vocab Speed Quiz Review ----
+  function startOldReviewQuiz(rawWords, taskId, taskLabel = '', onCompleteCallback = null) {
+    const poolById = new Map(getGlobalVocabPool().map((w) => [w.id, w]));
+    const resolved = (Array.isArray(rawWords) ? rawWords : [])
+      .map((w) => (w && w.id && poolById.get(w.id)) || w)
+      .filter((w) => w && w.id);
+    if (!resolved.length) return false;
+    stopTimers();
+    leaveWarnings = 0;
+    const itemById = new Map(resolved.map((w) => [w.id, w]));
+    const orderIds = shuffleArr(resolved).map((w) => w.id);
+
+    session = {
+      mode: 'old_review',
+      taskId: taskId || '',
+      taskLabel: taskLabel || taskId || 'Task',
+      scopeKey: 'old_review',
+      title: `Speed Quiz · Ôn ${resolved.length} từ cũ`,
+      pool: resolved,
+      itemById,
+      orderIds,
+      cursor: 0,
+      phase: 'intro',
+      correctCount: 0,
+      wrongIds: [],
+      errorQueue: [],
+      errorAttempts: 0,
+      currentItem: null,
+      currentOptions: [],
+      locked: false,
+      paused: false,
+      startedAt: Date.now(),
+      onCompleteCallback,
+    };
+    openModalShell();
+    renderIntroScreen();
+    return true;
+  }
+
   function renderIntroScreen() {
     if (!session) return;
     session.phase = 'intro';
     const body = document.getElementById('recog-modal-body');
     const badge = document.getElementById('recog-modal-badge');
     const titleEl = document.getElementById('recog-modal-title');
-    if (badge) badge.textContent = session.mode === 'task_final' ? 'TEST KẾT THÚC TASK' : 'TEST TỔNG KẾT 100% BỘ TỪ';
+    if (badge) {
+      badge.textContent = session.mode === 'task_final'
+        ? 'TEST KẾT THÚC TASK'
+        : (session.mode === 'old_review' ? 'SPEED QUIZ · ÔN TẬP TỪ CŨ' : 'SPEED QUIZ · 100% BỘ TỪ');
+    }
     if (titleEl) titleEl.textContent = session.title;
     if (!body) return;
 
@@ -418,16 +474,21 @@
     const totalRounds = Math.ceil(total / ROUND_SIZE);
     const curRound = Math.floor(session.cursor / ROUND_SIZE) + 1;
     const isList = session.mode === 'list_final';
+    const isOldReview = session.mode === 'old_review';
+    const limitSec = Math.round(getWordTimeLimitMs() / 1000);
 
     body.innerHTML = `
       <div class="recog-intro-card">
-        <div class="recog-intro-title">${isList ? `Kiểm chứng 100% mặt chữ &amp; nghĩa (${total.toLocaleString('vi-VN')} từ)` : `Kiểm tra phản xạ đọc hiểu (${total} từ)`}</div>
+        <div class="recog-intro-title">${isList ? `Kiểm chứng 100% mặt chữ &amp; nghĩa (${total.toLocaleString('vi-VN')} từ)` : (isOldReview ? `Ôn nhanh ${total} từ cũ qua Speed Quiz để mở ${esc(session.taskLabel)}` : `Kiểm tra phản xạ đọc hiểu (${total} từ)`)}</div>
         <div class="recog-rules-list">
-          <div><strong>1. Tốc độ Reading thực chiến:</strong> Mỗi từ có <strong>5 giây</strong> để nhìn mặt chữ và bấm chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc bấm <code>Space</code> nếu <em>Chưa biết</em>).</div>
-          <div><strong>2. Đảm bảo thuộc nằm lòng:</strong> Vòng 1 cần đạt <strong>&ge; ${PASS_THRESHOLD_PCT}%</strong>, sau đó bắt buộc vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ còn sai/chậm.</div>
+          <div><strong>1. Tốc độ Reading thực chiến:</strong> Mỗi từ có <strong>${limitSec} giây</strong> để nhìn mặt chữ và chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>).</div>
+          <div><strong>2. Đảm bảo thuộc nằm lòng:</strong> ${isOldReview ? 'Hoàn tất lượt kiểm tra và vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.' : `Vòng 1 cần đạt <strong>&ge; ${PASS_THRESHOLD_PCT}%</strong>, sau đó vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.`}</div>
           ${isList
-            ? `<div><strong>3. Chia ${totalRounds} chặng &times; ${ROUND_SIZE} từ (Tự động lưu):</strong> Mỗi chặng chỉ mất ~90 giây. Bất cứ lúc nào mệt có thể bấm <strong>Tạm lưu &amp; Nghỉ</strong>, lần sau làm tiếp đúng từ đang dở!</div>`
-            : `<div><strong>3. Kỷ luật phòng thi:</strong> Không chuyển tab / rời cửa sổ khi đang làm bài (rời quá 2 lần sẽ bị khóa bài).</div>`}
+            ? `<div><strong>3. Tự động phân loại Đã thuộc / Chưa thuộc:</strong> Trả lời đúng &le; ${limitSec} giây tự động đưa vào <strong>Đã thuộc</strong>; trả lời sai, hết giờ hoặc bấm <em>Chưa biết</em> tự động đưa vào <strong>Chưa thuộc</strong> (và <strong>Cần ôn</strong>) để lọc học lại ngay.</div>
+               <div><strong>4. Chia ${totalRounds} chặng &times; ${ROUND_SIZE} từ (Tự động lưu):</strong> Có thể bấm <strong>Tạm lưu &amp; Nghỉ</strong> bất cứ lúc nào, lần sau thi tiếp đúng vị trí đang dở.</div>`
+            : (isOldReview
+              ? `<div><strong>3. Tự động mở khóa Task:</strong> Ngay khi sửa sạch lỗi (100% từ vượt ngưỡng &le; ${limitSec} giây), các từ cũ được cập nhật <strong>Đã thuộc</strong> và bạn vào làm <strong>${esc(session.taskLabel)}</strong> ngay lập tức.</div>`
+              : `<div><strong>3. Kỷ luật phòng thi:</strong> Không chuyển tab / rời cửa sổ khi đang làm bài (rời quá 3 lần sẽ bị khóa bài).</div>`)}
         </div>
         ${session.resumed ? `
           <div class="recog-resume-banner">
@@ -480,6 +541,11 @@
 
   function beginActiveRound() {
     if (!session) return;
+    if (Array.isArray(session.orderIds) && session.orderIds.length > 1) {
+      const donePrefix = session.orderIds.slice(0, session.cursor);
+      const remShuffled = shuffleArr(session.orderIds.slice(session.cursor));
+      session.orderIds = donePrefix.concat(remShuffled);
+    }
     session.phase = 'quiz';
     session.paused = false;
     session.locked = false;
@@ -526,11 +592,11 @@
     const item = session.itemById.get(itemId);
     if (!item) return;
     session.currentItem = item;
-    session.currentOptions = buildMeaningDistractors(item, session.pool, 3);
+    session.currentOptions = shuffleArr(buildMeaningDistractors(item, session.pool, 3));
     session.locked = false;
 
     renderQuestionCard();
-    wordDeadlineAt = Date.now() + WORD_TIME_LIMIT_MS;
+    wordDeadlineAt = Date.now() + getWordTimeLimitMs();
     startCountdownRaf();
   }
 
@@ -565,7 +631,7 @@
               : `<span class="recog-pill">${session.mode === 'list_final' ? `Chặng ${curRound}/${totalRounds} · ` : ''}Câu ${curPos} / ${total}</span>`}
           </div>
           <div class="recog-meta-right">
-            <span class="recog-timer-text" id="recog-timer-text">5.0s</span>
+            <span class="recog-timer-text" id="recog-timer-text">${(getWordTimeLimitMs() / 1000).toFixed(1)}s</span>
             ${session.mode === 'list_final' && !isErrLoop
               ? `<button type="button" class="btn-subtle" style="padding:4px 10px; font-size:12px;" onclick="RecognitionTestModule.pauseAndSaveExit()">Tạm lưu</button>`
               : ''}
@@ -608,10 +674,12 @@
 
   function startCountdownRaf() {
     if (tickRaf) cancelAnimationFrame(tickRaf);
+    const limitMs = getWordTimeLimitMs();
+    const limitSec = Math.round(limitMs / 1000);
     const step = () => {
       if (!session || session.locked || session.paused) return;
       const rem = Math.max(0, wordDeadlineAt - Date.now());
-      const pct = Math.max(0, Math.min(100, (rem / WORD_TIME_LIMIT_MS) * 100));
+      const pct = Math.max(0, Math.min(100, (rem / limitMs) * 100));
       const bar = document.getElementById('recog-countdown-fill');
       const txt = document.getElementById('recog-timer-text');
       if (bar) {
@@ -623,7 +691,7 @@
         txt.classList.toggle('is-urgent', rem <= 1500);
       }
       if (rem <= 0) {
-        handleAnswerOutcome(false, -1, 'Hết 5 giây!');
+        handleAnswerOutcome(false, -1, `Hết ${limitSec} giây!`);
         return;
       }
       tickRaf = requestAnimationFrame(step);
@@ -670,10 +738,16 @@
       if (isCorrect) {
         session.correctCount += 1;
         session.roundCorrect = (session.roundCorrect || 0) + 1;
+        if (session.mode === 'list_final') {
+          B()?.markMasteredBatch?.([item.id]);
+        }
       } else {
         session.wrongIds.push(item.id);
         session.roundWrongIds = session.roundWrongIds || [];
         session.roundWrongIds.push(item.id);
+        if (session.mode === 'list_final') {
+          B()?.setWordWeakLevel?.(item.id, 1);
+        }
       }
       session.cursor += 1;
       if (session.mode === 'list_final') persistListCheckpoint();
@@ -693,6 +767,8 @@
       if (!isCorrect && curId) {
         // Push back to end of error queue until 100% mastered within 5s
         session.errorQueue.push(curId);
+      } else if (isCorrect && curId && session.mode === 'list_final') {
+        B()?.markMasteredBatch?.([curId]);
       }
       const delay = isCorrect ? 220 : 900;
       autoNextTimer = setTimeout(() => {
@@ -708,7 +784,7 @@
     const pct = Math.round((session.correctCount / Math.max(1, total)) * 100);
     const uniqWrong = Array.from(new Set(session.wrongIds));
 
-    if (pct < PASS_THRESHOLD_PCT) {
+    if (session.mode !== 'old_review' && pct < PASS_THRESHOLD_PCT) {
       renderFailScreen(pct, uniqWrong);
       return;
     }
@@ -732,7 +808,7 @@
       <div class="recog-intro-card">
         <div class="recog-intro-title" style="color:var(--accent);">Vòng 1 đạt ${pct}% — Còn ${wrongIds.length} từ cần chốt 100%!</div>
         <p style="font-size:15px; color:var(--text-muted); margin:6px 0 12px;">
-          Xem nhanh ${wrongIds.length} từ bạn vừa nhầm/chậm rồi bấm <strong>Vào Vòng Sửa Lỗi</strong>. Trả lời đúng sạch 100% trong &le; 5 giây là chính thức hoàn thành!
+          Xem nhanh ${wrongIds.length} từ bạn vừa nhầm/chậm rồi bấm <strong>Vào Vòng Sửa Lỗi</strong>. Trả lời đúng sạch 100% trong &le; ${Math.round(getWordTimeLimitMs() / 1000)} giây là chính thức hoàn thành!
         </p>
         <div class="recog-miss-list">${rows}</div>
         <div class="recog-intro-actions" style="margin-top:16px;">
@@ -768,7 +844,7 @@
       <div class="recog-intro-card">
         <div class="recog-intro-title" style="color:var(--danger);">Chưa đạt chuẩn (${pct}% &lt; ${PASS_THRESHOLD_PCT}%)</div>
         <p style="font-size:15px; color:var(--text-muted); margin:6px 0 12px;">
-          Bạn đúng <strong>${session.correctCount}/${session.orderIds.length} từ</strong> và còn <strong>${wrongIds.length} từ</strong> sai hoặc phản xạ chậm hơn 5 giây. Hãy ôn lại các từ dưới đây rồi thi lại nhé!
+          Bạn đúng <strong>${session.correctCount}/${session.orderIds.length} từ</strong> và còn <strong>${wrongIds.length} từ</strong> sai hoặc phản xạ chậm hơn ${Math.round(getWordTimeLimitMs() / 1000)} giây. Hãy ôn lại các từ dưới đây rồi thi lại nhé!
         </p>
         <div class="recog-miss-list">${rows}${moreNote}</div>
         <div class="recog-intro-actions" style="margin-top:16px;">
@@ -803,7 +879,7 @@
     // Mark all words mastered (synced via lemma!)
     B()?.markMasteredBatch?.(session.orderIds);
 
-    if (session.mode === 'task_final') {
+    if (session.mode === 'task_final' || session.mode === 'old_review') {
       if (typeof session.onCompleteCallback === 'function') {
         session.onCompleteCallback({
           taskId: session.taskId,
@@ -836,16 +912,20 @@
 
     body.innerHTML = `
       <div class="recog-intro-card" style="text-align:center;">
-        <img src="assets/images/panda_leaderboard.jpg" alt="" class="celebrate-panda-img" style="width:88px; height:88px; margin-bottom:10px;">
+        <img src="assets/images/totoro_sitting_branch.png" alt="" class="celebrate-panda-img celebrate-totoro-img" style="width:94px; height:86px; margin-bottom:10px;">
         <div class="recog-intro-title" style="color:var(--success);">
-          ${session.mode === 'task_final' ? `✓ Hoàn thành xuất sắc ${esc(session.taskLabel)}!` : `✓ Chinh phục 100% ${esc(session.scopeName)}!`}
+          ${session.mode === 'task_final'
+            ? `✓ Hoàn thành xuất sắc ${esc(session.taskLabel)}!`
+            : (session.mode === 'old_review'
+              ? `✓ Đã hoàn tất Speed Quiz ôn ${total} từ cũ!`
+              : `✓ Chinh phục 100% ${esc(session.scopeName)}!`)}
         </div>
         <p style="font-size:15.5px; color:var(--text-muted); margin:10px 0 18px; line-height:1.6;">
           Phản xạ Vòng 1: <strong>${session.correctCount}/${total} từ (${pct}%)</strong> · Sửa lỗi 100%: <strong>Đạt</strong> · Thời gian: <strong>${durStr}</strong>.
           <br>Toàn bộ <strong>${total.toLocaleString('vi-VN')} từ</strong> đã được xác nhận <strong>Đã thuộc</strong> và đồng bộ sang các bộ từ liên quan!
         </p>
         <div class="recog-intro-actions" style="justify-content:center;">
-          <button type="button" class="btn btn-primary" id="btn-recog-done" onclick="RecognitionTestModule.closeModal()">Hoàn tất &amp; Quay lại</button>
+          <button type="button" class="btn btn-primary" id="btn-recog-done" onclick="RecognitionTestModule.closeModal()">${session.mode === 'old_review' ? `Hoàn tất &amp; Mở ${esc(session.taskLabel)} →` : 'Hoàn tất &amp; Quay lại'}</button>
         </div>
       </div>
     `;
@@ -863,12 +943,17 @@
   function closeModal(event) {
     if (event && event.target !== document.getElementById('modal-recognition-test')) return;
     const completedTaskFinal = Boolean(session && session.mode === 'task_final' && session.phase === 'result' && session.passed);
+    const completedOldReviewTaskId = (session && session.mode === 'old_review' && session.phase === 'result' && session.passed)
+      ? session.taskId
+      : '';
     if (session && session.mode === 'list_final' && session.phase === 'quiz' && session.cursor > 0) {
       persistListCheckpoint();
     }
     closeModalShell();
     if (completedTaskFinal) {
       window.TasksModule?.exitTaskWorkspace?.(false);
+    } else if (completedOldReviewTaskId) {
+      window.TasksModule?.openTaskBriefModal?.(completedOldReviewTaskId);
     }
   }
 
@@ -914,6 +999,7 @@
     buildMeaningDistractors,
     startTaskFinalExam,
     startListFinalExam,
+    startOldReviewQuiz,
     beginActiveRound,
     beginErrorClearanceLoop,
     chooseOption,

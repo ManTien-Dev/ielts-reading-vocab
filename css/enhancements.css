@@ -63,8 +63,8 @@ main.app-main:has(#screen-study.active) {
   width: 100% !important;
   max-width: 780px !important;
   min-width: 0 !important;
-  height: clamp(320px, calc(100svh - 186px), 560px) !important;
-  min-height: 320px !important;
+  height: clamp(340px, calc(100svh - 208px), 700px) !important;
+  min-height: 340px !important;
   margin: 0 auto 8px !important;
   user-select: none;
   -webkit-user-select: none;
@@ -117,6 +117,12 @@ main.app-main:has(#screen-study.active) {
   #screen-study .fc-center-front { padding: 8px 0 !important; }
   #screen-study .fc-word { margin-bottom: 10px !important; }
   #screen-study .fc-flip-prompt { padding: 8px 14px !important; }
+  #screen-study .fc-scene {
+    height: clamp(340px, calc(100svh - 172px), 580px) !important;
+  }
+  body:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
+    height: clamp(320px, calc(100svh - 196px), 540px) !important;
+  }
 }
 @media (min-width: 1200px) {
   html:has(#screen-study.active),
@@ -142,7 +148,7 @@ main.app-main:has(#screen-study.active) {
     padding: 4px 8px 6px !important;
   }
   body:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
-    height: clamp(305px, calc(100svh - 210px), 540px) !important;
+    height: clamp(320px, calc(100svh - 232px), 650px) !important;
   }
 }
 .btn-deck-tool.is-active {
@@ -5123,16 +5129,41 @@ header.app-header {
 /* =========================================================
    TEST 2 PART 2: IELTS SUMMARY COMPLETION WORD BOX
    ========================================================= */
-.t2-wb-panel {
+.task-exam-dialog > .modal-body:has(.t2-wb-panel) {
+  overflow-y: hidden !important;
+  padding: 10px 22px 12px !important;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+}
+#task-stage-container:has(.t2-wb-panel) {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+}
+.task-card-panel.t2-wb-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  padding: 16px 26px 16px !important;
+  overflow: hidden;
+}
+.t2-wb-panel .task-stage-progress {
+  margin-bottom: 2px;
+}
+.t2-wb-panel .task-exam-header-row {
+  margin-bottom: 0;
 }
 .t2-wb-box {
   background: var(--bg-soft, #f3f7ee);
   border: 1.5px solid var(--card-border);
   border-radius: 16px;
-  padding: 12px 14px;
+  padding: 10px 15px;
+  flex-shrink: 0;
 }
 [data-theme="dark"] .t2-wb-box {
   background: rgba(255, 255, 255, 0.04);
@@ -5148,21 +5179,30 @@ header.app-header {
 .t2-wb-chip-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 .t2-wb-chip {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
-  border-radius: 12px;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 13px;
   border: 1.5px solid var(--card-border);
   background: var(--card-bg, #fff);
   color: var(--text-bright);
-  font-size: 14.5px;
-  font-weight: 700;
-  cursor: pointer;
+  font-size: 18px;
+  font-weight: 750;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
   transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, opacity 0.12s ease;
+}
+.t2-wb-chip:active:not(:disabled) {
+  cursor: grabbing;
+}
+.t2-wb-chip.is-source-lifted {
+  opacity: 0.38;
+  transform: scale(0.97);
 }
 .t2-wb-chip:hover:not(:disabled) {
   border-color: var(--accent);
@@ -5189,12 +5229,12 @@ header.app-header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
   background: rgba(47, 107, 50, 0.12);
   color: var(--accent);
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 850;
   flex-shrink: 0;
 }
@@ -5213,17 +5253,24 @@ header.app-header {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+  justify-content: space-evenly;
 }
 .t2-wb-sent-row {
   border: 1.5px solid var(--card-border);
-  border-radius: 14px;
-  padding: 11px 14px;
+  border-radius: 15px;
+  padding: 13px 18px;
   background: var(--card-bg, #fff);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
-.t2-wb-sent-row.is-active-row {
+.t2-wb-sent-row.is-active-row,
+.t2-wb-sent-row.is-drop-over {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(47, 107, 50, 0.12);
+  box-shadow: 0 0 0 3px rgba(47, 107, 50, 0.14);
+}
+.t2-wb-sent-row.is-drop-over {
+  background: rgba(47, 107, 50, 0.05);
 }
 .t2-wb-sent-row.is-ok-row {
   border-color: rgba(22, 163, 74, 0.5);
@@ -5238,11 +5285,13 @@ header.app-header {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   flex-wrap: wrap;
 }
 .t2-wb-num {
-  font-size: 12px;
+  display: inline-block;
+  margin-right: 7px;
+  font-size: 15px;
   font-weight: 850;
   color: var(--accent);
   text-transform: uppercase;
@@ -5253,30 +5302,33 @@ header.app-header {
   color: var(--text-muted);
 }
 .t2-wb-sent-text {
-  font-size: 15.5px;
-  line-height: 1.68;
+  font-size: 18.5px;
+  font-weight: 600;
+  line-height: 1.58;
   color: var(--text-bright);
 }
 .t2-wb-slot {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 10px;
-  margin: 0 3px;
-  border-radius: 9px;
+  gap: 6px;
+  padding: 4px 13px;
+  margin: 0 4px;
+  border-radius: 10px;
   border: 1.5px dashed var(--accent);
-  background: rgba(47, 107, 50, 0.06);
+  background: rgba(47, 107, 50, 0.07);
   color: var(--accent);
-  font-size: 14.5px;
+  font-size: 18px;
   font-weight: 800;
   cursor: pointer;
   vertical-align: baseline;
-  transition: background 0.12s ease, border-color 0.12s ease;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
 }
-.t2-wb-slot.is-active {
+.t2-wb-slot.is-active,
+.t2-wb-slot.is-drop-over {
   border-style: solid;
-  background: rgba(47, 107, 50, 0.15);
-  box-shadow: 0 0 0 2px rgba(47, 107, 50, 0.18);
+  background: rgba(47, 107, 50, 0.18);
+  box-shadow: 0 0 0 2.5px rgba(47, 107, 50, 0.22);
+  transform: scale(1.02);
 }
 .t2-wb-slot.is-filled {
   border-style: solid;
@@ -5299,19 +5351,19 @@ header.app-header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: 3px;
-  font-size: 14px;
+  margin-left: 4px;
+  font-size: 15px;
   line-height: 1;
-  opacity: 0.85;
+  opacity: 0.88;
 }
 .t2-wb-slot-x:hover {
   opacity: 1;
 }
 .t2-wb-fb {
-  margin-top: 7px;
-  font-size: 13px;
+  margin-top: 6px;
+  font-size: 14.5px;
   line-height: 1.45;
-  padding: 6px 10px;
+  padding: 6px 11px;
   border-radius: 9px;
 }
 .t2-wb-fb.is-ok {
@@ -5327,14 +5379,66 @@ header.app-header {
 .t2-wb-footer {
   display: flex;
   justify-content: flex-end;
-  padding-top: 4px;
+  padding-top: 2px;
   margin-top: auto;
+  flex-shrink: 0;
+}
+.t2-wb-footer .btn {
+  font-size: 16px;
+  padding: 10px 22px;
+}
+@media (max-width: 1366px), (max-height: 780px) {
+  .task-exam-dialog > .modal-body:has(.t2-wb-panel) { padding: 8px 18px 10px !important; }
+  .task-card-panel.t2-wb-panel { padding: 12px 22px 12px !important; gap: 7px; }
+  .t2-wb-panel .task-exam-title { font-size: 20px; }
+  .t2-wb-box { padding: 8px 12px; border-radius: 13px; }
+  .t2-wb-chip-grid { gap: 7px; }
+  .t2-wb-chip { padding: 6px 12px; font-size: 17px; border-radius: 11px; gap: 6px; }
+  .t2-wb-chip-key { width: 23px; height: 23px; font-size: 12.5px; }
+  .t2-wb-list { gap: 6px; }
+  .t2-wb-sent-row { padding: 8px 14px; border-radius: 12px; }
+  .t2-wb-sent-text { font-size: 17.5px; line-height: 1.44; }
+  .t2-wb-slot { padding: 2px 10px; font-size: 17px; }
+  .t2-wb-fb { margin-top: 3px; padding: 3px 8px; font-size: 12.5px; line-height: 1.35; }
+  .t2-wb-footer .btn { padding: 8px 20px; font-size: 15.5px; }
+}
+@media (max-width: 959px) {
+  .task-exam-dialog > .modal-body:has(.t2-wb-panel) {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 12px 18px !important;
+  }
+  #task-stage-container:has(.t2-wb-panel) {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .task-card-panel.t2-wb-panel {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 14px 14px 16px !important;
+    gap: 10px !important;
+  }
+  .t2-wb-list {
+    flex: 0 0 auto !important;
+    justify-content: flex-start !important;
+    gap: 9px !important;
+  }
+  .t2-wb-chip { padding: 6px 10px; font-size: 15px; gap: 5px; }
+  .t2-wb-chip-key { width: 22px; height: 22px; font-size: 12px; }
+  .t2-wb-sent-row { padding: 10px 12px; }
+  .t2-wb-sent-text { font-size: 15.5px; line-height: 1.5; }
+  .t2-wb-slot { padding: 2px 9px; font-size: 15px; }
+  .t2-wb-footer { margin-top: 6px; padding-top: 4px; }
 }
 @media (max-width: 640px) {
+  .task-exam-dialog > .modal-body:has(.t2-wb-panel) { overflow-y: auto !important; }
+  .t2-wb-panel { overflow: visible; }
   .t2-wb-box { padding: 10px 11px; }
-  .t2-wb-chip { padding: 6px 9px; font-size: 13.5px; }
-  .t2-wb-sent-text { font-size: 14.5px; line-height: 1.62; }
-  .t2-wb-slot { padding: 2px 8px; font-size: 13.5px; }
+  .t2-wb-chip { padding: 7px 11px; font-size: 15px; }
+  .t2-wb-sent-text { font-size: 15.5px; line-height: 1.58; }
+  .t2-wb-slot { padding: 2px 9px; font-size: 15px; }
 }
 
 /* =========================================================
@@ -5831,14 +5935,14 @@ header.app-header {
   body.study-focus-mode #screen-study .fc-scene {
     max-width: min(900px, 76vw) !important;
     width: 100% !important;
-    height: clamp(440px, calc(100svh - 220px), 580px) !important;
-    min-height: 440px !important;
+    height: clamp(460px, calc(100svh - 196px), 720px) !important;
+    min-height: 460px !important;
     border-radius: 24px !important;
     box-shadow: 0 20px 50px rgba(24, 48, 28, 0.11), 0 4px 14px rgba(24, 48, 28, 0.05) !important;
   }
   body.study-focus-mode:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
-    height: clamp(400px, calc(100svh - 270px), 540px) !important;
-    min-height: 400px !important;
+    height: clamp(420px, calc(100svh - 246px), 660px) !important;
+    min-height: 420px !important;
   }
   body.study-focus-mode #screen-study .fc-card,
   body.study-focus-mode #screen-study .fc-face {

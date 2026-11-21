@@ -7,11 +7,18 @@
     constructor() {
       this._voices = [];
       this._fallbackAudio = null;
+      this._activeUtterance = null;
       this.refreshVoices();
       try {
         if ('speechSynthesis' in window) {
           window.speechSynthesis.addEventListener?.('voiceschanged', () => this.refreshVoices());
         }
+        const wake = () => {
+          this.refreshVoices();
+          try { if ('speechSynthesis' in window) window.speechSynthesis.resume?.(); } catch (_) {}
+        };
+        window.addEventListener('pointerdown', wake, { once: true, passive: true });
+        window.addEventListener('keydown', wake, { once: true, passive: true });
       } catch (_) {}
     }
 
@@ -52,8 +59,11 @@
       if (this._fallbackAudio) {
         try { this._fallbackAudio.pause(); this._fallbackAudio = null; } catch (_) {}
       }
+      this._activeUtterance = null;
       try {
-        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        if ('speechSynthesis' in window && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
+          window.speechSynthesis.cancel();
+        }
       } catch (_) {}
     }
 
@@ -95,13 +105,20 @@
         return this.playDictionaryFallback(clean, accent, rate);
       }
       try {
-        window.speechSynthesis.cancel();
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+          window.speechSynthesis.cancel();
+        }
         window.speechSynthesis.resume?.();
         const utt = new SpeechSynthesisUtterance(clean);
         utt.lang = accent;
         utt.rate = Math.max(0.65, Math.min(1.5, Number(rate) || 0.92));
         if (bestVoice) utt.voice = bestVoice;
+        this._activeUtterance = utt;
+        utt.onend = () => {
+          if (this._activeUtterance === utt) this._activeUtterance = null;
+        };
         utt.onerror = (ev) => {
+          if (this._activeUtterance === utt) this._activeUtterance = null;
           const code = String(ev?.error || '');
           if (code === 'interrupted' || code === 'canceled' || code === 'not-allowed') return;
           this.playDictionaryFallback(clean, accent, rate);

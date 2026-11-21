@@ -56,9 +56,9 @@
     return Boolean(key && /^(task|fnd|acd|adv)_/i.test(String(key)));
   }
 
-  function isReadingQuickScopeKey(key) {
-    const k = String(key || '').toLowerCase();
-    return k === 'foundation' || k === 'academic' || k === 'advanced' || k.startsWith('fnd_') || k.startsWith('acd_') || k.startsWith('adv_');
+  function isReadingQuickScopeKey(_key) {
+    // Always run Stage 1 typing test ("gõ chữ") when clicking "Đã thuộc" across all scopes
+    return false;
   }
 
   // Study State
@@ -86,7 +86,8 @@
   let recallSubmitted = false;
   let recallStage = 1;
   let recallMode = 'standard'; // 'standard' | 'quick_vi'
-  let recallStage2Type = 'synonym'; // 'synonym' | 'wordbox'
+  let recallStage2Type = 'synonym'; // 'synonym' | 'wordfamily' | 'meaning_vi' | 'wordbox'
+  let recallStage2Queue = [];
   let recallWbSentence = '';
   let recallWbTitle = '';
   let recallAttemptsLeft = 2;
@@ -712,9 +713,42 @@
   let studyIdleWarnShown = false;
   let studyIdleEventsBound = false;
 
+  function syncStudyIdleClockUI(overrideIdleMs, limitMs, isTaskMode) {
+    const root = document.getElementById('study-idle-clock');
+    const valEl = document.getElementById('study-idle-clock-val');
+    const limitEl = document.getElementById('study-idle-clock-limit');
+    const barEl = document.getElementById('study-idle-clock-bar');
+    if (!root || !valEl) return;
+    if (!currentUser || isTeacherUser()) {
+      root.classList.remove('is-warn', 'is-danger', 'is-task-mode');
+      root.classList.toggle('is-teacher-exempt', Boolean(currentUser && isTeacherUser()));
+      valEl.textContent = isTeacherUser() ? 'Miễn' : '00:00';
+      if (limitEl) limitEl.textContent = isTeacherUser() ? 'GV' : '/ 10:00';
+      if (barEl) barEl.style.width = '0%';
+      return;
+    }
+    root.classList.remove('is-teacher-exempt');
+    const maxMs = limitMs || STUDY_IDLE_LOGOUT_MS;
+    const rawIdle = overrideIdleMs !== undefined && overrideIdleMs !== null
+      ? overrideIdleMs
+      : (Date.now() - lastStudyActivityAt);
+    const idleMs = Math.max(0, Math.min(maxMs, rawIdle));
+    const totalSec = Math.floor(idleMs / 1000);
+    const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+    const ss = String(totalSec % 60).padStart(2, '0');
+    const maxMin = String(Math.floor(maxMs / 60000)).padStart(2, '0');
+    valEl.textContent = `${mm}:${ss}`;
+    if (limitEl) limitEl.textContent = `/ ${maxMin}:00`;
+    if (barEl) barEl.style.width = `${Math.min(100, (idleMs / maxMs) * 100).toFixed(1)}%`;
+    root.classList.toggle('is-warn', idleMs >= 7 * 60 * 1000 && idleMs < 9 * 60 * 1000);
+    root.classList.toggle('is-danger', idleMs >= 9 * 60 * 1000);
+    root.classList.toggle('is-task-mode', Boolean(isTaskMode));
+  }
+
   function bumpStudyIdleActivity() {
     lastStudyActivityAt = Date.now();
     studyIdleWarnShown = false;
+    if (!window.TasksModule?.getActiveTask?.()) syncStudyIdleClockUI(0);
   }
 
   function handleStudyIdleTimeoutLogout() {
@@ -726,12 +760,16 @@
   }
 
   function evaluateStudyIdleTimeout() {
-    if (!currentUser || isTeacherUser()) return false;
+    if (!currentUser || isTeacherUser()) {
+      syncStudyIdleClockUI();
+      return false;
+    }
     if (window.TasksModule?.getActiveTask?.() || window.TasksModule?.getExamState?.().active) {
       lastStudyActivityAt = Date.now();
       return false;
     }
     const idleMs = Date.now() - lastStudyActivityAt;
+    syncStudyIdleClockUI(idleMs, STUDY_IDLE_LOGOUT_MS, false);
     if (idleMs >= STUDY_IDLE_LOGOUT_MS) {
       handleStudyIdleTimeoutLogout();
       return true;
@@ -745,6 +783,7 @@
 
   function startStudyIdleMonitor() {
     stopStudyIdleMonitor();
+    syncStudyIdleClockUI(0);
     if (!currentUser || isTeacherUser()) return;
     lastStudyActivityAt = Date.now();
     studyIdleWarnShown = false;
@@ -759,7 +798,8 @@
         }
       });
     }
-    studyIdleCheckTimer = setInterval(evaluateStudyIdleTimeout, 2000);
+    evaluateStudyIdleTimeout();
+    studyIdleCheckTimer = setInterval(evaluateStudyIdleTimeout, 1000);
   }
 
   function stopStudyIdleMonitor() {
@@ -768,6 +808,7 @@
       studyIdleCheckTimer = null;
     }
     studyIdleWarnShown = false;
+    syncStudyIdleClockUI(0);
   }
 
   function startTimer() {
@@ -1197,6 +1238,29 @@
       cloudClassCache = nextCache;
       initialCloudPullSettled = true;
 
+      // Sync teacher live task deadlines (extend / end early / reopen) into localStorage for all clients
+      try {
+        const LIVE_DL_KEY = 'ielts_teacher_live_deadlines_v1';
+        let liveMap = {};
+        try { liveMap = JSON.parse(localStorage.getItem(LIVE_DL_KEY) || '{}') || {}; } catch (_) {}
+        let liveChanged = false;
+        const mergeDlSource = (src) => {
+          if (!src || typeof src !== 'object') return;
+          Object.entries(src).forEach(([tid, rec]) => {
+            if (!rec || typeof rec !== 'object') return;
+            const prev = liveMap[tid];
+            if (!prev || Number(rec.issuedAt || 0) > Number(prev.issuedAt || 0)) {
+              liveMap[tid] = { deadlineAt: Number(rec.deadlineAt || 0), issuedAt: Number(rec.issuedAt || 0) };
+              liveChanged = true;
+            }
+          });
+        };
+        data.students.forEach((st) => mergeDlSource(st?.syncData?.teacherTaskDeadlines));
+        if (liveChanged) {
+          localStorage.setItem(LIVE_DL_KEY, JSON.stringify(liveMap));
+        }
+      } catch (_) {}
+
       if (currentUser) {
         const activeUid = getScopedUid(currentUser.id);
         const mine = cloudClassCache[activeUid];
@@ -1205,6 +1269,8 @@
           syncPushCurrentUser(false);
         } else if (mine) {
           mergeCloudEntryIntoLocal(currentUser.id, mine);
+        } else if (!isTeacherUser()) {
+          window.TasksModule?.onCloudMerged?.();
         }
       }
 
@@ -1223,6 +1289,33 @@
     } finally {
       initialCloudPullSettled = true;
     }
+  }
+
+  function broadcastTeacherTaskDeadlines(deadlinesMap) {
+    if (!isTeacherUser() || !deadlinesMap || typeof deadlinesMap !== 'object') return Promise.resolve(false);
+    const uid = currentUser?.id || 'giaovien';
+    const scoped = getScopedUid(uid);
+    const payload = {
+      id: uid,
+      name: currentUser?.name || 'Giao Vien',
+      todayMins: 0,
+      weekMins: 0,
+      monthMins: 0,
+      mastered: 0,
+      streak: 0,
+      syncData: {
+        resetEpoch: CLASS_RESET_EPOCH,
+        teacherTaskDeadlines: deadlinesMap,
+      },
+    };
+    cloudClassCache[scoped] = { ...cloudClassCache[scoped], ...payload };
+    const url = getSyncUrl();
+    if (!url) return Promise.resolve(true);
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+    }).then((r) => Boolean(r && r.ok)).catch(() => false);
   }
 
   function unlockStudentCloudLocks(studentId, unlockedAtTs = Date.now()) {
@@ -1711,7 +1804,8 @@
       return (parts[0] || 'HV').slice(0, 2).toUpperCase();
     };
 
-    const formatPts = (n) => `${Number(n || 0).toLocaleString('vi-VN')} đ`;
+    const CHESTNUT_UNIT_HTML = '<span class="tot-chestnut-unit" aria-label="hạt dẻ điểm" title="Hạt dẻ điểm"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.4C13 4.6 19.8 8.2 21 13.8C21.8 17.6 18.6 21 12 21C5.4 21 2.2 17.6 3 13.8C4.2 8.2 11 4.6 12 2.4Z" fill="#8B3A14" stroke="#531F07" stroke-width="1.4" stroke-linejoin="round"/><path d="M5 17.5C7 15.8 17 15.8 19 17.5C17.6 19.9 15 20.8 12 20.8C9 20.8 6.4 19.9 5 17.5Z" fill="#E8CCA0"/><path d="M7.2 12.2C7.8 9.6 9.8 7.8 11.4 6.6" stroke="#DF8B56" stroke-width="1.6" stroke-linecap="round" opacity=".85"/><path d="M12 4.8V15.4M8.5 8.5C7.9 11 7.8 13.2 8.2 15.6M15.5 8.5C16.1 11 16.2 13.2 15.8 15.6" stroke="#5E2409" stroke-width="0.9" stroke-linecap="round" opacity=".45"/></svg></span>';
+    const formatPts = (n) => `${Number(n || 0).toLocaleString('vi-VN')}${CHESTNUT_UNIT_HTML}`;
     const formatTip = (p) => `${p.name} · ${p.score.toLocaleString('vi-VN')} điểm (${p.mastered} từ gốc · ${p.tasksCompleted} Task · ${p.periodMins}p · ${p.streak} ngày streak)`;
 
     listEl.innerHTML = visibleTop.map((p, idx) => {
@@ -2297,7 +2391,18 @@
 
   function renderCurrentCard(direction = 0, options = {}) {
     cancelPendingAdvance();
+    if (cardStepOutTimer) {
+      clearTimeout(cardStepOutTimer);
+      cardStepOutTimer = null;
+      pendingCardStep = 0;
+    }
+    if (cardStepInTimer) {
+      clearTimeout(cardStepInTimer);
+      cardStepInTimer = null;
+    }
+    document.getElementById('fc-motion-wrap')?.classList.remove('out-next', 'in-next', 'out-prev', 'in-prev');
     const scene = document.getElementById('fc-scene');
+    scene?.classList.remove('shifting');
     const card = document.getElementById('fc-card');
     const finishedBox = document.getElementById('fc-finished-box');
     const progressText = document.getElementById('study-progress-text');
@@ -2396,7 +2501,7 @@
       if (synChips.length > 0) {
         pairCards.push(`
           <div class="fc-pair-card">
-            <div class="fc-pair-label">Đồng nghĩa</div>
+            <div class="fc-pair-label">Synonyms</div>
             <div class="fc-chip-wrap">${synChips.map(w => `<span class="fc-chip">${escapeHtml(w)}</span>`).join('')}</div>
           </div>
         `);
@@ -2411,7 +2516,7 @@
       } else if (formChips.length > 0) {
         pairCards.push(`
           <div class="fc-pair-card">
-            <div class="fc-pair-label">Gia đình từ</div>
+            <div class="fc-pair-label">Word Family</div>
             <div class="fc-chip-wrap">${formChips.map(w => `<span class="fc-chip">${escapeHtml(w)}</span>`).join('')}</div>
           </div>
         `);
@@ -2424,12 +2529,7 @@
     const backDisplaySent = sentence || item.qa_example?.question || '';
     const backHighlightTerm = sentence ? item.lemma : (item.qa_example?.q_term || item.lemma);
     if (backDisplaySent) {
-      const citTitle = (Array.isArray(item.exam_citations) && item.exam_citations[0]?.title)
-        ? String(item.exam_citations[0].title).trim()
-        : (item.qa_example?.exam_title || '');
-      const cleanSource = citTitle && citTitle !== '617 đề IELTS Academic Reading' ? citTitle : 'Đề thi thật IELTS Academic';
-      const srcHtml = `<div class="fc-sentence-src">${escapeHtml(cleanSource)}</div>`;
-      backSent.innerHTML = srcHtml + formatSentenceHighlight(backDisplaySent, backHighlightTerm);
+      backSent.innerHTML = formatSentenceHighlight(backDisplaySent, backHighlightTerm);
       backSent.style.display = 'block';
     } else {
       backSent.style.display = 'none';
@@ -2996,6 +3096,55 @@
     return shuffleArray(options);
   }
 
+  function buildRecallWordFamilyOptions(item) {
+    const lemmaNorm = String(item?.lemma || '').trim().toLowerCase();
+    const stemOf = (word) => {
+      const clean = String(word || '').toLowerCase().replace(/[^a-z]/g, '');
+      return clean.length >= 4 ? clean.slice(0, 4) : clean;
+    };
+    const options = [];
+    const used = new Set([lemmaNorm]);
+    const forbiddenStems = new Set([stemOf(lemmaNorm)]);
+
+    const addOption = (txt, isCorrect) => {
+      const clean = String(txt || '').trim();
+      const norm = clean.toLowerCase();
+      if (!clean || used.has(norm)) return false;
+      used.add(norm);
+      options.push({ text: clean, isCorrect });
+      return true;
+    };
+
+    const rawForms = shuffleArray(
+      (Array.isArray(item?.clean_forms) ? item.clean_forms : [])
+        .map((s) => String(s || '').trim())
+        .filter((s) => s && s.toLowerCase() !== lemmaNorm)
+    );
+    const chosenForms = rawForms.slice(0, 4);
+    chosenForms.forEach((f) => {
+      addOption(f, true);
+      const st = stemOf(f);
+      if (st.length >= 4) forbiddenStems.add(st);
+    });
+    rawForms.forEach((f) => used.add(f.toLowerCase()));
+
+    const pool = (currentScopeList && currentScopeList.length >= 30)
+      ? currentScopeList
+      : [...(APP_DATA?.file2_families_3500 || []), ...(APP_DATA?.file1_paraphrase_1500 || [])];
+    const step = Math.max(1, Math.floor(pool.length / 120));
+    const offset = Math.floor(Math.random() * Math.max(1, pool.length));
+    for (let k = 0; k < pool.length && options.length < 8; k++) {
+      const idx = (offset + k * step + Math.floor(k / 40)) % pool.length;
+      const cand = pool[idx];
+      if (!cand || cand.id === item.id) continue;
+      const cLem = String(cand.lemma || '').trim();
+      const cNorm = cLem.toLowerCase();
+      if (!cLem || used.has(cNorm) || forbiddenStems.has(stemOf(cNorm))) continue;
+      addOption(cLem, false);
+    }
+    return shuffleArray(options);
+  }
+
   function buildRecallWordBoxExercise(item) {
     const lem = String(item?.lemma || '').trim();
     const lemLow = lem.toLowerCase();
@@ -3124,22 +3273,48 @@
     });
   }
 
+  function finalizeRecallMastery(item) {
+    stopRecallInputTimer();
+    clearRecallActiveSession();
+    recallSubmitted = true;
+    delete masterCooldowns[item.id];
+    saveMasterCooldowns();
+    updateAssess3CooldownUI();
+    commitAssessment(item, 3);
+    closeRecallModal(null, true);
+    showToast(`Chính xác! Đã thuộc "${item.lemma}".`);
+    advanceDeckAfterAssess3();
+  }
+
+  function advanceRecallStage2Queue(item) {
+    if (Array.isArray(recallStage2Queue) && recallStage2Queue.length > 0) {
+      const nextStep = recallStage2Queue.shift();
+      enterRecallStage2Step(item, nextStep);
+      return;
+    }
+    finalizeRecallMastery(item);
+  }
+
   function toggleRecallSynOption(idx) {
     if (recallSubmitted) return;
-    // Fast 1-Tap Vietnamese Meaning check for Reading scopes (Nền Tảng / Học Thuật / Chuyên Sâu)
+    // Fast 1-Tap Vietnamese Meaning check
     if (recallMode === 'quick_vi') {
       const opt = recallSynOptions[idx];
       if (!opt || !recallTargetItem) return;
       recallSynSelected = new Set([idx]);
       if (opt.isCorrect) {
         stopRecallInputTimer();
-        clearRecallActiveSession();
         recallSubmitted = true;
         renderRecallSynGrid(true);
-        delete masterCooldowns[recallTargetItem.id];
+        const doneItem = recallTargetItem;
+        if (Array.isArray(recallStage2Queue) && recallStage2Queue.length > 0) {
+          setTimeout(() => advanceRecallStage2Queue(doneItem), 160);
+          return;
+        }
+        clearRecallActiveSession();
+        delete masterCooldowns[doneItem.id];
         saveMasterCooldowns();
         updateAssess3CooldownUI();
-        const doneItem = recallTargetItem;
         commitAssessment(doneItem, 3);
         setTimeout(() => {
           closeRecallModal(null, true);
@@ -3200,28 +3375,147 @@
     }
     if (p2) {
       if (recallMode === 'quick_vi') {
-        p2.innerHTML = 'Chọn nhanh <strong>nghĩa tiếng Việt đúng</strong> trong 5 giây (1 chạm):';
+        p2.innerHTML = 'Chọn nghĩa tiếng Việt đúng:';
         return;
       }
       if (recallStage2Type === 'wordbox') {
         p2.innerHTML = recallAttemptsLeft <= 0
-          ? 'Đã hết lượt thử cho bước điền Word Box.'
-          : `Chọn <strong>1 từ đúng</strong> (cẩn thận bẫy Word Family) để điền vào câu trích đề thật (còn ${recallAttemptsLeft} lần thử):`;
+          ? 'Đã hết lượt thử.'
+          : `Chọn từ đúng điền vào chỗ trống (còn ${recallAttemptsLeft} lần):`;
         return;
       }
       const targetTotal = recallSynOptions.filter((o) => o.isCorrect).length;
       const selBadge = targetTotal > 0
         ? ` <span class="recall-select-counter">Đã chọn ${recallSynSelected.size}/${targetTotal}</span>`
         : '';
+      if (recallStage2Type === 'wordfamily') {
+        if (recallAttemptsLeft <= 0) {
+          p2.innerHTML = 'Đã hết lượt thử.';
+        } else {
+          const baseText = rule.strict
+            ? 'Chọn các từ thuộc Word Family (còn 1 lần):'
+            : `Chọn các từ thuộc Word Family (còn ${recallAttemptsLeft} lần):`;
+          p2.innerHTML = escapeHtml(baseText) + selBadge;
+        }
+        return;
+      }
       if (recallAttemptsLeft <= 0) {
-        p2.innerHTML = 'Đã hết lượt thử cho bước chọn đồng nghĩa.';
+        p2.innerHTML = 'Đã hết lượt thử.';
       } else {
         const baseText = rule.strict
-          ? 'Chỉ click đúng các từ đồng nghĩa (Ôn tập · chỉ 1 lần xác nhận):'
-          : `Chỉ click đúng các từ đồng nghĩa (còn ${recallAttemptsLeft} lần thử):`;
+          ? 'Chọn các từ đồng nghĩa (còn 1 lần):'
+          : `Chọn các từ đồng nghĩa (còn ${recallAttemptsLeft} lần):`;
         p2.innerHTML = escapeHtml(baseText) + selBadge;
       }
     }
+  }
+
+  function enterRecallStage2Step(item, stepType) {
+    if (stepType === 'meaning_vi') {
+      const choices = window.RecognitionTestModule?.buildMeaningDistractors?.(item, currentScopeList, 3) || [];
+      if (choices.length < 2) {
+        advanceRecallStage2Queue(item);
+        return;
+      }
+      stopRecallInputTimer();
+      recallStage = 2;
+      recallSubmitted = false;
+      recallMode = 'quick_vi';
+      recallStage2Type = 'meaning_vi';
+      recallAttemptsLeft = 1;
+      recallSynOptions = choices.map((c) => ({ text: c.meaning, isCorrect: c.isCorrect }));
+      recallSynSelected = new Set();
+      recallDeadlineAt = Date.now() + 15000;
+      const stageBadge = document.getElementById('recall-stage-badge');
+      const timerBadge = document.getElementById('recall-timer-badge');
+      const hintBox = document.getElementById('recall-hint-box');
+      const targetSubEl = document.querySelector('#recall-stage2-target .recall-stage-sub');
+      const targetWordEl = document.getElementById('recall-stage2-word');
+      const stage1Body = document.getElementById('recall-stage1-body');
+      const stage2Body = document.getElementById('recall-stage2-body');
+      const btnSubmit = document.getElementById('btn-recall-submit');
+      const fb = document.getElementById('recall-feedback');
+      document.getElementById('recall-word-input')?.blur();
+      if (stageBadge) stageBadge.textContent = 'Test 2 · Nghĩa Việt';
+      if (timerBadge) {
+        timerBadge.textContent = '15s';
+        timerBadge.classList.remove('is-urgent');
+      }
+      if (hintBox) hintBox.style.display = 'block';
+      if (targetSubEl) targetSubEl.textContent = `${getCleanPos(item)} · Chọn nghĩa tiếng Việt đúng của`;
+      if (targetWordEl) {
+        targetWordEl.className = 'recall-stage-word';
+        targetWordEl.textContent = item.lemma || '';
+      }
+      if (stage1Body) stage1Body.style.display = 'none';
+      if (stage2Body) stage2Body.style.display = 'block';
+      if (btnSubmit) btnSubmit.style.display = 'none';
+      if (fb) {
+        fb.style.display = 'none';
+        fb.className = 'recall-feedback';
+        fb.innerHTML = '';
+      }
+      updateRecallPromptAttempts(item);
+      renderRecallSynGrid(false);
+      setRecallActiveSession(item, 2);
+      recallDeadlineTimer = setInterval(updateRecallCountdownBadge, 250);
+      return;
+    }
+
+    stopRecallInputTimer();
+    recallStage = 2;
+    recallSubmitted = false;
+    recallMode = 'standard';
+    recallAttemptsLeft = getRecallRule(item).maxAttempts;
+    recallStage2Type = stepType;
+    recallWbSentence = '';
+    recallWbTitle = '';
+    recallSynOptions = stepType === 'wordfamily'
+      ? buildRecallWordFamilyOptions(item)
+      : buildRecallSynonymOptions(item);
+    recallSynSelected = new Set();
+
+    const limitSec = getRecallTimeLimitSec(item, 2);
+    recallDeadlineAt = Date.now() + limitSec * 1000;
+
+    const stageBadge = document.getElementById('recall-stage-badge');
+    const timerBadge = document.getElementById('recall-timer-badge');
+    const hintBox = document.getElementById('recall-hint-box');
+    const targetSubEl = document.querySelector('#recall-stage2-target .recall-stage-sub');
+    const targetWordEl = document.getElementById('recall-stage2-word');
+    const stage1Body = document.getElementById('recall-stage1-body');
+    const stage2Body = document.getElementById('recall-stage2-body');
+    const btnSubmit = document.getElementById('btn-recall-submit');
+    const fb = document.getElementById('recall-feedback');
+
+    document.getElementById('recall-word-input')?.blur();
+    if (stageBadge) stageBadge.textContent = stepType === 'wordfamily' ? 'Test 2 · Word Family' : 'Test 2 · Synonyms';
+    if (timerBadge) {
+      timerBadge.textContent = `${limitSec}s`;
+      timerBadge.classList.remove('is-urgent');
+    }
+    if (hintBox) hintBox.style.display = 'block';
+    if (targetSubEl) {
+      targetSubEl.textContent = stepType === 'wordfamily'
+        ? 'Click các từ cùng gia đình từ (Word Family) của'
+        : (stepType === 'signal_equiv' ? 'Click các từ nối tương đương của' : 'Click các từ đồng nghĩa (Synonyms) của');
+    }
+    if (targetWordEl) {
+      targetWordEl.className = 'recall-stage-word';
+      targetWordEl.textContent = item.lemma || '';
+    }
+    if (stage1Body) stage1Body.style.display = 'none';
+    if (stage2Body) stage2Body.style.display = 'block';
+    if (btnSubmit) btnSubmit.style.display = 'inline-flex';
+    if (fb) {
+      fb.style.display = 'none';
+      fb.className = 'recall-feedback';
+      fb.innerHTML = '';
+    }
+    updateRecallPromptAttempts(item);
+    renderRecallSynGrid(false);
+    setRecallActiveSession(item, 2);
+    recallDeadlineTimer = setInterval(updateRecallCountdownBadge, 250);
   }
 
   function enterRecallStage2(item, wbExercise = null) {
@@ -3323,6 +3617,9 @@
       } else if (recallStage === 2 && recallStage2Type === 'wordbox') {
         const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
         fb.innerHTML = `${escapeHtml(reasonPrefix)} Đáp án Word Box đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
+      } else if (recallStage === 2 && recallStage2Type === 'wordfamily') {
+        const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
+        fb.innerHTML = `${escapeHtml(reasonPrefix)} Các gia đình từ đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
       } else if (recallStage === 2) {
         const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
         fb.innerHTML = `${escapeHtml(reasonPrefix)} Các từ đồng nghĩa đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
@@ -3345,6 +3642,7 @@
     recallSubmitted = false;
     recallStage = 1;
     recallStage2Type = 'synonym';
+    recallStage2Queue = [];
     recallWbSentence = '';
     recallWbTitle = '';
     const useQuickVi = isReadingQuickScopeKey(currentScopeKey) && Boolean(window.RecognitionTestModule?.buildMeaningDistractors);
@@ -3495,6 +3793,7 @@
     updateVocabMasteryUI();
     updateLeaderboardUI();
     window.TasksModule?.onStudyAssessmentChanged?.(currentScopeKey, assessments, item, level);
+    document.dispatchEvent(new CustomEvent('vocab:assessed', { detail: { id: item.id, level } }));
     scheduleCloudPush();
   }
 
@@ -3525,34 +3824,28 @@
 
       if (acceptedVariants.includes(typed)) {
         const isSignal = currentScopeKey === 'signal_words' || Boolean(item?.strategy);
-        const hasStage2Targets = isSignal
+        const hasSynTargets = isSignal
           ? splitCsvItems(item?.word_forms).length > 0
           : getCleanSynonyms(item).some((s) => {
               const sl = String(s || '').trim().toLowerCase();
               return sl && sl !== expected;
             });
-        if (!hasStage2Targets) {
-          // For Paraphrase words without a real-exam paraphrase, run Stage 2 IELTS Summary Word Box replacement!
-          if (!isSignal) {
-            const wbEx = buildRecallWordBoxExercise(item);
-            if (wbEx && wbEx.options.length >= 2) {
-              enterRecallStage2(item, wbEx);
-              return;
-            }
-          }
-          stopRecallInputTimer();
-          clearRecallActiveSession();
-          recallSubmitted = true;
-          delete masterCooldowns[item.id];
-          saveMasterCooldowns();
-          updateAssess3CooldownUI();
-          commitAssessment(item, 3);
-          closeRecallModal(null, true);
-          showToast(`Chính xác! Đã thuộc "${item.lemma}".`);
-          advanceDeckAfterAssess3();
-          return;
+        const hasFormTargets = !isSignal && (Array.isArray(item?.clean_forms) ? item.clean_forms : []).some((f) => {
+          const fl = String(f || '').trim().toLowerCase();
+          return fl && fl !== expected;
+        });
+        const hasMeaningChoices = !isSignal && Boolean(window.RecognitionTestModule?.buildMeaningDistractors) &&
+          (window.RecognitionTestModule.buildMeaningDistractors(item, currentScopeList, 3)?.length >= 2);
+
+        recallStage2Queue = [];
+        if (isSignal) {
+          if (hasSynTargets) recallStage2Queue.push('signal_equiv');
+        } else {
+          if (hasSynTargets) recallStage2Queue.push('synonym');
+          if (hasFormTargets) recallStage2Queue.push('wordfamily');
+          if (hasMeaningChoices) recallStage2Queue.push('meaning_vi');
         }
-        enterRecallStage2(item, null);
+        advanceRecallStage2Queue(item);
         return;
       }
 
@@ -3580,7 +3873,9 @@
         fb.className = 'recall-feedback err';
         fb.textContent = recallStage2Type === 'wordbox'
           ? 'Vui lòng click chọn 1 từ trong Word Box để điền vào câu trước khi xác nhận.'
-          : 'Vui lòng click chọn ít nhất 1 từ đồng nghĩa trước khi xác nhận.';
+          : (recallStage2Type === 'wordfamily'
+            ? 'Vui lòng click chọn ít nhất 1 từ cùng gia đình từ (Word Family) trước khi xác nhận.'
+            : 'Vui lòng click chọn ít nhất 1 từ đồng nghĩa trước khi xác nhận.');
       }
       return;
     }
@@ -3593,16 +3888,11 @@
       correctIndices.every((idx) => recallSynSelected.has(idx));
 
     if (isExactMatch) {
-      stopRecallInputTimer();
-      clearRecallActiveSession();
-      recallSubmitted = true;
-      delete masterCooldowns[item.id];
-      saveMasterCooldowns();
-      updateAssess3CooldownUI();
-      commitAssessment(item, 3);
-      closeRecallModal(null, true);
-      showToast(`Chính xác! Đã thuộc "${item.lemma}".`);
-      advanceDeckAfterAssess3();
+      if (Array.isArray(recallStage2Queue) && recallStage2Queue.length > 0) {
+        advanceRecallStage2Queue(item);
+        return;
+      }
+      finalizeRecallMastery(item);
       return;
     }
 
@@ -3612,7 +3902,9 @@
       if (fb) {
         fb.style.display = 'block';
         fb.className = 'recall-feedback err';
-        fb.textContent = `Chưa chính xác! Hãy chọn lại các từ đồng nghĩa (còn ${recallAttemptsLeft} lần thử).`;
+        fb.textContent = recallStage2Type === 'wordfamily'
+          ? `Chưa chính xác! Hãy chọn lại các từ cùng gia đình từ (còn ${recallAttemptsLeft} lần thử).`
+          : `Chưa chính xác! Hãy chọn lại các từ đồng nghĩa (còn ${recallAttemptsLeft} lần thử).`;
       }
       return;
     }
@@ -3635,18 +3927,111 @@
     }
   }
 
+  let cardStepOutTimer = null;
+  let cardStepInTimer = null;
+  let pendingCardStep = 0;
+
+  function flushPendingCardStep() {
+    if (!cardStepOutTimer) return false;
+    clearTimeout(cardStepOutTimer);
+    cardStepOutTimer = null;
+    const step = pendingCardStep;
+    pendingCardStep = 0;
+    if (step > 0 && currentCardIndex < currentScopeList.length) {
+      currentCardIndex++;
+    } else if (step < 0 && currentCardIndex > 0) {
+      currentCardIndex--;
+    }
+    return true;
+  }
+
+  function stepCardChoreographed(dir) {
+    const mode = document.documentElement.dataset.motion || 'pro';
+    const scene = document.getElementById('fc-scene');
+    const motionWrap = document.getElementById('fc-motion-wrap');
+    const card = document.getElementById('fc-card');
+
+    const wasMidStep = flushPendingCardStep();
+    if (cardStepInTimer) { clearTimeout(cardStepInTimer); cardStepInTimer = null; }
+
+    // Mode 4 ("Trượt nảy" / original): exact original index.html instant swap + spring enterCard()
+    if (mode === 'original' || !window.IELTSMotion?.enabled || !motionWrap || !scene || !card || scene.style.display === 'none') {
+      if (dir > 0) {
+        if (currentCardIndex < currentScopeList.length) currentCardIndex++;
+        else return;
+      } else if (currentCardIndex > 0) {
+        currentCardIndex--;
+      } else {
+        return;
+      }
+      renderCurrentCard(dir);
+      return;
+    }
+
+    if (dir < 0 && currentCardIndex <= 0) {
+      motionWrap.classList.remove('out-next', 'in-next', 'out-prev', 'in-prev');
+      scene.classList.remove('shifting');
+      if (wasMidStep) renderCurrentCard(0);
+      return;
+    }
+    if (dir > 0 && currentCardIndex >= currentScopeList.length) {
+      motionWrap.classList.remove('out-next', 'in-next', 'out-prev', 'in-prev');
+      scene.classList.remove('shifting');
+      renderCurrentCard(0);
+      return;
+    }
+
+    // Reset motion classes cleanly before starting the new phase
+    motionWrap.classList.remove('out-next', 'in-next', 'out-prev', 'in-prev');
+    void motionWrap.offsetWidth;
+
+    // Exact 1-to-1 demo_v3.html two-phase choreography (out -> silent reset & swap -> in)
+    const outCls = dir > 0 ? 'out-next' : 'out-prev';
+    const inCls = dir > 0 ? 'in-next' : 'in-prev';
+    const isCalmPro = (document.documentElement.dataset.mode || 'calm') === 'calm' && mode === 'pro';
+    const outMs = isCalmPro ? 285 : (mode === 'morph' ? 125 : 150);
+    const inMs = isCalmPro ? 270 : (mode === 'morph' ? 185 : 210);
+
+    pendingCardStep = dir;
+    scene.classList.add('shifting');
+    motionWrap.classList.add(outCls);
+
+    cardStepOutTimer = setTimeout(() => {
+      cardStepOutTimer = null;
+      const step = pendingCardStep;
+      pendingCardStep = 0;
+      if (step > 0) {
+        if (currentCardIndex < currentScopeList.length) currentCardIndex++;
+      } else if (step < 0 && currentCardIndex > 0) {
+        currentCardIndex--;
+      }
+
+      // Reset flipped state with transition suppressed so card NEVER visibly un-flips mid-swap
+      card.style.setProperty('transition', 'none', 'important');
+      renderCurrentCard(0);
+      void card.offsetWidth;
+      card.style.removeProperty('transition');
+
+      motionWrap.classList.remove(outCls);
+      motionWrap.classList.add(inCls);
+      cardStepInTimer = setTimeout(() => {
+        cardStepInTimer = null;
+        motionWrap.classList.remove(inCls);
+        scene.classList.remove('shifting');
+      }, inMs);
+    }, outMs);
+  }
+
   function nextCard() {
     cancelPendingAdvance();
     if (currentScopeList.length === 0) return;
-    if (currentCardIndex < currentScopeList.length) currentCardIndex++;
-    renderCurrentCard(1);
+    stepCardChoreographed(1);
   }
 
   function prevCard() {
     cancelPendingAdvance();
-    if (currentCardIndex > 0) {
-      currentCardIndex--;
-      renderCurrentCard(-1);
+    if (currentCardIndex > 0 || (cardStepOutTimer && pendingCardStep > 0)) {
+      stepCardChoreographed(-1);
     }
   }
 
@@ -3839,15 +4224,14 @@
     }
     const targetAccent = (accent === 'en-GB' || accent === 'en-US') ? accent : preferredAccent;
     const item = currentScopeList[currentCardIndex];
-    if (!item) return;
+    if (!item || !currentUser) return;
 
-    stopSpeechPlayback();
-    speakTimeout = setTimeout(() => {
+    if (speakTimeout) {
+      clearTimeout(speakTimeout);
       speakTimeout = null;
-      const latestItem = currentScopeList[currentCardIndex];
-      if (!latestItem || !currentUser) return;
-      speakCleanTextReliable(latestItem.lemma, targetAccent, 0.92);
-    }, 35);
+    }
+    // Call synchronously inside user gesture so Mobile Chrome / iOS Safari allow TTS playback
+    speakCleanTextReliable(item.lemma, targetAccent, 0.92);
   }
 
   /* =========================================================
@@ -4111,15 +4495,16 @@
     const period = currentLeaderboardTab === 'month' ? 'month' : 'week';
     const ranked = getClassRankedEntries(period);
     const activeUid = getScopedUid(currentUser?.id);
+    const chestnutUnitHtml = '<span class="tot-chestnut-unit" aria-label="hạt dẻ điểm" title="Hạt dẻ điểm"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.4C13 4.6 19.8 8.2 21 13.8C21.8 17.6 18.6 21 12 21C5.4 21 2.2 17.6 3 13.8C4.2 8.2 11 4.6 12 2.4Z" fill="#8B3A14" stroke="#531F07" stroke-width="1.4" stroke-linejoin="round"/><path d="M5 17.5C7 15.8 17 15.8 19 17.5C17.6 19.9 15 20.8 12 20.8C9 20.8 6.4 19.9 5 17.5Z" fill="#E8CCA0"/><path d="M7.2 12.2C7.8 9.6 9.8 7.8 11.4 6.6" stroke="#DF8B56" stroke-width="1.6" stroke-linecap="round" opacity=".85"/><path d="M12 4.8V15.4M8.5 8.5C7.9 11 7.8 13.2 8.2 15.6M15.5 8.5C16.1 11 16.2 13.2 15.8 15.6" stroke="#5E2409" stroke-width="0.9" stroke-linecap="round" opacity=".45"/></svg></span>';
     tbody.innerHTML = ranked.map(item => {
       const isMe = currentUser && !isTeacherUser() && getScopedUid(item.id) === activeUid;
       const bd = item.scoreBreakdown || {};
-      const tip = `Từ gốc: +${bd.vocabPoints || 0}đ | Task: +${bd.taskPoints || 0}đ | Test tổng: +${bd.certPoints || 0}đ | Streak: +${bd.streakPoints || 0}đ | Thời gian: +${bd.timePoints || 0}đ`;
+      const tip = `Từ gốc: +${bd.vocabPoints || 0} | Task: +${bd.taskPoints || 0} | Test tổng: +${bd.certPoints || 0} | Streak: +${bd.streakPoints || 0} | Thời gian: +${bd.timePoints || 0}`;
       return `
         <tr class="${isMe ? 'is-me' : ''}" title="${escapeHtml(tip)}">
           <td>${item.rankLabel}</td>
           <td><strong>${escapeHtml(item.name)}</strong></td>
-          <td><strong>${item.score.toLocaleString('vi-VN')} đ</strong></td>
+          <td><strong class="tot-score-with-unit">${item.score.toLocaleString('vi-VN')}${chestnutUnitHtml}</strong></td>
           <td>${item.mastered} từ</td>
           <td>${item.tasksCompleted}</td>
           <td>${item.weekMins} phút</td>
@@ -4180,8 +4565,7 @@
     if (chk) chk.checked = showFrontContext;
     const accEl = document.getElementById('menu-account-summary');
     if (accEl && currentUser) {
-      const roleText = currentUser.role === 'teacher' ? 'Giáo viên' : 'Học viên';
-      accEl.textContent = `${roleText}: ${currentUser.name} (ID: ${currentUser.id})`;
+      accEl.textContent = `${currentUser.name} · ${currentUser.id}`;
     }
     window.AppCore?.renderSkillModesMenu?.();
     document.getElementById('modal-menu')?.classList.add('open');
@@ -4406,7 +4790,7 @@
     const remember = !!document.getElementById('login-remember-chk')?.checked;
 
     if (!idInput.trim() || !passInput) {
-      showLoginError('Vui lòng nhập đầy đủ Mã học viên (ID) và Mật khẩu.');
+      showLoginError('Vui lòng nhập đầy đủ ID và Mật khẩu.');
       return;
     }
 
@@ -4599,12 +4983,20 @@
     handleLoginSubmit, togglePasswordVisibility, logoutCurrentAccount,
   });
 
-  function openCheatWarningModal(msg, onDismiss) {
+  function openCheatWarningModal(msg, onDismiss, warnNum = 1, maxStrikes = 3) {
     const modal = document.getElementById('modal-cheat-warn');
+    const pillEl = document.getElementById('cheat-warn-pill');
     const msgEl = document.getElementById('cheat-warn-msg');
+    const detailEl = document.getElementById('cheat-warn-detail');
     const btn = document.getElementById('btn-cheat-warn-close');
     if (!modal || !btn) return;
+    const rem = Math.max(1, maxStrikes - warnNum);
+    if (pillEl) pillEl.textContent = `CẢNH BÁO VI PHẠM · LẦN ${warnNum} / ${maxStrikes}`;
     if (msgEl && msg) msgEl.textContent = msg;
+    if (detailEl) {
+      detailEl.innerHTML = `<strong>Lưu ý:</strong> Không bấm ra ngoài hay chuyển tab khi đang làm bài. Nếu vi phạm đủ <strong>${maxStrikes} lần</strong>, bài sẽ bị <strong>KHÓA 30 PHÚT</strong> — <strong>mất sạch kết quả đang làm</strong> và khi mở lại bạn phải <strong>làm lại từ đầu</strong>! (Còn ${rem} lần nhắc)`;
+    }
+    btn.textContent = `Đã hiểu · Tiếp tục làm bài`;
     modal.classList.add('open');
     btn.onclick = () => {
       modal.classList.remove('open');
@@ -4838,31 +5230,33 @@
       if (now - lastRecallLeaveAt < 800) return;
       lastRecallLeaveAt = now;
       recallLeaveWarnings += 1;
-      if (recallLeaveWarnings === 1) {
+      if (recallLeaveWarnings < 3) {
         const pausedAt = Date.now();
         const card = document.querySelector('#modal-recall-check .recall-check-card');
         const inp = document.getElementById('recall-word-input');
-        if (inp) inp.value = '';
+        if (inp && recallStage === 1) inp.value = '';
         if (card) card.style.setProperty('visibility', 'hidden');
         const fb = document.getElementById('recall-feedback');
         if (fb) {
           fb.style.display = 'block';
           fb.className = 'recall-feedback err';
-          fb.innerHTML = '<strong>Cảnh báo (lần 1/2):</strong> Đã phát hiện rời tab kiểm tra. Đây là <strong>lần thử cuối</strong> — rời thêm lần nữa sẽ tính sai!';
+          fb.innerHTML = `<strong>Cảnh báo (lần ${recallLeaveWarnings}/3):</strong> Không bấm ra ngoài khi kiểm tra! Lần thứ 3 sẽ tính sai và khóa nút Đã thuộc.`;
         }
         openCheatWarningModal(
-          reason || 'Phát hiện bạn vừa chuyển tab hoặc rời khỏi cửa sổ khi đang Kiểm tra nhớ từ! Nội dung bài đã bị ẩn.',
+          reason || 'Không bấm ra ngoài hay chuyển tab khi đang kiểm tra nhớ từ!',
           () => {
             if (recallDeadlineAt > 0) recallDeadlineAt += (Date.now() - pausedAt);
             if (card) card.style.removeProperty('visibility');
             if (recallStage === 1) inp?.focus();
-          }
+          },
+          recallLeaveWarnings,
+          3
         );
         return;
       }
       closeCheatWarningModal();
       document.querySelector('#modal-recall-check .recall-check-card')?.style.removeProperty('visibility');
-      failRecallCheck(recallTargetItem, `${reason} (Lần 2)`);
+      failRecallCheck(recallTargetItem, `${reason} (Lần 3)`);
     };
     recallLeaveHandlerRef = handleLeaveAttempt;
 
@@ -4993,10 +5387,18 @@
 
   function setWordWeakLevel(wordId, level = 1) {
     if (!currentUser || !wordId) return;
+    const now = Date.now();
     assessments[wordId] = level;
-    srsData[wordId] = computeNextAnkiState(wordId, level, Date.now());
+    srsData[wordId] = computeNextAnkiState(wordId, level, now);
     saveState();
     updateVocabMasteryUI();
+    updateLeaderboardUI();
+    const cur = currentScopeList[currentCardIndex];
+    if (cur && cur.id === wordId) {
+      renderStatusTag('fc-front-status', assessments[cur.id]);
+      renderStatusTag('fc-back-status', assessments[cur.id]);
+    }
+    scheduleCloudPush();
   }
 
   window.__VOCAB_BRIDGE__ = {
@@ -5018,6 +5420,69 @@
     isWordDueNow,
     startOldVocabReview,
     getCurrentScopeKey: () => currentScopeKey,
+    jumpToNextUnlearned: () => {
+      if (!currentScopeList || currentScopeList.length === 0) return false;
+      const len = currentScopeList.length;
+      for (let off = 1; off <= len; off++) {
+        const idx = (currentCardIndex + off) % len;
+        if (assessments[currentScopeList[idx].id] !== 3) {
+          cancelPendingAdvance();
+          currentCardIndex = idx;
+          renderCurrentCard(1);
+          return true;
+        }
+      }
+      showToast('Tất cả từ trong danh sách hiện tại đã thuộc!');
+      return false;
+    },
+    jumpToCardQuery: (rawQuery) => {
+      const q = String(rawQuery || '').trim().toLowerCase();
+      if (!q || !currentScopeList || currentScopeList.length === 0) return false;
+      const numMatch = q.match(/^#?(\d+)$/);
+      if (numMatch) {
+        const n = Math.max(1, Math.min(currentScopeList.length, parseInt(numMatch[1], 10)));
+        cancelPendingAdvance();
+        currentCardIndex = n - 1;
+        renderCurrentCard(1);
+        const it = currentScopeList[currentCardIndex];
+        showToast(`Thẻ #${n}: ${it?.lemma || it?.word || ''}`);
+        return true;
+      }
+      const getWord = (x) => String(x?.lemma || x?.word || '').toLowerCase();
+      const getVi = (x) => String(x?.vi || '').toLowerCase();
+      let idx = currentScopeList.findIndex((x) => getWord(x) === q);
+      if (idx < 0) idx = currentScopeList.findIndex((x) => getWord(x).startsWith(q));
+      if (idx < 0) idx = currentScopeList.findIndex((x) => getWord(x).includes(q) || getVi(x).includes(q));
+      if (idx >= 0) {
+        cancelPendingAdvance();
+        currentCardIndex = idx;
+        renderCurrentCard(1);
+        const it = currentScopeList[currentCardIndex];
+        showToast(`Thẻ #${idx + 1}: ${it?.lemma || it?.word || ''}`);
+        return true;
+      }
+      showToast(`Không tìm thấy "${rawQuery.trim()}" trong danh sách đang học`);
+      return false;
+    },
+    speakSlowCurrentWord: (event) => {
+      if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+      const item = currentScopeList[currentCardIndex];
+      if (!item || !currentUser) return;
+      if (speakTimeout) { clearTimeout(speakTimeout); speakTimeout = null; }
+      speakCleanTextReliable(item.lemma, preferredAccent, 0.62);
+      showToast(`Đọc chậm (0.62×): ${item.lemma}`);
+    },
+    getStudyControlsState: () => ({
+      onlyUnmastered,
+      onlyDueReview,
+      autoSpeak,
+      preferredAccent,
+      showFrontContext,
+      currentScopeKey,
+      fullCount: fullScopeList.length,
+      unmasteredCount: fullScopeList.filter((it) => assessments[it.id] !== 3).length,
+      dueCount: fullScopeList.filter((it) => isWordDueNow(it)).length,
+    }),
     scheduleCloudPush,
     saveAndSync: () => {
       saveState();
@@ -5030,6 +5495,7 @@
     showCheatWarningModal: openCheatWarningModal,
     closeCheatWarningModal,
     syncExamLock,
+    broadcastTeacherTaskDeadlines,
     recheckMultiTabLock,
     bindNoPasteGuards,
     getCloudClassCache: () => cloudClassCache,
@@ -5044,7 +5510,8 @@
     TASK_LOCKS_KEY_BASE,
     TEACHER_UNLOCK_KEY_BASE,
     evaluateStudyIdleTimeout,
-    _setLastStudyActivityAtForTest: (ts) => { lastStudyActivityAt = Number(ts) || Date.now(); },
+    syncStudyIdleClockUI,
+    _setLastStudyActivityAtForTest: (ts) => { lastStudyActivityAt = Number(ts) || Date.now(); syncStudyIdleClockUI(); },
   };
 
   function applyOneTimeClassResetEpoch() {

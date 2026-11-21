@@ -37,7 +37,6 @@
           <button type="button" class="skill-mode-row ${isActive ? 'is-active' : ''} ${!isLive ? 'is-upcoming' : ''}" onclick="AppCore.handleSkillMenuClick('${esc(m.id)}')">
             <div class="skill-mode-row-main">
               <strong>${esc(m.label)}</strong>
-              <span>${esc(m.description)}</span>
             </div>
             ${badge}
           </button>
