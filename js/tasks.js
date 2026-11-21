@@ -1693,7 +1693,7 @@
       if (pendingTaskId && getTaskLockRemainingMs(pendingTaskId) <= 0) {
         bridge?.showToast?.('Task đã được mở khóa! Bạn có thể bắt đầu làm bài.');
       } else {
-        bridge?.showToast?.('Chưa thấy lệnh mở khóa mới từ giáo viên — vui lòng thử lại sau vài giây.');
+        bridge?.showToast?.('Chưa thấy lệnh mở khóa — vui lòng liên hệ giáo viên để mở khóa!');
       }
     });
   }
@@ -1816,7 +1816,7 @@
         lockEl.style.justifyContent = 'space-between';
         lockEl.style.gap = '10px';
         lockEl.style.flexWrap = 'wrap';
-        lockEl.innerHTML = `<span>Task đang tạm khóa do vi phạm kỷ luật. Vui lòng quay lại sau ${formatMmSs(remMs)}.</span><button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.checkTaskUnlockNow()">Kiểm tra mở khóa</button>`;
+        lockEl.innerHTML = `<span>Task đang tạm khóa (${formatMmSs(remMs)}). Vui lòng liên hệ giáo viên để mở khóa!</span><button type="button" class="btn-subtle" style="padding:5px 10px; font-size:12px;" onclick="TasksModule.checkTaskUnlockNow()">Kiểm tra mở khóa</button>`;
       }
       if (startBtn) startBtn.disabled = true;
       return;
@@ -2100,7 +2100,7 @@
     }
     const remMs = getTaskLockRemainingMs(t.id);
     if (remMs > 0) {
-      B()?.showToast?.(`${t.label} đang tạm khóa (${formatMmSs(remMs)}) — vui lòng đợi hết khóa hoặc nhờ giáo viên mở khóa!`);
+      B()?.showToast?.(`${t.label} đang tạm khóa (${formatMmSs(remMs)}) — vui lòng liên hệ giáo viên để mở khóa!`);
       openTaskBriefModal(t.id);
       return false;
     }
