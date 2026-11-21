@@ -6233,8 +6233,7 @@ header.app-header {
     width: 100% !important;
     max-width: 100% !important;
     margin-bottom: clamp(4px, 1svh, 10px) !important;
-    padding-right: 0 !important;
-    scrollbar-width: thin;
+    padding-right: 8px !important;
   }
   body.study-focus-mode #screen-study .fc-back-header-bar {
     width: 100% !important;
@@ -6464,9 +6463,6 @@ header.app-header {
   height: 30px;
   font-size: 12px;
   border-radius: 9px;
-}
-#screen-study .fc-back-scrollable {
-  scrollbar-width: thin;
 }
 #screen-study .fc-back-scrollable::-webkit-scrollbar,
 #modal-student-tasks #student-task-grid::-webkit-scrollbar {

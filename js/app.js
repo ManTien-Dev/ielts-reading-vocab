@@ -2510,6 +2510,8 @@
 
     scene.style.display = 'block';
     finishedBox.style.display = 'none';
+    const backScrollEl = document.querySelector('#fc-card .fc-back-scrollable');
+    if (backScrollEl) backScrollEl.scrollTop = 0;
 
     const item = currentScopeList[currentCardIndex];
     const total = currentScopeList.length;
@@ -4038,12 +4040,41 @@
   }
 
   let suppressSwipeClickUntil = 0;
+  let lastBackScrollAt = 0;
+
+  function bindBackScrollFlipGuard() {
+    const scrollEl = document.querySelector('#fc-card .fc-back-scrollable');
+    if (!scrollEl || scrollEl.dataset.scrollGuardBound === '1') return;
+    scrollEl.dataset.scrollGuardBound = '1';
+    scrollEl.addEventListener('scroll', () => {
+      lastBackScrollAt = Date.now();
+    }, { passive: true });
+    scrollEl.addEventListener('pointerdown', (e) => {
+      const rect = scrollEl.getBoundingClientRect();
+      if (scrollEl.scrollHeight > scrollEl.clientHeight + 2 && e.clientX >= rect.left + scrollEl.clientWidth - 2) {
+        suppressSwipeClickUntil = Date.now() + 600;
+      }
+    });
+  }
 
   function flipCurrentCard(event) {
+    bindBackScrollFlipGuard();
     if (event && event.currentTarget?.id === 'fc-scene' && Date.now() < suppressSwipeClickUntil) return;
+    if (event && event.currentTarget?.id === 'fc-scene' && (Date.now() - lastBackScrollAt) < 280) return;
     if (event && event.currentTarget?.id === 'fc-scene' && event.target.closest('button')) return;
+    if (event && event.currentTarget?.id === 'fc-scene') {
+      const scrollEl = event.target?.closest?.('.fc-back-scrollable');
+      if (scrollEl && scrollEl.scrollHeight > scrollEl.clientHeight + 2) {
+        const rect = scrollEl.getBoundingClientRect();
+        if (event.clientX >= rect.left + scrollEl.clientWidth - 2) return;
+      }
+    }
     if (currentScopeList.length === 0 || currentCardIndex >= currentScopeList.length) return;
     isCardFlipped = !isCardFlipped;
+    if (isCardFlipped) {
+      const backScrollEl = document.querySelector('#fc-card .fc-back-scrollable');
+      if (backScrollEl) backScrollEl.scrollTop = 0;
+    }
     document.getElementById('fc-card')?.classList.toggle('flipped', isCardFlipped);
     document.getElementById('btn-flip-action').textContent = isCardFlipped ? 'Mặt trước' : 'Xem nghĩa';
     if (isCardFlipped && autoSpeak) {

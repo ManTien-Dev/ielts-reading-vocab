@@ -589,8 +589,6 @@
       overflow-y: auto;
       padding-right: 4px;
       margin-bottom: 4px;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
     }
     .fc-back-scrollable::-webkit-scrollbar {
       width: 4px;
@@ -1918,7 +1916,7 @@ main.app-main:has(#screen-study.active) {max-width:none;min-height:calc(100svh -
  #screen-study .fc-sentence-box {color:#63694f;font-size:15px;margin-top:12px;line-height:1.75;}
  #screen-study .fc-target-mark {color:#355632;background:#e4edcc;}
  #screen-study .fc-flip-prompt {color:#757252;border-color:#e2dfc6;flex-shrink:0;padding-top:12px;}
- #screen-study .fc-back-scrollable {min-height:0;flex:1 1 auto;overflow-y:auto;margin-bottom:10px;padding-right:6px;scrollbar-color:#afbd92 transparent;}
+ #screen-study .fc-back-scrollable {min-height:0;flex:1 1 auto;overflow-y:auto;margin-bottom:10px;padding-right:6px;}
  #screen-study #fc-back-word {margin-top:12px;font-size:30px!important;}
  #screen-study .fc-back-meaning {color:#756029;font-size:22px;margin-bottom:12px;}
  #screen-study #fc-back-sentence {background:#eef2df;border-left-color:#93ac68;padding:10px 14px;font-size:14px;}
