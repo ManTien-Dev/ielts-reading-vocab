@@ -103,10 +103,10 @@
   }
 
   const TASK_SUITES_META = [
-    { key: 'foundation', prefix: 'fnd', label: 'Nền Tảng', count: 30, desc: 'Test 1 · Summary Word Box · Đọc hiểu & Dịch', kind: 'reading_full' },
-    { key: 'academic', prefix: 'acd', label: 'Học Thuật', count: 20, desc: 'Test 1 · Summary Word Box · Đọc hiểu & Dịch', kind: 'reading_full' },
-    { key: 'paraphrase', prefix: 'task', label: 'Paraphrase', count: 30, desc: 'Test 1 · Synonyms & Word Box · Đọc hiểu & Dịch', kind: 'paraphrase_full' },
-    { key: 'advanced', prefix: 'adv', label: 'Chuyên Sâu', count: 30, desc: 'Test 1 · Summary Word Box · Đọc hiểu & Dịch', kind: 'reading_full' },
+    { key: 'foundation', prefix: 'fnd', label: 'Nền Tảng', count: 30, desc: 'Vocab Match · Word Box · Reading & Translate', kind: 'reading_full' },
+    { key: 'academic', prefix: 'acd', label: 'Học Thuật', count: 20, desc: 'Vocab Match · Word Box · Reading & Translate', kind: 'reading_full' },
+    { key: 'paraphrase', prefix: 'task', label: 'Paraphrase', count: 30, desc: 'Vocab Match · Paraphrase · Reading & Translate', kind: 'paraphrase_full' },
+    { key: 'advanced', prefix: 'adv', label: 'Chuyên Sâu', count: 30, desc: 'Vocab Match · Word Box · Reading & Translate', kind: 'reading_full' },
   ];
 
   let _generatedSuiteCache = null;
@@ -1737,12 +1737,12 @@
       : '';
 
     const test2FlowDesc = isParaSuite
-      ? 'Test 2 (Synonyms &amp; Điền từ)'
-      : 'Test 2 (Điền từ)';
+      ? 'Test 2 (Paraphrase)'
+      : 'Test 2 (Word Box)';
     if (info) {
       info.innerHTML = `
         <div><strong>Bước 1 — Học từ vựng:</strong> Học thuộc đủ <strong>${t.words.length}/${t.words.length} từ</strong> trên Flashcard trước (học xong mới mở được bài Test).</div>
-        <div style="margin-top:6px;"><strong>Bước 2 — Làm Test (~${t.estMinutes} phút):</strong> Thuộc đủ ${t.words.length}/${t.words.length} từ → Làm <strong>Test 1 (Ghép từ) → ${test2FlowDesc} → Test 3 (Đọc hiểu &amp; Dịch bài)</strong>.</div>
+        <div style="margin-top:6px;"><strong>Bước 2 — Làm Test (~${t.estMinutes} phút):</strong> Thuộc đủ ${t.words.length}/${t.words.length} từ → Làm <strong>Test 1 (Vocab Match) → ${test2FlowDesc} → Test 3 (Reading &amp; Translate)</strong>.</div>
         <div style="margin-top:6px;"><strong>Kỷ luật thi:</strong> Không rời tab hoặc ngưng thao tác quá 10 phút khi làm bài (vi phạm đủ <strong>3 lần</strong> sẽ bị <strong>khóa Task 30 phút</strong> và phải làm lại từ đầu).</div>
         ${deadlineLine}
         ${doneNote}
@@ -2149,11 +2149,11 @@
     const desc = document.getElementById('exam-ready-desc');
     const startBtn = document.getElementById('btn-confirm-open-task-exam');
     const isParaSuite = task.scopeKey === 'paraphrase' || /^task_/i.test(task.id || '');
-    const t2SummaryDesc = isParaSuite ? 'Synonyms &amp; Điền từ' : 'Điền từ';
+    const t2SummaryDesc = isParaSuite ? 'Paraphrase' : 'Word Box';
     if (pill) pill.textContent = task.label.toUpperCase();
     if (heading) heading.textContent = `Đã thuộc đủ ${task.words.length}/${task.words.length} từ (${task.label})`;
     if (desc) {
-      desc.innerHTML = `Bước cuối: <strong>Test 1 (Ghép từ) → Test 2 (${t2SummaryDesc}) → Test 3 (Đọc hiểu &amp; Dịch bài)</strong>.`;
+      desc.innerHTML = `Bước cuối: <strong>Test 1 (Vocab Match) → Test 2 (${t2SummaryDesc}) → Test 3 (Reading &amp; Translate)</strong>.`;
     }
     if (startBtn) {
       startBtn.textContent = 'Bắt đầu làm Test 1 →';
@@ -5257,6 +5257,14 @@
     return `${m} phút ${String(r).padStart(2, '0')} giây`;
   }
 
+  function formatDurationCompact(sec) {
+    const s = Math.max(0, Number(sec || 0));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    if (m <= 0) return `${r}s`;
+    return `${m}m ${String(r).padStart(2, '0')}s`;
+  }
+
   function openTaskSummaryModal(focusTaskId = null, previewStudentSummary = false) {
     const bridge = B();
     const esc = bridge?.escapeHtml || ((x) => String(x));
@@ -5350,15 +5358,22 @@
 
     if (titleEl) {
       titleEl.textContent = (focusTask && focusRec?.status === 'completed')
-        ? `Hoàn Thành ${focusTask.label} — Bảng Thống Kê${previewStudentSummary ? ' (Bản Preview Học Viên)' : ''}`
-        : 'Bảng Thống Kê Tiến Độ Task';
+        ? `${focusTask.label} · Summary`
+        : 'Task Progress Summary';
     }
     if (subEl) {
-      subEl.textContent = `${totalDone} / ${allTasks.length} Task đã hoàn thành · Toàn bộ từ thuộc các Task đã xong được đánh dấu Đã thuộc ở bộ chính`;
+      subEl.textContent = `${totalDone} / ${allTasks.length} Tasks completed · Synced to main deck`;
     }
 
     const t2Total = (focusTask && focusRec) ? getTaskTest2Total(focusTask, focusRec) : 56;
     const focusOverall = (focusTask && focusRec) ? computeTaskOverallScore(focusTask, focusRec) : 0;
+    const isPara = focusTask ? isParaphraseTask(focusTask) : false;
+    const t2Name = isPara ? 'Paraphrase' : 'Word Box';
+    const t2Sub = isPara ? 'Synonyms & Fill-in' : 'Summary Fill-in';
+    const t3Sub = focusRec?.test3ReadingScore != null
+      ? `Quiz ${focusRec.test3ReadingScore}/${focusRec.test3ReadingTotal || 10} · Translate`
+      : 'Quiz & Translation';
+    const wordTotal = focusTask?.words?.length || 50;
     const focusHtml = (focusTask && focusRec?.status === 'completed') ? `
       <div class="task-summary-highlight">
         <div class="task-sum-hero-row">
@@ -5367,58 +5382,66 @@
           </div>
           <div class="task-sum-hero-main">
             <div class="task-sum-badges">
-              <span class="task-sum-done-pill">✓ HOÀN THÀNH ${esc(focusTask.label.toUpperCase())} · ${esc(formatDurationVi(focusRec.durationSec))}</span>
-              ${previewStudentSummary ? '<span class="task-sum-preview-pill">Bản xem thử (không lưu điểm lớp)</span>' : ''}
+              <span class="task-sum-done-pill">✓ COMPLETED</span>
+              <span class="task-sum-meta-chip">${esc(formatDurationCompact(focusRec.durationSec))}</span>
+              ${previewStudentSummary ? '<span class="task-sum-preview-pill">Preview</span>' : ''}
             </div>
             <div class="task-sum-hero-title">${esc(focusTask.theme)}</div>
             <div class="task-sum-hero-note">
-              Đã hoàn tất 50 từ gốc + Word Family và vượt qua đủ 3 bài Test kiểm tra thực chiến.
+              ${wordTotal} words mastered · All 3 tests passed
             </div>
           </div>
           <div class="task-sum-score-card">
-            <div class="task-sum-score-label">Điểm tổng</div>
-            <div class="task-sum-score-num">${focusOverall.toFixed(1)}</div>
-            <div class="task-sum-score-sub">/ 10 · Trung bình 3 Test</div>
+            <div class="task-sum-score-label">Overall</div>
+            <div class="task-sum-score-line">
+              <span class="task-sum-score-num">${focusOverall.toFixed(1)}</span>
+              <span class="task-sum-score-denom">/ 10</span>
+            </div>
+            <div class="task-sum-score-sub">Avg. of 3 tests</div>
           </div>
         </div>
       </div>
       <div class="task-sum-stage-grid">
-        <div class="task-sum-stat is-mint">
-          <div class="task-sum-stat-label">Test 1 · Ghép nghĩa</div>
+        <div class="task-sum-stat is-t1">
+          <div class="task-sum-stat-eyebrow"><span class="task-sum-dot"></span>TEST 1</div>
+          <div class="task-sum-stat-label">Vocab Match</div>
           <div class="task-sum-stat-val">${focusRec.test1AccuracyPct ?? 100}%</div>
-          <div class="task-sum-stat-sub">${focusRec.test1Mistakes ?? 0} lỗi trên 10 bảng</div>
+          <div class="task-sum-stat-sub">${focusRec.test1Mistakes ?? 0} errors · 10 boards</div>
         </div>
-        <div class="task-sum-stat is-teal">
-          <div class="task-sum-stat-label">Test 2 · ${isParaphraseTask(focusTask) ? 'Paraphrase' : 'Word Box'}</div>
+        <div class="task-sum-stat is-t2">
+          <div class="task-sum-stat-eyebrow"><span class="task-sum-dot"></span>TEST 2</div>
+          <div class="task-sum-stat-label">${t2Name}</div>
           <div class="task-sum-stat-val">${focusRec.test2Score ?? 0} / ${t2Total}</div>
-          <div class="task-sum-stat-sub">${isParaphraseTask(focusTask) ? 'Nối Synonyms + Word Box' : 'Summary / Sentence Completion'}</div>
+          <div class="task-sum-stat-sub">${t2Sub}</div>
         </div>
-        <div class="task-sum-stat is-gold">
-          <div class="task-sum-stat-label">Test 3 · Đọc hiểu &amp; Dịch</div>
+        <div class="task-sum-stat is-t3">
+          <div class="task-sum-stat-eyebrow"><span class="task-sum-dot"></span>TEST 3</div>
+          <div class="task-sum-stat-label">Reading</div>
           <div class="task-sum-stat-val">${Number(focusRec.translationScore || 0).toFixed(1)} / 10</div>
-          <div class="task-sum-stat-sub">${focusRec.test3ReadingScore != null ? `Đọc hiểu ${focusRec.test3ReadingScore}/${focusRec.test3ReadingTotal || 10} · ` : ''}Dịch đoạn &amp; tóm tắt</div>
+          <div class="task-sum-stat-sub">${t3Sub}</div>
         </div>
-        <div class="task-sum-stat is-coral">
-          <div class="task-sum-stat-label">Từ vựng · Tiến độ</div>
-          <div class="task-sum-stat-val">50 / 50 từ</div>
-          <div class="task-sum-stat-sub">+${focusRec.newlyMarked ?? 0} mới · ${totalDone}/${allTasks.length} Task</div>
+        <div class="task-sum-stat is-vocab">
+          <div class="task-sum-stat-eyebrow"><span class="task-sum-dot"></span>VOCABULARY</div>
+          <div class="task-sum-stat-label">Mastered</div>
+          <div class="task-sum-stat-val">${wordTotal} / ${wordTotal}</div>
+          <div class="task-sum-stat-sub">${totalDone} / ${allTasks.length} Tasks done</div>
         </div>
       </div>
     ` : `
       <div class="task-sum-stage-grid">
-        <div class="task-sum-stat is-mint"><div class="task-sum-stat-label">Task hoàn thành</div><div class="task-sum-stat-val">${totalDone} / ${allTasks.length}</div><div class="task-sum-stat-sub">Tiến độ toàn khóa</div></div>
-        <div class="task-sum-stat is-gold"><div class="task-sum-stat-label">Điểm tổng TB</div><div class="task-sum-stat-val">${avgOverallScore} / 10</div><div class="task-sum-stat-sub">Trung bình 3 Test mỗi Task</div></div>
-        <div class="task-sum-stat is-teal"><div class="task-sum-stat-label">Tổng thời gian Task</div><div class="task-sum-stat-val">${esc(formatDurationVi(totalSecs))}</div><div class="task-sum-stat-sub">Thời gian làm bài</div></div>
-        <div class="task-sum-stat is-coral"><div class="task-sum-stat-label">Từ Đã thuộc qua Task</div><div class="task-sum-stat-val">${totalLinkedWords} từ</div><div class="task-sum-stat-sub">Đã đồng bộ bộ chính</div></div>
+        <div class="task-sum-stat is-t1"><div class="task-sum-stat-eyebrow"><span class="task-sum-dot"></span>PROGRESS</div><div class="task-sum-stat-label">Completed</div><div class="task-sum-stat-val">${totalDone} / ${allTasks.length}</div><div class="task-sum-stat-sub">Tasks finished</div></div>
+        <div class="task-sum-stat is-t3"><div class="task-sum-stat-eyebrow"><span class="task-sum-dot"></span>SCORE</div><div class="task-sum-stat-label">Average</div><div class="task-sum-stat-val">${avgOverallScore} / 10</div><div class="task-sum-stat-sub">Across all tests</div></div>
+        <div class="task-sum-stat is-t2"><div class="task-sum-stat-eyebrow"><span class="task-sum-dot"></span>TIME</div><div class="task-sum-stat-label">Study Time</div><div class="task-sum-stat-val">${esc(formatDurationCompact(totalSecs))}</div><div class="task-sum-stat-sub">Total exam time</div></div>
+        <div class="task-sum-stat is-vocab"><div class="task-sum-stat-eyebrow"><span class="task-sum-dot"></span>VOCABULARY</div><div class="task-sum-stat-label">Mastered</div><div class="task-sum-stat-val">${totalLinkedWords}</div><div class="task-sum-stat-sub">Synced to main deck</div></div>
       </div>
     `;
 
     const inActiveExamModal = Boolean(document.getElementById('screen-task')?.classList.contains('open'));
     bodyEl.innerHTML = `
       ${focusHtml}
-      <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px; flex-wrap:wrap;">
-        <button type="button" class="btn-subtle" style="font-size:15.5px; padding:11px 20px;" onclick="TasksModule.closeTaskSummaryModal()">${inActiveExamModal ? '← Xem lại bài làm' : 'Đóng'}</button>
-        <button type="button" class="btn btn-primary" style="font-size:15.5px; padding:11px 22px;" onclick="TasksModule.closeTaskSummaryModal(); TasksModule.exitTaskWorkspace(false);">Về màn hình từ vựng chính →</button>
+      <div class="task-sum-footer">
+        <button type="button" class="btn-subtle task-sum-btn" onclick="TasksModule.closeTaskSummaryModal()">${inActiveExamModal ? '← Xem lại bài làm' : 'Đóng'}</button>
+        <button type="button" class="btn btn-primary task-sum-btn" onclick="TasksModule.closeTaskSummaryModal(); TasksModule.exitTaskWorkspace(false);">Về màn hình chính →</button>
       </div>
     `;
     document.getElementById('modal-task-summary')?.classList.add('open');
