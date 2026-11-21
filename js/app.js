@@ -2957,6 +2957,8 @@
     return (currentScopeKey === 'signal_words' || Boolean(item?.strategy)) ? 40 : 30;
   }
 
+  const RECALL_QUICK_VI_MS = 6000;
+
   function stopRecallInputTimer() {
     if (recallDeadlineTimer) {
       clearInterval(recallDeadlineTimer);
@@ -2965,13 +2967,38 @@
     recallDeadlineAt = 0;
   }
 
+  function resetRecallSpeedBarUI(showBar = false) {
+    const wrap = document.getElementById('recall-speed-bar-wrap');
+    const fill = document.getElementById('recall-speed-bar-fill');
+    const badge = document.getElementById('recall-timer-badge');
+    if (wrap) wrap.style.display = showBar ? 'block' : 'none';
+    if (fill) {
+      fill.style.width = '100%';
+      fill.classList.remove('is-warn', 'is-danger');
+    }
+    if (badge) badge.classList.remove('is-speed-pulse');
+  }
+
   function updateRecallCountdownBadge() {
     const badge = document.getElementById('recall-timer-badge');
     if (!badge || !recallTargetItem || recallSubmitted) return;
-    const rem = Math.max(0, Math.ceil((recallDeadlineAt - Date.now()) / 1000));
+    const remMs = Math.max(0, recallDeadlineAt - Date.now());
+    const rem = Math.max(0, Math.ceil(remMs / 1000));
     badge.textContent = `${rem}s`;
-    badge.classList.toggle('is-urgent', rem <= 5);
-    if (rem <= 0) {
+    const isQuickVi = recallMode === 'quick_vi';
+    badge.classList.toggle('is-urgent', isQuickVi ? rem <= 3 : rem <= 5);
+    badge.classList.toggle('is-speed-pulse', isQuickVi && rem > 0 && rem <= 3);
+
+    if (isQuickVi) {
+      const fill = document.getElementById('recall-speed-bar-fill');
+      if (fill) {
+        const pct = Math.max(0, Math.min(100, (remMs / RECALL_QUICK_VI_MS) * 100));
+        fill.style.width = `${pct.toFixed(1)}%`;
+        fill.classList.toggle('is-warn', pct <= 55 && pct > 35);
+        fill.classList.toggle('is-danger', pct <= 35);
+      }
+    }
+    if (remMs <= 0) {
       failRecallCheck(recallTargetItem, 'Hết thời gian!');
     }
   }
@@ -3275,6 +3302,7 @@
 
   function finalizeRecallMastery(item) {
     stopRecallInputTimer();
+    resetRecallSpeedBarUI(false);
     clearRecallActiveSession();
     recallSubmitted = true;
     delete masterCooldowns[item.id];
@@ -3423,9 +3451,9 @@
       recallMode = 'quick_vi';
       recallStage2Type = 'meaning_vi';
       recallAttemptsLeft = 1;
-      recallSynOptions = choices.map((c) => ({ text: c.meaning, isCorrect: c.isCorrect }));
+      recallSynOptions = shuffleArray(choices.map((c) => ({ text: c.meaning, isCorrect: c.isCorrect })));
       recallSynSelected = new Set();
-      recallDeadlineAt = Date.now() + 15000;
+      recallDeadlineAt = Date.now() + RECALL_QUICK_VI_MS;
       const stageBadge = document.getElementById('recall-stage-badge');
       const timerBadge = document.getElementById('recall-timer-badge');
       const hintBox = document.getElementById('recall-hint-box');
@@ -3436,13 +3464,14 @@
       const btnSubmit = document.getElementById('btn-recall-submit');
       const fb = document.getElementById('recall-feedback');
       document.getElementById('recall-word-input')?.blur();
+      resetRecallSpeedBarUI(true);
       if (stageBadge) stageBadge.textContent = 'Test 2 · Nghĩa Việt';
       if (timerBadge) {
-        timerBadge.textContent = '15s';
-        timerBadge.classList.remove('is-urgent');
+        timerBadge.textContent = `${Math.round(RECALL_QUICK_VI_MS / 1000)}s`;
+        timerBadge.classList.remove('is-urgent', 'is-speed-pulse');
       }
       if (hintBox) hintBox.style.display = 'block';
-      if (targetSubEl) targetSubEl.textContent = `${getCleanPos(item)} · Chọn nghĩa tiếng Việt đúng của`;
+      if (targetSubEl) targetSubEl.textContent = `${getCleanPos(item)} · Chọn nhanh nghĩa đúng của`;
       if (targetWordEl) {
         targetWordEl.className = 'recall-stage-word';
         targetWordEl.textContent = item.lemma || '';
@@ -3458,11 +3487,12 @@
       updateRecallPromptAttempts(item);
       renderRecallSynGrid(false);
       setRecallActiveSession(item, 2);
-      recallDeadlineTimer = setInterval(updateRecallCountdownBadge, 250);
+      recallDeadlineTimer = setInterval(updateRecallCountdownBadge, 60);
       return;
     }
 
     stopRecallInputTimer();
+    resetRecallSpeedBarUI(false);
     recallStage = 2;
     recallSubmitted = false;
     recallMode = 'standard';
@@ -3578,6 +3608,7 @@
 
   function failRecallCheck(item, reasonPrefix = 'Chưa chính xác!') {
     stopRecallInputTimer();
+    resetRecallSpeedBarUI(false);
     clearRecallActiveSession();
     recallSubmitted = true;
     recallAttemptsLeft = 0;
@@ -3590,9 +3621,17 @@
     const btnReturn = document.getElementById('btn-recall-return');
     const badge = document.getElementById('recall-timer-badge');
 
-    if (badge && reasonPrefix.includes('Hết')) {
-      badge.textContent = '0s';
-      badge.classList.add('is-urgent');
+    if (badge) {
+      badge.classList.remove('is-speed-pulse');
+      if (reasonPrefix.includes('Hết')) {
+        badge.textContent = '0s';
+        badge.classList.add('is-urgent');
+        const fill = document.getElementById('recall-speed-bar-fill');
+        if (fill) {
+          fill.style.width = '0%';
+          fill.classList.add('is-danger');
+        }
+      }
     }
     if (inp) inp.disabled = true;
     if (recallStage === 2 || recallMode === 'quick_vi') {
@@ -3690,10 +3729,11 @@
       if (btnSubmit) btnSubmit.style.display = 'none';
       renderRecallSynGrid(false);
     } else {
+      resetRecallSpeedBarUI(false);
       if (stageBadge) stageBadge.textContent = 'Test 1';
       if (timerBadge) {
         timerBadge.textContent = `${limitSec}s`;
-        timerBadge.classList.remove('is-urgent');
+        timerBadge.classList.remove('is-urgent', 'is-speed-pulse');
       }
       if (hintBox) hintBox.style.display = 'none';
       if (stage1Body) stage1Body.style.display = 'block';
@@ -3738,6 +3778,7 @@
     const rule = getRecallRule(item);
     const penaltySec = rule.strict ? 90 : 60;
     stopRecallInputTimer();
+    resetRecallSpeedBarUI(false);
     clearRecallActiveSession();
     recallSubmitted = true;
     recallAttemptsLeft = 0;
@@ -3763,6 +3804,7 @@
       return;
     }
     stopRecallInputTimer();
+    resetRecallSpeedBarUI(false);
     clearRecallActiveSession();
     document.getElementById('modal-recall-check')?.classList.remove('open');
     document.querySelector('#modal-recall-check .recall-check-card')?.style.removeProperty('visibility');
