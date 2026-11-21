@@ -2460,6 +2460,21 @@ html[data-mode="calm"] #screen-study .study-controls .btn {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
+
+  /* Teacher Dashboard MUST ALWAYS scroll freely up and down */
+  html:has(#screen-teacher.active),
+  body:has(#screen-teacher.active),
+  body.is-teacher-mode,
+  html:has(body.is-teacher-mode),
+  body:has(#screen-teacher.active) #app-shell,
+  body.is-teacher-mode #app-shell,
+  body:has(#screen-teacher.active) main.app-main,
+  body.is-teacher-mode main.app-main {
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
 }
 
 /* Compact vertical rhythm on shorter laptop screens (1536x740, 1366x768, 1280x720) so ZERO widget clips */

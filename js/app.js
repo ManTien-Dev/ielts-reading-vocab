@@ -4513,11 +4513,18 @@
     const teacherScreen = document.getElementById('screen-teacher');
     const studyScreen = document.getElementById('screen-study');
     const taskScreen = document.getElementById('screen-task');
+    const totHome = document.getElementById('screen-home');
+    const totTasksHub = document.getElementById('screen-tasks-hub');
+    const totPractice = document.getElementById('screen-practice');
     if (teacher && !teacherPreviewStudy) {
+      document.body.classList.add('is-teacher-mode');
       if (studyScreen) {
         studyScreen.classList.remove('active');
         studyScreen.style.display = 'none';
       }
+      if (totHome) totHome.classList.remove('active');
+      if (totTasksHub) totTasksHub.classList.remove('active');
+      if (totPractice) totPractice.classList.remove('active');
       if (taskScreen) {
         taskScreen.classList.remove('active', 'open');
       }
@@ -4528,11 +4535,21 @@
         teacherScreen.classList.add('active');
       }
     } else {
+      document.body.classList.remove('is-teacher-mode');
       if (teacherScreen) {
         teacherScreen.classList.remove('active');
         teacherScreen.style.display = 'none';
       }
-      if (studyScreen) {
+      if (window.TotoroUI?.switchView && window.TotoroUI?.getActiveView) {
+        const curV = window.TotoroUI.getActiveView() || 'home';
+        if (studyScreen) {
+          studyScreen.classList.toggle('active', curV === 'flashcard');
+          studyScreen.style.display = curV === 'flashcard' ? '' : 'none';
+        }
+        if (totHome) totHome.classList.toggle('active', curV === 'home');
+        if (totTasksHub) totTasksHub.classList.toggle('active', curV === 'task');
+        if (totPractice) totPractice.classList.toggle('active', curV === 'practice');
+      } else if (studyScreen) {
         studyScreen.style.display = 'block';
         studyScreen.classList.add('active');
       }
