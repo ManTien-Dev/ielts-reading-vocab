@@ -8,10 +8,132 @@
 (function () {
   const CHECKPOINT_KEY_BASE = 'ielts_recog_checkpoint_v1_';
   const CERT_KEY_BASE = 'ielts_list_certs_v1_';
+  const SOUND_PREF_KEY = 'ielts_recog_sound_v1';
   const WORD_TIME_LIMIT_MS = 5000;
   const OLD_REVIEW_TIME_LIMIT_MS = 4000;
   const ROUND_SIZE = 50;
   const PASS_THRESHOLD_PCT = 94;
+
+  function loadSoundEnabled() {
+    try {
+      const v = localStorage.getItem(SOUND_PREF_KEY);
+      if (v === '0' || v === 'false') return false;
+      return true;
+    } catch (_) {
+      return true;
+    }
+  }
+  function saveSoundEnabled(val) {
+    try {
+      localStorage.setItem(SOUND_PREF_KEY, val ? '1' : '0');
+    } catch (_) {}
+  }
+
+  let soundEnabled = loadSoundEnabled();
+  let sfxCtx = null;
+
+  function ensureSfxContext() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!sfxCtx || sfxCtx.state === 'closed') {
+        sfxCtx = new AC();
+      }
+      if (sfxCtx.state === 'suspended') {
+        sfxCtx.resume?.().catch?.(() => {});
+      }
+      return sfxCtx;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function playSfx(kind) {
+    if (!soundEnabled) return;
+    try {
+      const ctx = ensureSfxContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+
+      const tone = (freq, startOffset, duration, peakGain, type = 'sine', endFreq = null) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now + startOffset);
+        if (endFreq && endFreq !== freq) {
+          osc.frequency.exponentialRampToValueAtTime(endFreq, now + startOffset + duration);
+        }
+        gain.gain.setValueAtTime(0.0001, now + startOffset);
+        gain.gain.linearRampToValueAtTime(peakGain, now + startOffset + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + startOffset);
+        osc.stop(now + startOffset + duration + 0.02);
+      };
+
+      if (kind === 'correct') {
+        tone(587.33, 0, 0.095, 0.13, 'triangle');     // D5
+        tone(880.0, 0.065, 0.13, 0.15, 'sine');       // A5
+      } else if (kind === 'wrong') {
+        tone(240, 0, 0.11, 0.12, 'triangle', 195);
+        tone(185, 0.09, 0.14, 0.11, 'sine', 155);
+      } else if (kind === 'tick') {
+        tone(960, 0, 0.045, 0.055, 'sine');
+      } else if (kind === 'complete') {
+        tone(523.25, 0, 0.22, 0.13, 'sine');          // C5
+        tone(659.25, 0.09, 0.24, 0.13, 'sine');       // E5
+        tone(783.99, 0.18, 0.36, 0.15, 'sine');       // G5
+      }
+    } catch (_) {}
+  }
+
+  function stopAudio() {
+    try { window.AppCore?.audio?.stop?.(); } catch (_) {}
+  }
+
+  function speakWordAudio(lemma, accentOverride) {
+    if (!lemma) return;
+    ensureSfxContext();
+    try {
+      const accent = accentOverride || B()?.getPreferredAccent?.() || 'en-US';
+      if (B()?.speakText) {
+        B().speakText(lemma, accent);
+      } else if (window.AppCore?.audio?.speak) {
+        window.AppCore.audio.speak(lemma, { accent, rate: 0.94 });
+      }
+    } catch (_) {}
+  }
+
+  function speakCurrentWord(accentOverride) {
+    const lemma = session?.currentItem?.lemma;
+    if (!lemma) return;
+    speakWordAudio(lemma, accentOverride);
+  }
+
+  function syncSoundToggleButton() {
+    const btn = document.getElementById('btn-recog-sound-toggle');
+    if (!btn) return;
+    btn.classList.toggle('is-on', soundEnabled);
+    btn.classList.toggle('is-off', !soundEnabled);
+    btn.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
+    btn.textContent = soundEnabled ? '🔊 Âm: Bật' : '🔇 Âm: Tắt';
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    saveSoundEnabled(soundEnabled);
+    syncSoundToggleButton();
+    if (soundEnabled) {
+      ensureSfxContext();
+      if (session && (session.phase === 'quiz' || session.phase === 'error_loop') && !session.locked && session.currentItem?.lemma) {
+        speakWordAudio(session.currentItem.lemma);
+      }
+    } else {
+      stopAudio();
+    }
+    B()?.showToast?.(soundEnabled ? 'Đã bật âm thanh Speed Quiz' : 'Đã tắt âm thanh Speed Quiz');
+  }
 
   function getWordTimeLimitMs() {
     return session?.mode === 'old_review' ? OLD_REVIEW_TIME_LIMIT_MS : WORD_TIME_LIMIT_MS;
@@ -203,6 +325,7 @@
 
   function closeModalShell() {
     stopTimers();
+    stopAudio();
     const ov = document.getElementById('modal-recognition-test');
     if (ov) ov.classList.remove('open');
     session = null;
@@ -213,7 +336,7 @@
     if (!keydownBound) {
       keydownBound = true;
       document.addEventListener('keydown', (e) => {
-        if (!session || session.phase !== 'quiz' || session.locked || session.paused) return;
+        if (!session || (session.phase !== 'quiz' && session.phase !== 'error_loop') || session.locked || session.paused) return;
         const ov = document.getElementById('modal-recognition-test');
         if (!ov || !ov.classList.contains('open')) return;
         if (e.key >= '1' && e.key <= '4') {
@@ -222,6 +345,9 @@
         } else if (e.code === 'Space' || e.key === '0') {
           e.preventDefault();
           markDontKnow();
+        } else if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          speakCurrentWord();
         }
       });
     }
@@ -284,6 +410,7 @@
   function pauseWordClock() {
     if (!session || session.paused) return;
     session.paused = true;
+    stopAudio();
     wordPausedRemainingMs = Math.max(400, wordDeadlineAt - Date.now());
     if (tickRaf) { cancelAnimationFrame(tickRaf); tickRaf = null; }
   }
@@ -513,6 +640,8 @@
 
   function renderRoundIntro() {
     if (!session) return;
+    stopAudio();
+    playSfx('complete');
     session.phase = 'intro';
     const body = document.getElementById('recog-modal-body');
     if (!body) return;
@@ -594,8 +723,12 @@
     session.currentItem = item;
     session.currentOptions = shuffleArr(buildMeaningDistractors(item, session.pool, 3));
     session.locked = false;
+    session._tickFlags = { t1500: false, t750: false };
 
     renderQuestionCard();
+    if (soundEnabled) {
+      speakWordAudio(item.lemma);
+    }
     wordDeadlineAt = Date.now() + getWordTimeLimitMs();
     startCountdownRaf();
   }
@@ -631,6 +764,9 @@
               : `<span class="recog-pill">${session.mode === 'list_final' ? `Chặng ${curRound}/${totalRounds} · ` : ''}Câu ${curPos} / ${total}</span>`}
           </div>
           <div class="recog-meta-right">
+            <button type="button" class="btn-subtle recog-sound-btn ${soundEnabled ? 'is-on' : 'is-off'}" id="btn-recog-sound-toggle" title="Bật / Tắt phát âm tự động và hiệu ứng âm thanh (phím R để nghe lại)" aria-pressed="${soundEnabled ? 'true' : 'false'}" onclick="RecognitionTestModule.toggleSound()">
+              ${soundEnabled ? '🔊 Âm: Bật' : '🔇 Âm: Tắt'}
+            </button>
             <span class="recog-timer-text" id="recog-timer-text">${(getWordTimeLimitMs() / 1000).toFixed(1)}s</span>
             ${session.mode === 'list_final' && !isErrLoop
               ? `<button type="button" class="btn-subtle" style="padding:4px 10px; font-size:12px;" onclick="RecognitionTestModule.pauseAndSaveExit()">Tạm lưu</button>`
@@ -649,8 +785,8 @@
         <div class="recog-word-stage">
           <div class="recog-word-row">
             <span class="recog-word-main" id="recog-word-main">${esc(item.lemma)}</span>
-            <button type="button" class="btn-voice-speak" title="Nghe phát âm Anh - Anh (UK)" onclick="window.__VOCAB_BRIDGE__?.speakText?.('${esc(item.lemma)}', 'en-GB')"><span>UK</span></button>
-            <button type="button" class="btn-voice-speak" title="Nghe phát âm Anh - Mỹ (US)" onclick="window.__VOCAB_BRIDGE__?.speakText?.('${esc(item.lemma)}', 'en-US')"><span>US</span></button>
+            <button type="button" class="btn-voice-speak" title="Nghe phát âm Anh - Anh (UK)" onclick="RecognitionTestModule.speakCurrentWord('en-GB')"><span>UK</span></button>
+            <button type="button" class="btn-voice-speak" title="Nghe phát âm Anh - Mỹ (US)" onclick="RecognitionTestModule.speakCurrentWord('en-US')"><span>US</span></button>
           </div>
           <div class="recog-word-sub">
             ${ipaText ? `<span class="recog-ipa">${esc(ipaText)}</span>` : ''}
@@ -690,6 +826,15 @@
         txt.textContent = (rem / 1000).toFixed(1) + 's';
         txt.classList.toggle('is-urgent', rem <= 1500);
       }
+      if (soundEnabled && session._tickFlags) {
+        if (rem <= 1500 && rem > 750 && !session._tickFlags.t1500) {
+          session._tickFlags.t1500 = true;
+          playSfx('tick');
+        } else if (rem <= 750 && rem > 0 && !session._tickFlags.t750) {
+          session._tickFlags.t750 = true;
+          playSfx('tick');
+        }
+      }
       if (rem <= 0) {
         handleAnswerOutcome(false, -1, `Hết ${limitSec} giây!`);
         return;
@@ -715,6 +860,8 @@
     if (!session || session.locked) return;
     session.locked = true;
     stopTimers();
+    stopAudio();
+    playSfx(isCorrect ? 'correct' : 'wrong');
 
     const item = session.currentItem;
     const correctIdx = session.currentOptions.findIndex((o) => o.isCorrect);
@@ -870,6 +1017,8 @@
   function finishExamSuccess() {
     if (!session) return;
     stopTimers();
+    stopAudio();
+    playSfx('complete');
     session.phase = 'result';
     session.passed = true;
     const total = session.orderIds.length;
@@ -1004,6 +1153,9 @@
     beginErrorClearanceLoop,
     chooseOption,
     markDontKnow,
+    toggleSound,
+    speakCurrentWord,
+    isSoundEnabled: () => soundEnabled,
     pauseAndSaveExit,
     restartListExam,
     retryCurrentExam,
