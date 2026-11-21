@@ -4188,11 +4188,17 @@ html[data-theme="dark"] .anki-due-reminder {
   flex: 1 1 200px !important;
 }
 
+/* Hidden on PC (>= 1200px) — mobile/tablet distraction-free Speed Quiz bar */
+.mob-study-quick-bar {
+  display: none;
+}
+
 /* ==========================================================================
    MOBILE & TABLET STUDIO ADAPTATION (STRICTLY <= 1199px — PC >= 1200px UNTOUCHED)
-   Crafted for iPhone (360-430px), Phone (<= 767px), iPad Portrait (768-1023px)
-   & iPad Landscape (1024-1199px): zero horizontal overflow, thumb-first touch
-   targets (>= 44px), clean 2-row active-Task header, balanced Tablet 2-col grids.
+   Distilled focus-first architecture inspired by Quizlet iOS, AnkiMobile & iPadOS:
+   - ONE single clean 38px control bar above the Flashcard (scope + icon tools + 1/50)
+   - ZERO redundant stats strip (#mobile-stats-strip hidden) & ZERO bulky desktop widgets
+   - Full-height breathable Flashcard + thumb-zone controls + sleek single Speed Quiz bar
    ========================================================================== */
 @media (max-width: 1199px) {
   html, body {
@@ -4265,7 +4271,135 @@ html[data-theme="dark"] .anki-due-reminder {
     flex-shrink: 0 !important;
   }
 
-  /* 2. Home Chart Tooltip Fix: prevent "0p" from colliding with Tuần/Tháng/Năm segmented toggle */
+  /* 2. DISTILLED FLASHCARD CHROME (Phone & Tablet <= 1199px):
+        Collapse 3 noisy stacked rows into ONE sleek 38px bar; remove redundant strip & bulky side widgets */
+  #screen-study #mobile-stats-strip,
+  #screen-study #study-idle-clock,
+  #screen-study #study-deck-left,
+  #screen-study #study-deck-right,
+  #screen-study .study-deck-left,
+  #screen-study .study-deck-right,
+  body.mobile-widgets-open #screen-study #study-deck-left,
+  body.mobile-widgets-open #screen-study #study-deck-right,
+  #screen-study .keyboard-hint,
+  #screen-study #btn-focus-mode {
+    display: none !important;
+  }
+  #screen-study .study-top-bar {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    margin: 0 auto 10px !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  #screen-study .study-bar-left {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+  #screen-study .scope-select-wrap {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  #screen-study #study-scope-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 36px !important;
+    font-size: 13px !important;
+    padding: 0 28px 0 11px !important;
+    border-radius: 10px !important;
+  }
+  #screen-study .study-top-actions {
+    flex: 0 0 auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 5px !important;
+  }
+  #screen-study .study-top-actions .btn-deck-tool {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    justify-content: center !important;
+  }
+  #screen-study .study-top-actions .btn-deck-tool > span {
+    display: none !important;
+  }
+  #screen-study .study-progress {
+    height: 34px !important;
+    padding: 0 9px !important;
+    font-size: 12px !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+  }
+
+  /* Single-column centered Flashcard Stage on both Phone & Tablet */
+  #screen-study .study-stage-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+  }
+  #screen-study .study-center-col {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Sleek Single-Row Speed Quiz CTA right beneath Flashcard controls (replaces 4 bulky desktop widgets!) */
+  .mob-study-quick-bar {
+    display: flex !important;
+    justify-content: center;
+    width: 100%;
+    max-width: 480px;
+    margin: 10px auto 0;
+  }
+  .mob-quick-speedquiz {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--streak) 32%, var(--border));
+    background: var(--streak-soft);
+    color: var(--streak);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    cursor: pointer;
+    transition: transform 130ms var(--ease-out), background-color 150ms var(--ease-out);
+  }
+  .mob-quick-speedquiz:active {
+    transform: scale(0.98);
+  }
+  .mob-quick-speedquiz .mob-quick-sub {
+    font-size: 11.5px;
+    font-weight: 600;
+    opacity: 0.78;
+  }
+  .mob-quick-speedquiz .mob-quick-arrow {
+    margin-left: auto;
+    font-size: 14px;
+    opacity: 0.85;
+  }
+
+  /* 3. Home Chart Tooltip Fix: prevent "0p" from colliding with Tuần/Tháng/Năm segmented toggle */
   #screen-home .tot-home-panel-head {
     margin-bottom: 6px !important;
   }
@@ -4273,26 +4407,6 @@ html[data-theme="dark"] .anki-due-reminder {
     padding-top: 22px !important;
     min-height: 126px !important;
     max-height: none !important;
-  }
-
-  /* 3. Mobile/Tablet Quick Stats Strip + One-Tap Speed Quiz pill */
-  #mobile-stats-strip .mob-stat-pill {
-    min-height: 34px !important;
-    padding: 0 11px !important;
-    border-radius: 999px !important;
-    font-size: 12px !important;
-    white-space: nowrap !important;
-    flex-shrink: 0 !important;
-    transition: transform 120ms var(--ease-out), background-color 140ms var(--ease-out);
-  }
-  #mobile-stats-strip .mob-stat-pill:active {
-    transform: scale(0.96);
-  }
-  #mobile-stats-strip .mob-stat-pill.is-speedquiz {
-    background: var(--streak-soft) !important;
-    border-color: color-mix(in srgb, var(--streak) 36%, var(--border)) !important;
-    color: var(--streak) !important;
-    font-weight: 800 !important;
   }
 
   /* 4. Touch-friendly active states */
@@ -4309,7 +4423,7 @@ html[data-theme="dark"] .anki-due-reminder {
    TABLET STUDIO (768px - 1199px: iPad Portrait & iPad Landscape)
    ========================================================================== */
 @media (min-width: 768px) and (max-width: 1199px) {
-  /* Re-show custom Totoro Task mascot icon cleanly on Tablet header */
+  /* Show custom Totoro Task mascot icon cleanly on Tablet header */
   #btn-open-student-tasks.tot-task-mascot-btn {
     display: inline-flex !important;
     width: 38px !important;
@@ -4324,97 +4438,94 @@ html[data-theme="dark"] .anki-due-reminder {
     display: none !important;
   }
 
-  /* Tablet Study Layout: Centered Flashcard stage + aligned 2x2 companion deck below */
-  #screen-study .study-top-bar {
-    max-width: 740px !important;
-    margin: 0 auto 10px !important;
-    flex-wrap: wrap !important;
-    justify-content: space-between !important;
-    gap: 8px !important;
-  }
-  #screen-study #mobile-stats-strip {
-    max-width: 740px !important;
-    margin: 0 auto 10px !important;
-    justify-content: center !important;
-  }
-  #screen-study .study-stage-row {
-    max-width: 740px !important;
-    margin: 0 auto !important;
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 14px !important;
-    align-items: stretch !important;
-  }
-  #screen-study .study-center-col {
-    grid-column: 1 / -1 !important;
-    order: 1 !important;
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-  }
+  /* iPad Focused Flashcard Stage: zero-scroll calm editorial canvas */
+  #screen-study .study-top-bar,
+  #screen-study .study-stage-row,
   #screen-study .fc-scene,
+  #screen-study .study-controls,
+  #screen-study .mob-study-quick-bar {
+    max-width: 680px !important;
+  }
+  #screen-study .study-top-bar {
+    margin: 4px auto 14px !important;
+  }
+  #screen-study #study-scope-select {
+    height: 38px !important;
+    font-size: 13.5px !important;
+  }
+  #screen-study .study-top-actions .btn-deck-tool {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  #screen-study .study-progress {
+    height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 12.5px !important;
+  }
+  #screen-study .fc-scene {
+    width: 100% !important;
+    height: clamp(460px, calc(100svh - 275px), 620px) !important;
+    min-height: 440px !important;
+    margin: 0 auto 14px !important;
+  }
+  body:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
+    height: clamp(430px, calc(100svh - 320px), 580px) !important;
+    min-height: 410px !important;
+  }
   #screen-study .study-controls {
     width: 100% !important;
-    max-width: 740px !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
+    margin: 0 auto !important;
   }
-  #screen-study .study-deck-left,
-  #screen-study .study-deck-right {
-    display: flex !important;
-    flex-direction: column !important;
-    grid-template-columns: none !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    gap: 14px !important;
-    height: auto !important;
-    margin-top: 0 !important;
+  #screen-study .nav-buttons-group {
+    max-width: 680px !important;
+    gap: 12px !important;
   }
-  #screen-study .study-deck-left { order: 2 !important; }
-  #screen-study .study-deck-right { order: 3 !important; }
-  #screen-study .study-deck-left > .deck-widget,
-  #screen-study .study-deck-right > .deck-widget {
-    width: 100% !important;
-    min-width: 0 !important;
+  #screen-study .nav-buttons-group .btn {
+    min-height: 48px !important;
+    border-radius: 13px !important;
+    font-size: 14.5px !important;
   }
+  #screen-study .btn-assess {
+    min-height: 48px !important;
+  }
+  #screen-study .mob-study-quick-bar {
+    margin-top: 12px !important;
+  }
+  #screen-study .mob-quick-speedquiz {
+    min-height: 44px !important;
+    font-size: 13.5px !important;
+  }
+
+  /* Tablet iPad Landscape (short height): fit 100% inside 1024x768 with zero scroll! */
+  @media (max-height: 820px) {
+    #screen-study .study-top-bar {
+      margin: 0 auto 10px !important;
+    }
+    #screen-study .fc-scene {
+      height: clamp(390px, calc(100svh - 235px), 495px) !important;
+      min-height: 370px !important;
+      margin-bottom: 10px !important;
+    }
+    body:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
+      height: clamp(360px, calc(100svh - 280px), 460px) !important;
+      min-height: 345px !important;
+    }
+    #screen-study .nav-buttons-group .btn {
+      min-height: 44px !important;
+    }
+    #screen-study .mob-study-quick-bar {
+      margin-top: 8px !important;
+    }
+    #screen-study .mob-quick-speedquiz {
+      min-height: 38px !important;
+    }
+  }
+
   /* Tablet Toast: float cleanly at bottom so Task Bar & Home Greeting stay unobstructed */
   .toast-notice,
   #app-toast.toast-notice {
     top: auto !important;
     bottom: 22px !important;
-  }
-  #screen-study #widget-study-timer {
-    margin-top: 0 !important;
-  }
-  #screen-study #widget-study-timer > .totoro-peeker {
-    top: -16px !important;
-    right: 20px !important;
-    width: 44px !important;
-    height: 25px !important;
-  }
-  #screen-study .fc-scene {
-    height: clamp(390px, 50svh, 500px) !important;
-    min-height: 370px !important;
-  }
-  #screen-study .nav-buttons-group .btn {
-    min-height: 46px !important;
-    border-radius: 13px !important;
-  }
-  #screen-study .btn-assess {
-    min-height: 48px !important;
-  }
-
-  /* Tablet iPad Landscape (short height): fit Flashcard + controls cleanly above the fold */
-  @media (max-height: 820px) {
-    #screen-study .fc-scene {
-      height: clamp(350px, calc(100svh - 265px), 445px) !important;
-      min-height: 340px !important;
-    }
-    body:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
-      height: clamp(330px, calc(100svh - 305px), 420px) !important;
-      min-height: 320px !important;
-    }
   }
 
   /* Tablet Home: crisp 2-column top hero + goal on >= 960px, refined stacked on 768-959px */
@@ -4480,7 +4591,6 @@ html[data-theme="dark"] .anki-due-reminder {
     padding: 0 7px 0 4px !important;
     gap: 4px !important;
   }
-  /* Hide long username text on phones so Row 1 NEVER collides with logo or icons */
   .tot-account-trigger #header-user-id {
     display: none !important;
   }
@@ -4490,7 +4600,7 @@ html[data-theme="dark"] .anki-due-reminder {
     font-size: 10.5px !important;
   }
 
-  /* Compact Teacher buttons on Mobile Header (prevent 132px 3-row header bloat) */
+  /* Compact Teacher buttons on Mobile Header */
   body.is-teacher-mode #btn-teacher-preview,
   body.is-teacher-mode #btn-teacher-refresh {
     height: 32px !important;
@@ -4532,7 +4642,7 @@ html[data-theme="dark"] .anki-due-reminder {
     font-size: 10.5px !important;
   }
 
-  /* 2. Mobile Toast: sit cleanly ABOVE Bottom Nav Bar (never cover Header or Modals!) */
+  /* 2. Mobile Toast: sit cleanly ABOVE Bottom Nav Bar */
   .toast-notice,
   #app-toast.toast-notice {
     top: auto !important;
@@ -4570,107 +4680,54 @@ html[data-theme="dark"] .anki-due-reminder {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
   }
   main.app-main {
-    padding: 6px 10px 16px !important;
+    padding: 8px 12px 14px !important;
   }
 
-  /* 4. Mobile Flashcard Top Toolbar: compact 2-row layout (saves ~52px vertical space!) */
+  /* 4. Phone Flashcard: ONE sleek 36px top bar + BIG calm Flashcard + thumb controls + Speed Quiz pill */
   #screen-study .study-top-bar {
-    display: flex !important;
-    flex-direction: column !important;
+    margin: 0 0 10px !important;
     gap: 6px !important;
-    margin: 0 0 6px !important;
-    padding: 0 !important;
-  }
-  #screen-study .study-bar-left {
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-    gap: 6px !important;
-  }
-  #screen-study .scope-select-wrap {
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    width: auto !important;
   }
   #screen-study #study-scope-select {
-    width: 100% !important;
-    min-width: 0 !important;
     height: 36px !important;
     font-size: 12.5px !important;
-    padding: 0 26px 0 10px !important;
-  }
-  #screen-study #study-idle-clock {
-    flex-shrink: 0 !important;
-    width: auto !important;
-    min-width: auto !important;
-    height: 36px !important;
-    padding: 0 9px !important;
-    gap: 5px !important;
-    font-size: 11.5px !important;
-  }
-  #screen-study #study-idle-clock .tot-idle-lbl,
-  #screen-study #study-idle-clock .tot-idle-limit {
-    display: none !important;
+    padding: 0 24px 0 10px !important;
   }
   #screen-study .study-top-actions {
-    width: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 6px !important;
-    flex-wrap: nowrap !important;
+    gap: 4px !important;
   }
   #screen-study .study-top-actions .btn-deck-tool {
+    width: 34px !important;
     height: 34px !important;
-    padding: 0 9px !important;
-    font-size: 12px !important;
-  }
-  #screen-study .study-top-actions #btn-focus-mode {
-    display: none !important;
+    min-width: 34px !important;
   }
   #screen-study .study-progress {
-    height: 32px !important;
-    padding: 0 9px !important;
+    height: 34px !important;
+    padding: 0 8px !important;
     font-size: 11.5px !important;
-    display: inline-flex !important;
-    align-items: center !important;
   }
   #screen-study #card-settings-popover {
     width: min(292px, calc(100vw - 24px)) !important;
-    right: -42px !important;
+    right: -46px !important;
   }
 
-  /* 5. Mobile Stats Strip: sleek single-line horizontal scroll with compact pills */
-  #mobile-stats-strip {
-    margin: 0 0 8px !important;
-    gap: 5px !important;
-    padding: 1px 0 2px !important;
-  }
-  #mobile-stats-strip .mob-stat-pill {
-    min-height: 30px !important;
-    padding: 0 9px !important;
-    font-size: 11px !important;
-  }
-
-  /* 6. Mobile Flashcard Stage + Thumb Controls: 100% above Bottom Nav Bar (ZERO cutoff!) */
+  /* Generous Flashcard height — fits 100% above Bottom Nav Bar together with Controls + Speed Quiz pill! */
   #screen-study .fc-scene {
-    height: clamp(290px, calc(100svh - 332px), 420px) !important;
-    min-height: 280px !important;
+    height: clamp(360px, calc(100svh - 282px), 495px) !important;
+    min-height: 340px !important;
     margin-bottom: 10px !important;
   }
   body:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
-    height: clamp(270px, calc(100svh - 376px), 390px) !important;
-    min-height: 264px !important;
+    height: clamp(330px, calc(100svh - 324px), 460px) !important;
+    min-height: 320px !important;
   }
   #screen-study .fc-face {
-    padding: 14px 14px 12px !important;
+    padding: 15px 15px 13px !important;
     border-radius: 20px !important;
   }
   #screen-study .study-controls {
     margin-top: 0 !important;
-    padding-bottom: 4px !important;
+    padding-bottom: 0 !important;
   }
   #screen-study .nav-buttons-group {
     gap: 8px !important;
@@ -4682,11 +4739,15 @@ html[data-theme="dark"] .anki-due-reminder {
     font-size: 13.5px !important;
     font-weight: 750 !important;
   }
-  #screen-study .keyboard-hint {
-    display: none !important;
+  #screen-study .mob-study-quick-bar {
+    margin-top: 8px !important;
+  }
+  #screen-study .mob-quick-speedquiz {
+    min-height: 40px !important;
+    font-size: 12.5px !important;
   }
 
-  /* Mobile Flashcard Back Face: readable without cramped overflow + clean touch Assessment buttons */
+  /* Mobile Flashcard Back Face: airy, readable hierarchy (word + meaning + chips + sentence fit comfortably!) */
   html[data-mode="calm"] #screen-study .fc-back-header-bar,
   html[data-mode="vibrant"] #screen-study .fc-back-header-bar {
     padding-bottom: 6px !important;
@@ -4695,11 +4756,11 @@ html[data-theme="dark"] .anki-due-reminder {
   }
   html[data-mode="calm"] #screen-study .fc-back-body-stack,
   html[data-mode="vibrant"] #screen-study .fc-back-body-stack {
-    gap: 8px !important;
+    gap: 9px !important;
   }
   html[data-mode="calm"] #screen-study #fc-back-word,
   html[data-mode="vibrant"] #screen-study #fc-back-word {
-    font-size: 22px !important;
+    font-size: 23px !important;
     line-height: 1.2 !important;
   }
   html[data-mode="calm"] #screen-study #fc-back-ipa,
@@ -4715,7 +4776,7 @@ html[data-theme="dark"] .anki-due-reminder {
   }
   html[data-mode="calm"] #screen-study #fc-back-meaning,
   html[data-mode="vibrant"] #screen-study #fc-back-meaning {
-    font-size: 19.5px !important;
+    font-size: 20px !important;
     line-height: 1.28 !important;
     margin-bottom: 0 !important;
   }
@@ -4758,7 +4819,7 @@ html[data-theme="dark"] .anki-due-reminder {
     margin-top: 1px !important;
   }
 
-  /* 7. Mobile Home: Compact Horizontal Goal Row (no empty void!) + Full-width Action Trio */
+  /* 5. Mobile Home: Compact Horizontal Goal Row + Full-width Action Trio */
   #screen-home .tot-hero-card {
     padding: 14px 14px !important;
     gap: 12px !important;
@@ -4816,7 +4877,7 @@ html[data-theme="dark"] .anki-due-reminder {
     justify-content: center !important;
   }
 
-  /* 8. Mobile Task Hub: all 4 Suite tabs fit cleanly without clipping "Chuyên sâu" */
+  /* 6. Mobile Task Hub: all 4 Suite tabs fit cleanly without clipping */
   #screen-tasks-hub #inline-task-suites {
     width: 100% !important;
     display: grid !important;
@@ -4837,7 +4898,7 @@ html[data-theme="dark"] .anki-due-reminder {
     padding: 10px 12px !important;
   }
 
-  /* 9. Mobile Speed Quiz & Modals: Thumb-Friendly Bottom/Full-Width Sheets */
+  /* 7. Mobile Speed Quiz & Modals: Thumb-Friendly Sheets */
   .modal-overlay {
     padding: 10px !important;
   }
@@ -4862,7 +4923,7 @@ html[data-theme="dark"] .anki-due-reminder {
     display: none !important;
   }
 
-  /* 10. Mobile Teacher Dashboard: crisp horizontal scroll table & stacked composer */
+  /* 8. Mobile Teacher Dashboard: crisp horizontal scroll table & stacked composer */
   #screen-teacher .teacher-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 8px !important;
