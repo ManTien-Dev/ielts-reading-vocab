@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
   <link rel="stylesheet" href="css/enhancements.css?v=20261121y">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261121aa">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261121ab">
 </head>
 <body>
 
@@ -491,8 +491,11 @@
         <button type="button" class="mob-stat-pill is-due" id="mob-stat-due-btn" onclick="activateDueReviewOnly()" style="display:none;">
           <span>Cần ôn:</span> <strong id="mob-stat-due">0</strong>
         </button>
+        <button type="button" class="mob-stat-pill is-speedquiz" id="mob-stat-speedquiz-btn" onclick="RecognitionTestModule.startListFinalExam()">
+          <span>Speed Quiz</span>
+        </button>
         <button type="button" class="mob-stat-pill mob-widgets-toggle" id="btn-mob-widgets-toggle" onclick="toggleMobileWidgets()">
-          <span id="mob-widgets-toggle-label">Hiện tiện ích ▾</span>
+          <span id="mob-widgets-toggle-label">Tiện ích ▾</span>
         </button>
       </div>
 

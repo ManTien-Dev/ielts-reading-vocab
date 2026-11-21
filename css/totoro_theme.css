@@ -4187,3 +4187,721 @@ html[data-theme="dark"] .anki-due-reminder {
   min-width: 180px !important;
   flex: 1 1 200px !important;
 }
+
+/* ==========================================================================
+   MOBILE & TABLET STUDIO ADAPTATION (STRICTLY <= 1199px — PC >= 1200px UNTOUCHED)
+   Crafted for iPhone (360-430px), Phone (<= 767px), iPad Portrait (768-1023px)
+   & iPad Landscape (1024-1199px): zero horizontal overflow, thumb-first touch
+   targets (>= 44px), clean 2-row active-Task header, balanced Tablet 2-col grids.
+   ========================================================================== */
+@media (max-width: 1199px) {
+  html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  /* 1. Header & Active Task Bar: wrap cleanly onto Row 2 so Task bar NEVER overflows off-screen */
+  header.app-header,
+  html[data-theme="light"] header.app-header,
+  html[data-theme="dark"] header.app-header {
+    flex-wrap: wrap !important;
+    row-gap: 7px !important;
+    column-gap: 8px !important;
+    padding: 8px 14px !important;
+    height: auto !important;
+  }
+  header.app-header .header-left {
+    order: 1;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  header.app-header .tot-nav-tabs {
+    order: 2;
+  }
+  header.app-header .header-actions {
+    order: 3;
+    margin-left: auto;
+  }
+  header.app-header #task-study-bar {
+    order: 4 !important;
+    flex: 1 0 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 5px 9px !important;
+    border-radius: 12px !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+  header.app-header #task-study-bar .task-study-bar-info,
+  header.app-header #task-study-bar .task-study-bar-actions {
+    display: inline-flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+  }
+  header.app-header #task-study-bar #task-study-pill {
+    font-size: 11px !important;
+    padding: 4px 9px !important;
+    flex-shrink: 0 !important;
+  }
+  header.app-header #task-study-bar #task-study-deadline-badge {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  header.app-header #task-study-bar .btn-sm-task {
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 10px !important;
+    font-size: 11.5px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* 2. Home Chart Tooltip Fix: prevent "0p" from colliding with Tuần/Tháng/Năm segmented toggle */
+  #screen-home .tot-home-panel-head {
+    margin-bottom: 6px !important;
+  }
+  #screen-home .tot-chart-wrap {
+    padding-top: 22px !important;
+    min-height: 126px !important;
+    max-height: none !important;
+  }
+
+  /* 3. Mobile/Tablet Quick Stats Strip + One-Tap Speed Quiz pill */
+  #mobile-stats-strip .mob-stat-pill {
+    min-height: 34px !important;
+    padding: 0 11px !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    transition: transform 120ms var(--ease-out), background-color 140ms var(--ease-out);
+  }
+  #mobile-stats-strip .mob-stat-pill:active {
+    transform: scale(0.96);
+  }
+  #mobile-stats-strip .mob-stat-pill.is-speedquiz {
+    background: var(--streak-soft) !important;
+    border-color: color-mix(in srgb, var(--streak) 36%, var(--border)) !important;
+    color: var(--streak) !important;
+    font-weight: 800 !important;
+  }
+
+  /* 4. Touch-friendly active states */
+  .btn:active,
+  .btn-assess:active,
+  .tot-demo-btn:active,
+  .tot-task-card:active,
+  .mob-nav-item:active {
+    transform: scale(0.97);
+  }
+}
+
+/* ==========================================================================
+   TABLET STUDIO (768px - 1199px: iPad Portrait & iPad Landscape)
+   ========================================================================== */
+@media (min-width: 768px) and (max-width: 1199px) {
+  /* Re-show custom Totoro Task mascot icon cleanly on Tablet header */
+  #btn-open-student-tasks.tot-task-mascot-btn {
+    display: inline-flex !important;
+    width: 38px !important;
+    height: 36px !important;
+    min-width: 38px !important;
+  }
+  #btn-open-student-tasks.tot-task-mascot-btn .tot-task-mascot-svg {
+    width: 26px !important;
+    height: 26px !important;
+  }
+  body.is-teacher-mode #btn-open-student-tasks.tot-task-mascot-btn {
+    display: none !important;
+  }
+
+  /* Tablet Study Layout: Centered Flashcard stage + aligned 2x2 companion deck below */
+  #screen-study .study-top-bar {
+    max-width: 740px !important;
+    margin: 0 auto 10px !important;
+    flex-wrap: wrap !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+  #screen-study #mobile-stats-strip {
+    max-width: 740px !important;
+    margin: 0 auto 10px !important;
+    justify-content: center !important;
+  }
+  #screen-study .study-stage-row {
+    max-width: 740px !important;
+    margin: 0 auto !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    align-items: stretch !important;
+  }
+  #screen-study .study-center-col {
+    grid-column: 1 / -1 !important;
+    order: 1 !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+  #screen-study .fc-scene,
+  #screen-study .study-controls {
+    width: 100% !important;
+    max-width: 740px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  #screen-study .study-deck-left,
+  #screen-study .study-deck-right {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 14px !important;
+    height: auto !important;
+    margin-top: 0 !important;
+  }
+  #screen-study .study-deck-left { order: 2 !important; }
+  #screen-study .study-deck-right { order: 3 !important; }
+  #screen-study .study-deck-left > .deck-widget,
+  #screen-study .study-deck-right > .deck-widget {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  /* Tablet Toast: float cleanly at bottom so Task Bar & Home Greeting stay unobstructed */
+  .toast-notice,
+  #app-toast.toast-notice {
+    top: auto !important;
+    bottom: 22px !important;
+  }
+  #screen-study #widget-study-timer {
+    margin-top: 0 !important;
+  }
+  #screen-study #widget-study-timer > .totoro-peeker {
+    top: -16px !important;
+    right: 20px !important;
+    width: 44px !important;
+    height: 25px !important;
+  }
+  #screen-study .fc-scene {
+    height: clamp(390px, 50svh, 500px) !important;
+    min-height: 370px !important;
+  }
+  #screen-study .nav-buttons-group .btn {
+    min-height: 46px !important;
+    border-radius: 13px !important;
+  }
+  #screen-study .btn-assess {
+    min-height: 48px !important;
+  }
+
+  /* Tablet iPad Landscape (short height): fit Flashcard + controls cleanly above the fold */
+  @media (max-height: 820px) {
+    #screen-study .fc-scene {
+      height: clamp(350px, calc(100svh - 265px), 445px) !important;
+      min-height: 340px !important;
+    }
+    body:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
+      height: clamp(330px, calc(100svh - 305px), 420px) !important;
+      min-height: 320px !important;
+    }
+  }
+
+  /* Tablet Home: crisp 2-column top hero + goal on >= 960px, refined stacked on 768-959px */
+  @media (min-width: 960px) {
+    #screen-home .tot-home-top {
+      grid-template-columns: 1.35fr 1fr !important;
+    }
+    #screen-home .tot-home-bottom {
+      grid-template-columns: 1.15fr 1fr !important;
+    }
+  }
+  #screen-home .tot-goal-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 14px !important;
+  }
+
+  /* Tablet Teacher Dashboard: clean 2-col Task grid & aligned composer */
+  #screen-teacher .teacher-task-dash-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  #screen-teacher .teacher-composer-grid {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  #screen-teacher .teacher-link-inline {
+    flex: 1 1 100% !important;
+  }
+}
+
+/* ==========================================================================
+   MOBILE PHONE STUDIO (<= 767px: Native-App Ergonomics & Thumb-Zone Fit)
+   ========================================================================== */
+@media (max-width: 767px) {
+  /* 1. Crisp Single-Row Mobile Main Header + Sleek Full-Width Task Bar (Row 2) */
+  header.app-header,
+  html[data-theme="light"] header.app-header,
+  html[data-theme="dark"] header.app-header {
+    padding: 6px 10px !important;
+    min-height: 50px !important;
+    row-gap: 6px !important;
+    column-gap: 6px !important;
+  }
+  .brand-mark-svg {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .tot-skill-trigger {
+    height: 34px !important;
+    padding: 0 10px !important;
+    font-size: 12.5px !important;
+    gap: 5px !important;
+  }
+  .tot-hdr-btn,
+  #btn-open-menu.tot-hdr-ghost {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    padding: 0 !important;
+  }
+  .tot-account-trigger {
+    height: 34px !important;
+    padding: 0 7px 0 4px !important;
+    gap: 4px !important;
+  }
+  /* Hide long username text on phones so Row 1 NEVER collides with logo or icons */
+  .tot-account-trigger #header-user-id {
+    display: none !important;
+  }
+  .tot-account-av {
+    width: 25px !important;
+    height: 25px !important;
+    font-size: 10.5px !important;
+  }
+
+  /* Compact Teacher buttons on Mobile Header (prevent 132px 3-row header bloat) */
+  body.is-teacher-mode #btn-teacher-preview,
+  body.is-teacher-mode #btn-teacher-refresh {
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 9px !important;
+    font-size: 11.5px !important;
+    gap: 4px !important;
+  }
+  body.is-teacher-mode #btn-teacher-preview .hdr-btn-icon,
+  body.is-teacher-mode #btn-teacher-refresh .hdr-btn-icon {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  /* Active Task Bar on Phone: single compact line, zero overflow */
+  header.app-header #task-study-bar {
+    padding: 4px 7px !important;
+    gap: 4px !important;
+    border-radius: 11px !important;
+  }
+  header.app-header #task-study-bar .task-study-bar-info,
+  header.app-header #task-study-bar .task-study-bar-actions {
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+  }
+  header.app-header #task-study-bar #task-study-pill {
+    font-size: 10px !important;
+    padding: 3px 7px !important;
+  }
+  header.app-header #task-study-bar #task-study-deadline-badge {
+    font-size: 10px !important;
+    padding: 3px 6px !important;
+    max-width: 118px !important;
+  }
+  header.app-header #task-study-bar .btn-sm-task {
+    height: 27px !important;
+    min-height: 27px !important;
+    padding: 0 7px !important;
+    font-size: 10.5px !important;
+  }
+
+  /* 2. Mobile Toast: sit cleanly ABOVE Bottom Nav Bar (never cover Header or Modals!) */
+  .toast-notice,
+  #app-toast.toast-notice {
+    top: auto !important;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    max-width: calc(100vw - 24px) !important;
+    width: max-content !important;
+    font-size: 12.5px !important;
+    line-height: 1.38 !important;
+    padding: 9px 14px !important;
+    border-radius: 13px !important;
+    gap: 8px !important;
+  }
+  body:has(#auth-gate:not([style*="none"])) #app-toast.toast-notice,
+  body:has(#screen-task.active) #app-toast.toast-notice {
+    top: auto !important;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* 3. Native-App Bottom Navigation Bar */
+  .mobile-bottom-nav {
+    padding: 5px 8px calc(7px + env(safe-area-inset-bottom, 0px)) !important;
+    gap: 4px !important;
+  }
+  .mob-nav-item {
+    min-height: 50px !important;
+    border-radius: 13px !important;
+    font-size: 11px !important;
+    gap: 3px !important;
+    transition: transform 130ms var(--ease-out), background-color 150ms var(--ease-out), color 150ms var(--ease-out);
+  }
+  .mob-nav-item.active {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  #app-shell {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  main.app-main {
+    padding: 6px 10px 16px !important;
+  }
+
+  /* 4. Mobile Flashcard Top Toolbar: compact 2-row layout (saves ~52px vertical space!) */
+  #screen-study .study-top-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    margin: 0 0 6px !important;
+    padding: 0 !important;
+  }
+  #screen-study .study-bar-left {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+  #screen-study .scope-select-wrap {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+  #screen-study #study-scope-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 36px !important;
+    font-size: 12.5px !important;
+    padding: 0 26px 0 10px !important;
+  }
+  #screen-study #study-idle-clock {
+    flex-shrink: 0 !important;
+    width: auto !important;
+    min-width: auto !important;
+    height: 36px !important;
+    padding: 0 9px !important;
+    gap: 5px !important;
+    font-size: 11.5px !important;
+  }
+  #screen-study #study-idle-clock .tot-idle-lbl,
+  #screen-study #study-idle-clock .tot-idle-limit {
+    display: none !important;
+  }
+  #screen-study .study-top-actions {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+  }
+  #screen-study .study-top-actions .btn-deck-tool {
+    height: 34px !important;
+    padding: 0 9px !important;
+    font-size: 12px !important;
+  }
+  #screen-study .study-top-actions #btn-focus-mode {
+    display: none !important;
+  }
+  #screen-study .study-progress {
+    height: 32px !important;
+    padding: 0 9px !important;
+    font-size: 11.5px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+  #screen-study #card-settings-popover {
+    width: min(292px, calc(100vw - 24px)) !important;
+    right: -42px !important;
+  }
+
+  /* 5. Mobile Stats Strip: sleek single-line horizontal scroll with compact pills */
+  #mobile-stats-strip {
+    margin: 0 0 8px !important;
+    gap: 5px !important;
+    padding: 1px 0 2px !important;
+  }
+  #mobile-stats-strip .mob-stat-pill {
+    min-height: 30px !important;
+    padding: 0 9px !important;
+    font-size: 11px !important;
+  }
+
+  /* 6. Mobile Flashcard Stage + Thumb Controls: 100% above Bottom Nav Bar (ZERO cutoff!) */
+  #screen-study .fc-scene {
+    height: clamp(290px, calc(100svh - 332px), 420px) !important;
+    min-height: 280px !important;
+    margin-bottom: 10px !important;
+  }
+  body:has(#task-study-bar[style*="flex"]) #screen-study .fc-scene {
+    height: clamp(270px, calc(100svh - 376px), 390px) !important;
+    min-height: 264px !important;
+  }
+  #screen-study .fc-face {
+    padding: 14px 14px 12px !important;
+    border-radius: 20px !important;
+  }
+  #screen-study .study-controls {
+    margin-top: 0 !important;
+    padding-bottom: 4px !important;
+  }
+  #screen-study .nav-buttons-group {
+    gap: 8px !important;
+  }
+  #screen-study .nav-buttons-group .btn {
+    min-height: 46px !important;
+    height: 46px !important;
+    border-radius: 13px !important;
+    font-size: 13.5px !important;
+    font-weight: 750 !important;
+  }
+  #screen-study .keyboard-hint {
+    display: none !important;
+  }
+
+  /* Mobile Flashcard Back Face: readable without cramped overflow + clean touch Assessment buttons */
+  html[data-mode="calm"] #screen-study .fc-back-header-bar,
+  html[data-mode="vibrant"] #screen-study .fc-back-header-bar {
+    padding-bottom: 6px !important;
+    margin-bottom: 6px !important;
+    gap: 4px !important;
+  }
+  html[data-mode="calm"] #screen-study .fc-back-body-stack,
+  html[data-mode="vibrant"] #screen-study .fc-back-body-stack {
+    gap: 8px !important;
+  }
+  html[data-mode="calm"] #screen-study #fc-back-word,
+  html[data-mode="vibrant"] #screen-study #fc-back-word {
+    font-size: 22px !important;
+    line-height: 1.2 !important;
+  }
+  html[data-mode="calm"] #screen-study #fc-back-ipa,
+  html[data-mode="vibrant"] #screen-study #fc-back-ipa {
+    font-size: 13.5px !important;
+    padding: 0 3px !important;
+  }
+  html[data-mode="calm"] #screen-study .fc-face-back .btn-voice-speak {
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+  }
+  html[data-mode="calm"] #screen-study #fc-back-meaning,
+  html[data-mode="vibrant"] #screen-study #fc-back-meaning {
+    font-size: 19.5px !important;
+    line-height: 1.28 !important;
+    margin-bottom: 0 !important;
+  }
+  html[data-mode="calm"] #screen-study .fc-pair-label,
+  html[data-mode="vibrant"] #screen-study .fc-pair-label {
+    font-size: 11px !important;
+    margin-bottom: 4px !important;
+  }
+  html[data-mode="calm"] #screen-study .fc-chip,
+  html[data-mode="vibrant"] #screen-study .fc-chip {
+    font-size: 13.5px !important;
+    padding: 4px 9px !important;
+    border-radius: 7px !important;
+  }
+  html[data-mode="calm"] #screen-study #fc-back-sentence.fc-sentence-box,
+  html[data-mode="vibrant"] #screen-study #fc-back-sentence.fc-sentence-box {
+    font-size: 14.5px !important;
+    line-height: 1.48 !important;
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+  }
+  #screen-study .assessment-row {
+    gap: 6px !important;
+  }
+  #screen-study .btn-assess {
+    min-height: 46px !important;
+    padding: 6px 6px !important;
+    border-radius: 11px !important;
+    font-size: 12.5px !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+  #screen-study .btn-assess .kbd-badge {
+    display: none !important;
+  }
+  #screen-study .btn-assess .anki-ivl-tag {
+    display: block !important;
+    font-size: 10.5px !important;
+    margin-left: 0 !important;
+    margin-top: 1px !important;
+  }
+
+  /* 7. Mobile Home: Compact Horizontal Goal Row (no empty void!) + Full-width Action Trio */
+  #screen-home .tot-hero-card {
+    padding: 14px 14px !important;
+    gap: 12px !important;
+  }
+  #screen-home .tot-hero-title {
+    font-size: 18.5px !important;
+    line-height: 1.25 !important;
+  }
+  #screen-home .tot-hero-card > div:last-child {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+  #screen-home .tot-hero-card .tot-demo-btn {
+    width: 100% !important;
+    min-height: 42px !important;
+    padding: 0 8px !important;
+    font-size: 12.5px !important;
+    justify-content: center !important;
+  }
+  #screen-home .tot-goal-card {
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 12px 12px !important;
+    gap: 10px !important;
+  }
+  #screen-home .tot-goal-ring {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  #screen-home .tot-goal-pills {
+    gap: 5px !important;
+  }
+  #screen-home .tot-goal-pill {
+    padding: 7px 6px !important;
+    text-align: center !important;
+  }
+  #screen-home .tot-goal-num {
+    font-size: 15px !important;
+  }
+  #screen-home .tot-goal-lbl {
+    font-size: 10.5px !important;
+  }
+  #screen-home .tot-skill-card {
+    padding: 14px !important;
+  }
+  #screen-home .tot-skill-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  #screen-home .tot-skill-actions button {
+    min-height: 38px !important;
+    justify-content: center !important;
+  }
+
+  /* 8. Mobile Task Hub: all 4 Suite tabs fit cleanly without clipping "Chuyên sâu" */
+  #screen-tasks-hub #inline-task-suites {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 3px !important;
+    padding: 3px !important;
+  }
+  #screen-tasks-hub #inline-task-suites .tot-seg-btn {
+    padding: 0 4px !important;
+    height: 34px !important;
+    font-size: 11px !important;
+    justify-content: center !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+  #screen-tasks-hub .tot-task-card {
+    min-height: 54px !important;
+    padding: 10px 12px !important;
+  }
+
+  /* 9. Mobile Speed Quiz & Modals: Thumb-Friendly Bottom/Full-Width Sheets */
+  .modal-overlay {
+    padding: 10px !important;
+  }
+  .modal-card {
+    max-height: 90dvh !important;
+    border-radius: 18px !important;
+  }
+  #modal-recognition-test .modal-card {
+    width: calc(100vw - 16px) !important;
+    max-width: 100% !important;
+  }
+  #modal-recognition-test .recog-opt-btn {
+    min-height: 48px !important;
+    padding: 10px 12px !important;
+    font-size: 14px !important;
+  }
+  #modal-recognition-test .recog-skip-btn {
+    min-height: 44px !important;
+  }
+  #modal-recognition-test kbd,
+  #modal-recognition-test .recog-key-hint {
+    display: none !important;
+  }
+
+  /* 10. Mobile Teacher Dashboard: crisp horizontal scroll table & stacked composer */
+  #screen-teacher .teacher-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  #screen-teacher .class-report-table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+  }
+  #screen-teacher .class-report-table {
+    min-width: 560px !important;
+  }
+  #screen-teacher .teacher-composer-grid {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  #screen-teacher .teacher-deadline-group {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+  #screen-teacher .teacher-deadline-group .scope-select {
+    flex: 1 1 auto !important;
+  }
+  #screen-teacher .teacher-link-inline {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  #screen-teacher .teacher-link-inline .task-link-input {
+    flex: 1 0 100% !important;
+    font-size: 13px !important;
+  }
+  #screen-teacher .teacher-link-inline .btn-primary,
+  #screen-teacher .teacher-link-inline .btn-subtle {
+    flex: 1 1 auto !important;
+    padding: 0 10px !important;
+    font-size: 12px !important;
+  }
+  #screen-teacher .teacher-task-dash-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
