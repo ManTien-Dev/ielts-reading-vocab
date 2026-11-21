@@ -5048,6 +5048,12 @@
     const gateEl = document.getElementById('auth-gate');
     const shellEl = document.getElementById('app-shell');
     try { sessionStorage.removeItem('ielts_totoro_active_view_v1'); } catch (_) {}
+    try {
+      if (window.location.protocol !== 'file:' && window.history?.replaceState) {
+        const base = typeof window.__APP_BASE_PATH__ === 'string' ? window.__APP_BASE_PATH__ : '';
+        window.history.replaceState(null, '', `${base}/${window.location.search || ''}${window.location.hash || ''}`);
+      }
+    } catch (_) {}
     if (shellEl) shellEl.style.display = 'none';
     if (gateEl) gateEl.style.display = 'flex';
 

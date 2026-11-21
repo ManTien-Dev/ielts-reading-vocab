@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>IELTS Master — Đang chuyển trang...</title>
+  <script>
+    (function () {
+      var l = window.location;
+      var path = l.pathname || '/';
+      var m = path.match(/^(.*?)\/(home|flashcard|task|practice|practise)\/?$/i);
+      var route = m ? m[2].toLowerCase() : '';
+      if (route === 'practise') route = 'practice';
+      var base = m ? m[1] : path.replace(/\/[^/]*$/, '');
+      if (base === '/') base = '';
+      var rootUrl = l.origin + base + '/';
+      var sp = new URLSearchParams(l.search || '');
+      if (route) sp.set('__route', route);
+      var qs = sp.toString();
+      l.replace(rootUrl + (qs ? '?' + qs : '') + (l.hash || ''));
+    })();
+  </script>
+</head>
+<body></body>
+</html>

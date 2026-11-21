@@ -972,7 +972,15 @@
         hintEl.textContent = 'Học viên có thể làm bất kỳ lúc nào';
       }
     }
-    const base = window.location.href.split('?')[0].split('#')[0];
+    const basePath = typeof window.__APP_BASE_PATH__ === 'string'
+      ? window.__APP_BASE_PATH__
+      : (window.location.pathname || '/')
+          .replace(/\/index\.html$/i, '')
+          .replace(/\/(home|flashcard|task|practice|practise)\/?$/i, '')
+          .replace(/\/+$/, '');
+    const base = window.location.protocol === 'file:'
+      ? window.location.href.split('?')[0].split('#')[0]
+      : `${window.location.origin}${basePath}/`;
     let url = ids.length === 0
       ? ''
       : (ids.length === 1

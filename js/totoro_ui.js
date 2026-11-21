@@ -11,14 +11,63 @@
   const PALETTE_KEY = 'ielts_totoro_palette_v1';
   const MOTION_KEY = 'ielts_totoro_motion_v1';
   const ACTIVE_VIEW_SESSION_KEY = 'ielts_totoro_active_view_v1';
+  const VALID_VIEWS = ['home', 'flashcard', 'task', 'practice'];
 
   const html = document.documentElement;
+
+  function getAppBasePath() {
+    if (typeof window.__APP_BASE_PATH__ === 'string') return window.__APP_BASE_PATH__;
+    try {
+      return (window.location.pathname || '/')
+        .replace(/\/index\.html$/i, '')
+        .replace(/\/(home|flashcard|task|practice|practise)\/?$/i, '')
+        .replace(/\/+$/, '');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function parseViewFromLocation() {
+    try {
+      if (window.location.protocol === 'file:') return '';
+      const m = (window.location.pathname || '').match(/\/(home|flashcard|task|practice|practise)\/?$/i);
+      if (!m) return '';
+      const raw = m[1].toLowerCase();
+      return raw === 'practise' ? 'practice' : raw;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function syncUrlToView(viewName, push = false) {
+    try {
+      if (window.location.protocol === 'file:' || !window.history?.replaceState) return;
+      const B = window.__VOCAB_BRIDGE__;
+      if (!B?.getCurrentUser?.() || B?.isTeacherUser?.()) return;
+      if (!VALID_VIEWS.includes(viewName)) return;
+      const base = getAppBasePath();
+      const targetPath = `${base}/${viewName}`;
+      const qs = window.location.search || '';
+      const hash = window.location.hash || '';
+      const targetUrl = `${targetPath}${qs}${hash}`;
+      const curUrl = `${window.location.pathname || ''}${qs}${hash}`;
+      if (curUrl === targetUrl) return;
+      if (push && window.history.pushState) {
+        window.history.pushState({ view: viewName }, '', targetUrl);
+      } else {
+        window.history.replaceState({ view: viewName }, '', targetUrl);
+      }
+    } catch (_) {}
+  }
+
   function resolveInitialView() {
     try {
       const sp = new URLSearchParams(window.location.search || '');
       if (sp.get('task') || sp.get('tasks') || sp.get('adminTest')) return 'flashcard';
+      const urlView = parseViewFromLocation();
+      if (VALID_VIEWS.includes(urlView)) return urlView;
       const saved = sessionStorage.getItem(ACTIVE_VIEW_SESSION_KEY) || '';
-      if (['home', 'flashcard', 'task', 'practice'].includes(saved)) return saved;
+      if (VALID_VIEWS.includes(saved)) return saved;
     } catch (_) {}
     return 'home';
   }
@@ -348,8 +397,11 @@
     if (teacherActive && B?.isTeacherUser?.()) return;
 
     const prevView = activeView;
-    activeView = ['home', 'flashcard', 'task', 'practice'].includes(viewName) ? viewName : 'home';
+    activeView = VALID_VIEWS.includes(viewName) ? viewName : 'home';
     try { sessionStorage.setItem(ACTIVE_VIEW_SESSION_KEY, activeView); } catch (_) {}
+    if (!opts.skipUrlSync) {
+      syncUrlToView(activeView, Boolean(opts.fromUser && prevView !== activeView));
+    }
     const studyEl = document.getElementById('screen-study');
     const homeEl = document.getElementById('screen-home');
     const taskHubEl = document.getElementById('screen-tasks-hub');
@@ -879,6 +931,12 @@
     // 4-Tab Nav buttons (Desktop + Mobile Bottom Bar + Home Jump CTAs)
     document.querySelectorAll('[data-tot-view]').forEach((b) => {
       b.addEventListener('click', () => switchView(b.dataset.totView, { fromUser: true }));
+    });
+    window.addEventListener('popstate', () => {
+      const urlView = parseViewFromLocation();
+      if (VALID_VIEWS.includes(urlView)) {
+        switchView(urlView, { fromUser: false, skipUrlSync: true });
+      }
     });
 
     // Skill options
