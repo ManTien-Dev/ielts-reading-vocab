@@ -2063,11 +2063,22 @@ html[data-mode="calm"] #screen-study .fc-flip-prompt {
   opacity: 0.85 !important;
 }
 
-/* Calm & Vibrant Back Face: Enlarged legible typography matching exact Stationery layout */
+/* Calm & Vibrant Back Face: Balanced editorial hierarchy sized to fit zero-scroll on laptops */
+html[data-mode="calm"] #screen-study .fc-back-header-bar,
+html[data-mode="vibrant"] #screen-study .fc-back-header-bar {
+  padding-bottom: 8px !important;
+  margin-bottom: 8px !important;
+  gap: 4px !important;
+}
+html[data-mode="calm"] #screen-study .fc-back-body-stack,
+html[data-mode="vibrant"] #screen-study .fc-back-body-stack {
+  gap: 10px !important;
+}
 html[data-mode="calm"] #screen-study #fc-back-word,
 html[data-mode="vibrant"] #screen-study #fc-back-word {
-  font-size: clamp(27px, 2.5vw, 32px) !important;
+  font-size: clamp(21px, 1.9vw, 25px) !important;
   font-weight: 700 !important;
+  line-height: 1.2 !important;
   letter-spacing: -0.02em !important;
 }
 html[data-mode="calm"] #screen-study #fc-back-word {
@@ -2078,20 +2089,20 @@ html[data-mode="calm"] #screen-study #fc-back-ipa {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  padding: 0 6px !important;
-  font-size: 16.5px !important;
+  padding: 0 5px !important;
+  font-size: 14.5px !important;
   color: var(--ink-2) !important;
 }
 html[data-mode="vibrant"] #screen-study #fc-back-ipa {
-  font-size: 16.5px !important;
+  font-size: 14.5px !important;
 }
 html[data-mode="calm"] #screen-study #fc-back-meaning,
 html[data-mode="vibrant"] #screen-study #fc-back-meaning {
-  font-size: clamp(27px, 2.6vw, 33px) !important;
+  font-size: clamp(20px, 1.85vw, 24px) !important;
   font-weight: 700 !important;
-  line-height: 1.38 !important;
-  letter-spacing: -0.02em !important;
-  margin-bottom: 4px !important;
+  line-height: 1.32 !important;
+  letter-spacing: -0.015em !important;
+  margin-bottom: 0 !important;
 }
 html[data-mode="calm"] #screen-study #fc-back-meaning {
   font-family: Verdana, Geneva, sans-serif !important;
@@ -2102,26 +2113,31 @@ html[data-mode="calm"] #screen-study .fc-pair-card.trap {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  padding: 2px 0 !important;
+  padding: 1px 0 !important;
   border-radius: 0 !important;
 }
 html[data-mode="calm"] #screen-study .fc-pair-label,
 html[data-mode="vibrant"] #screen-study .fc-pair-label {
-  font-size: 13px !important;
+  font-size: 11px !important;
   font-weight: 750 !important;
   letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
-  margin-bottom: 7px !important;
+  margin-bottom: 5px !important;
 }
 html[data-mode="calm"] #screen-study .fc-pair-label {
   color: var(--ink-3) !important;
 }
+html[data-mode="calm"] #screen-study .fc-chip-wrap,
+html[data-mode="vibrant"] #screen-study .fc-chip-wrap {
+  gap: 6px !important;
+}
 html[data-mode="calm"] #screen-study .fc-chip,
 html[data-mode="vibrant"] #screen-study .fc-chip {
-  font-size: 17.5px !important;
+  font-size: 14px !important;
   font-weight: 650 !important;
-  padding: 6px 14px !important;
-  border-radius: 9px !important;
+  padding: 4px 10px !important;
+  border-radius: 7px !important;
+  line-height: 1.3 !important;
 }
 html[data-mode="calm"] #screen-study .fc-chip {
   background: var(--accent-soft) !important;
@@ -2136,39 +2152,65 @@ html[data-mode="calm"] #screen-study .fc-pair-card.trap .fc-chip {
 html[data-mode="calm"] #screen-study #fc-back-sentence.fc-sentence-box,
 html[data-mode="calm"] #screen-study #fc-front-sentence.fc-sentence-box {
   font-family: Verdana, Geneva, sans-serif !important;
-  font-size: clamp(18.5px, 1.55vw, 21px) !important;
-  line-height: 1.62 !important;
+  font-size: clamp(15.5px, 1.25vw, 17.5px) !important;
+  line-height: 1.52 !important;
   background: var(--surface-muted) !important;
   border: 1px dashed rgba(181, 132, 74, 0.36) !important;
   border-left: 1px dashed rgba(181, 132, 74, 0.36) !important;
-  border-radius: 13px !important;
-  padding: 15px 18px !important;
+  border-radius: 11px !important;
+  padding: 11px 14px !important;
   color: var(--ink) !important;
 }
 html[data-mode="vibrant"] #screen-study #fc-back-sentence.fc-sentence-box {
-  font-size: clamp(18.5px, 1.55vw, 21px) !important;
-  line-height: 1.62 !important;
-  padding: 15px 18px !important;
+  font-size: clamp(15.5px, 1.25vw, 17.5px) !important;
+  line-height: 1.52 !important;
+  padding: 11px 14px !important;
+}
+@media (max-height: 760px) and (min-width: 960px) {
+  html[data-mode="calm"] #screen-study .fc-back-body-stack,
+  html[data-mode="vibrant"] #screen-study .fc-back-body-stack {
+    gap: 8px !important;
+  }
+  html[data-mode="calm"] #screen-study #fc-back-word,
+  html[data-mode="vibrant"] #screen-study #fc-back-word {
+    font-size: 22px !important;
+  }
+  html[data-mode="calm"] #screen-study #fc-back-meaning,
+  html[data-mode="vibrant"] #screen-study #fc-back-meaning {
+    font-size: 21px !important;
+    line-height: 1.28 !important;
+  }
+  html[data-mode="calm"] #screen-study .fc-chip,
+  html[data-mode="vibrant"] #screen-study .fc-chip {
+    font-size: 13.5px !important;
+    padding: 3.5px 9px !important;
+  }
+  html[data-mode="calm"] #screen-study #fc-back-sentence.fc-sentence-box,
+  html[data-mode="vibrant"] #screen-study #fc-back-sentence.fc-sentence-box {
+    font-size: 16px !important;
+    line-height: 1.48 !important;
+    padding: 10px 13px !important;
+  }
 }
 @media (max-width: 640px) {
   html[data-mode="calm"] #screen-study #fc-back-word,
   html[data-mode="vibrant"] #screen-study #fc-back-word {
-    font-size: 24px !important;
+    font-size: 20px !important;
   }
   html[data-mode="calm"] #screen-study #fc-back-meaning,
   html[data-mode="vibrant"] #screen-study #fc-back-meaning {
-    font-size: 24px !important;
+    font-size: 20px !important;
   }
   html[data-mode="calm"] #screen-study .fc-chip,
   html[data-mode="vibrant"] #screen-study .fc-chip {
-    font-size: 16px !important;
-    padding: 5px 11px !important;
+    font-size: 13.5px !important;
+    padding: 3.5px 9px !important;
   }
   html[data-mode="calm"] #screen-study #fc-back-sentence.fc-sentence-box,
   html[data-mode="vibrant"] #screen-study #fc-back-sentence.fc-sentence-box {
-    font-size: 17.5px !important;
-    line-height: 1.58 !important;
-    padding: 12px 14px !important;
+    font-size: 15px !important;
+    line-height: 1.48 !important;
+    padding: 9px 12px !important;
   }
 }
 html[data-mode="calm"] #screen-study .fc-sentence-box mark,
