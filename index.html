@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
   <link rel="stylesheet" href="css/enhancements.css?v=20261121ae">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261121ad">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261121ae">
 </head>
 <body>
 
@@ -504,31 +504,47 @@
 
         <!-- LEFT DECK: STUDY TIMER & LEADERBOARD -->
         <aside class="study-deck study-deck-left" id="study-deck-left" aria-label="Tiện ích đếm giờ và bảng thi đua">
-          <!-- Widget 1: Sage Mint Study Timer + Interactive Peeking Totoro -->
+          <!-- Widget 1: Sage Mint Study Timer + Custom Totoro Belly Clock & Peeking Chu/Chibi Duo -->
           <div class="deck-widget widget-theme-mint ink-brackets" id="widget-study-timer">
-            <svg class="totoro-peeker" viewBox="0 0 88 50" fill="none" aria-hidden="true">
-              <path class="ear-l" d="M24 22L16 5C15.4 3.6 17.2 2.6 18.2 3.8L30 16Z" fill="#595753"/>
-              <path class="ear-r" d="M64 22L72 5C72.6 3.6 70.8 2.6 69.8 3.8L58 16Z" fill="#595753"/>
-              <path d="M12 46C12 27 24 14 44 14C64 14 76 27 76 46Z" fill="#595753"/>
-              <path d="M36 14.5C39 8.5 47 8 52 12.5C47.5 15.5 41 16 36 14.5Z" fill="#4E7A51"/>
-              <path d="M44 14V10.5" stroke="#4E7A51" stroke-width="1.6" stroke-linecap="round"/>
-              <circle cx="31" cy="28" r="4.6" fill="#FFFFFF"/><circle cx="31.5" cy="28" r="2.2" fill="#181A1F"/><circle cx="30.6" cy="27" r="0.8" fill="#FFFFFF"/>
-              <circle cx="57" cy="28" r="4.6" fill="#FFFFFF"/><circle cx="56.5" cy="28" r="2.2" fill="#181A1F"/><circle cx="55.6" cy="27" r="0.8" fill="#FFFFFF"/>
-              <ellipse cx="44" cy="29.5" rx="3" ry="1.6" fill="#181A1F"/>
-              <path d="M18 32L7 30M18 36L6 37M70 32L81 30M70 36L82 37" stroke="#595753" stroke-width="1.8" stroke-linecap="round"/>
-              <ellipse cx="26" cy="45" rx="7" ry="4.2" fill="#595753"/><ellipse cx="62" cy="45" rx="7" ry="4.2" fill="#595753"/>
+            <!-- Peeking Blue Chu-Totoro & White Chibi-Totoro Duo -->
+            <svg class="totoro-peeker totoro-peeker-duo" viewBox="0 0 112 52" fill="none" aria-hidden="true">
+              <!-- Blue Chu-Totoro (Left) -->
+              <g class="chu-peeker">
+                <path class="ear-l" d="M22 25L15 8C14.5 6.6 16.3 5.8 17.3 6.9L28 19Z" fill="#5D82A6" stroke="#3F5C78" stroke-width="1.3" stroke-linejoin="round"/>
+                <path class="ear-r" d="M56 25L63 8C63.5 6.6 61.7 5.8 60.7 6.9L50 19Z" fill="#5D82A6" stroke="#3F5C78" stroke-width="1.3" stroke-linejoin="round"/>
+                <path d="M12 49C12 31 22 18 39 18C56 18 66 31 66 49Z" fill="#6B92B8" stroke="#3F5C78" stroke-width="1.4"/>
+                <ellipse cx="39" cy="46" rx="18" ry="11" fill="#F6F1E2"/>
+                <path d="M31 44L34 41.2L37 44M41 44L44 41.2L47 44" stroke="#5D82A6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="29" cy="30" r="4.2" fill="#FFFFFF"/><circle cx="29.6" cy="30" r="2" fill="#181A1F"/><circle cx="28.7" cy="29.1" r="0.8" fill="#FFFFFF"/>
+                <circle cx="49" cy="30" r="4.2" fill="#FFFFFF"/><circle cx="48.4" cy="30" r="2" fill="#181A1F"/><circle cx="47.5" cy="29.1" r="0.8" fill="#FFFFFF"/>
+                <ellipse cx="39" cy="32.2" rx="2.5" ry="1.3" fill="#2A323D"/>
+                <ellipse cx="22" cy="48" rx="6" ry="3.5" fill="#5D82A6"/><ellipse cx="56" cy="48" rx="6" ry="3.5" fill="#5D82A6"/>
+              </g>
+              <!-- White Chibi-Totoro (Right) -->
+              <g class="chibi-peeker">
+                <path d="M76 31L72 19C71.7 17.8 73.1 17.2 73.9 18.1L81 26Z" fill="#FFFFFF" stroke="#6E6B64" stroke-width="1.3" stroke-linejoin="round"/>
+                <path d="M96 31L100 19C100.3 17.8 98.9 17.2 98.1 18.1L91 26Z" fill="#FFFFFF" stroke="#6E6B64" stroke-width="1.3" stroke-linejoin="round"/>
+                <path d="M68 49C68 35 75 25 86 25C97 25 104 35 104 49Z" fill="#FFFFFF" stroke="#6E6B64" stroke-width="1.4"/>
+                <path d="M86 25C88.5 20.5 93 20 95.5 22.8C92.8 25 89 25.8 86 25Z" fill="#4E9460" stroke="#2F663D" stroke-width="1.1"/>
+                <circle cx="80" cy="35.5" r="2.1" fill="#181A1F"/><circle cx="79.4" cy="34.9" r="0.6" fill="#FFFFFF"/>
+                <circle cx="92" cy="35.5" r="2.1" fill="#181A1F"/><circle cx="91.4" cy="34.9" r="0.6" fill="#FFFFFF"/>
+                <ellipse cx="76.5" cy="38.5" rx="2.2" ry="1.1" fill="#F2A6A6" opacity="0.65"/>
+                <ellipse cx="95.5" cy="38.5" rx="2.2" ry="1.1" fill="#F2A6A6" opacity="0.65"/>
+                <ellipse cx="86" cy="37.5" rx="1.5" ry="0.9" fill="#595651"/>
+              </g>
             </svg>
             <div class="widget-header">
               <div class="widget-panda-lockup">
                 <img src="assets/images/panda_timer.jpg" alt="" class="widget-panda-img">
               </div>
               <span class="tot-icon-tile" aria-hidden="true">
-                <svg viewBox="2.5 1 19 21.5" fill="none">
-                  <circle cx="12" cy="13.8" r="7.8" fill="#FFFFFF" stroke="var(--accent)" stroke-width="2"/>
-                  <circle cx="12" cy="13.8" r="5.6" fill="var(--accent-soft)"/>
-                  <path d="M12 9.8V13.8L14.8 15.4" stroke="var(--accent)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="12" cy="13.8" r="1.2" fill="var(--streak)"/>
-                  <path d="M12 6C13.8 2.8 16.8 2.2 18.8 3.9C16.8 5.8 14.2 6.5 12 6Z" fill="#4E9460" stroke="#2F663D" stroke-width="1.1" stroke-linejoin="round"/>
+                <svg viewBox="2 1 20 22" fill="none">
+                  <path d="M7.5 8.5L5.8 3.2L10 6.8C11.3 6.4 12.7 6.4 14 6.8L18.2 3.2L16.5 8.5C19 10.2 20.2 13 20.2 16C20.2 20 16.8 22 12 22C7.2 22 3.8 20 3.8 16C3.8 13 5 10.2 7.5 8.5Z" fill="#68645D"/>
+                  <path d="M12 6.6C13.6 3.6 16.4 3.2 18 4.8C16.2 6.4 13.8 7 12 6.6Z" fill="#4E9460" stroke="#2F663D" stroke-width="0.9"/>
+                  <circle cx="12" cy="15.2" r="5.6" fill="#FBF8F0" stroke="#4E7A51" stroke-width="1.4"/>
+                  <path d="M12 12.2V15.2L14.2 16.5" stroke="#4E7A51" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="9.2" cy="10.2" r="1.35" fill="#FFFFFF"/><circle cx="9.3" cy="10.2" r="0.65" fill="#181A1F"/>
+                  <circle cx="14.8" cy="10.2" r="1.35" fill="#FFFFFF"/><circle cx="14.7" cy="10.2" r="0.65" fill="#181A1F"/>
                 </svg>
               </span>
               <div class="widget-title-group">
@@ -553,17 +569,69 @@
               <button class="preset-btn" onclick="setCountdownMinutes(45)">45p</button>
             </div>
 
-            <div class="timer-display-box chrono-wrap" id="chrono-wrap">
-              <svg class="chrono-svg" viewBox="0 0 140 140" aria-hidden="true">
+            <div class="timer-display-box chrono-wrap totoro-clock-wrap" id="chrono-wrap">
+              <svg class="chrono-svg totoro-clock-svg" viewBox="0 0 184 184" aria-hidden="true">
                 <defs>
                   <linearGradient id="chronoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stop-color="var(--streak)" />
                     <stop offset="100%" stop-color="var(--accent)" />
                   </linearGradient>
+                  <linearGradient id="totClockFur" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#7A766E" />
+                    <stop offset="100%" stop-color="#5B5852" />
+                  </linearGradient>
                 </defs>
-                <circle cx="70" cy="70" r="65" fill="none" stroke="var(--border-strong)" stroke-width="1.5" stroke-dasharray="1.5 8.7" />
-                <circle class="chrono-track" cx="70" cy="70" r="56" />
-                <circle class="chrono-progress" id="chrono-arc" cx="70" cy="70" r="56" />
+                <!-- Totoro Pointed Ears -->
+                <g class="tot-clk-ear-l">
+                  <path d="M52 47L41 11C40.3 8.8 43.1 7.6 44.8 9.2L72 34Z" fill="url(#totClockFur)" stroke="#484540" stroke-width="1.6" stroke-linejoin="round"/>
+                  <path d="M52 40L46 18L63 33Z" fill="#53504A" opacity="0.55"/>
+                </g>
+                <g class="tot-clk-ear-r">
+                  <path d="M132 47L143 11C143.7 8.8 140.9 7.6 139.2 9.2L112 34Z" fill="url(#totClockFur)" stroke="#484540" stroke-width="1.6" stroke-linejoin="round"/>
+                  <path d="M132 40L138 18L121 33Z" fill="#53504A" opacity="0.55"/>
+                </g>
+                <!-- Plump Totoro Silhouette Body -->
+                <path d="M92 25C124 25 148 44 156 72C164 98 164 134 152 156C141 174 119 178 92 178C65 178 43 174 32 156C20 134 20 98 28 72C36 44 60 25 92 25Z" fill="url(#totClockFur)" stroke="#484540" stroke-width="1.7"/>
+                <!-- Subtle Plush Head Highlight -->
+                <path d="M62 34C72 28 112 28 122 34" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.16"/>
+                <!-- Camphor Leaf Hat on Crown -->
+                <g class="tot-clk-leaf">
+                  <path d="M92 25V18" stroke="#366E44" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M92 19C96 10 107 9 113 14.5C107.5 21 98.5 22.5 92 19Z" fill="#5AA169" stroke="#2F663D" stroke-width="1.4" stroke-linejoin="round"/>
+                  <path d="M94 18.2C99.5 16.6 104.5 15.2 109 14.5" stroke="#2F663D" stroke-width="1.1" stroke-linecap="round" opacity="0.7"/>
+                </g>
+                <!-- Totoro Whiskers -->
+                <path d="M35 47L17 44M33 52L14 53M35 57L18 61M149 47L167 44M151 52L170 53M149 57L166 61" stroke="#484540" stroke-width="1.65" stroke-linecap="round" opacity="0.82"/>
+                <!-- Totoro Expressive Eyes & Nose -->
+                <circle cx="71" cy="40.5" r="5.3" fill="#FFFFFF" stroke="#484540" stroke-width="1.1"/>
+                <circle cx="71.7" cy="40.5" r="2.5" fill="#181A1F"/>
+                <circle cx="70.6" cy="39.3" r="0.95" fill="#FFFFFF"/>
+                <circle cx="113" cy="40.5" r="5.3" fill="#FFFFFF" stroke="#484540" stroke-width="1.1"/>
+                <circle cx="112.3" cy="40.5" r="2.5" fill="#181A1F"/>
+                <circle cx="111.2" cy="39.3" r="0.95" fill="#FFFFFF"/>
+                <!-- Soft Rosy Cheeks -->
+                <ellipse cx="60" cy="46.5" rx="4.2" ry="2" fill="#E89A94" opacity="0.38"/>
+                <ellipse cx="124" cy="46.5" rx="4.2" ry="2" fill="#E89A94" opacity="0.38"/>
+                <!-- Nose & Gentle Smile -->
+                <ellipse cx="92" cy="42.5" rx="4.2" ry="2.1" fill="#23221F"/>
+                <path d="M87.5 46.8Q92 49.4 96.5 46.8" stroke="#23221F" stroke-width="1.4" stroke-linecap="round" fill="none" opacity="0.72"/>
+                <!-- Totoro Cream Belly Clock Face -->
+                <circle class="tot-clk-belly" cx="92" cy="112" r="59.5" />
+                <!-- 3 Iconic Totoro Belly Chevron Markings -->
+                <path class="tot-clk-chevrons" d="M72 75L76.5 70.8L81 75M87.5 72.5L92 68.3L96.5 72.5M103 75L107.5 70.8L112 75" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                <!-- 12 Subtle Dial Tick Dots -->
+                <circle cx="92" cy="112" r="49" fill="none" stroke="var(--border-strong)" stroke-width="1.4" stroke-dasharray="1.4 24.25" opacity="0.65"/>
+                <!-- Live Progress Ring (Exact r=56 -> circumference 351.86 for totoro_ui.js) -->
+                <g transform="rotate(-90 92 112)">
+                  <circle class="chrono-track" cx="92" cy="112" r="56" />
+                  <circle class="chrono-progress" id="chrono-arc" cx="92" cy="112" r="56" />
+                </g>
+                <!-- Little Totoro Paws Resting at Base -->
+                <g fill="#5B5852" stroke="#45423D" stroke-width="1.3">
+                  <ellipse cx="52" cy="173" rx="13" ry="5.5"/>
+                  <ellipse cx="132" cy="173" rx="13" ry="5.5"/>
+                </g>
+                <path d="M46 173V176M52 173.5V177M58 173V176M126 173V176M132 173.5V177M138 173V176" stroke="#3F3C37" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
               </svg>
               <div class="chrono-center">
                 <div class="timer-digits chrono-digits tabular" id="timer-digits">00:00</div>
@@ -697,23 +765,60 @@
                 <div class="fc-sentence-box" id="fc-front-sentence" style="display: none;"></div>
               </div>
 
-              <!-- Ghibli Botanical Leaf & Acorn Stamp (Bottom-Left) + Totoro Ink Stamp (Bottom-Right) -->
-              <svg class="ghibli-stamp" style="left:20px;bottom:16px;width:46px;height:46px;opacity:0.15;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-                <path d="M10 38C13 26 22 17 36 12C33 25 25 34 10 38Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" fill="currentColor" fill-opacity=".08"/>
-                <path d="M10 38L27 21" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-                <path d="M31 28C31 25.5 33.2 24 35.5 24C37.8 24 40 25.5 40 28H31Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                <path d="M32.2 28C32.2 32.5 33.8 35.6 35.5 36.8C37.2 35.6 38.8 32.5 38.8 28" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                <path d="M35.5 24V21.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <!-- Full-Color Ghibli Totoro Stickers on Flashcard Front -->
+              <!-- Top-Right: Floating Soot Sprite + Golden Konpeito Star -->
+              <svg class="totoro-fc-charm totoro-fc-soot" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+                <circle cx="19" cy="24" r="9" fill="#2A2C32"/>
+                <path d="M19 12V15.5M19 32.5V36M7 24H10.5M27.5 24H31M10.5 15.5L13 18M25 30L27.5 32.5M27.5 15.5L25 18M13 30L10.5 32.5" stroke="#2A2C32" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="15.8" cy="23.2" r="2.7" fill="#FFFFFF"/><circle cx="16.2" cy="23.2" r="1.25" fill="#111111"/>
+                <circle cx="22.2" cy="23.2" r="2.7" fill="#FFFFFF"/><circle cx="21.8" cy="23.2" r="1.25" fill="#111111"/>
+                <path d="M33.5 9.5L35 12.6L38.3 13.1L35.9 15.4L36.5 18.7L33.5 17.1L30.5 18.7L31.1 15.4L28.7 13.1L32 12.6L33.5 9.5Z" fill="#F5B041" stroke="#B4690E" stroke-width="0.9" stroke-linejoin="round"/>
               </svg>
-              <svg class="totoro-ink-stamp" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                <path d="M18 22L14 8L24 16C29 14.5 35 14.5 40 16L50 8L46 22C52 26 55 33 55 41C55 52 45.5 58 32 58C18.5 58 9 52 9 41C9 33 12 26 18 22Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
-                <path d="M32 10C35.5 6 41 5.5 44 8.5C40 11.5 35.5 12 32 10Z" fill="currentColor" fill-opacity=".22" stroke="currentColor" stroke-width="2"/>
-                <circle cx="23.5" cy="29" r="2.2" fill="currentColor"/><circle cx="40.5" cy="29" r="2.2" fill="currentColor"/>
-                <path d="M29 31.5C30.8 32.8 33.2 32.8 35 31.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <path d="M21 43L24.5 39.5L28 43M29 41.5L32 38.5L35 41.5M36 43L39.5 39.5L43 43" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- Bottom-Left: White Chibi-Totoro + Acorn & Leaf -->
+              <svg class="totoro-fc-charm totoro-fc-corner-left" viewBox="0 0 72 60" fill="none" aria-hidden="true">
+                <!-- Camphor Leaf -->
+                <path d="M7 51C10 39 18 32 30 28C27 39 19 47 7 51Z" fill="#63A870" stroke="#366E44" stroke-width="1.5" stroke-linejoin="round"/>
+                <path d="M7 51L22 36" stroke="#366E44" stroke-width="1.3" stroke-linecap="round"/>
+                <!-- White Chibi-Totoro -->
+                <path d="M31 28L27.5 16.5C27.2 15.2 28.7 14.5 29.6 15.5L36.5 23.5C39.2 22.8 42.3 22.8 45 23.5L51.9 15.5C52.8 14.5 54.3 15.2 54 16.5L50.5 28C55 31.5 57.5 37.2 57 44C56.4 51.5 49.8 55 40.8 55C31.8 55 25.2 51.5 24.6 44C24.1 37.2 26.6 31.5 31 28Z" fill="#FFFFFF" stroke="#5B5852" stroke-width="1.65" stroke-linejoin="round"/>
+                <circle cx="35.2" cy="34.5" r="2.1" fill="#1E2126"/><circle cx="34.6" cy="33.9" r="0.65" fill="#FFFFFF"/>
+                <circle cx="46.4" cy="34.5" r="2.1" fill="#1E2126"/><circle cx="45.8" cy="33.9" r="0.65" fill="#FFFFFF"/>
+                <ellipse cx="31.5" cy="37.6" rx="2.3" ry="1.15" fill="#F29B9B" opacity="0.6"/>
+                <ellipse cx="50.1" cy="37.6" rx="2.3" ry="1.15" fill="#F29B9B" opacity="0.6"/>
+                <ellipse cx="40.8" cy="36.6" rx="1.6" ry="0.95" fill="#5B5852"/>
+                <!-- Little Golden Acorn -->
+                <g transform="translate(51, 35) rotate(14)">
+                  <path d="M6 2.5V0.5" stroke="#5B3B1E" stroke-width="1.4" stroke-linecap="round"/>
+                  <path d="M1.5 6.8C1.5 4.2 3.5 2.7 6 2.7C8.5 2.7 10.5 4.2 10.5 6.8C8 7.4 4 7.4 1.5 6.8Z" fill="#8D653E" stroke="#57391C" stroke-width="1.1"/>
+                  <path d="M2.6 7C2.5 10.5 4 13.2 6 14.5C8 13.2 9.5 10.5 9.4 7Z" fill="#C97C3A" stroke="#633210" stroke-width="1.1"/>
+                </g>
+              </svg>
+              <!-- Bottom-Right: Full-Color Totoro Holding Leaf Umbrella -->
+              <svg class="totoro-ink-stamp totoro-fc-sticker" viewBox="0 0 72 72" fill="none" aria-hidden="true">
+                <!-- Green Leaf Umbrella -->
+                <path d="M36 9V14" stroke="#366E44" stroke-width="2" stroke-linecap="round"/>
+                <path d="M11 26C16 14 25 11 36 11C47 11 56 14 61 26C54.5 23.4 48.5 23.4 43.2 25.4C38.5 23.2 33.5 23.2 28.8 25.4C23.5 23.4 17.5 23.4 11 26Z" fill="#5CA06B" stroke="#2F663D" stroke-width="1.7" stroke-linejoin="round"/>
+                <path d="M36 24V44" stroke="#5B4430" stroke-width="1.9" stroke-linecap="round"/>
+                <!-- Big Grey Totoro -->
+                <path d="M24 33L20.5 22.5C20.2 21.3 21.7 20.6 22.6 21.5L29.8 28.2C33.6 27.1 38.4 27.1 42.2 28.2L49.4 21.5C50.3 20.6 51.8 21.3 51.5 22.5L48 33C54.2 37.5 57.5 45.2 56.8 54.5C56 62.2 48.5 66 36 66C23.5 66 16 62.2 15.2 54.5C14.5 45.2 17.8 37.5 24 33Z" fill="#6F6B64" stroke="#484540" stroke-width="1.7" stroke-linejoin="round"/>
+                <!-- Cream Belly & Chevrons -->
+                <ellipse cx="36" cy="54.5" rx="15" ry="10.2" fill="#FBF6E8"/>
+                <path d="M26 51.5L28.8 48.8L31.6 51.5M33.2 50.2L36 47.5L38.8 50.2M40.4 51.5L43.2 48.8L46 51.5" stroke="#6F6B64" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                <!-- Eyes, Nose & Whiskers -->
+                <circle cx="28" cy="36.8" r="3.4" fill="#FFFFFF"/><circle cx="28.4" cy="36.8" r="1.6" fill="#181A1F"/><circle cx="27.7" cy="36" r="0.6" fill="#FFFFFF"/>
+                <circle cx="44" cy="36.8" r="3.4" fill="#FFFFFF"/><circle cx="43.6" cy="36.8" r="1.6" fill="#181A1F"/><circle cx="42.9" cy="36" r="0.6" fill="#FFFFFF"/>
+                <ellipse cx="36" cy="38.2" rx="2.5" ry="1.3" fill="#23221F"/>
+                <path d="M18 39.5L10.5 38M17.5 43L10 43.5M54 39.5L61.5 38M54.5 43L62 43.5" stroke="#484540" stroke-width="1.4" stroke-linecap="round"/>
               </svg>
 
               <div class="fc-flip-prompt">
+                <svg class="totoro-inline-emoji" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M7 9.5L5.2 3.5L10 7.5C11.3 7 12.7 7 14 7.5L18.8 3.5L17 9.5C19.5 11.4 20.6 14 20.4 17C20.2 20.3 17 22 12 22C7 22 3.8 20.3 3.6 17C3.4 14 4.5 11.4 7 9.5Z" fill="#6F6B64" stroke="#484540" stroke-width="1.2"/>
+                  <ellipse cx="12" cy="17.5" rx="5.5" ry="3.6" fill="#FBF6E8"/>
+                  <circle cx="9.2" cy="12" r="1.7" fill="#FFFFFF"/><circle cx="9.4" cy="12" r="0.85" fill="#181A1F"/>
+                  <circle cx="14.8" cy="12" r="1.7" fill="#FFFFFF"/><circle cx="14.6" cy="12" r="0.85" fill="#181A1F"/>
+                  <ellipse cx="12" cy="13.2" rx="1.2" ry="0.65" fill="#23221F"/>
+                </svg>
                 <span>Chạm thẻ để lật · Vuốt ⇄ đổi từ</span>
               </div>
             </div>
@@ -750,11 +855,14 @@
                 </div>
               </div>
 
-              <!-- Back Face Chibi-Totoro Ink Stamp + Live Hanko Mastery Seal -->
-              <svg class="ghibli-stamp" id="fc-back-chibi-stamp" style="right:22px;bottom:74px;width:50px;height:50px;opacity:0.13;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                <path d="M22 21L18 9L27 17C30.2 16 33.8 16 37 17L46 9L42 21C47.5 25 50 32 50 40C50 50.5 42 56 32 56C22 56 14 50.5 14 40C14 32 16.5 25 22 21Z" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
-                <circle cx="25" cy="29" r="2.2" fill="currentColor"/><circle cx="39" cy="29" r="2.2" fill="currentColor"/>
-                <ellipse cx="32" cy="34" rx="2.4" ry="1.5" fill="currentColor"/>
+              <!-- Back Face Full-Color Blue Chu-Totoro Sticker + Live Hanko Mastery Seal -->
+              <svg class="ghibli-stamp totoro-fc-back-sticker" id="fc-back-chibi-stamp" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <path d="M21 24L17 10.5C16.7 9.4 18.2 8.7 19.1 9.6L27 17.5C30.2 16.5 33.8 16.5 37 17.5L44.9 9.6C45.8 8.7 47.3 9.4 47 10.5L43 24C48.5 28 51.5 34.8 51 43C50.4 51.8 43.2 56.5 32 56.5C20.8 56.5 13.6 51.8 13 43C12.5 34.8 15.5 28 21 24Z" fill="#6B92B8" stroke="#3F5C78" stroke-width="1.6" stroke-linejoin="round"/>
+                <ellipse cx="32" cy="44.5" rx="13" ry="9" fill="#FBF6E8"/>
+                <path d="M25 43L27.5 40.5L30 43M34 43L36.5 40.5L39 43" stroke="#5D82A6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="25" cy="29.2" r="3.1" fill="#FFFFFF"/><circle cx="25.4" cy="29.2" r="1.45" fill="#181A1F"/><circle cx="24.7" cy="28.5" r="0.55" fill="#FFFFFF"/>
+                <circle cx="39" cy="29.2" r="3.1" fill="#FFFFFF"/><circle cx="38.6" cy="29.2" r="1.45" fill="#181A1F"/><circle cx="37.9" cy="28.5" r="0.55" fill="#FFFFFF"/>
+                <ellipse cx="32" cy="31" rx="2" ry="1.1" fill="#2A323D"/>
               </svg>
               <div class="hanko-seal" id="fc-hanko-seal" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 64 64" fill="none">
@@ -765,17 +873,36 @@
                 <span class="hanko-seal-txt">Đã thuộc</span>
               </div>
 
-              <!-- 3 Nấc đánh giá Spaced Repetition -->
+              <!-- 3 Nấc đánh giá Spaced Repetition + Totoro Emoji Badges -->
               <div class="assessment-row">
                 <button class="btn-assess btn-assess-unremembered" id="btn-assess-1" onclick="assessCurrentWord(1, event)" aria-label="Đánh giá 1: Chưa nhớ">
+                  <svg class="assess-totoro-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="6.8" fill="#2A2C32"/>
+                    <path d="M12 3.2V5.5M12 18.5V20.8M3.2 12H5.5M18.5 12H20.8M5.8 5.8L7.4 7.4M16.6 16.6L18.2 18.2M18.2 5.8L16.6 7.4M7.4 16.6L5.8 18.2" stroke="#2A2C32" stroke-width="1.6" stroke-linecap="round"/>
+                    <circle cx="9.6" cy="11.5" r="2.1" fill="#FFFFFF"/><circle cx="9.8" cy="11.5" r="0.95" fill="#111111"/>
+                    <circle cx="14.4" cy="11.5" r="2.1" fill="#FFFFFF"/><circle cx="14.2" cy="11.5" r="0.95" fill="#111111"/>
+                  </svg>
                   <span>Chưa nhớ <small class="anki-ivl-tag" id="ivl-tag-1">Ôn ngay</small></span>
                   <span class="kbd-badge">1</span>
                 </button>
                 <button class="btn-assess btn-assess-slow" id="btn-assess-2" onclick="assessCurrentWord(2, event)" aria-label="Đánh giá 2: Nhớ chậm">
+                  <svg class="assess-totoro-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M7.5 10L6 4.8L10 8.2C11.3 7.7 12.7 7.7 14 8.2L18 4.8L16.5 10C18.8 11.7 19.8 14.3 19.6 17.2C19.3 20.2 16.5 21.8 12 21.8C7.5 21.8 4.7 20.2 4.4 17.2C4.2 14.3 5.2 11.7 7.5 10Z" fill="#FFFFFF" stroke="#5B5852" stroke-width="1.4" stroke-linejoin="round"/>
+                    <circle cx="9.6" cy="13.2" r="1.25" fill="#1E2126"/><circle cx="14.4" cy="13.2" r="1.25" fill="#1E2126"/>
+                    <ellipse cx="7.8" cy="15.2" rx="1.3" ry="0.7" fill="#F29B9B" opacity="0.7"/>
+                    <ellipse cx="16.2" cy="15.2" rx="1.3" ry="0.7" fill="#F29B9B" opacity="0.7"/>
+                  </svg>
                   <span>Nhớ chậm <small class="anki-ivl-tag" id="ivl-tag-2">1 ngày</small></span>
                   <span class="kbd-badge">2</span>
                 </button>
                 <button class="btn-assess btn-assess-mastered" id="btn-assess-3" onclick="assessCurrentWord(3, event)" aria-label="Đánh giá 3: Đã thuộc">
+                  <svg class="assess-totoro-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M7.2 10L5.6 4.2L10.1 8C11.3 7.6 12.7 7.6 13.9 8L18.4 4.2L16.8 10C19.2 11.7 20.2 14.2 20 17.2C19.7 20.3 16.8 22 12 22C7.2 22 4.3 20.3 4 17.2C3.8 14.2 4.8 11.7 7.2 10Z" fill="#6D6962" stroke="#484540" stroke-width="1.15" stroke-linejoin="round"/>
+                    <path d="M12 7.5C13.4 4.5 16 4.1 17.6 5.6C15.9 7.2 13.7 7.8 12 7.5Z" fill="#52A063" stroke="#2D6A3B" stroke-width="0.9"/>
+                    <ellipse cx="12" cy="17.8" rx="5.2" ry="3.2" fill="#FBF6E8"/>
+                    <circle cx="9.3" cy="12.6" r="1.5" fill="#FFFFFF"/><circle cx="9.4" cy="12.6" r="0.75" fill="#181A1F"/>
+                    <circle cx="14.7" cy="12.6" r="1.5" fill="#FFFFFF"/><circle cx="14.6" cy="12.6" r="0.75" fill="#181A1F"/>
+                  </svg>
                   <span id="assess-3-label">Đã thuộc <small class="anki-ivl-tag" id="ivl-tag-3">4 ngày</small></span>
                   <span class="kbd-badge">3</span>
                 </button>
@@ -826,12 +953,14 @@
 
         <!-- RIGHT DECK: TOP = MASTERY DONUT PROGRESS (symmetrical with Chrono Clock) | BOTTOM = HABIT STREAK -->
         <aside class="study-deck study-deck-right" id="study-deck-right" aria-label="Tiện ích tiến độ thuộc từ và chỉ số chăm chỉ">
-          <!-- Widget 3 (Top-Right): Vocabulary Mastery Progress with SVG Donut Ring from demo_v3 -->
+          <!-- Widget 3 (Top-Right): Vocabulary Mastery Progress with SVG Donut Ring & Cute Chibi-Totoro Charm -->
           <div class="deck-widget widget-theme-teal ink-brackets has-stamp" id="widget-vocab-progress">
-            <svg class="ghibli-stamp" style="top:10px;right:12px;width:40px;height:40px;opacity:0.14;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-              <circle cx="24" cy="24" r="11" stroke="currentColor" stroke-width="2.2"/>
-              <path d="M24 9V13M24 35V39M9 24H13M35 24H39M13.5 13.5L16.5 16.5M31.5 31.5L34.5 34.5M34.5 13.5L31.5 16.5M16.5 31.5L13.5 34.5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
-              <circle cx="20" cy="23" r="2.2" fill="currentColor"/><circle cx="28" cy="23" r="2.2" fill="currentColor"/>
+            <svg class="totoro-widget-charm" style="top:10px;right:12px;width:34px;height:34px;" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+              <path d="M13 18L10.5 9.5C10.3 8.5 11.5 8 12.2 8.7L17.5 14.2C19.8 13.5 22.2 13.5 24.5 14.2L29.8 8.7C30.5 8 31.7 8.5 31.5 9.5L29 18C32.5 20.8 34.4 25.2 34 30.8C33.5 36.8 28.5 39.8 21 39.8C13.5 39.8 8.5 36.8 8 30.8C7.6 25.2 9.5 20.8 13 18Z" fill="#FFFFFF" stroke="#5B5852" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M21 13.5C23 9.2 27.2 8.6 29.6 11.2C27.2 13.4 23.8 14.2 21 13.5Z" fill="#52A063" stroke="#2D6A3B" stroke-width="1"/>
+              <circle cx="16.8" cy="23.5" r="1.8" fill="#1E2126"/><circle cx="25.2" cy="23.5" r="1.8" fill="#1E2126"/>
+              <ellipse cx="14" cy="26.2" rx="1.8" ry="0.9" fill="#F29B9B" opacity="0.65"/>
+              <ellipse cx="28" cy="26.2" rx="1.8" ry="0.9" fill="#F29B9B" opacity="0.65"/>
             </svg>
             <div class="widget-header">
               <div class="widget-panda-lockup">
@@ -936,14 +1065,22 @@
             </div>
           </div>
 
-          <!-- Widget 4 (Study Focus Bottom-Right): Mục Tiêu Phiên Học (Không trùng Top Bar / Home) -->
+          <!-- Widget 4 (Study Focus Bottom-Right): Mục Tiêu Phiên Học + Totoro Acorn Icon -->
           <div class="deck-widget widget-theme-coral ink-brackets has-stamp" id="widget-four-decks">
+            <svg class="totoro-widget-charm" style="top:10px;right:12px;width:30px;height:30px;" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+              <path d="M18 8V4.5" stroke="#5B3B1E" stroke-width="2" stroke-linecap="round"/>
+              <path d="M18 8.5C21 4.2 26 3.5 29 6.5C26 9.2 21.8 10 18 8.5Z" fill="#52A063" stroke="#2D6A3B" stroke-width="1.2"/>
+              <path d="M9.5 16.5C9.5 11.4 13.2 8.5 18 8.5C22.8 8.5 26.5 11.4 26.5 16.5C21.5 17.6 14.5 17.6 9.5 16.5Z" fill="#8D653E" stroke="#57391C" stroke-width="1.4" stroke-linejoin="round"/>
+              <path d="M11.6 16.8C11.4 23.4 14 28.4 18 31C22 28.4 24.6 23.4 24.4 16.8C20.2 17.7 15.8 17.7 11.6 16.8Z" fill="#C97C3A" stroke="#633210" stroke-width="1.4" stroke-linejoin="round"/>
+            </svg>
             <div class="widget-header">
-              <span class="tot-icon-tile" aria-hidden="true">
-                <svg viewBox="2 2 20 20" fill="none">
-                  <circle cx="12" cy="12" r="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.8"/>
-                  <circle cx="12" cy="12" r="4.2" fill="var(--surface)" stroke="var(--streak)" stroke-width="1.7"/>
-                  <circle cx="12" cy="12" r="1.5" fill="var(--accent)"/>
+              <span class="tot-icon-tile warm" aria-hidden="true">
+                <svg viewBox="2 2 24 24" fill="none">
+                  <path d="M8.5 11.2L7 5.6L11.2 9C12.5 8.5 14 8.5 15.3 9L19.5 5.6L18 11.2C20.2 12.8 21.2 15.2 21 18.2C20.7 21.5 17.8 23.2 13.2 23.2C8.6 23.2 5.7 21.5 5.4 18.2C5.2 15.2 6.2 12.8 8.5 11.2Z" fill="#6F6B64" stroke="#484540" stroke-width="1.1"/>
+                  <ellipse cx="13.2" cy="18.8" rx="5.2" ry="3.4" fill="#FBF6E8"/>
+                  <circle cx="10.6" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="10.8" cy="13.5" r="0.75" fill="#181A1F"/>
+                  <circle cx="15.8" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="15.6" cy="13.5" r="0.75" fill="#181A1F"/>
+                  <path d="M19.8 18.2L20.8 20.4L23.2 20.8L21.5 22.4L21.9 24.8L19.8 23.6L17.7 24.8L18.1 22.4L16.4 20.8L18.8 20.4L19.8 18.2Z" fill="#F5B041" stroke="#B4690E" stroke-width="0.9" stroke-linejoin="round"/>
                 </svg>
               </span>
               <div class="widget-title-group">
@@ -1039,13 +1176,29 @@
       <div class="tot-home-layout">
         <div class="tot-home-top">
           <div class="tot-hero-card ink-brackets has-stamp">
-            <svg class="ghibli-stamp" style="right:308px;bottom:-6px;width:78px;height:78px;opacity:0.13;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-              <path d="M32 5V10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M10 22C14 12 22 9 32 9C42 9 50 12 54 22C48.5 19.8 43 19.8 38.5 21.6C34 19.5 30 19.5 25.5 21.6C21 19.8 15.5 19.8 10 22Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" fill="currentColor" fill-opacity=".1"/>
-              <path d="M32 20V38C32 40.5 34.4 41.2 35.4 39.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M22 28L19 19L26 24C29.5 23 34.5 23 38 24L45 19L42 28C47.5 32.5 50 40 49.5 48.5C48.8 55.5 42 59 32 59C22 59 15.2 55.5 14.5 48.5C14 40 16.5 32.5 22 28Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/>
-              <circle cx="25" cy="31" r="2" fill="currentColor"/><circle cx="39" cy="31" r="2" fill="currentColor"/>
-              <path d="M22 45L25 42L28 45M29 44L32 41L35 44M36 45L39 42L42 45" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Full-Color Totoro Umbrella Trio on Home Hero -->
+            <svg class="totoro-hero-trio" viewBox="0 0 128 74" fill="none" aria-hidden="true">
+              <!-- Big Grey Totoro with Green Umbrella -->
+              <path d="M40 7V12" stroke="#2F663D" stroke-width="2" stroke-linecap="round"/>
+              <path d="M13 25C18 13 28 10 40 10C52 10 62 13 67 25C60 22.4 53.5 22.4 48 24.4C43 22.2 37 22.2 32 24.4C26.5 22.4 20 22.4 13 25Z" fill="#5CA06B" stroke="#2F663D" stroke-width="1.7" stroke-linejoin="round"/>
+              <path d="M40 23V44" stroke="#5B4430" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M27 33L23.5 22C23.2 20.8 24.7 20.1 25.6 21L33 28C37 27 43 27 47 28L54.4 21C55.3 20.1 56.8 20.8 56.5 22L53 33C59.5 37.8 62.5 46 61.8 56C61 64.5 53 69 40 69C27 69 19 64.5 18.2 56C17.5 46 20.5 37.8 27 33Z" fill="#6F6B64" stroke="#484540" stroke-width="1.6" stroke-linejoin="round"/>
+              <ellipse cx="40" cy="56.5" rx="15.5" ry="10.8" fill="#FBF6E8"/>
+              <path d="M30 53.5L32.8 50.8L35.6 53.5M37.2 52L40 49.3L42.8 52M44.4 53.5L47.2 50.8L50 53.5" stroke="#6F6B64" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="31.5" cy="37" r="3.4" fill="#FFFFFF"/><circle cx="32" cy="37" r="1.6" fill="#181A1F"/>
+              <circle cx="48.5" cy="37" r="3.4" fill="#FFFFFF"/><circle cx="48" cy="37" r="1.6" fill="#181A1F"/>
+              <ellipse cx="40" cy="38.6" rx="2.4" ry="1.3" fill="#23221F"/>
+              <!-- Blue Chu-Totoro (Middle) -->
+              <path d="M74 44L71.2 35.2C71 34.2 72.3 33.7 73 34.4L78.4 39.8C80.8 39 83.6 39 86 39.8L91.4 34.4C92.1 33.7 93.4 34.2 93.2 35.2L90.4 44C94.8 47.2 96.8 52.5 96.4 59C96 65.5 90.4 69 82.2 69C74 69 68.4 65.5 68 59C67.6 52.5 69.6 47.2 74 44Z" fill="#6B92B8" stroke="#3F5C78" stroke-width="1.4" stroke-linejoin="round"/>
+              <ellipse cx="82.2" cy="59.5" rx="9.5" ry="6.6" fill="#FBF6E8"/>
+              <path d="M77.5 58.2L79.5 56.2L81.5 58.2M83 58.2L85 56.2L87 58.2" stroke="#5D82A6" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="77.2" cy="48.5" r="2.4" fill="#FFFFFF"/><circle cx="77.5" cy="48.5" r="1.15" fill="#181A1F"/>
+              <circle cx="87.2" cy="48.5" r="2.4" fill="#FFFFFF"/><circle cx="86.9" cy="48.5" r="1.15" fill="#181A1F"/>
+              <!-- White Chibi-Totoro (Right) -->
+              <path d="M104 52L102 45.2C101.8 44.4 102.8 44 103.4 44.6L107.2 48.8C109 48.2 111 48.2 112.8 48.8L116.6 44.6C117.2 44 118.2 44.4 118 45.2L116 52C119.2 54.4 120.8 58.4 120.4 63C120 67 116 69 110 69C104 69 100 67 99.6 63C99.2 58.4 100.8 54.4 104 52Z" fill="#FFFFFF" stroke="#5B5852" stroke-width="1.4" stroke-linejoin="round"/>
+              <circle cx="106.5" cy="56.5" r="1.4" fill="#1E2126"/><circle cx="113.5" cy="56.5" r="1.4" fill="#1E2126"/>
+              <ellipse cx="104.2" cy="58.6" rx="1.4" ry="0.7" fill="#F29B9B" opacity="0.65"/>
+              <ellipse cx="115.8" cy="58.6" rx="1.4" ry="0.7" fill="#F29B9B" opacity="0.65"/>
             </svg>
             <div>
               <div style="font-size:11px;font-weight:750;color:var(--accent);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">Đang học · IELTS Reading</div>
@@ -1228,9 +1381,20 @@
           <path d="M22 43.5L25 40.5L28 43.5M29 42.5L32 39.5L35 42.5M36 43.5L39 40.5L42 43.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <div class="tot-shell-head">
-          <div>
-            <h2 class="tot-shell-title">Task bài tập · Reading</h2>
-            <p class="tot-shell-sub" id="inline-task-sub">110 bài tập chia theo 4 cấp độ từ vựng.</p>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
+              <svg viewBox="2 2 24 24" fill="none">
+                <path d="M8.5 11.2L7 5.6L11.2 9C12.5 8.5 14 8.5 15.3 9L19.5 5.6L18 11.2C20.2 12.8 21.2 15.2 21 18.2C20.7 21.5 17.8 23.2 13.2 23.2C8.6 23.2 5.7 21.5 5.4 18.2C5.2 15.2 6.2 12.8 8.5 11.2Z" fill="#6F6B64" stroke="#484540" stroke-width="1.1"/>
+                <path d="M13.2 8.4C14.8 5.4 17.5 5 19.2 6.6C17.4 8.3 15 8.8 13.2 8.4Z" fill="#52A063" stroke="#2D6A3B" stroke-width="0.9"/>
+                <ellipse cx="13.2" cy="18.8" rx="5.2" ry="3.4" fill="#FBF6E8"/>
+                <circle cx="10.6" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="10.8" cy="13.5" r="0.75" fill="#181A1F"/>
+                <circle cx="15.8" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="15.6" cy="13.5" r="0.75" fill="#181A1F"/>
+              </svg>
+            </span>
+            <div>
+              <h2 class="tot-shell-title">Task bài tập · Reading</h2>
+              <p class="tot-shell-sub" id="inline-task-sub">110 bài tập chia theo 4 cấp độ từ vựng.</p>
+            </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <div class="tot-seg" id="inline-task-suites"></div>
@@ -1255,9 +1419,19 @@
           <circle cx="25.5" cy="32.5" r="1.9" fill="currentColor"/><circle cx="38.5" cy="32.5" r="1.9" fill="currentColor"/>
         </svg>
         <div class="tot-shell-head">
-          <div>
-            <h2 class="tot-shell-title">Luyện đề IELTS · Reading</h2>
-            <p class="tot-shell-sub">Làm đề bấm giờ chuẩn phòng thi, tự động lưu lịch sử &amp; rút từ sai vào Flashcard.</p>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="tot-icon-tile info" aria-hidden="true" style="width:36px;height:36px;">
+              <svg viewBox="2 2 24 24" fill="none">
+                <path d="M8.5 11.2L7 5.6L11.2 9C12.5 8.5 14 8.5 15.3 9L19.5 5.6L18 11.2C20.2 12.8 21.2 15.2 21 18.2C20.7 21.5 17.8 23.2 13.2 23.2C8.6 23.2 5.7 21.5 5.4 18.2C5.2 15.2 6.2 12.8 8.5 11.2Z" fill="#6B92B8" stroke="#3F5C78" stroke-width="1.1"/>
+                <ellipse cx="13.2" cy="18.8" rx="5.2" ry="3.4" fill="#FBF6E8"/>
+                <circle cx="10.6" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="10.8" cy="13.5" r="0.75" fill="#181A1F"/>
+                <circle cx="15.8" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="15.6" cy="13.5" r="0.75" fill="#181A1F"/>
+              </svg>
+            </span>
+            <div>
+              <h2 class="tot-shell-title">Luyện đề IELTS · Reading</h2>
+              <p class="tot-shell-sub">Làm đề bấm giờ chuẩn phòng thi, tự động lưu lịch sử &amp; rút từ sai vào Flashcard.</p>
+            </div>
           </div>
           <div class="tot-seg" id="practice-filter-tabs">
             <button type="button" class="tot-seg-btn active" data-practice-filter="all">Tất cả đề</button>
@@ -1660,7 +1834,14 @@
   <div class="modal-overlay" id="modal-task-brief" onclick="TasksModule.closeTaskBriefModal(event)">
     <div class="modal-card" style="max-width:640px;" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; gap:9px;">
+          <svg class="totoro-modal-emoji" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <path d="M8.5 11.5L6.5 4.5L11.5 8.8C13.1 8.2 14.9 8.2 16.5 8.8L21.5 4.5L19.5 11.5C22.4 13.6 23.6 16.8 23.3 20.4C22.9 24.4 19.4 26.2 14 26.2C8.6 26.2 5.1 24.4 4.7 20.4C4.4 16.8 5.6 13.6 8.5 11.5Z" fill="#6F6B64" stroke="#484540" stroke-width="1.2"/>
+            <path d="M14 8.2C15.8 5 18.8 4.6 20.6 6.4C18.6 8.2 16 8.8 14 8.2Z" fill="#52A063" stroke="#2D6A3B" stroke-width="0.9"/>
+            <ellipse cx="14" cy="21" rx="6.5" ry="4" fill="#FBF6E8"/>
+            <circle cx="10.8" cy="14.5" r="1.8" fill="#FFFFFF"/><circle cx="11" cy="14.5" r="0.9" fill="#181A1F"/>
+            <circle cx="17.2" cy="14.5" r="1.8" fill="#FFFFFF"/><circle cx="17" cy="14.5" r="0.9" fill="#181A1F"/>
+          </svg>
           <span class="tip-pill" id="brief-task-pill" style="margin-right:0;">TASK 1</span>
           <span id="brief-task-theme" style="font-weight:700; font-size:14px; color:var(--text-bright);"></span>
         </div>
