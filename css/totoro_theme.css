@@ -5152,122 +5152,106 @@ html[data-theme="dark"] .anki-due-reminder {
 }
 
 /* ============================================================================
-   CUSTOM TOTORO BELLY FOCUS CLOCK & WHOLE-WEB TOTORO EMOJI / STICKER CHARMS
+   SEIKO x GHIBLI PRO BOTANICAL CHRONOGRAPH & WHOLE-WEB TOTORO CHARMS
    ============================================================================ */
 
-/* 1. Peeking Blue Chu-Totoro + White Chibi-Totoro Duo above Study Timer */
-#widget-study-timer > .totoro-peeker.totoro-peeker-duo {
-  width: 96px !important;
-  height: 45px !important;
-  top: -31px !important;
-  right: 12px !important;
-}
-#widget-study-timer:hover > .totoro-peeker-duo .chibi-peeker {
-  transform: translateY(-3px) rotate(3deg);
-}
-.totoro-peeker-duo .chibi-peeker {
-  transform-origin: 86px 46px;
-  transition: transform 260ms var(--ease-out);
-}
-
-/* 2. Custom Totoro Belly Focus Clock (#chrono-wrap) */
-#widget-study-timer .timer-display-box.totoro-clock-wrap {
-  width: 162px !important;
-  height: 162px !important;
-  margin: -2px auto 0 !important;
-  border-radius: 0 !important;
+/* 1. Pro Horological Totoro Chronograph (#chrono-wrap.totoro-chrono-pro) */
+#widget-study-timer .timer-display-box.totoro-chrono-pro {
+  width: 152px !important;
+  height: 152px !important;
+  margin: 0 auto !important;
+  border-radius: 50% !important;
   background: transparent !important;
   box-shadow: none !important;
   overflow: visible !important;
 }
 @media (max-height: 800px) {
-  #widget-study-timer .timer-display-box.totoro-clock-wrap {
-    width: 146px !important;
-    height: 146px !important;
+  #widget-study-timer .timer-display-box.totoro-chrono-pro {
+    width: 140px !important;
+    height: 140px !important;
   }
 }
-html[data-mode="calm"] #widget-study-timer .timer-display-box.totoro-clock-wrap,
-html[data-theme="dark"] #widget-study-timer .timer-display-box.totoro-clock-wrap {
+html[data-mode="calm"] #widget-study-timer .timer-display-box.totoro-chrono-pro,
+html[data-theme="dark"] #widget-study-timer .timer-display-box.totoro-chrono-pro {
   background: transparent !important;
   box-shadow: none !important;
 }
-#widget-study-timer .totoro-clock-svg {
+#widget-study-timer .totoro-chrono-svg {
   width: 100%;
   height: 100%;
   transform: none !important;
   display: block;
   overflow: visible;
-  filter: drop-shadow(0 4px 10px rgba(48, 52, 42, 0.14));
+  filter: drop-shadow(0 8px 16px rgba(24, 38, 28, 0.18)) drop-shadow(0 2px 4px rgba(24, 38, 28, 0.1));
+  transition: transform 320ms var(--ease-out), filter 320ms var(--ease-out);
 }
-html[data-theme="dark"] #widget-study-timer .totoro-clock-svg {
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.36));
+#widget-study-timer:hover .totoro-chrono-svg {
+  transform: translateY(-1px) scale(1.015) !important;
+  filter: drop-shadow(0 10px 20px rgba(24, 38, 28, 0.22)) drop-shadow(0 2px 5px rgba(185, 141, 70, 0.16));
 }
-.tot-clk-belly {
-  fill: #FBF8F0;
-  stroke: #E4DCCB;
-  stroke-width: 1.4;
+html[data-theme="dark"] #widget-study-timer .totoro-chrono-svg {
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.48)) drop-shadow(0 0 12px rgba(78, 138, 91, 0.12));
 }
-html[data-theme="dark"] .tot-clk-belly {
-  fill: #222B24;
-  stroke: #3A4B3E;
+.tot-pro-dial {
+  fill: url(#totDialFaceLight);
+  stroke: rgba(45, 61, 49, 0.16);
+  stroke-width: 1;
 }
-.tot-clk-chevrons {
-  stroke: #8A8376;
-  opacity: 0.52;
+html[data-theme="dark"] .tot-pro-dial {
+  fill: url(#totDialFaceDark);
+  stroke: rgba(185, 141, 70, 0.22);
 }
-html[data-theme="dark"] .tot-clk-chevrons {
-  stroke: #9CB4A2;
-  opacity: 0.48;
+.tot-pro-guilloche {
+  color: #7E745E;
 }
-.tot-clk-ear-l {
-  transform-origin: 58px 40px;
-  transition: transform 260ms var(--ease-out);
+html[data-theme="dark"] .tot-pro-guilloche {
+  color: #C4D4C6;
 }
-.tot-clk-ear-r {
-  transform-origin: 126px 40px;
-  transition: transform 260ms var(--ease-out);
+.tot-pro-crest-eye {
+  fill: #243128;
 }
-.tot-clk-leaf {
-  transform-origin: 92px 24px;
-  transition: transform 320ms var(--ease-out);
+.tot-pro-crest-mark {
+  stroke: #243128;
+  opacity: 0.72;
 }
-#widget-study-timer:hover .tot-clk-ear-l {
-  transform: rotate(-7deg);
+html[data-theme="dark"] .tot-pro-crest-eye {
+  fill: #151E18;
 }
-#widget-study-timer:hover .tot-clk-ear-r {
-  transform: rotate(7deg);
+#widget-study-timer .totoro-chrono-pro .chrono-track {
+  stroke: rgba(45, 61, 49, 0.11);
+  stroke-width: 5.5;
 }
-#widget-study-timer:hover .tot-clk-leaf {
-  transform: rotate(-8deg) scale(1.06);
+html[data-theme="dark"] #widget-study-timer .totoro-chrono-pro .chrono-track {
+  stroke: rgba(212, 232, 218, 0.12) !important;
 }
-#widget-study-timer .totoro-clock-wrap .chrono-track {
-  stroke: rgba(138, 131, 118, 0.18);
-  stroke-width: 6.8;
+#widget-study-timer .totoro-chrono-pro .chrono-progress {
+  stroke-width: 5.5;
+  filter: drop-shadow(0 0 3px rgba(78, 138, 91, 0.32));
 }
-html[data-theme="dark"] #widget-study-timer .totoro-clock-wrap .chrono-track {
-  stroke: rgba(206, 224, 250, 0.14) !important;
+#widget-study-timer .totoro-chrono-pro .chrono-center {
+  top: 24%;
+  bottom: 16%;
+  left: 14%;
+  right: 14%;
+  gap: 3px;
 }
-#widget-study-timer .totoro-clock-wrap .chrono-progress {
-  stroke-width: 6.8;
+#screen-study #widget-study-timer .totoro-chrono-pro .timer-digits.chrono-digits {
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.025em !important;
+  color: #1D2A20 !important;
 }
-#widget-study-timer .totoro-clock-wrap .chrono-center {
-  top: 41%;
-  bottom: 10%;
-  left: 16%;
-  right: 16%;
-  gap: 2px;
-}
-#screen-study #widget-study-timer .totoro-clock-wrap .timer-digits.chrono-digits {
-  font-size: 22.5px !important;
-  letter-spacing: -0.03em !important;
+html[data-theme="dark"] #screen-study #widget-study-timer .totoro-chrono-pro .timer-digits.chrono-digits {
+  color: #F2F6F1 !important;
 }
 @media (max-height: 800px) {
-  #screen-study #widget-study-timer .totoro-clock-wrap .timer-digits.chrono-digits {
-    font-size: 20px !important;
+  #screen-study #widget-study-timer .totoro-chrono-pro .timer-digits.chrono-digits {
+    font-size: 22px !important;
   }
 }
-#widget-study-timer .totoro-clock-wrap .chrono-state {
+#widget-study-timer .totoro-chrono-pro .chrono-state {
   font-size: 9.5px !important;
+  letter-spacing: 0.02em;
 }
 
 /* 3. Full-Color Totoro Charms on Flashcards (Front + Back + Buttons) */
