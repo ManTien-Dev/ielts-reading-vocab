@@ -2326,6 +2326,7 @@
     taskStartedAt = Date.now();
     taskLeaveWarnings = 0;
     lastTaskLeaveAt = 0;
+    window.CoreAntiCheatGuard?.resetSoftBlurBudget?.();
     let reloadPenaltyNotice = '';
     if (!isTeacherOrBypassed()) {
       const savedExam = loadActiveExamSession();
@@ -2841,6 +2842,7 @@
     taskStartedAt = Date.now();
     taskLeaveWarnings = 0;
     lastTaskLeaveAt = 0;
+    window.CoreAntiCheatGuard?.resetSoftBlurBudget?.();
     t1BoardIndex = 0;
     t1Mistakes = 0;
     t1WrongWordIds = new Set();
@@ -3915,6 +3917,7 @@
     taskStartedAt = Date.now();
     taskLeaveWarnings = 0;
     lastTaskLeaveAt = 0;
+    window.CoreAntiCheatGuard?.resetSoftBlurBudget?.();
     taskTestPassed = false;
     t2Completed = false;
     updateFinishButtonUI();

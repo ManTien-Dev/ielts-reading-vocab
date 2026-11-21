@@ -3,10 +3,17 @@
    Provides copy/paste guards & 2-strike tab-leave tracking for ALL skills.
    ========================================================= */
 (function () {
+  const SOFT_BLUR_GRACE_MS = 3000;
+  const MAX_GRACE_RECOVERIES_PER_WINDOW = 2;
+  const GRACE_WINDOW_MS = 3 * 60 * 1000;
+
   let lastEditableInteractionAt = 0;
   let lastViewportResizeAt = 0;
   let editableCurrentlyFocused = false;
   let lastVisualHeight = (typeof window !== 'undefined' && window.visualViewport) ? window.visualViewport.height : 0;
+  let graceRecoveryTimestamps = [];
+  let pendingBlurTimer = null;
+  let pendingBlurIsTouchKb = false;
 
   function isEditableElement(el) {
     if (!el || el.nodeType !== 1) return false;
@@ -24,6 +31,28 @@
     } catch (_) {
       return false;
     }
+  }
+
+  function pruneGraceHistory(now) {
+    graceRecoveryTimestamps = graceRecoveryTimestamps.filter((ts) => (now - ts) < GRACE_WINDOW_MS);
+  }
+
+  function cancelPendingBlur(countAsGraceRecovery) {
+    if (!pendingBlurTimer) return;
+    clearTimeout(pendingBlurTimer);
+    pendingBlurTimer = null;
+    const wasTouchKb = pendingBlurIsTouchKb;
+    pendingBlurIsTouchKb = false;
+    if (countAsGraceRecovery && !wasTouchKb) {
+      const now = Date.now();
+      pruneGraceHistory(now);
+      graceRecoveryTimestamps.push(now);
+    }
+  }
+
+  function resetSoftBlurBudget() {
+    cancelPendingBlur(false);
+    graceRecoveryTimestamps = [];
   }
 
   if (typeof document !== 'undefined' && !window.__softKeyboardGuardBound) {
@@ -57,42 +86,86 @@
         lastVisualHeight = nextH;
       });
     }
+    // Returning focus within the 3s grace window cancels the pending blur cleanly
+    window.addEventListener('focus', () => {
+      if (pendingBlurTimer) {
+        cancelPendingBlur(true);
+      }
+    });
+    // Real tab switch / minimize cancels any pending soft-blur timer (visibilitychange handles immediately)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && pendingBlurTimer) {
+        cancelPendingBlur(false);
+      }
+    });
   }
 
   function handleSafeWindowBlur(onRealBlur) {
     if (typeof onRealBlur !== 'function') return;
     if (document.hidden) return;
 
-    // On non-touch Desktop (PC / Mac), keep immediate strict window-blur enforcement.
-    if (!isTouchMobileOrTablet()) {
+    const now = Date.now();
+    const isTouch = isTouchMobileOrTablet();
+    const hadEditableFocus = editableCurrentlyFocused || isEditableElement(document.activeElement);
+    const recentKeyboardActivity = isTouch && (
+      hadEditableFocus ||
+      (now - lastEditableInteractionAt < 2500) ||
+      (now - lastViewportResizeAt < 2500)
+    );
+
+    // 1. iPad / mobile virtual keyboard dismissal: ignore cleanly without burning grace budget
+    if (recentKeyboardActivity) {
+      cancelPendingBlur(false);
+      pendingBlurIsTouchKb = true;
+      pendingBlurTimer = setTimeout(() => {
+        pendingBlurTimer = null;
+        pendingBlurIsTouchKb = false;
+        if (document.hidden) return;
+        try {
+          if (typeof document.hasFocus === 'function' && document.hasFocus()) return;
+        } catch (_) {}
+        const after = Date.now();
+        if (
+          hadEditableFocus ||
+          (after - lastEditableInteractionAt < 2500) ||
+          (after - lastViewportResizeAt < 2500)
+        ) {
+          return;
+        }
+        onRealBlur();
+      }, 280);
+      return;
+    }
+
+    // 2. Light window.blur while tab stays visible (!document.hidden):
+    //    Allow up to 2 quick (<3s) recoveries per 3-minute window (e.g. dismissing OS notification
+    //    or adjusting taskbar/Control Center volume). Beyond 2 recoveries or >= 3s away -> penalize.
+    pruneGraceHistory(now);
+    if (graceRecoveryTimestamps.length >= MAX_GRACE_RECOVERIES_PER_WINDOW) {
+      cancelPendingBlur(false);
       onRealBlur();
       return;
     }
 
-    // On iPad / iPhone / Android tablets, dismissing or pulling down the virtual
-    // keyboard fires a spurious window.blur while the page remains visible (!document.hidden).
-    const hadEditableFocus = editableCurrentlyFocused || isEditableElement(document.activeElement);
-    const now = Date.now();
-    const recentKeyboardActivity =
-      hadEditableFocus ||
-      (now - lastEditableInteractionAt < 2500) ||
-      (now - lastViewportResizeAt < 2500);
-
-    setTimeout(() => {
+    cancelPendingBlur(false);
+    pendingBlurIsTouchKb = false;
+    pendingBlurTimer = setTimeout(() => {
+      pendingBlurTimer = null;
+      pendingBlurIsTouchKb = false;
       if (document.hidden) return; // visibilitychange already handled genuine tab/app switch
-      try {
-        if (typeof document.hasFocus === 'function' && document.hasFocus()) return;
-      } catch (_) {}
       const after = Date.now();
-      if (
-        recentKeyboardActivity ||
-        (after - lastEditableInteractionAt < 2500) ||
-        (after - lastViewportResizeAt < 2500)
-      ) {
-        return; // Soft keyboard opened/dismissed on iPad/mobile — NOT a real tab leave
+      if (isTouch && ((after - lastEditableInteractionAt < 2500) || (after - lastViewportResizeAt < 2500))) {
+        return;
       }
+      try {
+        if (typeof document.hasFocus === 'function' && document.hasFocus()) {
+          pruneGraceHistory(after);
+          graceRecoveryTimestamps.push(after);
+          return;
+        }
+      } catch (_) {}
       onRealBlur();
-    }, 280);
+    }, SOFT_BLUR_GRACE_MS);
   }
 
   class AntiCheatGuard {
@@ -167,6 +240,11 @@
 
   AntiCheatGuard.isTouchMobileOrTablet = isTouchMobileOrTablet;
   AntiCheatGuard.handleSafeWindowBlur = handleSafeWindowBlur;
+  AntiCheatGuard.resetSoftBlurBudget = resetSoftBlurBudget;
+  AntiCheatGuard.getGraceRecoveriesUsed = () => {
+    pruneGraceHistory(Date.now());
+    return graceRecoveryTimestamps.length;
+  };
 
   window.CoreAntiCheatGuard = AntiCheatGuard;
 })();
