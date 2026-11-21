@@ -1979,6 +1979,7 @@
       }
     }
     ensureStudyDeadlineTicker(task.id);
+    window.RecognitionTestModule?.updateScopeListTestButton?.();
   }
 
   function ensureStudyDeadlineTicker(taskId) {

@@ -268,12 +268,23 @@
     const f2 = d.file2_families_3500 || [];
     const f1 = d.file1_paraphrase_1500 || [];
     const map = {
-      foundation: { key: 'foundation', name: 'Từ Vựng Nền Tảng', list: f2.slice(0, 1500) },
-      academic: { key: 'academic', name: 'Từ Vựng Học Thuật', list: f2.slice(1500, 2500) },
-      paraphrase: { key: 'paraphrase', name: 'Từ Vựng Paraphrase', list: f1 },
-      advanced: { key: 'advanced', name: 'Từ Vựng Chuyên Sâu', list: f2.slice(2500) },
+      foundation: { key: 'foundation', name: 'Từ Vựng Nền Tảng', list: f2.slice(0, 1500), isTask: false },
+      academic: { key: 'academic', name: 'Từ Vựng Học Thuật', list: f2.slice(1500, 2500), isTask: false },
+      paraphrase: { key: 'paraphrase', name: 'Từ Vựng Paraphrase', list: f1, isTask: false },
+      advanced: { key: 'advanced', name: 'Từ Vựng Chuyên Sâu', list: f2.slice(2500), isTask: false },
     };
-    return map[scopeKey] || null;
+    if (map[scopeKey]) return map[scopeKey];
+    const taskObj = window.TasksModule?.getTaskById?.(scopeKey);
+    if (taskObj && Array.isArray(taskObj.words) && taskObj.words.length) {
+      return {
+        key: taskObj.id,
+        name: taskObj.label || taskObj.id,
+        list: taskObj.words,
+        isTask: true,
+        taskObj,
+      };
+    }
+    return null;
   }
 
   // ---- Active Exam Session State ----
@@ -297,12 +308,28 @@
     if (!btn) return;
     const scopeKey = B()?.getCurrentScopeKey?.() || '';
     const info = getScopeInfo(scopeKey);
-    const inTaskMode = Boolean(window.TasksModule?.isTaskWorkspaceActive?.());
-    if (!info || inTaskMode) {
+    if (!info) {
       btn.style.display = 'none';
       return;
     }
     btn.style.display = '';
+    if (info.isTask) {
+      const amap = B()?.getAssessmentsMap?.() || {};
+      const total = info.list.length;
+      const masteredCnt = info.list.reduce((s, w) => s + (amap[w.id] === 3 ? 1 : 0), 0);
+      const remaining = Math.max(0, total - masteredCnt);
+      if (remaining === 0) {
+        btn.innerHTML = `<span>✓ Đủ ${total}/${total} · Ôn Speed Quiz</span>`;
+        btn.classList.remove('active');
+      } else if (masteredCnt > 0) {
+        btn.innerHTML = `<span>Speed Quiz (${remaining} từ chưa thuộc)</span>`;
+        btn.classList.add('active');
+      } else {
+        btn.innerHTML = `<span>Vào Speed Quiz (${total} từ)</span>`;
+        btn.classList.remove('active');
+      }
+      return;
+    }
     const certs = loadListCerts();
     const cps = loadCheckpoints();
     const cert = certs[scopeKey];
@@ -391,12 +418,12 @@
       const tid = session.taskId;
       closeModalShell();
       window.TasksModule?.triggerExternalAntiCheatLock?.(tid, `${reason} (Lần 3)`);
-    } else if (session.mode === 'old_review') {
+    } else if (session.mode === 'old_review' || session.mode === 'task_study_quiz') {
       session.cursor = 0;
       session.correctCount = 0;
       session.wrongIds = [];
       closeModalShell();
-      B()?.showToast?.('Đã hủy lượt Speed Quiz ôn tập do rời màn hình kiểm tra!');
+      B()?.showToast?.('Đã dừng lượt Speed Quiz do rời màn hình kiểm tra (các từ trả lời đúng vẫn đã lưu Đã thuộc)!');
     } else {
       // Void current 50-word round back to start of this round (keeps prior completed rounds intact)
       const roundStart = Math.floor(session.cursor / ROUND_SIZE) * ROUND_SIZE;
@@ -484,15 +511,52 @@
     renderIntroScreen();
   }
 
-  // ---- Entry 2: Full-List Cumulative Exam (100% words, 50-word Checkpoints) ----
+  // ---- Entry 2: Full-List Cumulative Exam OR Active Task Study Speed Quiz ----
   function startListFinalExam(scopeKey) {
     const info = getScopeInfo(scopeKey || B()?.getCurrentScopeKey?.());
     if (!info || !info.list.length) {
-      B()?.showToast?.('Bộ từ này không áp dụng bài Test tổng kết.');
+      B()?.showToast?.('Bộ từ này không áp dụng bài Speed Quiz.');
       return;
     }
     stopTimers();
     leaveWarnings = 0;
+
+    if (info.isTask) {
+      const amap = B()?.getAssessmentsMap?.() || {};
+      const unmastered = info.list.filter((w) => w && amap[w.id] !== 3);
+      const targetWords = unmastered.length > 0 ? unmastered : info.list;
+      const itemById = new Map(info.list.map((w) => [w.id, w]));
+      const orderIds = shuffleArr(targetWords).map((w) => w.id);
+      session = {
+        mode: 'task_study_quiz',
+        taskId: info.key,
+        taskLabel: info.name,
+        scopeKey: info.key,
+        scopeName: info.name,
+        title: `Speed Quiz · ${info.name}`,
+        pool: info.list,
+        itemById,
+        orderIds,
+        cursor: 0,
+        resumed: false,
+        phase: 'intro',
+        correctCount: 0,
+        wrongIds: [],
+        roundCorrect: 0,
+        roundWrongIds: [],
+        errorQueue: [],
+        errorAttempts: 0,
+        currentItem: null,
+        currentOptions: [],
+        locked: false,
+        paused: false,
+        startedAt: Date.now(),
+        onCompleteCallback: null,
+      };
+      openModalShell();
+      renderIntroScreen();
+      return;
+    }
 
     const itemById = new Map(info.list.map((w) => [w.id, w]));
     const cps = loadCheckpoints();
@@ -594,7 +658,9 @@
     if (badge) {
       badge.textContent = session.mode === 'task_final'
         ? 'TEST KẾT THÚC TASK'
-        : (session.mode === 'old_review' ? 'SPEED QUIZ · ÔN TẬP TỪ CŨ' : 'SPEED QUIZ · 100% BỘ TỪ');
+        : (session.mode === 'old_review'
+          ? 'SPEED QUIZ · ÔN TẬP TỪ CŨ'
+          : (session.mode === 'task_study_quiz' ? 'SPEED QUIZ · HỌC TỪ TASK' : 'SPEED QUIZ · 100% BỘ TỪ'));
     }
     if (titleEl) titleEl.textContent = session.title;
     if (!body) return;
@@ -604,20 +670,23 @@
     const curRound = Math.floor(session.cursor / ROUND_SIZE) + 1;
     const isList = session.mode === 'list_final';
     const isOldReview = session.mode === 'old_review';
+    const isTaskStudy = session.mode === 'task_study_quiz';
     const limitSec = Math.round(getWordTimeLimitMs() / 1000);
 
     body.innerHTML = `
       <div class="recog-intro-card">
-        <div class="recog-intro-title">${isList ? `Kiểm chứng 100% mặt chữ &amp; nghĩa (${total.toLocaleString('vi-VN')} từ)` : (isOldReview ? `Ôn nhanh ${total} từ cũ qua Speed Quiz để mở ${esc(session.taskLabel)}` : `Kiểm tra phản xạ đọc hiểu (${total} từ)`)}</div>
+        <div class="recog-intro-title">${isList ? `Kiểm chứng 100% mặt chữ &amp; nghĩa (${total.toLocaleString('vi-VN')} từ)` : (isTaskStudy ? `Speed Quiz ${total} từ của ${esc(session.taskLabel)} — Đúng hết mở Test ngay!` : (isOldReview ? `Ôn nhanh ${total} từ cũ qua Speed Quiz để mở ${esc(session.taskLabel)}` : `Kiểm tra phản xạ đọc hiểu (${total} từ)`))}</div>
         <div class="recog-rules-list">
           <div><strong>1. Tốc độ Reading thực chiến:</strong> Mỗi từ có <strong>${limitSec} giây</strong> để nhìn mặt chữ và chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>).</div>
-          <div><strong>2. Đảm bảo thuộc nằm lòng:</strong> ${isOldReview ? 'Hoàn tất lượt kiểm tra và vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.' : `Vòng 1 cần đạt <strong>&ge; ${PASS_THRESHOLD_PCT}%</strong>, sau đó vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.`}</div>
+          <div><strong>2. Đảm bảo thuộc nằm lòng:</strong> ${(isOldReview || isTaskStudy) ? 'Hoàn tất lượt kiểm tra và vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.' : `Vòng 1 cần đạt <strong>&ge; ${PASS_THRESHOLD_PCT}%</strong>, sau đó vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.`}</div>
           ${isList
             ? `<div><strong>3. Tự động phân loại Đã thuộc / Chưa thuộc:</strong> Trả lời đúng &le; ${limitSec} giây tự động đưa vào <strong>Đã thuộc</strong>; trả lời sai, hết giờ hoặc bấm <em>Chưa biết</em> tự động đưa vào <strong>Chưa thuộc</strong> (và <strong>Cần ôn</strong>) để lọc học lại ngay.</div>
                <div><strong>4. Chia ${totalRounds} chặng &times; ${ROUND_SIZE} từ (Tự động lưu):</strong> Có thể bấm <strong>Tạm lưu &amp; Nghỉ</strong> bất cứ lúc nào, lần sau thi tiếp đúng vị trí đang dở.</div>`
-            : (isOldReview
-              ? `<div><strong>3. Tự động mở khóa Task:</strong> Ngay khi sửa sạch lỗi (100% từ vượt ngưỡng &le; ${limitSec} giây), các từ cũ được cập nhật <strong>Đã thuộc</strong> và bạn vào làm <strong>${esc(session.taskLabel)}</strong> ngay lập tức.</div>`
-              : `<div><strong>3. Kỷ luật phòng thi:</strong> Không chuyển tab / rời cửa sổ khi đang làm bài (rời quá 3 lần sẽ bị khóa bài).</div>`)}
+            : (isTaskStudy
+              ? `<div><strong>3. Tự động cập nhật Đã thuộc &amp; mở Test Task:</strong> Trả lời đúng &le; ${limitSec} giây tự động đánh dấu <strong>Đã thuộc</strong> ngay lập tức. Hoàn thành đúng sạch 100% (50/50 từ) là <strong>vào làm Test Task được luôn</strong>!</div>`
+              : (isOldReview
+                ? `<div><strong>3. Tự động mở khóa Task:</strong> Ngay khi sửa sạch lỗi (100% từ vượt ngưỡng &le; ${limitSec} giây), các từ cũ được cập nhật <strong>Đã thuộc</strong> và bạn vào làm <strong>${esc(session.taskLabel)}</strong> ngay lập tức.</div>`
+                : `<div><strong>3. Kỷ luật phòng thi:</strong> Không chuyển tab / rời cửa sổ khi đang làm bài (rời quá 3 lần sẽ bị khóa bài).</div>`))}
         </div>
         ${session.resumed ? `
           <div class="recog-resume-banner">
@@ -887,15 +956,17 @@
       if (isCorrect) {
         session.correctCount += 1;
         session.roundCorrect = (session.roundCorrect || 0) + 1;
-        if (session.mode === 'list_final') {
+        if (session.mode === 'list_final' || session.mode === 'task_study_quiz') {
           B()?.markMasteredBatch?.([item.id]);
+          if (session.mode === 'task_study_quiz') window.TasksModule?.updateTaskStudyBar?.();
         }
       } else {
         session.wrongIds.push(item.id);
         session.roundWrongIds = session.roundWrongIds || [];
         session.roundWrongIds.push(item.id);
-        if (session.mode === 'list_final') {
+        if (session.mode === 'list_final' || session.mode === 'task_study_quiz') {
           B()?.setWordWeakLevel?.(item.id, 1);
+          if (session.mode === 'task_study_quiz') window.TasksModule?.updateTaskStudyBar?.();
         }
       }
       session.cursor += 1;
@@ -916,8 +987,9 @@
       if (!isCorrect && curId) {
         // Push back to end of error queue until 100% mastered within 5s
         session.errorQueue.push(curId);
-      } else if (isCorrect && curId && session.mode === 'list_final') {
+      } else if (isCorrect && curId && (session.mode === 'list_final' || session.mode === 'task_study_quiz')) {
         B()?.markMasteredBatch?.([curId]);
+        if (session.mode === 'task_study_quiz') window.TasksModule?.updateTaskStudyBar?.();
       }
       const delay = isCorrect ? 220 : 900;
       autoNextTimer = setTimeout(() => {
@@ -933,7 +1005,7 @@
     const pct = Math.round((session.correctCount / Math.max(1, total)) * 100);
     const uniqWrong = Array.from(new Set(session.wrongIds));
 
-    if (session.mode !== 'old_review' && pct < PASS_THRESHOLD_PCT) {
+    if (session.mode !== 'old_review' && session.mode !== 'task_study_quiz' && pct < PASS_THRESHOLD_PCT) {
       renderFailScreen(pct, uniqWrong);
       return;
     }
@@ -1029,6 +1101,9 @@
 
     // Mark all words mastered (synced via lemma!)
     B()?.markMasteredBatch?.(session.orderIds);
+    if (session.mode === 'task_study_quiz') {
+      window.TasksModule?.updateTaskStudyBar?.();
+    }
 
     if (session.mode === 'task_final' || session.mode === 'old_review') {
       if (typeof session.onCompleteCallback === 'function') {
@@ -1067,16 +1142,21 @@
         <div class="recog-intro-title" style="color:var(--success);">
           ${session.mode === 'task_final'
             ? `✓ Hoàn thành xuất sắc ${esc(session.taskLabel)}!`
-            : (session.mode === 'old_review'
-              ? `✓ Đã hoàn tất Speed Quiz ôn ${total} từ cũ!`
-              : `✓ Chinh phục 100% ${esc(session.scopeName)}!`)}
+            : (session.mode === 'task_study_quiz'
+              ? `✓ Đã thuộc sạch từ vựng ${esc(session.taskLabel)} — Sẵn sàng làm Test!`
+              : (session.mode === 'old_review'
+                ? `✓ Đã hoàn tất Speed Quiz ôn ${total} từ cũ!`
+                : `✓ Chinh phục 100% ${esc(session.scopeName)}!`))}
         </div>
         <p style="font-size:15.5px; color:var(--text-muted); margin:10px 0 18px; line-height:1.6;">
           Phản xạ Vòng 1: <strong>${session.correctCount}/${total} từ (${pct}%)</strong> · Sửa lỗi 100%: <strong>Đạt</strong> · Thời gian: <strong>${durStr}</strong>.
-          <br>Toàn bộ <strong>${total.toLocaleString('vi-VN')} từ</strong> đã được xác nhận <strong>Đã thuộc</strong> và đồng bộ sang các bộ từ liên quan!
+          <br>Toàn bộ <strong>${total.toLocaleString('vi-VN')} từ</strong> đã được xác nhận <strong>Đã thuộc</strong>${session.mode === 'task_study_quiz' ? ' — bạn có thể bấm vào làm bài Test Task ngay bây giờ!' : ' và đồng bộ sang các bộ từ liên quan!'}
         </p>
         <div class="recog-intro-actions" style="justify-content:center;">
-          <button type="button" class="btn btn-primary" id="btn-recog-done" onclick="RecognitionTestModule.closeModal()">${session.mode === 'old_review' ? `Hoàn tất &amp; Mở ${esc(session.taskLabel)} →` : 'Hoàn tất &amp; Quay lại'}</button>
+          ${session.mode === 'task_study_quiz'
+            ? `<button type="button" class="btn-subtle" onclick="RecognitionTestModule.closeModal()">Quay lại Flashcard</button>
+               <button type="button" class="btn btn-primary" id="btn-recog-start-task-test" onclick="RecognitionTestModule.closeAndStartTaskTest()">Làm Test Task ngay →</button>`
+            : `<button type="button" class="btn btn-primary" id="btn-recog-done" onclick="RecognitionTestModule.closeModal()">${session.mode === 'old_review' ? `Hoàn tất &amp; Mở ${esc(session.taskLabel)} →` : 'Hoàn tất &amp; Quay lại'}</button>`}
         </div>
       </div>
     `;
@@ -1089,6 +1169,12 @@
       B()?.showToast?.(`Đã lưu tiến độ tại câu ${session.cursor}/${session.orderIds.length}. Lần sau vào làm tiếp nhé!`);
     }
     closeModalShell();
+  }
+
+  function closeAndStartTaskTest() {
+    closeModalShell();
+    window.TasksModule?.updateTaskStudyBar?.();
+    window.TasksModule?.onClickStartTaskExam?.();
   }
 
   function closeModal(event) {
@@ -1162,6 +1248,7 @@
     restartListExam,
     retryCurrentExam,
     closeModal,
+    closeAndStartTaskTest,
     updateScopeListTestButton,
     exportCloudRecognitionData,
     importCloudRecognitionData,
