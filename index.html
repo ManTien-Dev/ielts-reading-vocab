@@ -13,7 +13,7 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="css/style.css?v=20261120a">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261121h">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261121i">
   <link rel="stylesheet" href="css/totoro_theme.css?v=20261121g">
 </head>
 <body>
@@ -1282,16 +1282,15 @@
             <svg class="tot-ico-sm teacher-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/></svg>
             <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" placeholder="Tìm nhanh học viên theo tên hoặc mã ID..." oninput="TasksModule.renderTeacherDashboard()">
           </div>
-          <select class="scope-select teacher-sort-select" id="teacher-student-sort" onchange="TasksModule.renderTeacherDashboard()" aria-label="Sắp xếp danh sách học viên">
-            <option value="rank">Sắp xếp: Xếp hạng tuần</option>
-            <option value="mastered">Sắp xếp: Từ đã thuộc</option>
-            <option value="tasks">Sắp xếp: Số Task xong</option>
-            <option value="today">Sắp xếp: Giờ học hôm nay</option>
-          </select>
+          <div class="teacher-view-tabs" id="teacher-view-tabs" role="tablist" aria-label="Chế độ xem danh sách học viên">
+            <button type="button" class="teacher-view-tab" data-view="today" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('today')">Hôm nay</button>
+            <button type="button" class="teacher-view-tab" data-view="month" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('month')">Tháng này</button>
+            <button type="button" class="teacher-view-tab active" data-view="full" role="tab" aria-selected="true" onclick="TasksModule.setTeacherTableView('full')">Full</button>
+          </div>
         </div>
         <div class="class-report-table-wrap">
           <table class="class-report-table">
-            <thead>
+            <thead id="teacher-dashboard-thead">
               <tr>
                 <th>#</th>
                 <th>Học viên</th>
@@ -1818,8 +1817,8 @@
   <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119t"></script>
   <script src="js/core/AppCore.js?v=20261121c"></script>
   <script src="js/recognition_test.js?v=20261121h"></script>
-  <script src="js/app.js?v=20261121g"></script>
-  <script src="js/tasks.js?v=20261121c"></script>
+  <script src="js/app.js?v=20261121i"></script>
+  <script src="js/tasks.js?v=20261121i"></script>
   <script src="js/totoro_ui.js?v=20261121d"></script>
 </body>
 </html>

@@ -1597,6 +1597,85 @@
     };
   }
 
+  function getUserWordsForDay(uid, dateKey) {
+    let words = 0;
+    try {
+      words = parseInt(localStorage.getItem(getUserDailyWordsKey(dateKey, uid)) || '0', 10) || 0;
+    } catch (_) {}
+    const scoped = getScopedUid(uid);
+    const cloudWords = parseInt(cloudClassCache[scoped]?.syncData?.wordsByDay?.[dateKey] || '0', 10) || 0;
+    return Math.max(words, cloudWords);
+  }
+
+  function getUserPeriodWords(uid) {
+    const now = new Date();
+    const todayKey = localStudyDayKey(now);
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+    const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+
+    const todayDaily = getUserWordsForDay(uid, todayKey);
+    let monthDaily = 0;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(curYear, curMonth, day);
+      monthDaily += getUserWordsForDay(uid, localStudyDayKey(d));
+    }
+
+    const scoped = getScopedUid(uid);
+    const mergedAssess = {};
+    const mergedSrs = {};
+    if (currentUser && scoped === getScopedUid(currentUser.id)) {
+      Object.assign(mergedAssess, assessments || {});
+      Object.assign(mergedSrs, srsData || {});
+    } else {
+      try {
+        const raw = localStorage.getItem(getUserStorageKey(uid));
+        if (raw) {
+          const st = JSON.parse(raw);
+          if (st?.assessments && typeof st.assessments === 'object') Object.assign(mergedAssess, st.assessments);
+          if (st?.srsData && typeof st.srsData === 'object') Object.assign(mergedSrs, st.srsData);
+        }
+      } catch (_) {}
+    }
+    const cloudSd = cloudClassCache[scoped]?.syncData;
+    if (cloudSd?.assessments && typeof cloudSd.assessments === 'object') {
+      Object.entries(cloudSd.assessments).forEach(([wid, lvl]) => {
+        mergedAssess[wid] = Math.max(Number(mergedAssess[wid] || 0), Number(lvl || 0));
+      });
+    }
+    if (cloudSd?.srsData && typeof cloudSd.srsData === 'object') {
+      Object.entries(cloudSd.srsData).forEach(([wid, rec]) => {
+        if (!rec || typeof rec !== 'object') return;
+        const prev = mergedSrs[wid];
+        if (!prev || Number(rec.lastAt || 0) > Number(prev.lastAt || 0)) {
+          mergedSrs[wid] = rec;
+        }
+      });
+    }
+
+    ensureLemmaPeerIndex();
+    const todayUniq = new Set();
+    const monthUniq = new Set();
+    Object.entries(mergedAssess).forEach(([wid, lvl]) => {
+      if (lvl !== 3) return;
+      const lastAt = Number(mergedSrs[wid]?.lastAt || 0);
+      if (!lastAt) return;
+      const dt = new Date(lastAt);
+      const lem = _idToLemmaCache?.get(wid) || wid;
+      if (localStudyDayKey(dt) === todayKey) {
+        todayUniq.add(lem);
+      }
+      if (dt.getFullYear() === curYear && dt.getMonth() === curMonth) {
+        monthUniq.add(lem);
+      }
+    });
+
+    return {
+      todayWords: Math.max(todayDaily, todayUniq.size),
+      monthWords: Math.max(monthDaily, monthUniq.size),
+    };
+  }
+
   function getUserMasteredCount(uid) {
     const scoped = getScopedUid(uid);
     const cloudEntry = cloudClassCache[scoped];
@@ -1730,6 +1809,7 @@
     const studentAccounts = accounts.filter(acc => acc.role !== 'teacher');
     const entries = studentAccounts.map((acc, idx) => {
       const mins = getUserPeriodMinutes(acc.id);
+      const periodWords = getUserPeriodWords(acc.id);
       const mastered = getUserMasteredCount(acc.id);
       const streak = computeConsecutiveStreakForUser(acc.id);
       const taskProgress = getUserTaskProgressMap(acc.id);
@@ -1743,6 +1823,8 @@
         todayMins: mins.todayMins,
         weekMins: mins.weekMins,
         monthMins: mins.monthMins,
+        todayWords: periodWords.todayWords,
+        monthWords: periodWords.monthWords,
         periodMins,
         mastered,
         streak,
@@ -1849,13 +1931,14 @@
     }
   }
 
-  function recordDailyWordActivity() {
+  function recordDailyWordActivity(delta = 1) {
     if (!currentUser || isTeacherUser()) return;
+    const inc = Math.max(1, parseInt(delta, 10) || 1);
     try {
       const todayKey = localStudyDayKey();
       const key = getUserDailyWordsKey(todayKey);
       const cur = parseInt(localStorage.getItem(key) || '0', 10) || 0;
-      localStorage.setItem(key, String(cur + 1));
+      localStorage.setItem(key, String(cur + inc));
     } catch (_) {}
   }
 
@@ -5438,7 +5521,7 @@
       syncLemmaPeersMastery(wid, 3, now);
     });
     saveState();
-    recordDailyWordActivity();
+    recordDailyWordActivity(Math.max(1, addedCount));
     updateVocabMasteryUI();
     updateLeaderboardUI();
     const cur = currentScopeList[currentCardIndex];

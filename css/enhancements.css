@@ -4622,7 +4622,7 @@ body:has(#screen-teacher.active) #anki-due-reminder {
 }
 .teacher-toolbar-row {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) 230px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   margin-bottom: 12px;
   align-items: center;
@@ -4632,6 +4632,51 @@ body:has(#screen-teacher.active) #anki-due-reminder {
   width: 100% !important;
   min-width: 0 !important;
 }
+.teacher-view-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  height: 38px;
+  border-radius: var(--radius-btn, 10px);
+  background: var(--bg-soft, #f3efe4);
+  border: 1px solid var(--border-strong, rgba(61, 82, 54, 0.18));
+  flex-shrink: 0;
+}
+.teacher-view-tab {
+  height: 30px;
+  padding: 0 13px;
+  border: none;
+  border-radius: calc(var(--radius-btn, 10px) - 3px);
+  background: transparent;
+  color: var(--text-muted, #5c6659);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+.teacher-view-tab:hover:not(.active) {
+  color: var(--ink, #233022);
+  background: rgba(82, 136, 62, 0.08);
+}
+.teacher-view-tab.active {
+  background: #2f6b32;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(32, 68, 34, 0.24);
+}
+[data-theme="dark"] .teacher-view-tabs {
+  background: #1d2922;
+  border-color: rgba(154, 210, 165, 0.22);
+}
+[data-theme="dark"] .teacher-view-tab {
+  color: #b2c5b6;
+}
+[data-theme="dark"] .teacher-view-tab.active {
+  background: #4e8c49;
+  color: #ffffff;
+}
 @media (max-width: 760px) {
   .teacher-kpi-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4640,6 +4685,11 @@ body:has(#screen-teacher.active) #anki-due-reminder {
 @media (max-width: 640px) {
   .teacher-toolbar-row {
     grid-template-columns: 1fr;
+  }
+  .teacher-view-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .teacher-panda-badge {
     width: 54px;

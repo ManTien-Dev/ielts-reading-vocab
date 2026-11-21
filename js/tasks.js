@@ -1100,6 +1100,19 @@
     bridge.showToast?.('Đã xuất file Excel (.csv) báo cáo lớp!');
   }
 
+  let teacherTableView = 'full';
+
+  function setTeacherTableView(mode) {
+    const next = (mode === 'today' || mode === 'month' || mode === 'full') ? mode : 'full';
+    teacherTableView = next;
+    document.querySelectorAll('#teacher-view-tabs .teacher-view-tab').forEach((btn) => {
+      const active = btn.getAttribute('data-view') === next;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    renderTeacherDashboard();
+  }
+
   function renderTeacherDashboard() {
     const bridge = B();
     if (!bridge?.isTeacherUser?.()) return;
@@ -1110,14 +1123,40 @@
       statusEl.textContent = syncTime ? `Cập nhật lúc ${syncTime}` : 'Theo dõi giờ học & Task của cả lớp';
     }
 
+    const viewMode = (teacherTableView === 'today' || teacherTableView === 'month') ? teacherTableView : 'full';
+    document.querySelectorAll('#teacher-view-tabs .teacher-view-tab').forEach((btn) => {
+      const active = btn.getAttribute('data-view') === viewMode;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+
+    const thead = document.getElementById('teacher-dashboard-thead');
     const tbody = document.getElementById('teacher-dashboard-tbody');
     if (tbody) {
-      const ranked = bridge.getClassRankedEntries?.('week') || [];
+      const ranked = bridge.getClassRankedEntries?.(viewMode === 'month' ? 'month' : 'week') || [];
       const cache = bridge.getCloudClassCache?.() || {};
       const totalTasks = getAllCatalogTasks().length || 110;
       const now = Date.now();
+      const nowDate = new Date(now);
+      const todayKey = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
+      const curYear = nowDate.getFullYear();
+      const curMonth = nowDate.getMonth();
       const q = (document.getElementById('teacher-student-search')?.value || '').trim().toLowerCase();
-      const sortMode = document.getElementById('teacher-student-sort')?.value || 'rank';
+
+      const isTaskInPeriod = (rec, mode) => {
+        if (mode === 'full') return true;
+        const ts = Number(rec?.updatedAt || rec?.completedAt || 0);
+        if (!ts) return false;
+        const d = new Date(ts);
+        if (mode === 'today') {
+          const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          return k === todayKey;
+        }
+        if (mode === 'month') {
+          return d.getFullYear() === curYear && d.getMonth() === curMonth;
+        }
+        return true;
+      };
 
       const allEnriched = ranked.map((item) => {
         const uid = bridge.getScopedUid(item.id);
@@ -1125,78 +1164,163 @@
         const tp = readStudentTaskMap(bridge, cache, bridge.TASK_PROGRESS_KEY_BASE, uid);
         const tl = readStudentTaskMap(bridge, cache, bridge.TASK_LOCKS_KEY_BASE, uid);
         const doneEntries = Object.entries(tp).filter(([, v]) => v?.status === 'completed');
-        return { item, streak, doneEntries, tl };
+        const periodDoneEntries = viewMode === 'full'
+          ? doneEntries
+          : doneEntries.filter(([, v]) => isTaskInPeriod(v, viewMode));
+        const periodMins = viewMode === 'today' ? Number(item.todayMins || 0) : (viewMode === 'month' ? Number(item.monthMins || 0) : Number(item.weekMins || 0));
+        const periodWords = viewMode === 'today' ? Number(item.todayWords || 0) : (viewMode === 'month' ? Number(item.monthWords || 0) : Number(item.mastered || 0));
+        const periodActivityScore = (periodDoneEntries.length * 100) + (periodWords * 10) + periodMins;
+        return { item, streak, doneEntries, periodDoneEntries, periodMins, periodWords, periodActivityScore, tl };
       });
+
+      if (viewMode !== 'full') {
+        allEnriched.sort((a, b) => (
+          (b.periodActivityScore - a.periodActivityScore)
+          || (b.periodWords - a.periodWords)
+          || (b.periodMins - a.periodMins)
+          || (b.periodDoneEntries.length - a.periodDoneEntries.length)
+          || (Number(a.item.order || 0) - Number(b.item.order || 0))
+        ));
+      }
 
       const chestnutUnit = `<span class="tot-chestnut-unit" aria-label="hạt dẻ"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.4C13 4.6 19.8 8.2 21 13.8C21.8 17.6 18.6 21 12 21C5.4 21 2.2 17.6 3 13.8C4.2 8.2 11 4.6 12 2.4Z" fill="#8B3A14" stroke="#531F07" stroke-width="1.4" stroke-linejoin="round"/><path d="M5 17.5C7 15.8 17 15.8 19 17.5C17.6 19.9 15 20.8 12 20.8C9 20.8 6.4 19.9 5 17.5Z" fill="#E8CCA0"/><path d="M7.2 12.2C7.8 9.6 9.8 7.8 11.4 6.6" stroke="#DF8B56" stroke-width="1.6" stroke-linecap="round" opacity=".85"/></svg></span>`;
       const kpiStrip = document.getElementById('teacher-kpi-strip');
       if (kpiStrip) {
         const totalStudents = allEnriched.length;
-        const totalMastered = allEnriched.reduce((s, r) => s + Number(r.item.mastered || 0), 0);
-        const totalDoneTasks = allEnriched.reduce((s, r) => s + r.doneEntries.length, 0);
-        const topRow = allEnriched[0];
-        const topLabel = (topRow && Number(topRow.item.score || 0) > 0)
-          ? `${esc(topRow.item.name.split(' ').slice(-2).join(' '))} <span class="teacher-kpi-score">(${Number(topRow.item.score).toLocaleString('vi-VN')}${chestnutUnit})</span>`
-          : 'Chưa phát sinh';
-        kpiStrip.innerHTML = `
-          <div class="teacher-kpi-card is-mint">
-            <div class="teacher-kpi-label">Học viên</div>
-            <div class="teacher-kpi-val tabular">${totalStudents}</div>
-          </div>
-          <div class="teacher-kpi-card is-gold">
-            <div class="teacher-kpi-label">Tổng từ đã thuộc</div>
-            <div class="teacher-kpi-val tabular">${totalMastered.toLocaleString('vi-VN')} <span class="teacher-kpi-unit">từ</span></div>
-          </div>
-          <div class="teacher-kpi-card is-coral">
-            <div class="teacher-kpi-label">Lượt Task hoàn thành</div>
-            <div class="teacher-kpi-val tabular">${totalDoneTasks.toLocaleString('vi-VN')}</div>
-          </div>
-          <div class="teacher-kpi-card is-teal">
-            <div class="teacher-kpi-label">Dẫn đầu tuần</div>
-            <div class="teacher-kpi-val teacher-kpi-leader tabular">${topLabel}</div>
-          </div>
-        `;
+        if (viewMode === 'full') {
+          const totalMastered = allEnriched.reduce((s, r) => s + Number(r.item.mastered || 0), 0);
+          const totalDoneTasks = allEnriched.reduce((s, r) => s + r.doneEntries.length, 0);
+          const topRow = allEnriched[0];
+          const topLabel = (topRow && Number(topRow.item.score || 0) > 0)
+            ? `${esc(topRow.item.name.split(' ').slice(-2).join(' '))} <span class="teacher-kpi-score">(${Number(topRow.item.score).toLocaleString('vi-VN')}${chestnutUnit})</span>`
+            : 'Chưa phát sinh';
+          kpiStrip.innerHTML = `
+            <div class="teacher-kpi-card is-mint">
+              <div class="teacher-kpi-label">Học viên</div>
+              <div class="teacher-kpi-val tabular">${totalStudents}</div>
+            </div>
+            <div class="teacher-kpi-card is-gold">
+              <div class="teacher-kpi-label">Tổng từ đã thuộc</div>
+              <div class="teacher-kpi-val tabular">${totalMastered.toLocaleString('vi-VN')} <span class="teacher-kpi-unit">từ</span></div>
+            </div>
+            <div class="teacher-kpi-card is-coral">
+              <div class="teacher-kpi-label">Lượt Task hoàn thành</div>
+              <div class="teacher-kpi-val tabular">${totalDoneTasks.toLocaleString('vi-VN')}</div>
+            </div>
+            <div class="teacher-kpi-card is-teal">
+              <div class="teacher-kpi-label">Dẫn đầu tuần</div>
+              <div class="teacher-kpi-val teacher-kpi-leader tabular">${topLabel}</div>
+            </div>
+          `;
+        } else {
+          const periodLabel = viewMode === 'today' ? 'hôm nay' : 'tháng này';
+          const activeCount = allEnriched.filter((r) => r.periodActivityScore > 0).length;
+          const totalPeriodMins = allEnriched.reduce((s, r) => s + r.periodMins, 0);
+          const totalPeriodWords = allEnriched.reduce((s, r) => s + r.periodWords, 0);
+          const totalPeriodTasks = allEnriched.reduce((s, r) => s + r.periodDoneEntries.length, 0);
+          kpiStrip.innerHTML = `
+            <div class="teacher-kpi-card is-mint">
+              <div class="teacher-kpi-label">Học viên học ${periodLabel}</div>
+              <div class="teacher-kpi-val tabular">${activeCount}/${totalStudents}</div>
+            </div>
+            <div class="teacher-kpi-card is-teal">
+              <div class="teacher-kpi-label">Tổng phút học ${periodLabel}</div>
+              <div class="teacher-kpi-val tabular">${totalPeriodMins.toLocaleString('vi-VN')} <span class="teacher-kpi-unit">phút</span></div>
+            </div>
+            <div class="teacher-kpi-card is-gold">
+              <div class="teacher-kpi-label">Tổng từ ${periodLabel}</div>
+              <div class="teacher-kpi-val tabular">${totalPeriodWords.toLocaleString('vi-VN')} <span class="teacher-kpi-unit">từ</span></div>
+            </div>
+            <div class="teacher-kpi-card is-coral">
+              <div class="teacher-kpi-label">Task xong ${periodLabel}</div>
+              <div class="teacher-kpi-val tabular">${totalPeriodTasks.toLocaleString('vi-VN')}</div>
+            </div>
+          `;
+        }
+      }
+
+      if (thead) {
+        if (viewMode === 'full') {
+          thead.innerHTML = `
+            <tr>
+              <th>#</th>
+              <th>Học viên</th>
+              <th>Hôm nay</th>
+              <th>Tuần này</th>
+              <th>Tháng này</th>
+              <th>Chuỗi ngày</th>
+              <th>Từ đã thuộc</th>
+              <th>Task hoàn thành</th>
+              <th>Trạng thái</th>
+            </tr>
+          `;
+        } else {
+          thead.innerHTML = `
+            <tr>
+              <th>#</th>
+              <th>Học viên</th>
+              <th>Số phút học</th>
+              <th>Số từ</th>
+              <th>Task hoàn thành</th>
+              <th>Trạng thái</th>
+            </tr>
+          `;
+        }
       }
 
       const enriched = allEnriched.filter((row) => !q || String(row.item.name || '').toLowerCase().includes(q) || String(row.item.id || '').toLowerCase().includes(q));
-
-      if (sortMode === 'mastered') {
-        enriched.sort((a, b) => (b.item.mastered - a.item.mastered) || (b.item.score - a.item.score));
-      } else if (sortMode === 'tasks') {
-        enriched.sort((a, b) => (b.doneEntries.length - a.doneEntries.length) || (b.item.score - a.item.score));
-      } else if (sortMode === 'today') {
-        enriched.sort((a, b) => (b.item.todayMins - a.item.todayMins) || (b.item.score - a.item.score));
-      }
 
       const getMonogram = (name) => {
         const pts = String(name || 'HV').trim().split(/\s+/).filter(Boolean);
         return (pts.length >= 2 ? (pts[pts.length - 2][0] + pts[pts.length - 1][0]) : (pts[0] || 'HV').slice(0, 2)).toUpperCase();
       };
 
-      tbody.innerHTML = enriched.map(({ item, streak, doneEntries, tl }, idx) => {
+      const renderStatusCell = (item, tl) => {
         const activeLocks = Object.entries(tl).filter(([, until]) => Number(until || 0) > now);
-        const taskSummary = renderCompactCompletedTasksCell(doneEntries, totalTasks, esc, false);
-        const statusCell = activeLocks.length > 0
+        return activeLocks.length > 0
           ? `<div class="teacher-status-cell is-locked">
               ${activeLocks.map(([tid, until]) => `<span class="teacher-lock-pill">Khóa T${Number(tid.replace(/\D/g, '')) || tid} (${formatMmSs(Number(until) - now)})</span>`).join('')}
               <button type="button" class="btn-teacher-unlock" onclick="TasksModule.unlockStudentTasks('${esc(item.id)}')" title="Mở khóa cho học viên">Mở khóa</button>
             </div>`
           : '<span class="teacher-status-ok">Bình thường</span>';
+      };
 
-        return `
-          <tr>
-            <td class="tabular">${item.rankLabel || `#${item.rank}`}</td>
-            <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(getMonogram(item.name))}</span><div style="min-width:0;"><strong>${esc(item.name)}</strong><div class="teacher-student-score tabular">${Number(item.score || 0).toLocaleString('vi-VN')}${chestnutUnit}</div></div></div></td>
-            <td class="tabular">${item.todayMins}p</td>
-            <td class="tabular">${item.weekMins}p</td>
-            <td class="tabular">${item.monthMins}p</td>
-            <td class="tabular">${streak} ngày</td>
-            <td class="tabular"><strong>${item.mastered} từ</strong></td>
-            <td style="font-size:12.5px;">${taskSummary}</td>
-            <td style="font-size:12.5px;">${statusCell}</td>
-          </tr>
-        `;
-      }).join('') || '<tr><td colspan="9" style="text-align:center;">Không tìm thấy học viên phù hợp.</td></tr>';
+      if (viewMode === 'full') {
+        tbody.innerHTML = enriched.map(({ item, streak, doneEntries, tl }, idx) => {
+          const taskSummary = renderCompactCompletedTasksCell(doneEntries, totalTasks, esc, false);
+          const statusCell = renderStatusCell(item, tl);
+          return `
+            <tr>
+              <td class="tabular">${item.rankLabel || `#${item.rank}`}</td>
+              <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(getMonogram(item.name))}</span><div style="min-width:0;"><strong>${esc(item.name)}</strong><div class="teacher-student-score tabular">${Number(item.score || 0).toLocaleString('vi-VN')}${chestnutUnit}</div></div></div></td>
+              <td class="tabular">${item.todayMins}p</td>
+              <td class="tabular">${item.weekMins}p</td>
+              <td class="tabular">${item.monthMins}p</td>
+              <td class="tabular">${streak} ngày</td>
+              <td class="tabular"><strong>${item.mastered} từ</strong></td>
+              <td style="font-size:12.5px;">${taskSummary}</td>
+              <td style="font-size:12.5px;">${statusCell}</td>
+            </tr>
+          `;
+        }).join('') || '<tr><td colspan="9" style="text-align:center;">Không tìm thấy học viên phù hợp.</td></tr>';
+      } else {
+        let rankCounter = 0;
+        tbody.innerHTML = enriched.map(({ item, periodDoneEntries, periodMins, periodWords, periodActivityScore, tl }, idx) => {
+          const rankLabel = periodActivityScore > 0 ? `#${++rankCounter}` : '–';
+          const taskSummary = renderCompactCompletedTasksCell(periodDoneEntries, totalTasks, esc, false);
+          const statusCell = renderStatusCell(item, tl);
+          return `
+            <tr>
+              <td class="tabular">${rankLabel}</td>
+              <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(getMonogram(item.name))}</span><div style="min-width:0;"><strong>${esc(item.name)}</strong></div></div></td>
+              <td class="tabular"><strong>${periodMins}p</strong></td>
+              <td class="tabular"><strong>${periodWords} từ</strong></td>
+              <td style="font-size:12.5px;">${taskSummary}</td>
+              <td style="font-size:12.5px;">${statusCell}</td>
+            </tr>
+          `;
+        }).join('') || '<tr><td colspan="6" style="text-align:center;">Không tìm thấy học viên phù hợp.</td></tr>';
+      }
     }
 
     renderTeacherTasksGrid();
@@ -4869,6 +4993,7 @@
 
   window.TasksModule = {
     renderTeacherDashboard,
+    setTeacherTableView,
     refreshTeacherDashboard,
     unlockStudentTasks,
     exportClassReportCsv,
