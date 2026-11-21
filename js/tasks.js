@@ -80,6 +80,8 @@
   let lockCountdownTimer = null;
   let studentTasksCountdownTimer = null;
   let studyDeadlineTickTimer = null;
+  let teacherGridDeadlineTimer = null;
+  let teacherPresetDirty = false;
   let examReadyPromptShownForTaskId = null;
   let lastPreviewSummaryRecord = null;
   let t1Completed = false;
@@ -602,6 +604,7 @@
       return;
     }
     const labelStr = dlMs > 0 ? `đến ${formatDeadlineTimestamp(dlMs)}` : 'Không giới hạn thời gian';
+    teacherPresetDirty = false;
     updateTasksLiveDeadline(ids, dlMs, `Đã cập nhật hạn mới (${labelStr}) cho ${ids.length} Task!`);
   }
 
@@ -656,7 +659,7 @@
           if (issuedAt > prevIssued) {
             map[tid] = { deadlineAt: rawDl, issuedAt };
             changed = true;
-          } else if (prevDl <= 0 || rawDl < prevDl) {
+          } else if (issuedAt === prevIssued && (prevDl <= 0 || rawDl < prevDl)) {
             map[tid] = { deadlineAt: rawDl, issuedAt: prevIssued };
             changed = true;
           }
@@ -869,9 +872,10 @@
       let liveDlBadge = '';
       if (liveDl && Number(liveDl.deadlineAt || 0) > 0) {
         const rem = Number(liveDl.deadlineAt) - Date.now();
+        const closeAtStr = formatDeadlineTimestamp(Number(liveDl.deadlineAt));
         liveDlBadge = rem > 0
-          ? `<span class="teacher-task-dl-badge">⏱ Còn ${esc(formatDeadlineRemaining(rem))}</span>`
-          : `<span class="teacher-task-dl-badge is-ended">Đã kết thúc</span>`;
+          ? `<span class="teacher-task-dl-badge" data-teacher-dl-task="${esc(t.id)}" title="Đóng lúc ${esc(closeAtStr)}">⏱ Còn ${esc(formatDeadlineRemaining(rem))}</span>`
+          : `<span class="teacher-task-dl-badge is-ended" data-teacher-dl-task="${esc(t.id)}" title="Đã đóng lúc ${esc(closeAtStr)}">Đã kết thúc</span>`;
       }
 
       const previewBtns = `
@@ -899,6 +903,39 @@
 
     const gridEl = document.getElementById('teacher-dash-task-grid');
     if (gridEl) gridEl.innerHTML = html;
+    ensureTeacherGridDeadlineTicker();
+  }
+
+  function ensureTeacherGridDeadlineTicker() {
+    clearInterval(teacherGridDeadlineTimer);
+    teacherGridDeadlineTimer = null;
+    const gridEl = document.getElementById('teacher-dash-task-grid');
+    if (!gridEl) return;
+    const badges = gridEl.querySelectorAll('[data-teacher-dl-task]');
+    if (!badges.length) return;
+    teacherGridDeadlineTimer = setInterval(() => {
+      const screen = document.getElementById('screen-teacher');
+      if (!screen || !screen.classList.contains('active')) {
+        clearInterval(teacherGridDeadlineTimer);
+        teacherGridDeadlineTimer = null;
+        return;
+      }
+      const liveMap = loadTeacherLiveDeadlines();
+      const now = Date.now();
+      gridEl.querySelectorAll('[data-teacher-dl-task]').forEach((el) => {
+        const tid = el.getAttribute('data-teacher-dl-task');
+        const rec = liveMap[tid];
+        if (!rec || Number(rec.deadlineAt || 0) <= 0) return;
+        const rem = Number(rec.deadlineAt) - now;
+        if (rem > 0) {
+          el.classList.remove('is-ended');
+          el.textContent = `⏱ Còn ${formatDeadlineRemaining(rem)}`;
+        } else {
+          el.classList.add('is-ended');
+          el.textContent = 'Đã kết thúc';
+        }
+      });
+    }, 1000);
   }
 
   function openRecognitionTaskPreview(tid) {
@@ -944,6 +981,7 @@
   }
 
   function onTeacherDeadlinePresetChange() {
+    teacherPresetDirty = true;
     const presetEl = document.getElementById('teacher-task-deadline-preset');
     const customEl = document.getElementById('teacher-task-deadline-custom');
     if (presetEl && customEl) {
@@ -958,22 +996,43 @@
     updateTeacherLinkPreview();
   }
 
+  function resolveComposerDeadlineForIds(ids, nowTs = Date.now()) {
+    const liveMap = loadTeacherLiveDeadlines();
+    const preset = document.getElementById('teacher-task-deadline-preset')?.value || '0';
+    // If preset wasn't freshly changed (or is '0'), preserve an existing active live deadline
+    // so re-copying the link later NEVER resets the countdown back to 24h!
+    if (ids.length > 0 && (!teacherPresetDirty || preset === '0')) {
+      const activeLive = ids
+        .map((tid) => liveMap[tid])
+        .filter((rec) => rec && Number(rec.deadlineAt || 0) > nowTs);
+      if (activeLive.length === ids.length) {
+        const first = activeLive[0];
+        const allSame = activeLive.every((r) => Number(r.deadlineAt) === Number(first.deadlineAt));
+        if (allSame) {
+          return {
+            deadlineMs: Number(first.deadlineAt),
+            issuedAt: Number(first.issuedAt || nowTs),
+            fromExistingLive: true,
+          };
+        }
+      }
+    }
+    const computed = computeSelectedDeadlineMs(nowTs);
+    return {
+      deadlineMs: computed,
+      issuedAt: nowTs,
+      fromExistingLive: false,
+    };
+  }
+
   function updateTeacherLinkPreview() {
     const ids = [...teacherSelectedIds].sort();
     const cntEl = document.getElementById('teacher-dash-sel-count');
     if (cntEl) cntEl.textContent = `Đã chọn: ${ids.length} Task`;
     const nowTs = Date.now();
-    const deadlineMs = computeSelectedDeadlineMs(nowTs);
-    const hintEl = document.getElementById('teacher-task-deadline-hint');
-    if (hintEl) {
-      if (deadlineMs > 0) {
-        hintEl.textContent = `Đóng lúc ${formatDeadlineTimestamp(deadlineMs)} (hết giờ không làm lại được)`;
-      } else if (document.getElementById('teacher-task-deadline-preset')?.value === 'custom') {
-        hintEl.textContent = 'Hãy chọn thời điểm đóng ở tương lai';
-      } else {
-        hintEl.textContent = 'Học viên có thể làm bất kỳ lúc nào';
-      }
-    }
+    const resolved = resolveComposerDeadlineForIds(ids, nowTs);
+    const deadlineMs = resolved.deadlineMs;
+    const issuedAt = resolved.issuedAt;
     const basePath = typeof window.__APP_BASE_PATH__ === 'string'
       ? window.__APP_BASE_PATH__
       : (window.location.pathname || '/')
@@ -989,27 +1048,43 @@
         ? `${base}?task=${encodeURIComponent(ids[0])}`
         : `${base}?tasks=${ids.map(encodeURIComponent).join(',')}`);
     if (url && deadlineMs > 0) {
-      url += `&deadline=${deadlineMs}&issued=${nowTs}`;
+      url += `&deadline=${deadlineMs}&issued=${issuedAt}`;
     }
     const inp = document.getElementById('teacher-dash-link-preview');
     if (inp) inp.value = url;
+    return { url, deadlineMs, issuedAt, fromExistingLive: resolved.fromExistingLive };
   }
 
   function copyTeacherTaskLink() {
-    updateTeacherLinkPreview();
+    const ids = [...teacherSelectedIds].sort();
+    if (!ids.length) {
+      B()?.showToast('Vui lòng tick ít nhất 1 Task trước khi copy link!');
+      return;
+    }
+    const info = updateTeacherLinkPreview();
     const inp = document.getElementById('teacher-dash-link-preview');
-    const url = inp?.value?.trim() || '';
+    const url = info?.url || inp?.value?.trim() || '';
     if (!url) {
       B()?.showToast('Vui lòng tick ít nhất 1 Task trước khi copy link!');
       return;
     }
-    const ids = [...teacherSelectedIds];
+    // Lock in & broadcast newly chosen deadline so Teacher Dashboard, Cloud & future re-copies
+    // all share the EXACT same fixed closing timestamp (countdown never resets on re-copy!).
+    if (info.deadlineMs > 0 && !info.fromExistingLive) {
+      const liveMap = loadTeacherLiveDeadlines();
+      const idsToSave = ids.filter((tid) => teacherPresetDirty || !(liveMap[tid] && Number(liveMap[tid].deadlineAt || 0) > Date.now()));
+      if (idsToSave.length) {
+        updateTasksLiveDeadline(idsToSave, info.deadlineMs, '');
+      }
+    }
+    teacherPresetDirty = false;
     markTasksAsSent(ids);
     const allAlreadyDone = ids.every((id) => getTaskClassStatus(id).allDone);
+    const dlNote = info.deadlineMs > 0 ? ` (đóng lúc ${formatDeadlineTimestamp(info.deadlineMs)})` : '';
     const toastDone = () => {
       B()?.showToast(allAlreadyDone
-        ? 'Đã copy link (Lưu ý: các Task này cả lớp đã làm xong hết!)'
-        : 'Đã copy link & đánh dấu Đã gửi link!');
+        ? `Đã copy link${dlNote} (Lưu ý: các Task này cả lớp đã làm xong hết!)`
+        : `Đã copy link${dlNote} & đánh dấu Đã gửi link!`);
       renderTeacherTasksGrid();
     };
     if (navigator.clipboard?.writeText) {
@@ -1548,12 +1623,12 @@
 
       let remPillHtml = '';
       if (exp.expired) {
-        remPillHtml = `<span class="task-card-rem-pill is-urgent" data-live-dl-task="${esc(t.id)}">⏱ Hết giờ</span>`;
+        remPillHtml = `<span class="task-card-rem-pill is-urgent" data-live-dl-task="${esc(t.id)}" title="Đã đóng lúc ${esc(exp.formattedAt)}">⏱ Hết giờ</span>`;
       } else if (exp.hasDeadline) {
         const isUrgent = exp.remainingMs <= 5 * 60 * 1000;
-        remPillHtml = `<span class="task-card-rem-pill${isUrgent ? ' is-urgent' : ''}" data-live-dl-task="${esc(t.id)}">⏱ Còn ${esc(formatDeadlineRemaining(exp.remainingMs))}</span>`;
+        remPillHtml = `<span class="task-card-rem-pill${isUrgent ? ' is-urgent' : ''}" data-live-dl-task="${esc(t.id)}" title="Đóng lúc ${esc(exp.formattedAt)}">⏱ Còn ${esc(formatDeadlineRemaining(exp.remainingMs))}</span>`;
       } else {
-        remPillHtml = `<span class="task-card-rem-pill is-unlimited">⏱ Không giới hạn</span>`;
+        remPillHtml = `<span class="task-card-rem-pill is-unlimited" data-live-dl-task="${esc(t.id)}">⏱ Không giới hạn</span>`;
       }
 
       if (exp.expired && !done) {
@@ -1602,8 +1677,16 @@
       const tid = el.getAttribute('data-live-dl-task');
       if (!tid) return;
       const dl = getTaskDeadlineInfo(tid);
-      if (!dl.hasDeadline) return;
+      if (!dl.hasDeadline) {
+        el.classList.remove('is-urgent');
+        el.classList.add('is-unlimited');
+        el.removeAttribute('title');
+        el.textContent = '⏱ Không giới hạn';
+        return;
+      }
+      el.classList.remove('is-unlimited');
       el.classList.toggle('is-urgent', dl.expired || dl.remainingMs <= 5 * 60 * 1000);
+      el.title = dl.expired ? `Đã đóng lúc ${dl.formattedAt}` : `Đóng lúc ${dl.formattedAt}`;
       el.textContent = dl.expired ? '⏱ Hết giờ' : `⏱ Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
     });
   }
@@ -2012,10 +2095,12 @@
       if (dl.hasDeadline) {
         dlBadge.classList.remove('is-unlimited');
         dlBadge.classList.toggle('is-urgent', dl.expired || dl.remainingMs <= 5 * 60 * 1000);
+        dlBadge.title = dl.expired ? `Đã đóng lúc ${dl.formattedAt}` : `Đóng lúc ${dl.formattedAt}`;
         dlBadge.textContent = dl.expired ? '⏱ Hết giờ' : `⏱ Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
       } else {
         dlBadge.classList.remove('is-urgent');
         dlBadge.classList.add('is-unlimited');
+        dlBadge.removeAttribute('title');
         dlBadge.textContent = '⏱ Không giới hạn';
       }
     }
@@ -2027,8 +2112,6 @@
     clearInterval(studyDeadlineTickTimer);
     studyDeadlineTickTimer = null;
     if (!taskId) return;
-    const dl0 = getTaskDeadlineInfo(taskId);
-    if (!dl0.hasDeadline) return;
     studyDeadlineTickTimer = setInterval(() => {
       const bar = document.getElementById('task-study-bar');
       const curScope = B()?.getCurrentScopeKey?.() || '';
@@ -2039,10 +2122,18 @@
       }
       const dl = getTaskDeadlineInfo(taskId);
       const badge = document.getElementById('task-study-deadline-badge');
-      if (badge && dl.hasDeadline) {
-        badge.classList.remove('is-unlimited');
-        badge.classList.toggle('is-urgent', dl.expired || dl.remainingMs <= 5 * 60 * 1000);
-        badge.textContent = dl.expired ? '⏱ Hết giờ' : `⏱ Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
+      if (badge) {
+        if (dl.hasDeadline) {
+          badge.classList.remove('is-unlimited');
+          badge.classList.toggle('is-urgent', dl.expired || dl.remainingMs <= 5 * 60 * 1000);
+          badge.title = dl.expired ? `Đã đóng lúc ${dl.formattedAt}` : `Đóng lúc ${dl.formattedAt}`;
+          badge.textContent = dl.expired ? '⏱ Hết giờ' : `⏱ Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
+        } else {
+          badge.classList.remove('is-urgent');
+          badge.classList.add('is-unlimited');
+          badge.removeAttribute('title');
+          badge.textContent = '⏱ Không giới hạn';
+        }
       }
     }, 1000);
   }
