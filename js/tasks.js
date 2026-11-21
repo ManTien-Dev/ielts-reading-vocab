@@ -1141,7 +1141,17 @@
       const todayKey = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
       const curYear = nowDate.getFullYear();
       const curMonth = nowDate.getMonth();
-      const q = (document.getElementById('teacher-student-search')?.value || '').trim().toLowerCase();
+      const searchEl = document.getElementById('teacher-student-search');
+      if (searchEl) {
+        const curTeacherId = String(bridge.getCurrentUser?.()?.id || '').trim().toLowerCase();
+        const rawSearch = String(searchEl.value || '').trim().toLowerCase();
+        let isAutofilled = false;
+        try { isAutofilled = searchEl.matches(':-webkit-autofill'); } catch (_) {}
+        if (isAutofilled || (!searchEl.matches(':focus') && curTeacherId && rawSearch === curTeacherId)) {
+          searchEl.value = '';
+        }
+      }
+      const q = (searchEl?.value || '').trim().toLowerCase();
 
       const isTaskInPeriod = (rec, mode) => {
         if (mode === 'full') return true;

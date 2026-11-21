@@ -13,7 +13,7 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="css/style.css?v=20261120a">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261121i">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261121j">
   <link rel="stylesheet" href="css/totoro_theme.css?v=20261121g">
 </head>
 <body>
@@ -1280,7 +1280,7 @@
         <div class="teacher-toolbar-row">
           <div class="teacher-search-wrap">
             <svg class="tot-ico-sm teacher-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/></svg>
-            <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" placeholder="Tìm nhanh học viên theo tên hoặc mã ID..." oninput="TasksModule.renderTeacherDashboard()">
+            <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" name="teacher_filter_query" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Tìm nhanh học viên theo tên hoặc mã ID..." oninput="TasksModule.renderTeacherDashboard()">
           </div>
           <div class="teacher-view-tabs" id="teacher-view-tabs" role="tablist" aria-label="Chế độ xem danh sách học viên">
             <button type="button" class="teacher-view-tab" data-view="today" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('today')">Hôm nay</button>
@@ -1370,7 +1370,7 @@
         <details class="teacher-ai-key-details">
           <summary>Cấu hình Google AI Studio Key dự phòng trên trình duyệt này</summary>
           <div class="teacher-ai-key-row">
-            <input type="password" class="task-link-input" id="teacher-dash-gemini-key" placeholder="Dán key Google AI Studio nếu chưa cấu hình GEMINI_API_KEY trong Google Apps Script...">
+            <input type="text" class="task-link-input teacher-secret-input" id="teacher-dash-gemini-key" name="gemini_api_key_local" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Dán key Google AI Studio nếu chưa cấu hình GEMINI_API_KEY trong Google Apps Script...">
             <button type="button" class="btn-subtle" onclick="TasksModule.saveLocalGeminiKey()">Lưu key</button>
           </div>
         </details>
@@ -1399,7 +1399,7 @@
         <button class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="closeWordListModal()">✕</button>
       </div>
       <div class="modal-body">
-        <input type="search" class="word-list-search" id="word-list-search" placeholder="Tìm từ vựng hoặc nghĩa tiếng Việt..." oninput="onWordListSearch(this.value)">
+        <input type="search" class="word-list-search" id="word-list-search" name="vocab_list_filter_q" autocomplete="off" spellcheck="false" data-lpignore="true" placeholder="Tìm từ vựng hoặc nghĩa tiếng Việt..." oninput="onWordListSearch(this.value)">
         <div class="wl-filter-bar" style="display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px;">
           <button class="btn-subtle active" id="wl-filter-all" onclick="filterWordListByStatus('all')">Tất cả</button>
           <button class="btn-subtle" id="wl-filter-unremembered" onclick="filterWordListByStatus('unremembered')">Chưa nhớ</button>
@@ -1426,7 +1426,7 @@
       </div>
       <div class="modal-body" style="padding: 14px 20px;">
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-          <input type="search" class="word-list-search" id="signal-words-search" placeholder="Tìm từ nối hoặc nhóm nghĩa…" oninput="filterSignalWordsList(this.value)" style="margin-bottom:0; flex:1; min-height:36px; padding:6px 12px; font-size:0.88rem;">
+          <input type="search" class="word-list-search" id="signal-words-search" name="signal_words_filter_q" autocomplete="off" spellcheck="false" data-lpignore="true" placeholder="Tìm từ nối hoặc nhóm nghĩa…" oninput="filterSignalWordsList(this.value)" style="margin-bottom:0; flex:1; min-height:36px; padding:6px 12px; font-size:0.88rem;">
           <button class="btn btn-primary" style="white-space:nowrap; padding:6px 14px; font-size:0.82rem; min-height:36px;" onclick="studySignalWordsAsDeck()">Học bộ này</button>
         </div>
         <div id="signal-categories-bar" style="display:flex; gap:5px; margin-bottom:8px; overflow-x:auto; padding-bottom:4px;"></div>
@@ -1818,7 +1818,7 @@
   <script src="js/core/AppCore.js?v=20261121c"></script>
   <script src="js/recognition_test.js?v=20261121h"></script>
   <script src="js/app.js?v=20261121i"></script>
-  <script src="js/tasks.js?v=20261121i"></script>
+  <script src="js/tasks.js?v=20261121j"></script>
   <script src="js/totoro_ui.js?v=20261121d"></script>
 </body>
 </html>

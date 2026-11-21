@@ -4632,6 +4632,9 @@ body:has(#screen-teacher.active) #anki-due-reminder {
   width: 100% !important;
   min-width: 0 !important;
 }
+.teacher-secret-input {
+  -webkit-text-security: disc;
+}
 .teacher-view-tabs {
   display: inline-flex;
   align-items: center;
