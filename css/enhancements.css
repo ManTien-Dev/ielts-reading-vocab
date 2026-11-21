@@ -2609,6 +2609,11 @@ main.app-main:has(#screen-study.active) {
   color: #b91c1c;
   border-color: #ef4444;
 }
+.task-deadline-mini.is-unlimited {
+  background: rgba(78, 122, 81, 0.11);
+  color: #2f5c33;
+  border-color: rgba(78, 122, 81, 0.28);
+}
 [data-theme="dark"] .task-deadline-mini {
   background: rgba(245, 158, 11, 0.2);
   color: #fcd34d;
@@ -2618,6 +2623,56 @@ main.app-main:has(#screen-study.active) {
   background: rgba(239, 68, 68, 0.25);
   color: #fca5a5;
   border-color: rgba(239, 68, 68, 0.55);
+}
+[data-theme="dark"] .task-deadline-mini.is-unlimited {
+  background: rgba(114, 184, 126, 0.16);
+  color: #b5e4be;
+  border-color: rgba(114, 184, 126, 0.32);
+}
+.task-card-rem-row {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.task-card-rem-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2.5px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #f59e0b;
+  white-space: nowrap;
+}
+.task-card-rem-pill.is-urgent {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #ef4444;
+}
+.task-card-rem-pill.is-unlimited {
+  background: rgba(78, 122, 81, 0.11);
+  color: #2f5c33;
+  border-color: rgba(78, 122, 81, 0.26);
+}
+[data-theme="dark"] .task-card-rem-pill {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+[data-theme="dark"] .task-card-rem-pill.is-urgent {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.55);
+}
+[data-theme="dark"] .task-card-rem-pill.is-unlimited {
+  background: rgba(114, 184, 126, 0.16);
+  color: #b5e4be;
+  border-color: rgba(114, 184, 126, 0.32);
 }
 header.app-header .tip-pill,
 header.app-header .btn-icon-glass,

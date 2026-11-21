@@ -78,6 +78,8 @@
   let taskTestPassed = false;
   let isPreviewTestMode = false;
   let lockCountdownTimer = null;
+  let studentTasksCountdownTimer = null;
+  let studyDeadlineTickTimer = null;
   let examReadyPromptShownForTaskId = null;
   let lastPreviewSummaryRecord = null;
   let t1Completed = false;
@@ -1544,18 +1546,28 @@
       let subCls = '';
       let dotCls = 'is-idle';
 
+      let remPillHtml = '';
+      if (exp.expired) {
+        remPillHtml = `<span class="task-card-rem-pill is-urgent" data-live-dl-task="${esc(t.id)}">⏱ Hết giờ</span>`;
+      } else if (exp.hasDeadline) {
+        const isUrgent = exp.remainingMs <= 5 * 60 * 1000;
+        remPillHtml = `<span class="task-card-rem-pill${isUrgent ? ' is-urgent' : ''}" data-live-dl-task="${esc(t.id)}">⏱ Còn ${esc(formatDeadlineRemaining(exp.remainingMs))}</span>`;
+      } else {
+        remPillHtml = `<span class="task-card-rem-pill is-unlimited">⏱ Không giới hạn</span>`;
+      }
+
       if (exp.expired && !done) {
         statusText = `Task đã kết thúc (Hết hạn lúc ${exp.formattedAt})`;
         clsState = 'is-locked';
         subCls = 'task-text-err';
         dotCls = 'is-locked';
       } else if (exp.expired && done) {
-        statusText = `✓ Hoàn thành (${scoreBadge}) · Hết hạn (Chỉ xem kết quả)`;
+        statusText = `✓ Hoàn thành (${scoreBadge}) · Chỉ xem kết quả`;
         clsState = 'is-done';
         subCls = 'task-text-ok';
         dotCls = 'is-done';
       } else if (done) {
-        statusText = `✓ Hoàn thành (${scoreBadge})` + (exp.hasDeadline ? ` · Còn ${formatDeadlineRemaining(exp.remainingMs)}` : '');
+        statusText = `✓ Hoàn thành (${scoreBadge}) · ${t.theme}`;
         clsState = 'is-done';
         subCls = 'task-text-ok';
         dotCls = 'is-done';
@@ -1564,8 +1576,6 @@
         clsState = 'is-locked';
         subCls = 'task-text-err';
         dotCls = 'is-locked';
-      } else if (exp.hasDeadline) {
-        statusText = `${t.theme} · Còn ${formatDeadlineRemaining(exp.remainingMs)}`;
       }
       return `
         <button type="button" class="teacher-task-item task-card-modern ${clsState}" style="text-align:left;" onclick="TasksModule.closeStudentTasksModal(); TasksModule.openTaskBriefModal('${esc(t.id)}')">
@@ -1573,11 +1583,29 @@
           <div class="task-card-body">
             <div class="teacher-task-title">${esc(t.label)}</div>
             <div class="teacher-task-sub ${subCls}">${esc(statusText)}</div>
+            <div class="task-card-rem-row">${remPillHtml}</div>
           </div>
           <span class="task-status-dot ${dotCls}" aria-hidden="true"></span>
         </button>
       `;
     }).join('');
+  }
+
+  function tickStudentTasksModalCountdowns() {
+    const modal = document.getElementById('modal-student-tasks');
+    if (!modal || !modal.classList.contains('open')) {
+      clearInterval(studentTasksCountdownTimer);
+      studentTasksCountdownTimer = null;
+      return;
+    }
+    modal.querySelectorAll('[data-live-dl-task]').forEach((el) => {
+      const tid = el.getAttribute('data-live-dl-task');
+      if (!tid) return;
+      const dl = getTaskDeadlineInfo(tid);
+      if (!dl.hasDeadline) return;
+      el.classList.toggle('is-urgent', dl.expired || dl.remainingMs <= 5 * 60 * 1000);
+      el.textContent = dl.expired ? '⏱ Hết giờ' : `⏱ Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
+    });
   }
 
   function openStudentTasksModal() {
@@ -1590,10 +1618,14 @@
     }
     renderStudentTasksModalBody();
     document.getElementById('modal-student-tasks')?.classList.add('open');
+    clearInterval(studentTasksCountdownTimer);
+    studentTasksCountdownTimer = setInterval(tickStudentTasksModalCountdowns, 1000);
   }
 
   function closeStudentTasksModal(event) {
     if (event && event.target !== document.getElementById('modal-student-tasks')) return;
+    clearInterval(studentTasksCountdownTimer);
+    studentTasksCountdownTimer = null;
     document.getElementById('modal-student-tasks')?.classList.remove('open');
   }
 
@@ -1934,15 +1966,43 @@
     }
     const dlBadge = document.getElementById('task-study-deadline-badge');
     if (dlBadge) {
-      const dl = !isTeacherOrBypassed() ? getTaskDeadlineInfo(task.id) : { hasDeadline: false };
+      const dl = getTaskDeadlineInfo(task.id);
+      dlBadge.style.display = 'inline-flex';
       if (dl.hasDeadline) {
-        dlBadge.style.display = 'inline-flex';
-        dlBadge.classList.toggle('is-urgent', dl.remainingMs <= 5 * 60 * 1000);
+        dlBadge.classList.remove('is-unlimited');
+        dlBadge.classList.toggle('is-urgent', dl.expired || dl.remainingMs <= 5 * 60 * 1000);
         dlBadge.textContent = dl.expired ? '⏱ Hết giờ' : `⏱ Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
       } else {
-        dlBadge.style.display = 'none';
+        dlBadge.classList.remove('is-urgent');
+        dlBadge.classList.add('is-unlimited');
+        dlBadge.textContent = '⏱ Không giới hạn';
       }
     }
+    ensureStudyDeadlineTicker(task.id);
+  }
+
+  function ensureStudyDeadlineTicker(taskId) {
+    clearInterval(studyDeadlineTickTimer);
+    studyDeadlineTickTimer = null;
+    if (!taskId) return;
+    const dl0 = getTaskDeadlineInfo(taskId);
+    if (!dl0.hasDeadline) return;
+    studyDeadlineTickTimer = setInterval(() => {
+      const bar = document.getElementById('task-study-bar');
+      const curScope = B()?.getCurrentScopeKey?.() || '';
+      if (!bar || bar.style.display === 'none' || curScope !== taskId) {
+        clearInterval(studyDeadlineTickTimer);
+        studyDeadlineTickTimer = null;
+        return;
+      }
+      const dl = getTaskDeadlineInfo(taskId);
+      const badge = document.getElementById('task-study-deadline-badge');
+      if (badge && dl.hasDeadline) {
+        badge.classList.remove('is-unlimited');
+        badge.classList.toggle('is-urgent', dl.expired || dl.remainingMs <= 5 * 60 * 1000);
+        badge.textContent = dl.expired ? '⏱ Hết giờ' : `⏱ Còn ${formatDeadlineRemaining(dl.remainingMs)}`;
+      }
+    }, 1000);
   }
 
   function openTaskExamReadyModal(task) {
@@ -2525,6 +2585,10 @@
     if (idleTimer) {
       clearInterval(idleTimer);
       idleTimer = null;
+    }
+    if (studyDeadlineTickTimer) {
+      clearInterval(studyDeadlineTickTimer);
+      studyDeadlineTickTimer = null;
     }
     ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'input'].forEach((evt) => {
       window.removeEventListener(evt, bumpIdleActivity);
