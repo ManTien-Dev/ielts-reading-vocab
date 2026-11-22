@@ -109,7 +109,7 @@
   function speakCurrentWord(accentOverride, engineOverride) {
     const lemma = session?.currentItem?.lemma;
     if (!lemma) return;
-    const chosenEngine = engineOverride || (accentOverride ? 'browser' : 'youdao');
+    const chosenEngine = engineOverride || 'auto';
     speakWordAudio(lemma, accentOverride, chosenEngine);
   }
 

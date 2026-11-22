@@ -4158,10 +4158,10 @@
     document.getElementById('btn-flip-action').textContent = isCardFlipped ? 'Mặt trước' : 'Xem nghĩa';
     if (isCardFlipped && autoSpeak) {
       pendingInitialSpeak = false;
-      speakCurrentWord(preferredAccent, null, 'browser');
+      speakCurrentWord(preferredAccent, null, 'auto');
     } else if (pendingInitialSpeak && autoSpeak) {
       pendingInitialSpeak = false;
-      speakCurrentWord(preferredAccent, null, 'youdao');
+      speakCurrentWord(preferredAccent, null, 'auto');
     }
   }
 
@@ -4481,7 +4481,7 @@
       window.AppCore.audio.speak(text, {
         accent: targetAccent,
         rate,
-        engine: opts?.engine || 'browser',
+        engine: opts?.engine || 'auto',
         respectCustom: opts?.respectCustom !== false,
       });
       return;
@@ -4509,8 +4509,14 @@
       clearTimeout(speakTimeout);
       speakTimeout = null;
     }
-    // Front auto-speak -> Youdao; Back auto-speak & manual UK/US clicks -> default warm female browser voice
-    const chosenEngine = engineOverride || (event ? 'browser' : (isCardFlipped ? 'browser' : 'youdao'));
+    // Unified studio-first engine across PC, iPad, iPhone & Android so UK/US & front/back sound identical
+    const chosenEngine = engineOverride || 'auto';
+    const triggerBtn = event?.currentTarget?.closest?.('.btn-voice-speak') || event?.target?.closest?.('.btn-voice-speak');
+    if (triggerBtn) {
+      triggerBtn.classList.add('is-speaking');
+      clearTimeout(triggerBtn._speakPulseTimer);
+      triggerBtn._speakPulseTimer = setTimeout(() => triggerBtn.classList.remove('is-speaking'), 550);
+    }
     speakCleanTextReliable(item.lemma, targetAccent, 0.92, {
       engine: chosenEngine,
       respectCustom: !event,

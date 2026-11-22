@@ -1,11 +1,13 @@
 /* =========================================================
-   CORE OOP: AudioEngine — Unified Multi-Accent TTS & Audio Service
-   Prioritizes warm female Neural / Browser TTS voices, locked consistently
-   per accent so every word uses the exact same pleasant voice.
+   CORE OOP: AudioEngine — Unified Cross-Platform Multi-Accent TTS & Audio Service
+   Studio-first (consistent UK/US dictionary pronunciation across PC, iPad, iPhone, Android)
+   with synchronous iOS/iPadOS Safari gesture unlock + browser TTS fallback + stall watchdog.
    ========================================================= */
 (function () {
   const VOICE_PREF_KEY = 'ielts_preferred_voice_v1';
   const MALE_NAME_RE = /\b(david|mark|male|daniel|ryan|guy|george|alex|richard|sean|james|andrew|brian|christopher|eric|roger|steffan|liam|william)\b/i;
+  // Tiny 44-byte silent WAV used once on first touch to unlock HTMLAudioElement on iOS/iPadOS Safari
+  const SILENT_WAV_DATA_URI = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
 
   class AudioEngine {
     constructor() {
@@ -13,9 +15,11 @@
       this._lockedVoices = {};
       this._preferredVoiceName = this._loadPreferredVoiceName();
       this._studioAudio = null;
+      this._audioUnlocked = false;
       this._activeUtterance = null;
       this._speakSeq = 0;
       this._watchdog = null;
+      this._synthWatchdog = null;
       this.refreshVoices();
       try {
         if ('speechSynthesis' in window) {
@@ -27,11 +31,69 @@
         }
         const wake = () => {
           this.refreshVoices();
+          this.unlockAudio();
           try { if ('speechSynthesis' in window) window.speechSynthesis.resume?.(); } catch (_) {}
         };
+        window.addEventListener('touchstart', wake, { once: true, passive: true });
         window.addEventListener('pointerdown', wake, { once: true, passive: true });
         window.addEventListener('keydown', wake, { once: true, passive: true });
       } catch (_) {}
+    }
+
+    _isMobileOrWebKit() {
+      try {
+        const ua = String(navigator.userAgent || '');
+        const isIPadDesktop = /Macintosh/i.test(ua) && Number(navigator.maxTouchPoints || 0) > 1;
+        const isMobile = /iPad|iPhone|iPod|Android|Mobile/i.test(ua);
+        const isSafari = /Safari/i.test(ua) && !/Chrome|CriOS|Edg|OPR/i.test(ua);
+        return isIPadDesktop || isMobile || isSafari;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    _ensureStudioAudio() {
+      if (!this._studioAudio) {
+        const audio = new Audio();
+        audio.preload = 'auto';
+        audio.playsInline = true;
+        try {
+          audio.setAttribute('playsinline', '');
+          audio.setAttribute('webkit-playsinline', '');
+        } catch (_) {}
+        this._studioAudio = audio;
+      }
+      return this._studioAudio;
+    }
+
+    unlockAudio() {
+      if (this._audioUnlocked) return;
+      this._audioUnlocked = true;
+      try {
+        if (navigator.webdriver) return;
+        const audio = this._ensureStudioAudio();
+        if (!audio.src) {
+          audio.muted = true;
+          audio.src = SILENT_WAV_DATA_URI;
+          const p = audio.play?.();
+          if (p && typeof p.then === 'function') {
+            p.then(() => {
+              try {
+                audio.pause();
+                audio.muted = false;
+                audio.currentTime = 0;
+              } catch (_) {}
+            }).catch(() => {
+              audio.muted = false;
+              this._audioUnlocked = false;
+            });
+          } else {
+            audio.muted = false;
+          }
+        }
+      } catch (_) {
+        this._audioUnlocked = false;
+      }
     }
 
     _loadPreferredVoiceName() {
@@ -114,16 +176,25 @@
       return chosen;
     }
 
-    stop() {
-      this._speakSeq++;
+    _clearWatchdogs() {
       if (this._watchdog) {
         clearTimeout(this._watchdog);
         this._watchdog = null;
       }
+      if (this._synthWatchdog) {
+        clearTimeout(this._synthWatchdog);
+        this._synthWatchdog = null;
+      }
+    }
+
+    stop() {
+      this._speakSeq++;
+      this._clearWatchdogs();
       if (this._studioAudio) {
         try {
           this._studioAudio.onplaying = null;
           this._studioAudio.onerror = null;
+          this._studioAudio.onended = null;
           this._studioAudio.pause();
           this._studioAudio.currentTime = 0;
         } catch (_) {}
@@ -151,13 +222,12 @@
     playYoudaoAudio(clean, accent = 'en-US', rate = 0.92, seq = 0, allowFallbackToBrowser = true) {
       if (!this.canUseYoudaoAudio(clean)) return false;
       try {
-        if (!this._studioAudio) {
-          this._studioAudio = new Audio();
-          this._studioAudio.preload = 'auto';
-        }
-        const audio = this._studioAudio;
+        const audio = this._ensureStudioAudio();
+        audio.muted = false;
+        audio.volume = 1.0;
         audio.onplaying = null;
         audio.onerror = null;
+        audio.onended = null;
         try { audio.pause(); } catch (_) {}
 
         const isGb = String(accent).toLowerCase().startsWith('en-gb');
@@ -179,6 +249,7 @@
 
         audio.onplaying = () => {
           settled = true;
+          this._audioUnlocked = true;
           if (this._watchdog) {
             clearTimeout(this._watchdog);
             this._watchdog = null;
@@ -188,14 +259,18 @@
 
         const numRate = Number(rate);
         const studioRate = (Number.isFinite(numRate) && Math.abs(numRate - 0.92) > 0.14)
-          ? Math.max(0.75, Math.min(1.35, numRate))
+          ? Math.max(0.68, Math.min(1.35, numRate))
           : 1.0;
 
         audio.src = url;
         audio.playbackRate = studioRate;
         const playPromise = audio.play?.();
         if (playPromise && typeof playPromise.catch === 'function') {
-          playPromise.catch(() => fallbackToBrowser());
+          playPromise.catch((err) => {
+            if (this._speakSeq !== seq) return;
+            if (err && err.name === 'AbortError') return;
+            fallbackToBrowser();
+          });
         }
 
         if (allowFallbackToBrowser) {
@@ -224,6 +299,7 @@
       }
 
       try {
+        const isTouchWebKit = this._isMobileOrWebKit();
         const wasBusy = Boolean(window.speechSynthesis.speaking || window.speechSynthesis.pending);
         if (wasBusy) {
           window.speechSynthesis.cancel();
@@ -239,10 +315,29 @@
             utt.rate = Math.max(0.65, Math.min(1.5, Number(rate) || 0.92));
             if (bestVoice) utt.voice = bestVoice;
             this._activeUtterance = utt;
+
+            let started = false;
+            utt.onstart = () => {
+              started = true;
+              if (this._synthWatchdog) {
+                clearTimeout(this._synthWatchdog);
+                this._synthWatchdog = null;
+              }
+            };
             utt.onend = () => {
+              started = true;
+              if (this._synthWatchdog) {
+                clearTimeout(this._synthWatchdog);
+                this._synthWatchdog = null;
+              }
               if (this._activeUtterance === utt) this._activeUtterance = null;
             };
             utt.onerror = (ev) => {
+              started = true;
+              if (this._synthWatchdog) {
+                clearTimeout(this._synthWatchdog);
+                this._synthWatchdog = null;
+              }
               if (this._activeUtterance === utt) this._activeUtterance = null;
               const code = String(ev?.error || '');
               if (code === 'interrupted' || code === 'canceled') return;
@@ -251,17 +346,32 @@
               }
             };
             window.speechSynthesis.speak(utt);
+
+            // Watchdog: iOS/iPadOS Safari & Android WebViews can silently stall without firing onstart/onerror
+            if (allowFallbackToYoudao && this.canUseYoudaoAudio(clean)) {
+              this._synthWatchdog = setTimeout(() => {
+                if (!started && this._speakSeq === seq) {
+                  try { window.speechSynthesis.cancel(); } catch (_) {}
+                  this.playYoudaoAudio(clean, accent, rate, seq, false);
+                }
+              }, 900);
+            }
           } catch (_) {
             if (allowFallbackToYoudao && this._speakSeq === seq) {
               this.playYoudaoAudio(clean, accent, rate, seq, false);
             }
           }
         };
-        if (wasBusy) {
-          // 40ms micro-gap avoids Chromium bug where cancel() silently swallows an immediately queued speak()
+
+        // On iOS / iPadOS / Safari / Mobile, MUST speak synchronously inside the user tap stack
+        // (deferring into setTimeout loses Transient User Activation and causes silent drops!)
+        if (isTouchWebKit) {
+          runSpeak();
+        } else if (wasBusy) {
+          // 40ms micro-gap avoids desktop Chromium bug where cancel() silently swallows an immediately queued speak()
           setTimeout(runSpeak, 40);
         } else if (!this._voices.length) {
-          // Brief 100ms wait on very first call so voices hydrate and word #1 uses the same warm female voice
+          // Brief 100ms wait on very first desktop call so neural voices hydrate
           setTimeout(runSpeak, 100);
         } else {
           runSpeak();
@@ -272,18 +382,16 @@
       }
     }
 
-    speak(text, { accent = 'en-US', rate = 0.92, engine = 'browser', respectCustom = true } = {}) {
+    speak(text, { accent = 'en-US', rate = 0.92, engine = 'auto', respectCustom = true } = {}) {
       const clean = String(text || '').replace(/\s*\/\s*/g, ' or ').trim();
       if (!clean) return false;
       const seq = ++this._speakSeq;
-      if (this._watchdog) {
-        clearTimeout(this._watchdog);
-        this._watchdog = null;
-      }
+      this._clearWatchdogs();
       if (this._studioAudio) {
         try {
           this._studioAudio.onplaying = null;
           this._studioAudio.onerror = null;
+          this._studioAudio.onended = null;
           this._studioAudio.pause();
         } catch (_) {}
       }
@@ -293,7 +401,11 @@
         }
       } catch (_) {}
 
-      if (engine === 'youdao') {
+      // If user explicitly pinned a custom browser voice in Settings (and respectCustom !== false), honor it first
+      const hasPinnedBrowserVoice = Boolean(respectCustom && this._preferredVoiceName);
+      const preferStudio = (engine === 'youdao') || (engine === 'auto' && !hasPinnedBrowserVoice);
+
+      if (preferStudio) {
         if (this.playYoudaoAudio(clean, accent, rate, seq, true)) {
           return true;
         }

@@ -1697,7 +1697,7 @@ html[data-motion="classic"] #screen-study #fc-card .fc-face {
 }
 html[data-motion="pro"] #screen-study #fc-card .fc-face-front,
 html[data-motion="classic"] #screen-study #fc-card .fc-face-front {
-  transform: rotateY(0deg) !important;
+  transform: rotateY(0deg) translateZ(1px) !important;
   z-index: 2;
   opacity: 1;
   pointer-events: auto;
@@ -1705,7 +1705,7 @@ html[data-motion="classic"] #screen-study #fc-card .fc-face-front {
 }
 html[data-motion="pro"] #screen-study #fc-card .fc-face-back,
 html[data-motion="classic"] #screen-study #fc-card .fc-face-back {
-  transform: rotateY(180deg) !important;
+  transform: rotateY(180deg) translateZ(0px) !important;
   z-index: 1;
   opacity: 0;
   pointer-events: none;
@@ -1721,12 +1721,14 @@ html[data-motion="classic"] #screen-study #fc-card .fc-face-back {
 }
 html[data-motion="pro"] #screen-study #fc-card.flipped .fc-face-front,
 html[data-motion="classic"] #screen-study #fc-card.flipped .fc-face-front {
+  transform: rotateY(0deg) translateZ(0px) !important;
   z-index: 1;
   opacity: 0;
   pointer-events: none;
 }
 html[data-motion="pro"] #screen-study #fc-card.flipped .fc-face-back,
 html[data-motion="classic"] #screen-study #fc-card.flipped .fc-face-back {
+  transform: rotateY(180deg) translateZ(1px) !important;
   z-index: 2;
   opacity: 1;
   pointer-events: auto;
@@ -2119,10 +2121,23 @@ html[data-mode="calm"] #screen-study .fc-face-back .btn-voice-speak {
   box-shadow: 0 1px 0 var(--lip-btn) !important;
 }
 html[data-mode="calm"] #screen-study .fc-face-front .btn-voice-speak:hover,
-html[data-mode="calm"] #screen-study .fc-face-back .btn-voice-speak:hover {
+html[data-mode="calm"] #screen-study .fc-face-back .btn-voice-speak:hover,
+#screen-study .btn-voice-speak.is-speaking {
   background: var(--accent) !important;
   color: var(--accent-ink) !important;
   border-color: transparent !important;
+}
+#screen-study .btn-voice-speak {
+  position: relative;
+  z-index: 4;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 1199px) {
+  #screen-study .btn-voice-speak {
+    min-width: 44px;
+    min-height: 36px !important;
+  }
 }
 html[data-mode="calm"] #screen-study .fc-flip-prompt {
   font-size: 12px !important;
