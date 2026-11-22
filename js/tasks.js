@@ -144,8 +144,8 @@
   ];
 
   let _generatedSuiteCache = null;
-  let activeStudentTaskTab = 'paraphrase';
-  let activeTeacherTaskTab = 'paraphrase';
+  let activeStudentTaskTab = 'foundation';
+  let activeTeacherTaskTab = 'foundation';
 
   function isAnyTaskId(raw) {
     return Boolean(raw && /^(task|fnd|acd|adv)_\d{2}$/i.test(String(raw).trim()));
@@ -1041,7 +1041,7 @@
   }
 
   function selectTeacherTaskRange(startNum, endNum) {
-    const meta = TASK_SUITES_META.find((m) => m.key === activeTeacherTaskTab) || TASK_SUITES_META[2];
+    const meta = TASK_SUITES_META.find((m) => m.key === activeTeacherTaskTab) || TASK_SUITES_META[0];
     for (let n = startNum; n <= endNum; n++) {
       const id = normalizeTaskId(`${meta.prefix}_${String(n).padStart(2, '0')}`);
       if (id) teacherSelectedIds.add(id);
@@ -2416,9 +2416,7 @@
 
   function openStudentTasksModal() {
     const curScope = B()?.getCurrentScopeKey?.() || '';
-    if (TASK_SUITES_META.some((m) => m.key === curScope)) {
-      activeStudentTaskTab = curScope;
-    } else if (isAnyTaskId(curScope)) {
+    if (isAnyTaskId(curScope)) {
       const curT = getTaskById(curScope);
       if (curT?.scopeKey) activeStudentTaskTab = curT.scopeKey;
     }

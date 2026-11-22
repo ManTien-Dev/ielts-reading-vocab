@@ -74,7 +74,7 @@
   let activeView = resolveInitialView();
   let activeHomeChartPeriod = 'week';
   let activeHomeLbPeriod = 'week';
-  let activeInlineTaskSuite = 'paraphrase';
+  let activeInlineTaskSuite = 'foundation';
 
   // --- 1. PERSISTED APPEARANCE ENGINE (Calm/Vibrant x Light/Dark x 5 Palettes x 3 Motions) ---
   function applySavedAppearance() {
