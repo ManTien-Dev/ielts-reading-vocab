@@ -2721,7 +2721,7 @@
     const { speak = true } = options;
     if (speak && autoSpeak && !isCardFlipped) {
       pendingInitialSpeak = false;
-      speakCurrentWord(preferredAccent, null, 'youdao');
+      speakCurrentWord('en-US', null, 'auto');
     }
   }
 
@@ -4158,10 +4158,10 @@
     document.getElementById('btn-flip-action').textContent = isCardFlipped ? 'Mặt trước' : 'Xem nghĩa';
     if (isCardFlipped && autoSpeak) {
       pendingInitialSpeak = false;
-      speakCurrentWord(preferredAccent, null, 'auto');
+      speakCurrentWord('en-GB', null, 'auto');
     } else if (pendingInitialSpeak && autoSpeak) {
       pendingInitialSpeak = false;
-      speakCurrentWord(preferredAccent, null, 'auto');
+      speakCurrentWord('en-US', null, 'auto');
     }
   }
 
@@ -4238,7 +4238,7 @@
       : null;
     if (autoSpeak && previewNextItem && currentUser) {
       pendingInitialSpeak = false;
-      speakCleanTextReliable(previewNextItem.lemma, preferredAccent, 0.92, { engine: 'youdao' });
+      speakCleanTextReliable(previewNextItem.lemma, 'en-US', 0.92, { engine: 'auto' });
     }
     scene.classList.add('shifting');
     motionWrap.classList.add(outCls);
@@ -4468,8 +4468,8 @@
     updateAutoSpeakUI();
     saveState();
     if (autoSpeak) {
-      speakCurrentWord(preferredAccent);
-      showToast('Đã bật tự động đọc từ vựng');
+      speakCurrentWord();
+      showToast('Đã bật tự đọc (Mặt trước US · Mặt sau UK)');
     } else {
       stopSpeechPlayback();
       showToast('Đã tắt tự động đọc từ vựng');
@@ -4497,11 +4497,12 @@
     } catch (_) {}
   }
 
-  function speakCurrentWord(accent = preferredAccent, event, engineOverride) {
+  function speakCurrentWord(accent, event, engineOverride) {
     if (event && typeof event.stopPropagation === 'function') {
       event.stopPropagation();
     }
-    const targetAccent = (accent === 'en-GB' || accent === 'en-US') ? accent : preferredAccent;
+    const defaultSideAccent = isCardFlipped ? 'en-GB' : 'en-US';
+    const targetAccent = (accent === 'en-GB' || accent === 'en-US') ? accent : defaultSideAccent;
     const item = currentScopeList[currentCardIndex];
     if (!item || !currentUser) return;
 
@@ -5276,7 +5277,7 @@
       prevCard();
     } else if (e.key === 'r' || e.key === 'R') {
       e.preventDefault();
-      speakCurrentWord(preferredAccent);
+      speakCurrentWord(isCardFlipped ? 'en-GB' : 'en-US');
     } else if (['1', '2', '3'].includes(e.key) && isCardFlipped) {
       assessCurrentWord(parseInt(e.key, 10));
     }
@@ -5794,7 +5795,7 @@
       const item = currentScopeList[currentCardIndex];
       if (!item || !currentUser) return;
       if (speakTimeout) { clearTimeout(speakTimeout); speakTimeout = null; }
-      speakCleanTextReliable(item.lemma, preferredAccent, 0.62);
+      speakCleanTextReliable(item.lemma, isCardFlipped ? 'en-GB' : 'en-US', 0.62);
       showToast(`Đọc chậm (0.62×): ${item.lemma}`);
     },
     getStudyControlsState: () => ({
