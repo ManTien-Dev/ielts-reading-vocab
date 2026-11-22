@@ -4514,6 +4514,12 @@
 
       const clip = t2Clips[t2ClipIndex];
       const isTfng = clip.type === 'tfng';
+      const isYnng = clip.type === 'ynng';
+      const isTriChoice = isTfng || isYnng;
+      const lvlCode = String(clip.passageLevel || '').toUpperCase();
+      const lvlLabel = lvlCode === 'P1' ? 'Passage 1' : (lvlCode === 'P2' ? 'Passage 2' : (lvlCode === 'P3' ? 'Passage 3' : ''));
+      const typeLabel = isTfng ? 'TRUE / FALSE / NOT GIVEN' : (isYnng ? 'YES / NO / NOT GIVEN' : 'Multiple Choice');
+      const typeCls = isTfng ? 'is-tfng' : (isYnng ? 'is-ynng' : 'is-mcq');
       const pct = Math.round(((t2ClipIndex + (t2ClipAnswered ? 1 : 0)) / totalClips) * 100);
       const letters = ['A', 'B', 'C', 'D'];
       const excerptHtml = t2ClipAnswered
@@ -4521,14 +4527,14 @@
         : esc(clip.excerpt);
 
       const optsHtml = (clip.options || []).map((opt, idx) => {
-        let cls = isTfng ? 't2-clip-tfng-btn' : 'task-q-opt';
+        let cls = isTriChoice ? 't2-clip-tfng-btn' : 'task-q-opt';
         if (t2ClipAnswered) {
           const isAns = String(opt).trim().toLowerCase() === String(clip.answer).trim().toLowerCase();
           const isPicked = String(opt).trim().toLowerCase() === String(t2ClipChosen).trim().toLowerCase();
           if (isAns) cls += ' is-right';
           else if (isPicked) cls += ' is-wrong';
         }
-        return isTfng
+        return isTriChoice
           ? `<button type="button" class="${cls}" data-opt-idx="${idx}" ${t2ClipAnswered ? 'disabled' : ''} onclick="TasksModule.answerTest2Clip(${idx})">${esc(opt)}</button>`
           : `<button type="button" class="${cls}" data-opt-idx="${idx}" ${t2ClipAnswered ? 'disabled' : ''} onclick="TasksModule.answerTest2Clip(${idx})"><span class="task-q-opt-key">${letters[idx] || idx + 1}</span><span>${esc(opt)}</span></button>`;
       }).join('');
@@ -4557,15 +4563,16 @@
           <div class="task-exam-header-row">
             <div class="task-exam-title-group">
               <h2 class="task-exam-title">Đọc hiểu Paraphrase · Câu ${t2ClipIndex + 1} / ${totalClips}</h2>
-              <span class="t2-clip-type-badge ${isTfng ? 'is-tfng' : 'is-mcq'}">${isTfng ? 'TRUE / FALSE / NOT GIVEN' : 'Multiple Choice'}</span>
+              ${lvlLabel ? `<span class="t2-clip-lvl-badge is-${lvlCode.toLowerCase()}">${lvlLabel}</span>` : ''}
+              <span class="t2-clip-type-badge ${typeCls}">${typeLabel}</span>
             </div>
             <div class="task-stat-pills">
               <span class="recall-stage-pill">Đúng ${t2Correct} / ${totalClips}</span>
             </div>
           </div>
           <div class="t2-clip-excerpt" lang="en">${excerptHtml}</div>
-          <div class="t2-clip-prompt" lang="en">${esc(clip.prompt)}</div>
-          <div class="${isTfng ? 't2-clip-tfng-row' : 'task-q-opts'}" id="task-t2-clip-opts">${optsHtml}</div>
+          <div class="t2-clip-prompt" lang="en"><span class="t2-clip-q-label">Question ${t2ClipIndex + 1}:</span> ${esc(clip.prompt)}</div>
+          <div class="${isTriChoice ? 't2-clip-tfng-row' : 'task-q-opts'}" id="task-t2-clip-opts">${optsHtml}</div>
           ${feedbackHtml}
           ${t2ClipAnswered ? `
             <div style="display:flex; justify-content:flex-end; margin-top:auto; padding-top:12px;">
@@ -5632,14 +5639,6 @@
     } catch (_) {}
     const isTeacherSession = Boolean(isPreviewTestMode || B()?.isTeacherUser?.() || B()?.getCurrentUser?.()?.role === 'teacher');
 
-    const stepperHtml = `
-      <div class="t3-steps-bar" id="t3-steps-bar" aria-label="Tiến trình Test 3">
-        <span class="t3-step-pill ${t3V2Step1Locked ? 'is-done' : 'is-active'}" id="t3-step-pill-1">${t3V2Step1Locked ? '✓ 1. Ý chính từng đoạn (Đã khóa)' : '1. Đọc hiểu &amp; Ý chính'}</span>
-        <span class="t3-step-arrow" aria-hidden="true">→</span>
-        <span class="t3-step-pill ${t3V2Step2Submitted ? 'is-done' : (t3V2Step1Locked ? 'is-active' : 'is-locked')}" id="t3-step-pill-2">2. Headings &amp; Summary</span>
-      </div>
-    `;
-
     const bodyHtml = !t3V2Step1Locked
       ? `
         <div id="t3-v2-step1-wrap" class="t3-writing-step-wrap">
@@ -5666,10 +5665,6 @@
         </div>
       `
       : `
-        <div class="t3-step1-locked-bar" id="t3-v2-step1-locked-bar">
-          <span>🔒 Bước 1 (Ý chính từng đoạn &amp; Tóm tắt) đã nộp &amp; khóa — Điểm AI: <strong>${Number(t3V2Step1Snapshot?.grade?.score || 0).toFixed(1)}/10</strong></span>
-          <span class="t3-step1-locked-sub">Hoàn thành Bước 2 để mở Bảng Đối Chiếu</span>
-        </div>
         <div id="t3-v2-step2-wrap" class="t3-v2-step2-wrap">
           ${buildT3V2Step2InnerHtml(esc)}
         </div>
@@ -5680,36 +5675,22 @@
         <article class="practice-paper english-paper" lang="en">
           <div class="paper-eyebrow">
             <span class="paper-title-upper">${esc(String(p.title || p.topic || activeTask.theme).toUpperCase())}</span>
-            <span class="paper-wc">${p.wordCount} từ</span>
+            <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
+              ${p.passageLevel ? `<span class="t2-clip-lvl-badge is-${esc(String(p.passageLevel).toLowerCase())}">${p.passageLevel === 'P1' ? 'Passage 1' : (p.passageLevel === 'P2' ? 'Passage 2' : 'Passage 3')}</span>` : ''}
+              <span class="paper-wc">${p.wordCount} từ</span>
+            </span>
           </div>
           <div id="task-passage-hl-legend" class="passage-hl-legend" style="display:none; margin-bottom:12px;"></div>
           <div class="english-passage" id="task-english-passage">${esc(p.text)}</div>
         </article>
 
         <section class="practice-paper writing-paper" aria-label="Bài làm và Đối chiếu">
-          <div class="t3-tabs-bar" role="tablist">
-            <button type="button" role="tab" id="t3-tab-btn-write" class="t3-tab-btn active" onclick="TasksModule.switchT3Tab('write')">
-              Bài làm
-            </button>
-            <button type="button" role="tab" id="t3-tab-btn-grade" class="t3-tab-btn" onclick="TasksModule.switchT3Tab('grade')">
-              Đối chiếu &amp; Kết quả
-              <span id="t3-tab-score-badge" class="t3-tab-score-badge" style="display:none;"></span>
-            </button>
-          </div>
-
           <div id="t3-pane-write">
-            ${stepperHtml}
             ${bodyHtml}
           </div>
 
           <div id="t3-pane-grade" style="display:none;">
-            <div id="task-ai-grade-result" class="ai-grade-box" style="display:block; background:var(--bg-soft); border-color:var(--card-border);">
-              <div style="text-align:center; padding:36px 16px; color:var(--text-muted);">
-                <div style="font-size:18px; font-weight:750; color:var(--text-bright); margin-bottom:8px;">Chưa hoàn thành đủ 2 bước</div>
-                <div style="font-size:15.5px; margin-bottom:18px;">Hoàn thành &amp; khóa Bước 1 (Ghi ý chính từng đoạn &amp; Tóm tắt), sau đó làm Bước 2 (Matching Headings &amp; Summary) để xem Bảng Đối Chiếu 2 cột.</div>
-                <button type="button" class="btn btn-primary" onclick="TasksModule.switchT3Tab('write')">← Quay lại bài làm</button>
-              </div>
-            </div>
+            <div id="task-ai-grade-result" class="ai-grade-box" style="display:block; background:var(--bg-soft); border-color:var(--card-border);"></div>
           </div>
         </section>
       </div>
@@ -5834,7 +5815,10 @@
         <article class="practice-paper english-paper" lang="en">
           <div class="paper-eyebrow">
             <span class="paper-title-upper">${esc(String(p.title || p.topic || activeTask.theme).toUpperCase())}</span>
-            <span class="paper-wc">${p.wordCount} từ</span>
+            <span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
+              ${p.passageLevel ? `<span class="t2-clip-lvl-badge is-${esc(String(p.passageLevel).toLowerCase())}">${p.passageLevel === 'P1' ? 'Passage 1' : (p.passageLevel === 'P2' ? 'Passage 2' : 'Passage 3')}</span>` : ''}
+              <span class="paper-wc">${p.wordCount} từ</span>
+            </span>
           </div>
           <div id="task-passage-hl-legend" class="passage-hl-legend" style="display:none; margin-bottom:12px;"></div>
           <div class="english-passage" id="task-english-passage">${esc(p.text)}</div>
