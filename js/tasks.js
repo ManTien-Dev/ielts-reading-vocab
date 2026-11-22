@@ -1405,7 +1405,7 @@
     bridge.showToast?.('Đã xuất file Excel (.csv) báo cáo lớp!');
   }
 
-  let teacherTableView = 'full';
+  let teacherTableView = 'today';
 
   function setTeacherTableView(mode) {
     const next = (mode === 'today' || mode === 'month' || mode === 'full') ? mode : 'full';
@@ -4756,7 +4756,7 @@
         <div class="task-card-panel" style="text-align:center; padding:34px 28px;">
           <h2 style="margin:0 0 10px; font-size:25px; font-weight:850;">Kết quả Test 2: ${t2Correct} / ${totalT2}</h2>
           <p style="color:var(--text-muted); font-size:16px; margin:0 0 18px;">
-            ${passed ? 'Đạt yêu cầu! Tiếp tục làm bài dịch cuối.' : `Cần đạt tối thiểu ${passThreshold}/${totalT2} để qua Test 2.`}
+            ${passed ? 'Đạt yêu cầu! Tiếp tục sang Test 3 (Đọc hiểu &amp; Ý chính).' : `Cần đạt tối thiểu ${passThreshold}/${totalT2} để qua Test 2.`}
           </p>
           ${mistakesHtml}
           ${passed
@@ -5300,7 +5300,7 @@
     if (skipForTeacher && isTeacherSession && transWords === 0 && sumWords === 0) {
       t3V2Step1Locked = true;
       t3V2Step1Snapshot = {
-        trans: '(Chế độ xem thử Giáo viên — đã bỏ qua nhập bản dịch)',
+        trans: '(Chế độ xem thử Giáo viên — đã bỏ qua nhập ý chính từng đoạn)',
         summary: '(Chế độ xem thử Giáo viên — đã bỏ qua nhập tóm tắt)',
         grade: {
           score: 8.5,
@@ -5316,12 +5316,12 @@
       return;
     }
 
-    if (!isTeacherSession && (transWords < 20 || sumWords < 8)) {
-      B()?.showToast?.(`Vui lòng dịch đầy đủ đoạn văn (>= 20 từ, hiện ${transWords}) và viết tóm tắt ý chính (>= 8 từ, hiện ${sumWords}) trước khi khóa Bước 1!`);
+    if (!isTeacherSession && (transWords < 20 || sumWords < 6)) {
+      B()?.showToast?.(`Vui lòng ghi ngắn gọn ý chính các đoạn (>= 20 từ, hiện ${transWords}) và tóm tắt tổng quát (>= 6 từ, hiện ${sumWords}) trước khi khóa Bước 1!`);
       return;
     }
     if (transWords === 0 && sumWords === 0) {
-      B()?.showToast?.('Vui lòng nhập bản dịch và tóm tắt ý chính để nộp Bước 1!');
+      B()?.showToast?.('Vui lòng nhập ý chính từng đoạn và tóm tắt tổng quát để nộp Bước 1!');
       return;
     }
 
@@ -5347,7 +5347,7 @@
         return;
       }
       if (!isTeacherSession && Number(res.grade.score) <= 2.0) {
-        B()?.showToast?.(res.grade.overallComment || 'Bài làm chưa hợp lệ (nghi gõ rác hoặc chưa dịch tiếng Việt). Hãy sửa lại trước khi khóa!');
+        B()?.showToast?.(res.grade.overallComment || 'Bài làm chưa hợp lệ (nghi gõ rác hoặc chưa diễn đạt bằng tiếng Việt). Hãy sửa lại trước khi khóa!');
         return;
       }
 
@@ -5408,7 +5408,7 @@
     const linesHtml = (g.lineFeedback || []).slice(0, 6).map((lf) => `
       <div class="t3-compare-item">
         <div><strong>Cụm / câu cần chú ý:</strong> ${esc(lf.issue || '')}</div>
-        ${lf.student ? `<div class="task-text-err" style="margin-top:3px;"><strong>Bạn dịch:</strong> ${esc(lf.student)}</div>` : ''}
+        ${lf.student ? `<div class="task-text-err" style="margin-top:3px;"><strong>Bạn viết:</strong> ${esc(lf.student)}</div>` : ''}
         ${lf.advice ? `<div style="margin-top:3px;"><strong>Phân tích:</strong> ${esc(lf.advice)}</div>` : ''}
         ${lf.suggested ? `<div class="task-text-ok" style="margin-top:3px;"><strong>Gợi ý:</strong> ${esc(lf.suggested)}</div>` : ''}
       </div>
@@ -5468,23 +5468,23 @@
         </div>
       </div>
 
-      <div class="t3-compare-block-title">Đối chiếu 2 · Bản dịch &amp; Phân tích AI</div>
+      <div class="t3-compare-block-title">Đối chiếu 2 · Ý chính từng đoạn &amp; Phân tích AI</div>
       <div class="t3-compare-grid">
         <div class="t3-compare-card">
-          <div class="t3-compare-col-head">Bản dịch của bạn (Bước 1)</div>
+          <div class="t3-compare-col-head">Ý hiểu từng đoạn của bạn (Bước 1)</div>
           <div class="t3-compare-student-text">${esc(snap.trans || '(Trống)')}</div>
         </div>
         <div class="t3-compare-card">
-          <div class="t3-compare-col-head">Bản dịch chuẩn</div>
+          <div class="t3-compare-col-head">Bản diễn giải / dịch chuẩn</div>
           <div class="t3-compare-model-text">${esc(g.modelTranslation || generateTaskModelTranslation(activeTask))}</div>
         </div>
       </div>
 
       <div class="ai-criteria-grid" style="margin-top:14px;">
-        <div class="ai-crit-pill"><span>Độ chính xác</span><span>${c.accuracy ?? '--'}/10</span></div>
-        <div class="ai-crit-pill"><span>Từ nối định hướng</span><span>${c.signalWords ?? '--'}/10</span></div>
-        <div class="ai-crit-pill"><span>Đoán từ ngữ cảnh</span><span>${c.contextInference ?? '--'}/10</span></div>
-        <div class="ai-crit-pill"><span>Tóm tắt ý chính</span><span>${c.summary ?? '--'}/10</span></div>
+        <div class="ai-crit-pill"><span>Đúng ý từng đoạn</span><span>${c.accuracy ?? '--'}/10</span></div>
+        <div class="ai-crit-pill"><span>Mạch từ nối</span><span>${c.signalWords ?? '--'}/10</span></div>
+        <div class="ai-crit-pill"><span>Hiểu từ khóa ngữ cảnh</span><span>${c.contextInference ?? '--'}/10</span></div>
+        <div class="ai-crit-pill"><span>Tóm tắt tổng quát</span><span>${c.summary ?? '--'}/10</span></div>
       </div>
       <div style="font-size:15.5px; line-height:1.58; margin-top:10px;"><strong>Nhận xét tổng hợp:</strong> ${esc(g.overallComment || '')}</div>
       ${linesHtml ? `<div class="t3-compare-items-stack" style="margin-top:10px;">${linesHtml}</div>` : ''}
@@ -5634,7 +5634,7 @@
 
     const stepperHtml = `
       <div class="t3-steps-bar" id="t3-steps-bar" aria-label="Tiến trình Test 3">
-        <span class="t3-step-pill ${t3V2Step1Locked ? 'is-done' : 'is-active'}" id="t3-step-pill-1">${t3V2Step1Locked ? '✓ 1. Dịch &amp; Tóm tắt (Đã khóa)' : '1. Dịch &amp; Tóm tắt'}</span>
+        <span class="t3-step-pill ${t3V2Step1Locked ? 'is-done' : 'is-active'}" id="t3-step-pill-1">${t3V2Step1Locked ? '✓ 1. Ý chính từng đoạn (Đã khóa)' : '1. Đọc hiểu &amp; Ý chính'}</span>
         <span class="t3-step-arrow" aria-hidden="true">→</span>
         <span class="t3-step-pill ${t3V2Step2Submitted ? 'is-done' : (t3V2Step1Locked ? 'is-active' : 'is-locked')}" id="t3-step-pill-2">2. Headings &amp; Summary</span>
       </div>
@@ -5645,17 +5645,17 @@
         <div id="t3-v2-step1-wrap" class="t3-writing-step-wrap">
           <div class="t3-trans-field">
             <label class="writing-label" for="task-trans-input">
-              <span>Bước 1 · Dịch toàn đoạn (4 đoạn A–D)</span>
+              <span>Bước 1 · Ghi ý chính từng đoạn (A–D)</span>
               <span id="task-trans-wc" style="color:var(--text-muted); font-size:14.5px;">0 từ</span>
             </label>
-            <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Tự đọc hiểu đoạn văn bên trái và dịch hoàn chỉnh sang tiếng Việt (sẽ khóa khi nộp để mở Bước 2)...">${esc(savedDraft.trans || '')}</textarea>
+            <textarea id="task-trans-input" class="translation-input" lang="vi" placeholder="Đọc hiểu từng đoạn A, B, C, D rồi ghi ngắn gọn ý chính bằng tiếng Việt theo ý hiểu (không cần dịch từng từ)...">${esc(savedDraft.trans || '')}</textarea>
           </div>
           <div class="t3-sum-field">
             <label class="writing-label" for="task-summary-input">
-              <span>Tóm tắt ý chính (2–3 câu trước khi xem Headings &amp; Summary)</span>
+              <span>Tóm tắt tổng quát cả bài (1–2 câu)</span>
               <span id="task-sum-wc" style="color:var(--text-muted); font-size:14.5px;">0 từ</span>
             </label>
-            <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Tự tóm tắt mạch ý chính của cả bài đọc...">${esc(savedDraft.summary || '')}</textarea>
+            <textarea id="task-summary-input" class="summary-input" lang="vi" placeholder="Gộp mạch ý chính toàn bài trong 1–2 câu ngắn gọn...">${esc(savedDraft.summary || '')}</textarea>
           </div>
           <div style="display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; flex-shrink:0;">
             ${isTeacherSession ? `<button type="button" class="btn-subtle" id="btn-t3-v2-skip-step1" onclick="TasksModule.submitT3V2Step1(true)">Bỏ qua → Xem Bước 2</button>` : ''}
@@ -5667,7 +5667,7 @@
       `
       : `
         <div class="t3-step1-locked-bar" id="t3-v2-step1-locked-bar">
-          <span>🔒 Bước 1 (Dịch &amp; Tóm tắt) đã nộp &amp; khóa — Điểm AI: <strong>${Number(t3V2Step1Snapshot?.grade?.score || 0).toFixed(1)}/10</strong></span>
+          <span>🔒 Bước 1 (Ý chính từng đoạn &amp; Tóm tắt) đã nộp &amp; khóa — Điểm AI: <strong>${Number(t3V2Step1Snapshot?.grade?.score || 0).toFixed(1)}/10</strong></span>
           <span class="t3-step1-locked-sub">Hoàn thành Bước 2 để mở Bảng Đối Chiếu</span>
         </div>
         <div id="t3-v2-step2-wrap" class="t3-v2-step2-wrap">
@@ -5706,7 +5706,7 @@
             <div id="task-ai-grade-result" class="ai-grade-box" style="display:block; background:var(--bg-soft); border-color:var(--card-border);">
               <div style="text-align:center; padding:36px 16px; color:var(--text-muted);">
                 <div style="font-size:18px; font-weight:750; color:var(--text-bright); margin-bottom:8px;">Chưa hoàn thành đủ 2 bước</div>
-                <div style="font-size:15.5px; margin-bottom:18px;">Hoàn thành &amp; khóa Bước 1 (Dịch &amp; Tóm tắt), sau đó làm Bước 2 (Matching Headings &amp; Summary) để xem Bảng Đối Chiếu 2 cột.</div>
+                <div style="font-size:15.5px; margin-bottom:18px;">Hoàn thành &amp; khóa Bước 1 (Ghi ý chính từng đoạn &amp; Tóm tắt), sau đó làm Bước 2 (Matching Headings &amp; Summary) để xem Bảng Đối Chiếu 2 cột.</div>
                 <button type="button" class="btn btn-primary" onclick="TasksModule.switchT3Tab('write')">← Quay lại bài làm</button>
               </div>
             </div>
@@ -5735,7 +5735,7 @@
       transEl?.addEventListener('input', updateCounts);
       sumEl?.addEventListener('input', updateCounts);
       if (!isTeacherOrBypassed()) {
-        B()?.bindNoPasteGuards?.(transEl, 'Không được dán (paste) khi làm bài dịch — hãy tự dịch trực tiếp!');
+        B()?.bindNoPasteGuards?.(transEl, 'Không được dán (paste) — hãy tự đọc hiểu và ghi lại theo ý hiểu của bạn!');
         B()?.bindNoPasteGuards?.(sumEl, 'Không được dán (paste) khi tóm tắt — hãy tự viết trực tiếp!');
       }
       updateCounts();
@@ -6081,13 +6081,13 @@
           score: 1.5,
           passed: false,
           criteria: { accuracy: 1.0, signalWords: 1.0, contextInference: 1.0, summary: 1.0 },
-          overallComment: `Bài làm KHÔNG ĐẠT (1.5/10): Phát hiện chuỗi ký tự gõ phím ngẫu nhiên hoặc từ vô nghĩa ("${sample}"). Hệ thống AI chấm dựa trên ngữ cảnh đọc hiểu thực tế; vui lòng dịch nghiêm túc sang câu văn tiếng Việt có nghĩa.`,
+          overallComment: `Bài làm KHÔNG ĐẠT (1.5/10): Phát hiện chuỗi ký tự gõ phím ngẫu nhiên hoặc từ vô nghĩa ("${sample}"). Hệ thống AI chấm dựa trên mức độ đọc hiểu thực tế; vui lòng ghi ngắn gọn ý chính từng đoạn bằng tiếng Việt có nghĩa.`,
           lineFeedback: [
             {
               issue: 'Từ ngữ không hợp lệ / Ký tự ngẫu nhiên',
               student: (gibberishMatches.slice(0, 4).join(' ') || trans.slice(0, 50)),
-              advice: 'Hệ thống yêu cầu bản dịch tiếng Việt thực tế bám sát đoạn văn, không chấp nhận gõ phím thử nghiệm hoặc từ rác.',
-              suggested: 'Hãy đọc từng câu tiếng Anh của bài đọc và dịch nghĩa chính xác sang tiếng Việt.',
+              advice: 'Hệ thống yêu cầu ghi ý chính bằng tiếng Việt theo ý hiểu bám sát bài đọc, không chấp nhận gõ phím thử nghiệm hoặc từ rác.',
+              suggested: 'Hãy đọc hiểu từng đoạn A, B, C, D và tóm lược ý chính mỗi đoạn 1–2 câu bằng tiếng Việt.',
             },
           ],
           modelTranslation: generateTaskModelTranslation(task),
@@ -6112,13 +6112,13 @@
           score: 2.0,
           passed: false,
           criteria: { accuracy: 2.0, signalWords: 1.5, contextInference: 1.5, summary: 1.0 },
-          overallComment: 'Bài làm chưa đạt (2.0/10): Bạn đang sao chép lại tiếng Anh thay vì dịch sang tiếng Việt. Yêu cầu của bài thi là dịch nghĩa toàn bộ sang tiếng Việt để kiểm tra độ hiểu bài.',
+          overallComment: 'Bài làm chưa đạt (2.0/10): Bạn đang sao chép lại tiếng Anh thay vì diễn đạt ý chính bằng tiếng Việt. Yêu cầu là đọc hiểu và ghi lại ý chính từng đoạn theo cách hiểu của bạn.',
           lineFeedback: [
             {
-              issue: 'Chưa dịch sang tiếng Việt',
+              issue: 'Chưa diễn đạt sang tiếng Việt',
               student: trans.slice(0, 60) + (trans.length > 60 ? '...' : ''),
-              advice: 'Vui lòng dịch các câu tiếng Anh sang tiếng Việt hoàn chỉnh.',
-              suggested: 'Dịch lại toàn bộ các câu trong bài đọc sang tiếng Việt.',
+              advice: 'Vui lòng đọc hiểu các đoạn tiếng Anh và ghi lại ý chính ngắn gọn bằng tiếng Việt.',
+              suggested: 'Diễn đạt lại ý lõi của từng đoạn A, B, C, D bằng tiếng Việt tự nhiên.',
             },
           ],
           modelTranslation: generateTaskModelTranslation(task),
@@ -6172,13 +6172,13 @@
             score: 1.8,
             passed: false,
             criteria: { accuracy: 1.5, signalWords: 1.5, contextInference: 1.5, summary: 1.5 },
-            overallComment: 'Bài làm KHÔNG ĐẠT (1.8/10): Phát hiện lặp từ / lặp cụm từ hoặc độ đa dạng từ vựng quá thấp (nghi vấn spam nội dung). Vui lòng dịch thực tế từng câu của đoạn văn gốc sang tiếng Việt.',
+            overallComment: 'Bài làm KHÔNG ĐẠT (1.8/10): Phát hiện lặp từ / lặp cụm từ hoặc độ đa dạng từ vựng quá thấp (nghi vấn spam nội dung). Vui lòng đọc hiểu và ghi thực tế ý chính từng đoạn bằng tiếng Việt.',
             lineFeedback: [
               {
                 issue: 'Lặp từ / Lặp cụm từ bất thường',
                 student: trans.slice(0, 70) + (trans.length > 70 ? '...' : ''),
-                advice: 'Mỗi câu trong đoạn văn IELTS chứa thông tin và từ vựng riêng biệt; không lặp lại cùng một cụm từ để đủ số từ.',
-                suggested: 'Hãy dịch sát từng câu từ đầu đến cuối đoạn văn tiếng Anh.',
+                advice: 'Mỗi đoạn A, B, C, D mang một ý chính riêng; hãy tóm lược ngắn gọn thay vì lặp lại cùng một cụm từ.',
+                suggested: 'Ghi ngắn gọn ý chính từng đoạn A–D bằng tiếng Việt theo ý hiểu.',
               },
             ],
             modelTranslation: generateTaskModelTranslation(task),
@@ -6187,9 +6187,9 @@
       }
     }
 
-    // RULE 4: Bài dịch quá ngắn (< 30 từ so với đoạn đọc gốc 200-300 từ)
-    if (wordCount < 30) {
-      const shortScore = Math.min(4.5, Math.max(2.0, Math.round((wordCount / 30) * 4.5 * 10) / 10));
+    // RULE 4: Nội dung ghi ý chính quá ngắn (< 20 từ)
+    if (wordCount < 20) {
+      const shortScore = Math.min(4.5, Math.max(2.0, Math.round((wordCount / 20) * 4.5 * 10) / 10));
       return {
         ok: true,
         grade: {
@@ -6201,13 +6201,13 @@
             contextInference: 3.0,
             summary: sum.length >= 10 ? 6.0 : 2.0,
           },
-          overallComment: `Bản dịch quá ngắn (${wordCount} từ so với đoạn đọc gốc ${passageWords} từ). Bạn mới chỉ dịch được một phần nhỏ của bài đọc, thiếu các luận điểm và từ khóa quan trọng. Cần hoàn thành trọn vẹn cả đoạn.`,
+          overallComment: `Nội dung ghi ý chính quá ngắn (${wordCount} từ). Hãy đọc hiểu đủ 4 đoạn A–D và diễn đạt ngắn gọn ý chính từng đoạn bằng tiếng Việt theo ý hiểu (khoảng 35–100 từ, không cần dịch từng từ).`,
           lineFeedback: [
             {
-              issue: 'Độ dài bài dịch chưa đạt yêu cầu bao quát',
+              issue: 'Chưa đủ ý chính các đoạn',
               student: trans,
-              advice: `Đoạn văn gốc có ${passageWords} từ; bản dịch tiếng Việt đầy đủ cần từ 100-250 từ.`,
-              suggested: 'Hãy tiếp tục dịch hết các câu còn lại của bài đọc.',
+              advice: 'Chỉ cần ghi ngắn gọn ý chính của từng đoạn A, B, C, D theo cách hiểu của bạn (khoảng 35–100 từ).',
+              suggested: 'Bổ sung nhanh ý chính còn thiếu của các đoạn A, B, C, D.',
             },
           ],
           modelTranslation: generateTaskModelTranslation(task),
@@ -6232,11 +6232,12 @@
     const passageWords = passage.split(/\s+/).filter(Boolean).length;
     const passageTokensSet = buildPassageTokensSet(passage);
 
-    // RULE 5: ĐỐI CHIẾU NGỮ CẢNH VÀ TỪ KHÓA BÀI ĐỌC (Context & Semantic Evaluation)
+    // RULE 5: ĐỐI CHIẾU NGỮ CẢNH VÀ Ý CHÍNH NGẮN GỌN THEO Ý HIỂU (Concise Comprehension Evaluation)
     const transLower = trans.toLowerCase();
     const sumLower = sum.toLowerCase();
+    const combinedLower = `${transLower} ${sumLower}`.trim();
 
-    // 5.1 Bóc tách và đối chiếu từ khóa cốt lõi (Anchor Words)
+    // 5.1 Bóc tách và đối chiếu từ khóa cốt lõi (Anchor Words) trên cả ghi chú đoạn & tóm tắt
     const taskWords = Array.isArray(task.words) ? task.words : [];
     const escReLocal = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (anchorWords.length === 0 && taskWords.length > 0 && passage) {
@@ -6276,7 +6277,7 @@
       const meanings = wordMeaningsMap.get(awClean) || [];
       let found = false;
       for (const m of meanings) {
-        if (transLower.includes(m)) {
+        if (combinedLower.includes(m)) {
           found = true;
           break;
         }
@@ -6289,22 +6290,26 @@
       }
     });
 
-    // Độ bao quát dung lượng đoạn văn
-    const lengthRatio = Math.min(1.0, wordCount / Math.max(80, passageWords * 0.55));
+    // Độ bao quát ý chính ngắn gọn (~38–60 từ cho bài đọc ~280 từ, không đòi dịch từng từ)
+    const targetConciseWords = Math.max(38, Math.min(60, Math.round(passageWords * 0.18)));
+    const lengthRatio = Math.min(1.0, wordCount / targetConciseWords);
     const coverageScore = Math.min(10, Math.round(lengthRatio * 10 * 10) / 10);
 
     const hasAnchors = anchorWords.length > 0;
     const anchorRatio = hasAnchors
       ? (anchorHits / anchorWords.length)
       : Math.min(0.85, Math.max(0.55, (coverageScore / 10) * 0.85));
+    const effectiveAnchor = hasAnchors
+      ? Math.min(1.0, anchorRatio * 2.2 + (anchorHits >= 2 ? 0.35 : (anchorHits === 1 ? 0.15 : 0)))
+      : anchorRatio;
 
-    // 5.2 Đối chiếu mạch liên kết từ nối định hướng (Signal Clues)
+    // 5.2 Đối chiếu mạch liên kết từ nối định hướng (Signal Clues) trên ý hiểu bài đọc
     const signalPatterns = [
       { signals: ['however', 'yet', 'nevertheless', 'nonetheless'], vn: ['tuy nhiên', 'dẫu vậy', 'tuy thế', 'nhưng'] },
       { signals: ['while', 'whereas', 'in contrast', 'on the other hand', 'conversely'], vn: ['trong khi', 'trong khi đó', 'ngược lại', 'mặt khác'] },
-      { signals: ['therefore', 'consequently', 'as a result', 'thus', 'hence'], vn: ['do đó', 'vì vậy', 'kết quả là', 'cho nên', 'bởi vậy'] },
-      { signals: ['furthermore', 'in addition', 'moreover', 'besides'], vn: ['hơn nữa', 'ngoài ra', 'thêm vào đó', 'bên cạnh đó'] },
-      { signals: ['because', 'since', 'as', 'due to', 'owing to'], vn: ['bởi vì', 'vì', 'do', 'nhờ có'] },
+      { signals: ['therefore', 'consequently', 'as a result', 'thus', 'hence'], vn: ['do đó', 'vì vậy', 'kết quả là', 'cho nên', 'bởi vậy', 'nên', 'dẫn đến'] },
+      { signals: ['furthermore', 'in addition', 'moreover', 'besides'], vn: ['hơn nữa', 'ngoài ra', 'thêm vào đó', 'bên cạnh đó', 'đồng thời'] },
+      { signals: ['because', 'since', 'as', 'due to', 'owing to'], vn: ['bởi vì', 'vì', 'do', 'nhờ có', 'nhờ'] },
     ];
 
     let signalPresentInPassageCount = 0;
@@ -6314,14 +6319,14 @@
       const presentInPassage = group.signals.some((s) => passage.toLowerCase().includes(s));
       if (presentInPassage) {
         signalPresentInPassageCount++;
-        const reflected = group.vn.some((v) => transLower.includes(v));
+        const reflected = group.vn.some((v) => combinedLower.includes(v));
         if (reflected) signalReflectedInTransCount++;
       }
     });
 
     const signalRatio = signalPresentInPassageCount > 0 ? (signalReflectedInTransCount / signalPresentInPassageCount) : 0.8;
 
-    // 5.3 Đánh giá tóm tắt ý chính (có kiểm tra gibberish)
+    // 5.3 Đánh giá tóm tắt tổng quát 1–2 câu (có kiểm tra gibberish)
     const sumWordsList = sum.split(/\s+/).filter(Boolean);
     const sumWords = sumWordsList.length;
     const sumGibberish = sumWordsList.filter((w) => isGibberishToken(w, passageTokensSet));
@@ -6330,71 +6335,75 @@
     if (sumWords > 0 && (sumGibberish.length >= 2 || (sumGibberish.length / sumWords) >= 0.3)) {
       sumScore = 1.0;
       sumHasSpam = true;
-    } else if (sumWords >= 12 && sumWords <= 80) {
+    } else if (sumWords >= 8 && sumWords <= 80) {
       sumScore = 8.0;
       const topicKeywords = String(task.theme || '').toLowerCase().split(/[\s&·,]+/);
       const hitsTopic = topicKeywords.some((k) => k.length >= 3 && sumLower.includes(k));
       if (hitsTopic) sumScore = 9.0;
-    } else if (sumWords >= 6) {
-      sumScore = 6.0;
+    } else if (sumWords >= 5) {
+      sumScore = 6.5;
     } else if (sumWords > 0) {
       sumScore = 4.0;
     }
 
-    // 5.4 Tính điểm thành phần và tổng điểm
-    const accuracy = Math.min(9.5, Math.max(3.0, Math.round((coverageScore * 0.45 + anchorRatio * 5.0) * 10) / 10));
-    const signalWordsScore = Math.min(9.5, Math.max(3.0, Math.round((signalRatio * 7.5 + 2.0) * 10) / 10));
-    const contextInferenceScore = Math.min(9.5, Math.max(3.0, Math.round((anchorRatio * 5.5 + (coverageScore >= 7 ? 3.5 : 2.0)) * 10) / 10));
+    // 5.4 Tính điểm thành phần và tổng điểm (ưu tiên nắm đúng ý lõi & mạch lập luận theo cách diễn đạt tự nhiên)
+    const concisenessBonus = (wordCount >= 32 && (!hasAnchors || anchorHits >= 1)) ? 1.0 : 0;
+    const accuracy = Math.min(9.5, Math.max(3.0, Math.round((coverageScore * 0.45 + effectiveAnchor * 5.0 + concisenessBonus) * 10) / 10));
+    const signalWordsScore = Math.min(9.5, Math.max(3.5, Math.round((signalRatio * 6.5 + 3.0) * 10) / 10));
+    const contextInferenceScore = Math.min(9.5, Math.max(3.0, Math.round((effectiveAnchor * 5.5 + (coverageScore >= 5 ? 3.5 : 2.0)) * 10) / 10));
 
     let finalScore = Math.min(9.5, Math.max(2.5, Math.round((accuracy * 0.4 + signalWordsScore * 0.2 + contextInferenceScore * 0.2 + sumScore * 0.2) * 10) / 10));
-    if (wordCount < 50 && finalScore >= 6.0) {
+    if (hasAnchors && anchorHits === 0 && finalScore >= 5.0) {
+      finalScore = 4.5;
+    }
+    if (wordCount < 25 && finalScore >= 6.0) {
       finalScore = 5.5;
     }
-    const passed = finalScore >= 6.0 && wordCount >= 50;
+    const passed = finalScore >= 6.0 && wordCount >= 25 && (!hasAnchors || anchorHits >= 1);
 
-    // 5.5 Tạo góp ý chi tiết từng câu bám sát bài đọc
+    // 5.5 Tạo góp ý chi tiết bám sát ý chính & từ khóa
     const lineFeedback = [];
     if (sumHasSpam) {
       lineFeedback.push({
-        issue: 'Phần tóm tắt ý chính chứa ký tự không hợp lệ',
+        issue: 'Phần tóm tắt tổng quát chứa ký tự không hợp lệ',
         student: sum.slice(0, 60),
-        advice: 'Vui lòng viết 1–3 câu tiếng Việt súc tích tóm tắt ý chính đoạn văn thay vì gõ ký tự vô nghĩa.',
+        advice: 'Vui lòng viết 1–2 câu tiếng Việt súc tích nêu ý chính cả bài thay vì gõ ký tự vô nghĩa.',
         suggested: 'Tóm tắt lại luận điểm chính của bài đọc bằng tiếng Việt rõ ràng.',
       });
     }
-    if (missedAnchorNames.length > 0) {
+    if (missedAnchorNames.length > 0 && anchorRatio < 0.35) {
       const m1 = missedAnchorNames[0];
       const mMeanings = wordMeaningsMap.get(m1) || [];
       lineFeedback.push({
-        issue: `Từ khóa "${m1}" trong bài đọc`,
-        student: `Chưa thể hiện rõ nghĩa tiếng Việt tương đương trong bản dịch`,
-        advice: `Trong bài đọc, "${m1}" mang nghĩa: ${mMeanings.slice(0, 3).join(', ') || 'thuần ngữ cảnh học thuật'}. Cần đối chiếu kỹ để không làm mờ ý đoạn văn.`,
-        suggested: `Dịch bám sát nghĩa "${mMeanings[0] || m1}" trong câu văn tương ứng.`,
+        issue: `Từ khóa trọng tâm "${m1}" trong bài đọc`,
+        student: 'Chưa thấy thể hiện rõ ý của từ khóa này trong phần ghi ý chính',
+        advice: `Trong bài đọc, "${m1}" gắn với nghĩa: ${mMeanings.slice(0, 3).join(', ') || 'ngữ cảnh học thuật'}. Có thể diễn đạt gọn theo ý hiểu nhưng đừng bỏ sót ý của nó.`,
+        suggested: `Thể hiện gọn ý "${mMeanings[0] || m1}" ở đoạn chứa từ khóa này.`,
       });
     }
 
-    if (signalPresentInPassageCount > 0 && signalReflectedInTransCount < signalPresentInPassageCount) {
+    if (signalPresentInPassageCount > 0 && signalReflectedInTransCount < Math.max(1, Math.floor(signalPresentInPassageCount * 0.5))) {
       lineFeedback.push({
         issue: 'Mạch liên kết từ nối (Signal Clues)',
-        student: 'Một số liên từ chỉ tương phản/kết quả chưa được nhấn mạnh rõ',
-        advice: 'Bài đọc sử dụng các từ nối logic để chuyển hướng luận điểm. Hãy chú ý dịch rõ "Tuy nhiên", "Trong khi đó" hoặc "Do đó" để người đọc nắm được mạch lập luận.',
-        suggested: 'Giữ nguyên vai trò định hướng của các liên từ ở đầu mệnh đề.',
+        student: 'Chưa thể hiện rõ hướng chuyển ý (nhượng bộ / nguyên nhân – kết quả)',
+        advice: 'Bài đọc dùng từ nối để xoay chiều luận điểm. Khi ghi ý chính, chỉ cần gắn ngắn gọn "nhưng / tuy nhiên" hoặc "dẫn đến / nên" là giữ được mạch logic.',
+        suggested: 'Nêu rõ quan hệ tương phản hoặc nhân quả khi ghi ý chính từng đoạn.',
       });
     }
 
     if (lineFeedback.length === 0) {
       lineFeedback.push({
-        issue: 'Từ nối định hướng & Thuật ngữ học thuật',
+        issue: 'Nắm ý chính từng đoạn & Mạch logic',
         student: trans.slice(0, 70) + (trans.length > 70 ? '...' : ''),
-        advice: 'Bản dịch đã chuyển tải tốt các thuật ngữ học thuật và liên kết logic của đoạn văn.',
-        suggested: 'Tiếp tục phát huy độ tự nhiên của câu văn khi làm các bài đọc dài hơn.',
+        advice: 'Bạn đã diễn đạt súc tích đúng ý hiểu, giữ được từ khóa trọng tâm và mạch chuyển ý của bài đọc.',
+        suggested: 'Tiếp tục sang Bước 2 (Matching Headings & Summary) để đối chiếu độ chính xác cấu trúc.',
       });
     }
 
-    const anchorNote = hasAnchors ? ` Nắm bắt được ${(anchorRatio * 100).toFixed(0)}% từ khóa trọng tâm và mạch suy luận từ nối.` : '';
+    const anchorNote = hasAnchors ? ` Thể hiện được trọng tâm bài đọc (${Math.round(effectiveAnchor * 100)}% mức phủ khái niệm) và mạch logic.` : '';
     const comment = passed
-      ? `Bản dịch đạt yêu cầu đọc hiểu (${finalScore}/10).${anchorNote} Tóm tắt ý chính ${sumWords >= 12 && !sumHasSpam ? 'súc tích, rõ ràng' : 'ở mức cơ bản'}.`
-      : `Bản dịch chưa đạt (${finalScore}/10 - cần >= 6.0). ${wordCount < 50 ? 'Độ dài bản dịch chưa đạt tối thiểu 50 từ để bao quát bài đọc. ' : ''}${hasAnchors && anchorRatio < 0.5 ? 'Chưa dịch sát nghĩa các từ khóa quan trọng của bài đọc. ' : ''}Vui lòng đối chiếu kỹ lại bản dịch tham khảo và hoàn thiện lại.`;
+      ? `Đạt yêu cầu đọc hiểu & nắm ý chính (${finalScore}/10).${anchorNote} Tóm tắt tổng quát ${sumWords >= 8 && !sumHasSpam ? 'súc tích, rõ ràng' : 'ở mức cơ bản'}.`
+      : `Chưa đạt yêu cầu nắm ý chính (${finalScore}/10 - cần >= 6.0). ${wordCount < 25 ? 'Nội dung ghi ý chính còn quá ngắn (< 25 từ), chưa đủ phủ các đoạn A–D. ' : ''}${hasAnchors && effectiveAnchor < 0.45 ? 'Cần bám sát hơn các ý lõi & từ khóa chính của bài đọc. ' : ''}Hãy đối chiếu lại và bổ sung rõ ý từng đoạn nhé.`;
 
     return {
       ok: true,
@@ -6416,54 +6425,52 @@
 
   async function callGeminiApiDirectly(key, payload) {
     const prompt = [
-      'Bạn là Giám khảo IELTS Reading & Chuyên gia dịch thuật học thuật tiếng Việt.',
-      'Hãy chấm RẤT NGHIÊM TÚC, CÔNG BẰNG VÀ CHÍNH XÁC bài dịch và tóm tắt của học sinh dựa trên ĐÚNG ĐOẠN VĂN GỐC.',
+      'Bạn là Giám khảo IELTS Reading. Học sinh KHÔNG CẦN dịch từng từ (word-by-word); học sinh chỉ cần đọc hiểu các đoạn (A–D) và diễn đạt ngắn gọn lại ý chính của từng đoạn bằng tiếng Việt theo cách hiểu tự nhiên của mình kèm 1–2 câu tóm tắt tổng quát.',
+      'Hãy chấm NGHIÊM TÚC, CÔNG BẰNG VÀ CHÍNH XÁC mức độ hiểu bài của học sinh dựa trên ĐÚNG BÀI ĐỌC GỐC.',
       '',
-      'QUY TẮC BẮT BUỘC ĐỂ TRÁNH CHẤM SAI:',
+      'QUY TẮC BẮT BUỘC:',
       '1. NẾU BÀI LÀM LÀ KÝ TỰ VÔ NGHĨA (GIBBERISH), GÕ PHÍM NGẪU NHIÊN, SPAM, HOẶC CHƯA PHẢI TIẾNG VIỆT HỢP LỆ:',
-      '   - Cho điểm từ 1.0 đến 2.0 / 10.',
-      '   - passed: false.',
-      '   - overallComment: Nêu rõ bài làm chứa ký tự vô nghĩa/chưa dịch nghiêm túc, yêu cầu đọc bài và dịch lại.',
+      '   - Cho điểm từ 1.0 đến 2.0 / 10, passed: false.',
+      '   - overallComment: Nêu rõ bài làm chứa ký tự vô nghĩa/chưa làm nghiêm túc, yêu cầu đọc hiểu và ghi lại ý chính.',
       '   - TUYỆT ĐỐI KHÔNG khen ngợi hay cho điểm đỗ bài làm vô nghĩa!',
       '',
       '2. NẾU BÀI LÀM SAO CHÉP LẠI TIẾNG ANH:',
       '   - Cho điểm 1.5 - 2.0 / 10, passed: false.',
-      '   - overallComment: Nêu rõ học sinh đang sao chép lại tiếng Anh thay vì dịch sang tiếng Việt.',
+      '   - overallComment: Nêu rõ học sinh đang sao chép lại tiếng Anh thay vì diễn đạt ý hiểu bằng tiếng Việt.',
       '',
-      '3. NẾU BẢN DỊCH QUÁ NGẮN (< 40 từ) HOẶC BỎ SÓT ĐA SỐ CÂU:',
+      '3. NẾU NỘI DUNG QUÁ NGẮN (< 20 từ) HOẶC CHỈ GHI 1 ĐOẠN MÀ BỎ SÓT ĐA SỐ CÁC ĐOẠN A–D:',
       '   - Cho điểm từ 2.5 đến 4.5 / 10, passed: false.',
-      '   - overallComment: Nêu rõ bản dịch chưa bao quát đủ dung lượng đoạn văn.',
+      '   - overallComment: Nêu rõ học sinh chưa bao quát đủ ý chính của các đoạn A–D.',
       '',
-      '4. ĐỐI CHIẾU NỘI DUNG VỚI ĐOẠN GỐC TIẾNG ANH:',
-      '   - Kiểm tra học sinh có dịch đúng các từ khóa trọng tâm: ' + (payload.anchorWords || []).join(', '),
-      '   - Kiểm tra học sinh có bắt đúng logic các từ nối định hướng: ' + (payload.signalClues || []).join(', '),
-      '   - Kiểm tra độ chuẩn xác của câu văn tiếng Việt, không bịa đặt ý.',
-      '   - Kiểm tra tóm tắt 1-3 câu có nắm bắt đúng ý chính của đoạn văn không.',
+      '4. ĐÁNH GIÁ THEO Ý HIỂU (KHÔNG BẮT DỊCH SÁT TỪNG TỪ):',
+      '   - KHÔNG trừ điểm vì diễn đạt ngắn gọn hoặc paraphrase theo ý hiểu tiếng Việt.',
+      '   - Chấm xem học sinh có nắm đúng ý lõi từng đoạn A–D, hiểu đúng ngữ nghĩa từ khóa trọng tâm (' + (payload.anchorWords || []).join(', ') + ') và bắt đúng mạch chuyển ý từ nối (' + (payload.signalClues || []).join(', ') + ') hay bịa sai ý.',
+      '   - Kiểm tra tóm tắt tổng quát 1–2 câu có gộp được mạch luận điểm cả bài không.',
       '',
       'Trả về DUY NHẤT một chuỗi JSON hợp lệ theo schema sau (không dùng markdown fence ```json):',
       '{',
       '  "score": <số thực từ 0.0 đến 10.0, ví dụ 7.5>,',
       '  "passed": <boolean, true nếu score >= 6.0>,',
       '  "criteria": {',
-      '    "accuracy": <số 0..10>,',
-      '    "signalWords": <số 0..10>,',
-      '    "contextInference": <số 0..10>,',
-      '    "summary": <số 0..10>',
+      '    "accuracy": <số 0..10, nắm đúng ý chính từng đoạn A-D>,',
+      '    "signalWords": <số 0..10, giữ đúng mạch logic từ nối>,',
+      '    "contextInference": <số 0..10, hiểu đúng nghĩa từ khóa ngữ cảnh>,',
+      '    "summary": <số 0..10, tóm tắt tổng quát súc tích>',
       '  },',
-      '  "overallComment": "<nhận xét chi tiết 3-5 câu đánh giá khách quan điểm mạnh, điểm yếu dựa trên bài làm thực tế>",',
+      '  "overallComment": "<nhận xét chi tiết 3-5 câu đánh giá điểm mạnh, chỗ hiểu nhầm hoặc sót ý>",',
       '  "lineFeedback": [',
-      '    { "issue": "<cụm từ/câu gốc trong bài>", "student": "<cách học sinh dịch>", "advice": "<phân tích ngữ cảnh>", "suggested": "<gợi ý dịch chuẩn>" }',
+      '    { "issue": "<ý/câu trong đoạn cần chú ý>", "student": "<ý học sinh viết>", "advice": "<phân tích ngữ cảnh & từ nối>", "suggested": "<gợi ý diễn đạt ý chính chuẩn>" }',
       '  ],',
-      '  "modelTranslation": "<bản dịch tham khảo chuẩn mực toàn bộ đoạn văn>"',
+      '  "modelTranslation": "<bản diễn giải / dịch chuẩn tham khảo toàn bộ đoạn văn>"',
       '}',
       '',
       '=== ĐOẠN VĂN TIẾNG ANH (' + (payload.taskLabel || 'Task') + ') ===',
       payload.passage,
       '',
-      '=== BÀI DỊCH CỦA HỌC SINH ===',
+      '=== Ý CHÍNH TỪNG ĐOẠN THEO Ý HIỂU CỦA HỌC SINH ===',
       payload.translation,
       '',
-      '=== TÓM TẮT Ý CHÍNH CỦA HỌC SINH ===',
+      '=== TÓM TẮT TỔNG QUÁT CỦA HỌC SINH ===',
       payload.summary || '(Học sinh không nhập tóm tắt)'
     ].join('\n');
 

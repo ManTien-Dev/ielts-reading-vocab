@@ -1531,9 +1531,9 @@
             <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" name="teacher_filter_query" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Tìm nhanh học viên theo tên hoặc mã ID..." oninput="TasksModule.renderTeacherDashboard()">
           </div>
           <div class="teacher-view-tabs" id="teacher-view-tabs" role="tablist" aria-label="Chế độ xem danh sách học viên">
-            <button type="button" class="teacher-view-tab" data-view="today" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('today')">Hôm nay</button>
+            <button type="button" class="teacher-view-tab active" data-view="today" role="tab" aria-selected="true" onclick="TasksModule.setTeacherTableView('today')">Hôm nay</button>
             <button type="button" class="teacher-view-tab" data-view="month" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('month')">Tháng này</button>
-            <button type="button" class="teacher-view-tab active" data-view="full" role="tab" aria-selected="true" onclick="TasksModule.setTeacherTableView('full')">Full</button>
+            <button type="button" class="teacher-view-tab" data-view="full" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('full')">Full</button>
           </div>
         </div>
         <div class="class-report-table-wrap">
@@ -1881,7 +1881,7 @@
         <img src="assets/images/totoro_sitting_branch.png" alt="" class="celebrate-panda-img celebrate-totoro-img" style="width:94px; height:86px; margin-bottom:10px;">
         <div style="font-size:20px; font-weight:850; color:var(--text-bright); line-height:1.35;" id="exam-ready-heading">Bạn đã học và bấm Đã thuộc đủ 50 từ!</div>
         <p style="font-size:16.5px; color:var(--text-muted); line-height:1.6; margin:10px 0 20px;" id="exam-ready-desc">
-          Bước cuối để hoàn tất Task: vượt qua <strong>Test 1 (Ghép từ) → Test 2 (Kéo thả &amp; Ngữ cảnh) → Test 3 (Dịch bài)</strong>. Chú ý không rời tab khi làm bài nhé!
+          Bước cuối để hoàn tất Task: vượt qua <strong>Test 1 (Ghép từ) → Test 2 (Đọc hiểu đoạn trích) → Test 3 (Đọc hiểu &amp; Ý chính)</strong>. Chú ý không rời tab khi làm bài nhé!
         </p>
         <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
           <button type="button" class="btn-subtle" onclick="TasksModule.closeTaskExamReadyModal()">Ôn thêm chút nữa</button>
@@ -1892,7 +1892,7 @@
     </div>
   </div>
 
-  <!-- MODAL: BÀI TEST KẾT THÚC TASK (TEST 1 -> TEST 2 -> TEST CUỐI DỊCH AI) -->
+  <!-- MODAL: BÀI TEST KẾT THÚC TASK (TEST 1 -> TEST 2 -> TEST 3 ĐỌC HIỂU & Ý CHÍNH) -->
   <div class="modal-overlay task-exam-overlay" id="screen-task" aria-label="Bài Test kết thúc Task">
     <div class="modal-card task-exam-dialog" onclick="event.stopPropagation()">
       <div class="task-topbar">
@@ -2066,7 +2066,7 @@
   <script src="data/v2_foundation.js?v=20261122b"></script>
   <script src="data/v2_academic.js?v=20261122b"></script>
   <script src="data/v2_advanced.js?v=20261122b"></script>
-  <script src="js/tasks.js?v=20261122d"></script>
+  <script src="js/tasks.js?v=20261122f"></script>
   <script src="js/totoro_ui.js?v=20261122d"></script>
 </body>
 </html>
