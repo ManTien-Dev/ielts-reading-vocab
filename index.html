@@ -41,8 +41,8 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261121ae">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261121af">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261122a">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261122a">
 </head>
 <body>
 
@@ -1498,18 +1498,22 @@
     <!-- Màn hình Làm Task theo Link Giáo viên giao -->
     <!-- Màn hình Dành Riêng Cho Giáo Viên: Siêu gọn - Chỉ Quản lý Lớp & Giao Task -->
     <section class="screen" id="screen-teacher" aria-label="Bảng quản lý giáo viên" style="display:none;">
-      <div class="teacher-panel">
-        <div class="teacher-panel-head">
+      <!-- PANEL 1 (HERO): THEO DÕI BÀI TẬP ĐANG GIAO (HOMEWORK COMMAND CENTER) -->
+      <div class="teacher-panel teacher-hw-panel" id="teacher-homework-panel">
+        <div class="teacher-panel-head thw-head">
           <div class="teacher-panel-brand">
             <div class="teacher-mascot-pedestal" aria-hidden="true">
               <img src="assets/images/totoro_professor.png" alt="" class="teacher-totoro-badge">
             </div>
             <div>
-              <h2 class="teacher-panel-title">Theo Dõi Học Sinh</h2>
+              <h2 class="teacher-panel-title">Theo Dõi Bài Tập</h2>
               <div class="teacher-panel-sub" id="teacher-sync-status">Đang đồng bộ dữ liệu lớp...</div>
             </div>
           </div>
           <div class="teacher-head-actions">
+            <div class="thw-picker-wrap">
+              <select class="scope-select thw-picker-select" id="teacher-hw-picker" aria-label="Chọn bất kỳ Task nào để theo dõi" onchange="TasksModule.selectTeacherTrackedTask(this.value)"></select>
+            </div>
             <button type="button" class="btn-subtle" id="btn-teacher-task-stats" onclick="TasksModule.openTaskSummaryModal()">
               <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19V11" stroke-linecap="round"/></svg>
               <span>Thống kê Task</span>
@@ -1524,6 +1528,40 @@
             </button>
           </div>
         </div>
+
+        <div class="thw-pills-strip" id="teacher-hw-pills" aria-label="Các Task đang theo dõi"></div>
+        <div class="thw-summary-card" id="teacher-hw-summary"></div>
+        <div class="thw-filters-row" id="teacher-hw-filters" role="group" aria-label="Lọc trạng thái học viên"></div>
+
+        <div class="teacher-hw-table-wrap">
+          <table class="teacher-hw-table">
+            <thead>
+              <tr>
+                <th>Học viên</th>
+                <th>Học từ vựng</th>
+                <th>Trạng thái</th>
+                <th>Điểm chi tiết</th>
+                <th>Thời gian nộp</th>
+              </tr>
+            </thead>
+            <tbody id="teacher-hw-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PANEL 2: TỔNG QUAN CHUYÊN CẦN & HỌC VIÊN -->
+      <div class="teacher-panel">
+        <div class="teacher-panel-head">
+          <div class="teacher-panel-brand">
+            <span class="tot-icon-tile" aria-hidden="true">
+              <svg viewBox="2 2 20 20" fill="none"><circle cx="9" cy="8" r="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.7"/><path d="M3.5 18c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round"/><circle cx="16.5" cy="9" r="2.3" stroke="var(--streak)" stroke-width="1.6"/><path d="M15.2 13.5c2.2.3 4.3 1.7 4.8 4.2" stroke="var(--streak)" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </span>
+            <div>
+              <h2 class="teacher-panel-title">Tổng Quan Học Viên</h2>
+              <div class="teacher-panel-sub">Giờ học, chuỗi ngày, tổng từ đã thuộc và tiến độ toàn khóa</div>
+            </div>
+          </div>
+        </div>
         <div class="teacher-kpi-strip" id="teacher-kpi-strip"></div>
         <div class="teacher-toolbar-row">
           <div class="teacher-search-wrap">
@@ -1531,9 +1569,9 @@
             <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" name="teacher_filter_query" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Tìm nhanh học viên theo tên hoặc mã ID..." oninput="TasksModule.renderTeacherDashboard()">
           </div>
           <div class="teacher-view-tabs" id="teacher-view-tabs" role="tablist" aria-label="Chế độ xem danh sách học viên">
-            <button type="button" class="teacher-view-tab active" data-view="today" role="tab" aria-selected="true" onclick="TasksModule.setTeacherTableView('today')">Hôm nay</button>
+            <button type="button" class="teacher-view-tab" data-view="today" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('today')">Hôm nay</button>
             <button type="button" class="teacher-view-tab" data-view="month" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('month')">Tháng này</button>
-            <button type="button" class="teacher-view-tab" data-view="full" role="tab" aria-selected="false" onclick="TasksModule.setTeacherTableView('full')">Full</button>
+            <button type="button" class="teacher-view-tab active" data-view="full" role="tab" aria-selected="true" onclick="TasksModule.setTeacherTableView('full')">Full</button>
           </div>
         </div>
         <div class="class-report-table-wrap">
@@ -1542,8 +1580,11 @@
               <tr>
                 <th>#</th>
                 <th>Học viên</th>
-                <th>Số phút học</th>
-                <th>Số từ</th>
+                <th>Hôm nay</th>
+                <th>Tuần này</th>
+                <th>Tháng này</th>
+                <th>Chuỗi ngày</th>
+                <th>Từ đã thuộc</th>
                 <th>Task hoàn thành</th>
                 <th>Trạng thái</th>
               </tr>
@@ -2030,6 +2071,7 @@
   <script src="data/vocab_data.js?v=20261119t"></script>
   <script src="data/tasks_data.js?v=20261119t"></script>
   <script src="data/reading_tasks_exam_data.js?v=20261121c"></script>
+  <script src="data/task_exam_v2_data.js?v=20261122a"></script>
   <script src="data/ipa_dict.js?v=20261119t"></script>
   <script src="js/motion.js?v=20261121c"></script>
   <script src="js/core/EventBus.js?v=20261119t"></script>
@@ -2041,8 +2083,8 @@
   <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119t"></script>
   <script src="js/core/AppCore.js?v=20261121c"></script>
   <script src="js/recognition_test.js?v=20261121aa"></script>
-  <script src="js/app.js?v=20261121aa"></script>
-  <script src="js/tasks.js?v=20261121ae"></script>
+  <script src="js/app.js?v=20261122a"></script>
+  <script src="js/tasks.js?v=20261122a"></script>
   <script src="js/totoro_ui.js?v=20261121z"></script>
 </body>
 </html>

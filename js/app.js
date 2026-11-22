@@ -1266,11 +1266,17 @@
         const mine = cloudClassCache[activeUid];
         if (activeCloudNeedsReset && !isTeacherUser()) {
           if (mine) mergeCloudEntryIntoLocal(currentUser.id, mine);
-          syncPushCurrentUser(false);
+          syncPushCurrentUser(false, { force: true, retries: 1 });
         } else if (mine) {
           mergeCloudEntryIntoLocal(currentUser.id, mine);
+          if (!isTeacherUser() && hasPendingCloudPush(activeUid)) {
+            syncPushCurrentUser(false, { force: true, retries: 1 });
+          }
         } else if (!isTeacherUser()) {
           window.TasksModule?.onCloudMerged?.();
+          if (hasPendingCloudPush(activeUid)) {
+            syncPushCurrentUser(false, { force: true, retries: 1 });
+          }
         }
       }
 
@@ -1482,9 +1488,61 @@
     });
   }
 
-  function syncPushCurrentUser(useKeepalive = false) {
+  const PENDING_CLOUD_PUSH_KEY = 'ielts_pending_cloud_push_v1';
+
+  function markPendingCloudPush(scopedUid, isPending) {
+    if (!scopedUid) return;
+    try {
+      const map = JSON.parse(localStorage.getItem(PENDING_CLOUD_PUSH_KEY) || '{}') || {};
+      if (isPending) map[scopedUid] = Date.now();
+      else delete map[scopedUid];
+      localStorage.setItem(PENDING_CLOUD_PUSH_KEY, JSON.stringify(map));
+    } catch (_) {}
+  }
+
+  function hasPendingCloudPush(scopedUid) {
+    if (!scopedUid) return false;
+    try {
+      const map = JSON.parse(localStorage.getItem(PENDING_CLOUD_PUSH_KEY) || '{}') || {};
+      return Boolean(map[scopedUid]);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function getStudentAssessmentsMap(studentId) {
+    const scoped = getScopedUid(studentId);
+    if (!scoped) return {};
+    const merged = {};
+    const remote = cloudClassCache[scoped]?.syncData?.assessments;
+    if (remote && typeof remote === 'object') {
+      Object.entries(remote).forEach(([wid, v]) => {
+        if (v === 1 || v === 2 || v === 3) merged[wid] = v;
+      });
+    }
+    try {
+      const localObj = JSON.parse(localStorage.getItem(getUserStorageKey(scoped)) || '{}') || {};
+      const localAssess = localObj.assessments;
+      if (localAssess && typeof localAssess === 'object') {
+        Object.entries(localAssess).forEach(([wid, v]) => {
+          if (v === 3 || (v === 2 && merged[wid] !== 3) || (v === 1 && !merged[wid])) {
+            merged[wid] = v;
+          }
+        });
+      }
+    } catch (_) {}
+    return merged;
+  }
+
+  function syncPushCurrentUser(useKeepalive = false, opts = {}) {
     const url = getSyncUrl();
-    if (!url || !currentUser || isTeacherUser() || !initialCloudPullSettled) return;
+    const force = Boolean(opts && opts.force);
+    const maxRetries = Math.max(0, Number(opts && opts.retries || 0));
+    if (!url || !currentUser || isTeacherUser()) return Promise.resolve(false);
+    if (!initialCloudPullSettled && !force) {
+      markPendingCloudPush(getScopedUid(currentUser.id), true);
+      return Promise.resolve(false);
+    }
     try {
       const pushedUid = getScopedUid(currentUser.id);
       const mins = getUserPeriodMinutes(currentUser.id);
@@ -1506,14 +1564,21 @@
         ...payload,
       };
 
-      fetch(url, {
+      const bodyStr = JSON.stringify(payload);
+      // Browser fetch keepalive rejects payloads > 64KB; fall back to standard fetch when large
+      const safeKeepalive = Boolean(useKeepalive && bodyStr.length < 60000);
+
+      const attemptPush = (attempt) => fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload),
-        keepalive: !!useKeepalive,
+        body: bodyStr,
+        keepalive: safeKeepalive,
       }).then(r => r.ok ? r.json() : null).then(res => {
-        if (!res || !res.ok) return;
-        if (!currentUser || getScopedUid(currentUser.id) !== pushedUid) return;
+        if (!res || !res.ok) {
+          throw new Error('Cloud push rejected');
+        }
+        markPendingCloudPush(pushedUid, false);
+        if (!currentUser || getScopedUid(currentUser.id) !== pushedUid) return true;
         const now = new Date();
         lastCloudSyncTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
         updateCloudSyncBadge();
@@ -1531,8 +1596,22 @@
             },
           });
         }
-      }).catch(() => {});
-    } catch (_) {}
+        return true;
+      }).catch(() => {
+        markPendingCloudPush(pushedUid, true);
+        if (attempt < maxRetries && currentUser && getScopedUid(currentUser.id) === pushedUid) {
+          const delay = attempt === 0 ? 1500 : 4000;
+          return new Promise((resolve) => {
+            setTimeout(() => resolve(attemptPush(attempt + 1)), delay);
+          });
+        }
+        return false;
+      });
+
+      return attemptPush(0);
+    } catch (_) {
+      return Promise.resolve(false);
+    }
   }
 
   function scheduleCloudPush() {
@@ -5724,10 +5803,11 @@
       dueCount: fullScopeList.filter((it) => isWordDueNow(it)).length,
     }),
     scheduleCloudPush,
-    saveAndSync: () => {
+    saveAndSync: (opts = {}) => {
       saveState();
-      syncPushCurrentUser(false);
+      return syncPushCurrentUser(false, opts);
     },
+    getStudentAssessmentsMap,
     showToast,
     escapeHtml,
     formatSentenceHighlight,
