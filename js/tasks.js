@@ -13,11 +13,13 @@
   const TASK_DEADLINE_KEY_BASE = 'ielts_task_deadlines_';
   const ASSIGNED_TASKS_KEY_BASE = 'ielts_assigned_tasks_';
   const TEACHER_LIVE_DEADLINES_KEY = 'ielts_teacher_live_deadlines_v1';
+  const TEACHER_DISMISSED_HW_KEY = 'ielts_teacher_dismissed_hw_v1';
 
   let teacherSelectedIds = new Set();
   let teacherFilterPendingOnly = false;
-  let teacherTrackedTaskId = '';
-  let teacherHwFilter = 'all'; // 'all' | 'done' | 'progress' | 'missing'
+  let teacherAssignedTab = 'active'; // 'active' | 'expired'
+  let teacherDetailTaskId = '';
+  let teacherDetailFilter = 'all'; // 'all' | 'done' | 'progress' | 'missing'
   let assignedUrlTaskIds = [];
   let pendingTaskId = null;
 
@@ -901,50 +903,80 @@
 
     const html = visibleTasks.map((t) => {
       const checked = teacherSelectedIds.has(t.id) ? 'checked' : '';
-      const st = getTaskClassStatus(t.id);
+      const bridge = B();
+      const students = bridge?.getStudentAccounts?.() || [];
+      const cache = bridge?.getCloudClassCache?.() || {};
+      const nowMs = Date.now();
+      const rows = students.map((stu) => getStudentHomeworkRowData(t, stu, bridge, cache, nowMs));
+      const doneRows = rows.filter((r) => r.bucket === 'done');
+      const progRows = rows.filter((r) => r.bucket === 'progress');
+      const missRows = rows.filter((r) => r.bucket === 'missing');
+      const totalStu = rows.length;
+      const allDone = totalStu > 0 && doneRows.length >= totalStu;
+      const donePct = totalStu ? Math.round((doneRows.length / totalStu) * 100) : 0;
+      const progPct = totalStu ? Math.round((progRows.length / totalStu) * 100) : 0;
       const isSent = Boolean(sentMap[t.id]);
       let badgeHtml = '';
       let subStatusHtml = '';
 
-      if (st.allDone) {
-        badgeHtml = `<span class="teacher-task-badge done">✓ Đã làm hết (${st.doneCount}/${st.totalStudents})</span>`;
+      if (allDone) {
+        badgeHtml = `<span class="teacher-task-badge done">✓ Xong hết (${doneRows.length}/${totalStu})</span>`;
         subStatusHtml = `<div class="teacher-task-missing teacher-task-done-note">Cả lớp đã hoàn thành</div>`;
-      } else if (st.doneCount > 0) {
-        badgeHtml = `<span class="teacher-task-badge partial">${st.doneCount}/${st.totalStudents} xong</span>`;
-        subStatusHtml = `<div class="teacher-task-missing"><strong>Chưa làm (${st.missingNames.length}):</strong> ${esc(st.missingNames.join(', '))}</div>`;
+      } else if (doneRows.length > 0 || progRows.length > 0) {
+        badgeHtml = `<span class="teacher-task-badge partial">${doneRows.length}/${totalStu} xong</span>`;
+        const parts = [];
+        if (progRows.length > 0) {
+          const pTxt = progRows.map((r) => {
+            const nm = shortStudentName(r.student.name);
+            if (r.isLocked) return `${nm} (Khóa)`;
+            if (r.rec?.status === 'in_progress') return `${nm} (Test ${Math.min(3, Number(r.rec.stage || 1) + 1)})`;
+            return `${nm} (${r.masteredInTask}/${r.wordTotal})`;
+          }).join(', ');
+          parts.push(`<div class="teacher-task-missing is-prog"><strong>Đang học (${progRows.length}):</strong> ${esc(pTxt)}</div>`);
+        }
+        if (missRows.length > 0) {
+          parts.push(`<div class="teacher-task-missing"><strong>Chưa làm (${missRows.length}):</strong> ${esc(missRows.map((r) => shortStudentName(r.student.name)).join(', '))}</div>`);
+        }
+        subStatusHtml = parts.join('');
       } else {
         badgeHtml = isSent ? `<span class="teacher-task-badge sent">Đã gửi link</span>` : '';
-        subStatusHtml = `<div class="teacher-task-missing">Chưa ai xong (0/${st.totalStudents} HS)</div>`;
+        subStatusHtml = `<div class="teacher-task-missing">Chưa ai làm (0/${totalStu} HS)</div>`;
       }
+
+      const miniBarHtml = `
+        <div class="teacher-card-mini-bar" aria-hidden="true">
+          <div class="thw-seg-done" style="width:${donePct}%;"></div>
+          <div class="thw-seg-prog" style="width:${progPct}%;"></div>
+        </div>`;
 
       const liveDlMap = loadTeacherLiveDeadlines();
       const liveDl = liveDlMap[t.id];
       let liveDlBadge = '';
       if (liveDl && Number(liveDl.deadlineAt || 0) > 0) {
-        const rem = Number(liveDl.deadlineAt) - Date.now();
+        const rem = Number(liveDl.deadlineAt) - nowMs;
         const closeAtStr = formatDeadlineTimestamp(Number(liveDl.deadlineAt));
         liveDlBadge = rem > 0
           ? `<span class="teacher-task-dl-badge" data-teacher-dl-task="${esc(t.id)}" title="Đóng lúc ${esc(closeAtStr)}">⏱ Còn ${esc(formatDeadlineRemaining(rem))}</span>`
-          : `<span class="teacher-task-dl-badge is-ended" data-teacher-dl-task="${esc(t.id)}" title="Đã đóng lúc ${esc(closeAtStr)}">Đã kết thúc</span>`;
+          : `<span class="teacher-task-dl-badge is-ended" data-teacher-dl-task="${esc(t.id)}" title="Đã đóng lúc ${esc(closeAtStr)}">Đã hết hạn</span>`;
       }
 
       const previewBtns = `
-          <button type="button" class="btn-subtle" style="padding:2px 8px; font-size:11px; color:var(--accent); border-color:color-mix(in srgb, var(--accent) 42%, transparent); font-weight:750;" onclick="TasksModule.jumpToTrackTask('${esc(t.id)}')" title="Xem chi tiết tiến độ học sinh làm Task này">Theo dõi</button>
-          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(1, '${esc(t.id)}')">Test 1</button>
-          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(2, '${esc(t.id)}')">Test 2</button>
-          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(3, '${esc(t.id)}')">Test 3</button>
+          <button type="button" class="btn-subtle" style="padding:2px 8px; font-size:11px; color:var(--accent); border-color:color-mix(in srgb, var(--accent) 42%, transparent); font-weight:750;" onclick="TasksModule.openTeacherTaskDetailModal('${esc(t.id)}')" title="Xem chi tiết từng học sinh làm Task này">Chi tiết</button>
+          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(1, '${esc(t.id)}')">T1</button>
+          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(2, '${esc(t.id)}')">T2</button>
+          <button type="button" class="btn-subtle" style="padding:2px 7px; font-size:11px;" onclick="TasksModule.openAdminTestPreview(3, '${esc(t.id)}')">T3</button>
           <button type="button" class="btn-subtle" style="padding:2px 6px; font-size:10.5px;" onclick="TasksModule.extendTaskDeadlineByMinutes('${esc(t.id)}', 60)" title="Gia hạn thêm 1 giờ cho Task này">+1h</button>
           <button type="button" class="btn-subtle" style="padding:2px 6px; font-size:10.5px; color:#b91c1c;" onclick="TasksModule.endSelectedTasksNow(['${esc(t.id)}'])" title="Kết thúc ngay Task này">Đóng</button>`;
 
       return `
-        <label class="teacher-task-item ${st.allDone ? 'is-all-done' : ''}" style="align-items:flex-start;">
+        <label class="teacher-task-item ${allDone ? 'is-all-done' : ''}" style="align-items:flex-start;">
           <input type="checkbox" style="margin-top:3px;" value="${esc(t.id)}" ${checked} onchange="TasksModule.toggleTeacherTask('${esc(t.id)}', this.checked)">
           <div style="min-width:0; flex:1;">
             <div class="teacher-task-title">${esc(t.label)}${badgeHtml}${liveDlBadge}</div>
             <div class="teacher-task-sub">${esc(t.theme)}</div>
+            ${miniBarHtml}
             ${subStatusHtml}
-            <div style="margin-top:7px; display:flex; gap:6px; align-items:center; flex-wrap:wrap;" onclick="event.stopPropagation()">
-              <span style="font-size:11.5px; color:var(--text-muted); font-weight:700;">Xem Test:</span>
+            <div style="margin-top:7px; display:flex; gap:5px; align-items:center; flex-wrap:wrap;" onclick="event.stopPropagation()">
               ${previewBtns}
             </div>
           </div>
@@ -1141,16 +1173,14 @@
     }
     teacherPresetDirty = false;
     markTasksAsSent(ids);
-    if (ids.length) {
-      teacherTrackedTaskId = ids[0];
-    }
+    teacherAssignedTab = 'active';
     const allAlreadyDone = ids.every((id) => getTaskClassStatus(id).allDone);
     const dlNote = info.deadlineMs > 0 ? ` (đóng lúc ${formatDeadlineTimestamp(info.deadlineMs)})` : '';
     const toastDone = () => {
       B()?.showToast(allAlreadyDone
         ? `Đã copy link${dlNote} (Lưu ý: các Task này cả lớp đã làm xong hết!)`
         : `Đã copy link${dlNote} & đánh dấu Đã gửi link!`);
-      renderTeacherHomeworkTracker();
+      renderTeacherAssignedMonitor();
       renderTeacherTasksGrid();
     };
     if (navigator.clipboard?.writeText) {
@@ -1412,52 +1442,75 @@
     return Math.round((((t1Ratio + t2Ratio + t3Ratio) / 3) * 10) * 10) / 10;
   }
 
-  function getTrackedTaskCandidates() {
-    const bridge = B();
-    const students = bridge?.getStudentAccounts?.() || [];
-    const cache = bridge?.getCloudClassCache?.() || {};
+  function loadDismissedHwMap() {
+    try {
+      return JSON.parse(localStorage.getItem(TEACHER_DISMISSED_HW_KEY) || '{}') || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function dismissAssignedTask(taskId) {
+    const norm = normalizeTaskId(taskId);
+    if (!norm) return;
+    const map = loadDismissedHwMap();
+    map[norm] = Date.now();
+    try {
+      localStorage.setItem(TEACHER_DISMISSED_HW_KEY, JSON.stringify(map));
+    } catch (_) {}
+    renderTeacherAssignedMonitor();
+    B()?.showToast?.('Đã ẩn Task này khỏi danh sách theo dõi.');
+  }
+
+  function setTeacherAssignedTab(tab) {
+    teacherAssignedTab = tab === 'expired' ? 'expired' : 'active';
+    renderTeacherAssignedMonitor();
+  }
+
+  function getAssignedMonitorBuckets(nowMs) {
     const liveMap = loadTeacherLiveDeadlines();
     const sentMap = loadTeacherSentTasks();
-    const scoreByTid = new Map();
+    const dismissedMap = loadDismissedHwMap();
+    const activeList = [];
+    const expiredList = [];
+    const seen = new Set();
 
-    const bump = (tid, ts, weight) => {
-      const norm = normalizeTaskId(tid);
-      if (!norm || !getTaskById(norm)) return;
-      const cur = scoreByTid.get(norm) || { tid: norm, ts: 0, weight: 0 };
-      cur.ts = Math.max(cur.ts, Number(ts || 0));
-      cur.weight = Math.max(cur.weight, weight);
-      scoreByTid.set(norm, cur);
+    const inspectTask = (rawTid) => {
+      const tid = normalizeTaskId(rawTid);
+      if (!tid || seen.has(tid)) return;
+      const task = getTaskById(tid);
+      if (!task) return;
+      seen.add(tid);
+
+      const dlRec = liveMap[tid] || null;
+      const sentTs = Number(sentMap[tid] || 0);
+      const issuedAt = Math.max(Number(dlRec?.issuedAt || 0), sentTs);
+      const deadlineAt = Number(dlRec?.deadlineAt || 0);
+      const dismissedAt = Number(dismissedMap[tid] || 0);
+      const lastEventTs = Math.max(issuedAt, deadlineAt > 0 && deadlineAt <= nowMs ? deadlineAt : 0);
+
+      // If teacher manually hid this task AFTER it was issued/expired, keep it hidden
+      if (dismissedAt > 0 && dismissedAt >= lastEventTs) return;
+
+      if (deadlineAt > nowMs) {
+        activeList.push({ task, deadlineAt, issuedAt, mode: 'active' });
+      } else if (deadlineAt > 0 && deadlineAt <= nowMs) {
+        expiredList.push({ task, deadlineAt, issuedAt, mode: 'expired' });
+      } else if (issuedAt > 0) {
+        // Sent with "Không giới hạn": show in Đang giao while not 100% completed
+        const st = getTaskClassStatus(tid);
+        if (!st.allDone) {
+          activeList.push({ task, deadlineAt: 0, issuedAt, mode: 'active' });
+        }
+      }
     };
 
-    Object.entries(liveMap).forEach(([tid, rec]) => {
-      const dl = Number(rec?.deadlineAt || 0);
-      const isLiveActive = dl > Date.now();
-      bump(tid, Number(rec?.issuedAt || dl || 1), isLiveActive ? 3 : 2);
-    });
-    Object.entries(sentMap).forEach(([tid, ts]) => {
-      bump(tid, Number(ts || 1), 2);
-    });
-    students.forEach((st) => {
-      const uid = bridge.getScopedUid(st.id);
-      const tp = readStudentTaskMap(bridge, cache, bridge.TASK_PROGRESS_KEY_BASE, uid);
-      Object.entries(tp).forEach(([tid, rec]) => {
-        if (rec && (rec.status === 'completed' || rec.status === 'in_progress')) {
-          bump(tid, Number(rec.updatedAt || rec.completedAt || 1), rec.status === 'completed' ? 2 : 1);
-        }
-      });
-    });
+    Object.keys(liveMap).forEach(inspectTask);
+    Object.keys(sentMap).forEach(inspectTask);
 
-    const list = Array.from(scoreByTid.values())
-      .sort((a, b) => (b.weight - a.weight) || (b.ts - a.ts))
-      .map((x) => x.tid);
-
-    if (teacherTrackedTaskId && getTaskById(teacherTrackedTaskId) && !list.includes(teacherTrackedTaskId)) {
-      list.unshift(teacherTrackedTaskId);
-    }
-    if (!list.length) {
-      list.push('task_01');
-    }
-    return list;
+    activeList.sort((a, b) => (a.deadlineAt > 0 && b.deadlineAt > 0 ? a.deadlineAt - b.deadlineAt : b.issuedAt - a.issuedAt));
+    expiredList.sort((a, b) => b.deadlineAt - a.deadlineAt);
+    return { activeList, expiredList };
   }
 
   function getStudentHomeworkRowData(task, st, bridge, cache, nowMs) {
@@ -1492,31 +1545,9 @@
     };
   }
 
-  function selectTeacherTrackedTask(taskId) {
-    const norm = normalizeTaskId(taskId);
-    if (!norm || !getTaskById(norm)) return;
-    teacherTrackedTaskId = norm;
-    renderTeacherHomeworkTracker();
-  }
-
-  function setTeacherHwFilter(filter) {
-    teacherHwFilter = ['all', 'done', 'progress', 'missing'].includes(filter) ? filter : 'all';
-    renderTeacherHomeworkTracker();
-  }
-
-  function jumpToTrackTask(taskId) {
-    const norm = normalizeTaskId(taskId);
-    if (!norm || !getTaskById(norm)) return;
-    teacherTrackedTaskId = norm;
-    teacherHwFilter = 'all';
-    renderTeacherHomeworkTracker();
-    const panel = document.getElementById('teacher-homework-panel');
-    panel?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-  }
-
-  function copyTeacherHomeworkReminder(taskId) {
+  function copyTeacherHomeworkReminder(taskId, isExpiredReport = false) {
     const bridge = B();
-    const task = getTaskById(taskId || teacherTrackedTaskId);
+    const task = getTaskById(taskId || teacherDetailTaskId);
     if (!bridge || !task) return;
     const students = bridge.getStudentAccounts?.() || [];
     const cache = bridge.getCloudClassCache?.() || {};
@@ -1525,43 +1556,65 @@
     const doneRows = rows.filter((r) => r.bucket === 'done');
     const progRows = rows.filter((r) => r.bucket === 'progress');
     const missRows = rows.filter((r) => r.bucket === 'missing');
+    const notDoneRows = rows.filter((r) => r.bucket !== 'done');
 
     const liveDl = loadTeacherLiveDeadlines()[task.id];
+    const expired = isExpiredReport || Boolean(liveDl && Number(liveDl.deadlineAt || 0) > 0 && Number(liveDl.deadlineAt) <= nowMs);
     let dlLine = '';
     if (liveDl && Number(liveDl.deadlineAt || 0) > 0) {
       const rem = Number(liveDl.deadlineAt) - nowMs;
       dlLine = rem > 0
         ? `⏱ Hạn nộp: còn ${formatDeadlineRemaining(rem)} (đóng lúc ${formatDeadlineTimestamp(Number(liveDl.deadlineAt))})`
-        : `⏱ Đã hết hạn lúc ${formatDeadlineTimestamp(Number(liveDl.deadlineAt))}`;
+        : `⏱ Đã đóng hạn lúc ${formatDeadlineTimestamp(Number(liveDl.deadlineAt))}`;
     }
 
     const lines = [
-      `📋 NHẮC NỘP BÀI — ${task.label}: ${task.theme}`,
+      expired
+        ? `📊 THỐNG KÊ HẾT HẠN — ${task.label}: ${task.theme}`
+        : `📋 NHẮC NỘP BÀI — ${task.label}: ${task.theme}`,
       dlLine,
       `✓ Đã nộp: ${doneRows.length}/${rows.length} bạn`,
     ].filter(Boolean);
 
-    if (progRows.length) {
-      lines.push('');
-      lines.push(`📖 Đang làm dở (${progRows.length}):`);
-      progRows.forEach((r) => {
-        const detail = r.rec?.status === 'in_progress'
-          ? `đang làm Test ${Number(r.rec.stage || 1) + 1}`
-          : `đã thuộc ${r.masteredInTask}/${r.wordTotal} từ`;
-        lines.push(`• ${r.student.name} (${detail})`);
-      });
-    }
-    if (missRows.length) {
-      lines.push('');
-      lines.push(`⏳ Chưa bắt đầu (${missRows.length}):`);
-      lines.push(`• ${missRows.map((r) => r.student.name).join(', ')}`);
-    }
-    if (!progRows.length && !missRows.length) {
-      lines.push('🎉 Cả lớp đã hoàn thành 100% bài tập này!');
+    if (expired) {
+      if (notDoneRows.length) {
+        lines.push('');
+        lines.push(`✗ Chưa nộp sau hạn (${notDoneRows.length}):`);
+        notDoneRows.forEach((r) => {
+          const note = r.bucket === 'progress'
+            ? (r.rec?.status === 'in_progress' ? `mới xong Test ${Number(r.rec.stage || 1)}` : `mới học ${r.masteredInTask}/${r.wordTotal} từ`)
+            : 'chưa bắt đầu';
+          lines.push(`• ${r.student.name} (${note})`);
+        });
+      } else {
+        lines.push('🎉 Cả lớp đã nộp đủ 100% đúng hạn!');
+      }
+    } else {
+      if (progRows.length) {
+        lines.push('');
+        lines.push(`📖 Đang làm dở (${progRows.length}):`);
+        progRows.forEach((r) => {
+          const detail = r.rec?.status === 'in_progress'
+            ? `đang làm Test ${Math.min(3, Number(r.rec.stage || 1) + 1)}`
+            : `đã thuộc ${r.masteredInTask}/${r.wordTotal} từ`;
+          lines.push(`• ${r.student.name} (${detail})`);
+        });
+      }
+      if (missRows.length) {
+        lines.push('');
+        lines.push(`⏳ Chưa bắt đầu (${missRows.length}):`);
+        lines.push(`• ${missRows.map((r) => r.student.name).join(', ')}`);
+      }
+      if (!progRows.length && !missRows.length) {
+        lines.push('🎉 Cả lớp đã hoàn thành 100% bài tập này!');
+      }
     }
 
     const txt = lines.join('\n');
-    const onCopied = () => bridge.showToast?.('Đã copy danh sách nhắc nộp bài (dán thẳng vào Zalo lớp)!');
+    const msg = expired
+      ? 'Đã copy danh sách học sinh chưa nộp sau hạn (dán vào Zalo)!'
+      : 'Đã copy tin nhắn nhắc nộp bài (dán thẳng vào Zalo lớp)!';
+    const onCopied = () => bridge.showToast?.(msg);
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(txt).then(onCopied).catch(() => onCopied());
     } else {
@@ -1569,74 +1622,161 @@
     }
   }
 
-  function copyQuickSingleTaskLink(taskId) {
-    const task = getTaskById(taskId);
-    if (!task) return;
-    teacherSelectedIds = new Set([task.id]);
-    renderTeacherTasksGrid();
-    copyTeacherTaskLink();
-  }
-
-  function renderTeacherHomeworkTracker() {
-    const panel = document.getElementById('teacher-homework-panel');
-    if (!panel) return;
+  function renderTeacherAssignedMonitor() {
+    const box = document.getElementById('teacher-assigned-monitor');
+    if (!box) return;
     const bridge = B();
-    if (!bridge?.isTeacherUser?.()) return;
+    if (!bridge?.isTeacherUser?.()) {
+      box.style.display = 'none';
+      return;
+    }
     const esc = bridge.escapeHtml || ((x) => String(x));
     const students = bridge.getStudentAccounts?.() || [];
     const cache = bridge.getCloudClassCache?.() || {};
     const nowMs = Date.now();
-    const candidates = getTrackedTaskCandidates();
+    const { activeList, expiredList } = getAssignedMonitorBuckets(nowMs);
 
-    if (!teacherTrackedTaskId || !getTaskById(teacherTrackedTaskId)) {
-      teacherTrackedTaskId = candidates[0] || 'task_01';
-    }
-    const activeHwTask = getTaskById(teacherTrackedTaskId) || getTaskById('task_01');
-    if (!activeHwTask) return;
-
-    const liveMap = loadTeacherLiveDeadlines();
-
-    // 1. Render Active Task Pills Strip (top 8 recent/assigned) + Full 110-Task Picker
-    const pillsEl = document.getElementById('teacher-hw-pills');
-    if (pillsEl) {
-      const topIds = candidates.slice(0, 8);
-      if (!topIds.includes(activeHwTask.id)) topIds.unshift(activeHwTask.id);
-      pillsEl.innerHTML = topIds.map((tid) => {
-        const t = getTaskById(tid);
-        if (!t) return '';
-        const st = getTaskClassStatus(tid);
-        const dl = liveMap[tid];
-        const rem = dl && Number(dl.deadlineAt || 0) > 0 ? (Number(dl.deadlineAt) - nowMs) : null;
-        const isSel = tid === activeHwTask.id;
-        const statusDotCls = st.allDone ? 'is-done' : (st.doneCount > 0 ? 'is-partial' : 'is-pending');
-        const dlMini = rem !== null
-          ? (rem > 0 ? `<span class="thw-pill-dl">⏱ ${esc(formatDeadlineRemaining(rem))}</span>` : '<span class="thw-pill-dl is-ended">Hết hạn</span>')
-          : '';
-        return `
-          <button type="button" class="thw-task-pill ${isSel ? 'active' : ''}" onclick="TasksModule.selectTeacherTrackedTask('${esc(tid)}')" title="${esc(t.label)} · ${esc(t.theme)}">
-            <span class="thw-pill-dot ${statusDotCls}"></span>
-            <span class="thw-pill-name">${esc(t.label)}</span>
-            <span class="thw-pill-count tabular">${st.doneCount}/${st.totalStudents}</span>
-            ${dlMini}
-          </button>
-        `;
-      }).join('');
+    if (!activeList.length && !expiredList.length) {
+      box.style.display = 'none';
+      box.innerHTML = '';
+      return;
     }
 
-    const pickerEl = document.getElementById('teacher-hw-picker');
-    if (pickerEl) {
-      if (!pickerEl.dataset.populated) {
-        pickerEl.innerHTML = TASK_SUITES_META.map((m) => {
-          const suiteTasks = getTasksByScope(m.key);
-          return `<optgroup label="${esc(m.label)} (${suiteTasks.length} Task)">${suiteTasks.map((t) => `<option value="${esc(t.id)}">${esc(t.label)} — ${esc(t.theme)}</option>`).join('')}</optgroup>`;
-        }).join('');
-        pickerEl.dataset.populated = '1';
+    if (teacherAssignedTab === 'active' && !activeList.length && expiredList.length) {
+      teacherAssignedTab = 'expired';
+    } else if (teacherAssignedTab === 'expired' && !expiredList.length && activeList.length) {
+      teacherAssignedTab = 'active';
+    }
+
+    const showingExpired = teacherAssignedTab === 'expired';
+    const listToRender = showingExpired ? expiredList : activeList;
+
+    const cardsHtml = listToRender.map(({ task, deadlineAt }) => {
+      const rows = students.map((st) => getStudentHomeworkRowData(task, st, bridge, cache, nowMs));
+      const doneRows = rows.filter((r) => r.bucket === 'done');
+      const progRows = rows.filter((r) => r.bucket === 'progress');
+      const missRows = rows.filter((r) => r.bucket === 'missing');
+      const notDoneRows = rows.filter((r) => r.bucket !== 'done');
+      const totalStu = rows.length || 1;
+      const donePct = Math.round((doneRows.length / totalStu) * 100);
+      const progPct = Math.round((progRows.length / totalStu) * 100);
+
+      let dlPillHtml = '<span class="thw-dl-pill is-open">Không giới hạn</span>';
+      if (deadlineAt > 0) {
+        const rem = deadlineAt - nowMs;
+        const closeStr = formatDeadlineTimestamp(deadlineAt);
+        dlPillHtml = rem > 0
+          ? `<span class="thw-dl-pill is-live" data-teacher-dl-task="${esc(task.id)}" title="Đóng lúc ${esc(closeStr)}">⏱ Còn ${esc(formatDeadlineRemaining(rem))} · đóng ${esc(closeStr)}</span>`
+          : `<span class="thw-dl-pill is-ended" data-teacher-dl-task="${esc(task.id)}">Đã đóng lúc ${esc(closeStr)}</span>`;
       }
-      pickerEl.value = activeHwTask.id;
-    }
 
-    // 2. Compute Student Rows for Active Task
-    const rows = students.map((st) => getStudentHomeworkRowData(activeHwTask, st, bridge, cache, nowMs));
+      const doneNamesHtml = doneRows.length
+        ? `<div class="tam-line is-done"><strong>✓ Đã nộp (${doneRows.length}):</strong> ${esc(doneRows.map((r) => `${shortStudentName(r.student.name)}${r.overallScore != null ? ` (${r.overallScore.toFixed(1)})` : ''}`).join(', '))}</div>`
+        : '';
+
+      let pendingLinesHtml = '';
+      if (showingExpired) {
+        pendingLinesHtml = notDoneRows.length
+          ? `<div class="tam-line is-overdue"><strong>✗ Chưa nộp sau hạn (${notDoneRows.length}):</strong> ${esc(notDoneRows.map((r) => {
+              const nm = shortStudentName(r.student.name);
+              return r.bucket === 'progress' ? `${nm} (${r.masteredInTask}/${r.wordTotal})` : nm;
+            }).join(', '))}</div>`
+          : '<div class="tam-line is-done"><strong>🎉 Cả lớp đã nộp đủ 100%!</strong></div>';
+      } else {
+        const parts = [];
+        if (progRows.length) {
+          parts.push(`<div class="tam-line is-prog"><strong>Đang học (${progRows.length}):</strong> ${esc(progRows.map((r) => {
+            const nm = shortStudentName(r.student.name);
+            if (r.isLocked) return `${nm} (Khóa)`;
+            if (r.rec?.status === 'in_progress') return `${nm} (Test ${Math.min(3, Number(r.rec.stage || 1) + 1)})`;
+            return `${nm} (${r.masteredInTask}/${r.wordTotal})`;
+          }).join(', '))}</div>`);
+        }
+        if (missRows.length) {
+          parts.push(`<div class="tam-line is-miss"><strong>Chưa làm (${missRows.length}):</strong> ${esc(missRows.map((r) => shortStudentName(r.student.name)).join(', '))}</div>`);
+        }
+        if (!progRows.length && !missRows.length) {
+          parts.push('<div class="tam-line is-done"><strong>🎉 Cả lớp đã hoàn thành 100%!</strong></div>');
+        }
+        pendingLinesHtml = parts.join('');
+      }
+
+      const actionsHtml = showingExpired
+        ? `
+          <button type="button" class="btn-subtle thw-act-btn" onclick="TasksModule.copyTeacherHomeworkReminder('${esc(task.id)}', true)">Copy DS chưa làm</button>
+          <button type="button" class="btn-subtle thw-act-btn" onclick="TasksModule.openTeacherTaskDetailModal('${esc(task.id)}')">Chi tiết</button>
+          <button type="button" class="btn-subtle thw-act-btn" onclick="TasksModule.extendTaskDeadlineByMinutes('${esc(task.id)}', 60)" title="Mở gia hạn thêm 1 giờ">+1h</button>
+          <button type="button" class="btn-subtle thw-act-btn" onclick="TasksModule.dismissAssignedTask('${esc(task.id)}')" title="Ẩn khỏi danh sách hết hạn">Ẩn</button>
+        `
+        : `
+          <button type="button" class="btn-subtle thw-act-btn is-accent" onclick="TasksModule.copyTeacherHomeworkReminder('${esc(task.id)}', false)">Nhắc nộp Zalo</button>
+          <button type="button" class="btn-subtle thw-act-btn" onclick="TasksModule.openTeacherTaskDetailModal('${esc(task.id)}')">Chi tiết</button>
+          <button type="button" class="btn-subtle thw-act-btn" onclick="TasksModule.extendTaskDeadlineByMinutes('${esc(task.id)}', 60)" title="Gia hạn thêm 1 giờ">+1h</button>
+          <button type="button" class="btn-subtle thw-act-btn is-danger" onclick="TasksModule.endSelectedTasksNow(['${esc(task.id)}'])" title="Đóng hạn ngay">Đóng hạn</button>
+        `;
+
+      return `
+        <div class="tam-card ${showingExpired ? 'is-expired' : 'is-active'}">
+          <div class="tam-card-top">
+            <div class="tam-card-title-wrap">
+              <span class="thw-task-code ${showingExpired ? 'is-ended' : ''}">${esc(task.label.toUpperCase())}</span>
+              <strong class="tam-card-theme">${esc(task.theme)}</strong>
+              ${dlPillHtml}
+            </div>
+            <div class="tam-card-actions">${actionsHtml}</div>
+          </div>
+          <div class="thw-progress-row">
+            <div class="thw-progress-bar">
+              <div class="thw-seg-done" style="width:${donePct}%;"></div>
+              ${!showingExpired ? `<div class="thw-seg-prog" style="width:${progPct}%;"></div>` : ''}
+            </div>
+            <span class="thw-progress-text tabular">
+              <strong>${doneRows.length}/${rows.length}</strong> đã nộp (${donePct}%)
+              ${showingExpired ? `· <strong>${notDoneRows.length}</strong> chưa nộp` : `· <strong>${progRows.length}</strong> đang học · <strong>${missRows.length}</strong> chưa làm`}
+            </span>
+          </div>
+          <div class="tam-rollcall">
+            ${doneNamesHtml}
+            ${pendingLinesHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    box.style.display = 'flex';
+    box.innerHTML = `
+      <div class="tam-header">
+        <div class="tam-tabs" role="tablist" aria-label="Phân loại Task theo hạn nộp">
+          <button type="button" class="tam-tab ${!showingExpired ? 'active' : ''}" role="tab" aria-selected="${!showingExpired}" onclick="TasksModule.setTeacherAssignedTab('active')">
+            <span class="tam-dot is-live"></span>Đang giao <span class="tam-cnt tabular">${activeList.length}</span>
+          </button>
+          <button type="button" class="tam-tab ${showingExpired ? 'active' : ''}" role="tab" aria-selected="${showingExpired}" onclick="TasksModule.setTeacherAssignedTab('expired')">
+            <span class="tam-dot is-ended"></span>Đã hết hạn <span class="tam-cnt tabular">${expiredList.length}</span>
+          </button>
+        </div>
+        <span class="tam-hint">${showingExpired ? 'Thống kê học viên chưa nộp sau hạn · Bấm "Ẩn" sau khi đã ghi nhận' : 'Chỉ hiện các Task đang giao · Nhắc nộp nhanh trước deadline'}</span>
+      </div>
+      <div class="tam-cards-list">
+        ${cardsHtml || `<div class="tam-empty">${showingExpired ? 'Không có Task nào vừa hết hạn.' : 'Hiện không có Task nào đang trong hạn nộp.'}</div>`}
+      </div>
+    `;
+  }
+
+  function renderTeacherTaskDetailModalBody() {
+    const titleEl = document.getElementById('teacher-task-detail-title');
+    const subEl = document.getElementById('teacher-task-detail-sub');
+    const bodyEl = document.getElementById('teacher-task-detail-body');
+    const bridge = B();
+    const task = getTaskById(teacherDetailTaskId);
+    if (!bodyEl || !bridge || !task) return;
+    const esc = bridge.escapeHtml || ((x) => String(x));
+    const students = bridge.getStudentAccounts?.() || [];
+    const cache = bridge.getCloudClassCache?.() || {};
+    const nowMs = Date.now();
+    const liveDl = loadTeacherLiveDeadlines()[task.id];
+    const isExpired = Boolean(liveDl && Number(liveDl.deadlineAt || 0) > 0 && Number(liveDl.deadlineAt) <= nowMs);
+
+    const rows = students.map((st) => getStudentHomeworkRowData(task, st, bridge, cache, nowMs));
     const bucketOrder = { done: 0, progress: 1, missing: 2 };
     rows.sort((a, b) => (
       (bucketOrder[a.bucket] - bucketOrder[b.bucket])
@@ -1645,148 +1785,128 @@
       || String(a.student.name || '').localeCompare(String(b.student.name || ''), 'vi')
     ));
 
-    const totalStu = rows.length || 1;
     const doneCnt = rows.filter((r) => r.bucket === 'done').length;
     const progCnt = rows.filter((r) => r.bucket === 'progress').length;
     const missCnt = rows.filter((r) => r.bucket === 'missing').length;
-    const donePct = Math.round((doneCnt / totalStu) * 100);
-    const progPct = Math.round((progCnt / totalStu) * 100);
 
-    // 3. Render Selected Task Summary & Quick Actions
-    const sumEl = document.getElementById('teacher-hw-summary');
-    if (sumEl) {
-      const dl = liveMap[activeHwTask.id];
-      let dlPillHtml = '<span class="thw-dl-pill is-open">Không giới hạn thời gian</span>';
-      if (dl && Number(dl.deadlineAt || 0) > 0) {
-        const rem = Number(dl.deadlineAt) - nowMs;
-        const closeStr = formatDeadlineTimestamp(Number(dl.deadlineAt));
-        dlPillHtml = rem > 0
-          ? `<span class="thw-dl-pill is-live" data-teacher-dl-task="${esc(activeHwTask.id)}" title="Đóng lúc ${esc(closeStr)}">⏱ Còn ${esc(formatDeadlineRemaining(rem))} · đóng ${esc(closeStr)}</span>`
-          : `<span class="thw-dl-pill is-ended" data-teacher-dl-task="${esc(activeHwTask.id)}">Đã hết hạn lúc ${esc(closeStr)}</span>`;
+    if (titleEl) titleEl.textContent = `${task.label} — ${task.theme}`;
+    if (subEl) {
+      let dlStr = 'Không giới hạn thời gian';
+      if (liveDl && Number(liveDl.deadlineAt || 0) > 0) {
+        const rem = Number(liveDl.deadlineAt) - nowMs;
+        dlStr = rem > 0
+          ? `Còn ${formatDeadlineRemaining(rem)} · đóng lúc ${formatDeadlineTimestamp(Number(liveDl.deadlineAt))}`
+          : `Đã hết hạn lúc ${formatDeadlineTimestamp(Number(liveDl.deadlineAt))}`;
       }
-      sumEl.innerHTML = `
-        <div class="thw-summary-left">
-          <div class="thw-summary-title-row">
-            <span class="thw-task-code">${esc(activeHwTask.label.toUpperCase())}</span>
-            <h3 class="thw-task-theme">${esc(activeHwTask.theme)}</h3>
-            ${dlPillHtml}
-          </div>
-          <div class="thw-progress-row">
-            <div class="thw-progress-bar" aria-label="Tiến độ hoàn thành lớp">
-              <div class="thw-seg-done" style="width:${donePct}%;"></div>
-              <div class="thw-seg-prog" style="width:${progPct}%;"></div>
-            </div>
-            <span class="thw-progress-text tabular"><strong>${doneCnt}/${rows.length}</strong> đã nộp (${donePct}%) · <strong>${progCnt}</strong> đang làm · <strong>${missCnt}</strong> chưa làm</span>
-          </div>
-        </div>
-        <div class="thw-summary-actions">
-          <button type="button" class="btn-subtle thw-act-btn" onclick="TasksModule.copyTeacherHomeworkReminder('${esc(activeHwTask.id)}')" title="Sao chép tin nhắn nhắc nộp bài cho học viên chưa xong">
-            Nhắc nộp Zalo
-          </button>
-          <button type="button" class="btn-subtle thw-act-btn" onclick="TasksModule.copyQuickSingleTaskLink('${esc(activeHwTask.id)}')" title="Copy link giao Task này">
-            Copy Link
-          </button>
-          <button type="button" class="btn-subtle thw-act-btn" onclick="TasksModule.extendTaskDeadlineByMinutes('${esc(activeHwTask.id)}', 60)" title="Gia hạn thêm 1 giờ">+1h</button>
-          <button type="button" class="btn-subtle thw-act-btn is-danger" onclick="TasksModule.endSelectedTasksNow(['${esc(activeHwTask.id)}'])" title="Đóng thời hạn ngay">Đóng hạn</button>
-          <div class="thw-preview-group">
-            <button type="button" class="btn-subtle thw-mini-btn" onclick="TasksModule.openAdminTestPreview(1, '${esc(activeHwTask.id)}')">T1</button>
-            <button type="button" class="btn-subtle thw-mini-btn" onclick="TasksModule.openAdminTestPreview(2, '${esc(activeHwTask.id)}')">T2</button>
-            <button type="button" class="btn-subtle thw-mini-btn" onclick="TasksModule.openAdminTestPreview(3, '${esc(activeHwTask.id)}')">T3</button>
-          </div>
-        </div>
+      subEl.textContent = `${doneCnt}/${rows.length} đã nộp · ${progCnt} đang học · ${missCnt} chưa làm · ${dlStr}`;
+    }
+
+    const visibleRows = teacherDetailFilter === 'all' ? rows : rows.filter((r) => r.bucket === teacherDetailFilter);
+    const getMono = (name) => {
+      const pts = String(name || 'HV').trim().split(/\s+/).filter(Boolean);
+      return (pts.length >= 2 ? (pts[pts.length - 2][0] + pts[pts.length - 1][0]) : (pts[0] || 'HV').slice(0, 2)).toUpperCase();
+    };
+
+    const rowsHtml = visibleRows.map((r, idx) => {
+      const pctW = Math.min(100, Math.round((r.masteredInTask / Math.max(1, r.wordTotal)) * 100));
+      let statusHtml = '<span class="thw-status-pill is-missing">Chưa bắt đầu</span>';
+      if (r.bucket === 'done') {
+        statusHtml = '<span class="thw-status-pill is-done">✓ Đã nộp</span>';
+      } else if (r.isLocked) {
+        statusHtml = `<div class="teacher-status-cell is-locked"><span class="teacher-lock-pill">Khóa (${formatMmSs(r.lockRemainingMs)})</span><button type="button" class="btn-teacher-unlock" onclick="TasksModule.unlockStudentTasks('${esc(r.student.id)}'); TasksModule.openTeacherTaskDetailModal('${esc(task.id)}');">Mở khóa</button></div>`;
+      } else if (r.rec?.status === 'in_progress') {
+        statusHtml = `<span class="thw-status-pill is-testing">Đang làm Test ${Math.min(3, Number(r.rec.stage || 1) + 1)}</span>`;
+      } else if (r.masteredInTask >= r.wordTotal) {
+        statusHtml = '<span class="thw-status-pill is-ready">Đủ từ · Chưa thi</span>';
+      } else if (r.masteredInTask > 0) {
+        statusHtml = '<span class="thw-status-pill is-progress">Đang học từ</span>';
+      }
+
+      let scoreHtml = '<span class="thw-muted">—</span>';
+      if (r.bucket === 'done' && r.rec) {
+        const chips = [];
+        if (r.rec.test1AccuracyPct != null) chips.push(`T1 ${r.rec.test1AccuracyPct}%`);
+        if (r.rec.test2Score != null) chips.push(`T2 ${r.rec.test2Score}/${r.t2Total}`);
+        if (r.rec.test3ReadingScore != null) chips.push(`Quiz ${r.rec.test3ReadingScore}/${r.rec.test3ReadingTotal || 10}`);
+        if (r.rec.translationScore != null) chips.push(`AI ${Number(r.rec.translationScore).toFixed(1)}`);
+        scoreHtml = `<div class="thw-score-cell"><strong class="thw-overall-score tabular">${r.overallScore != null ? `${r.overallScore.toFixed(1)}/10` : 'Đạt'}</strong><div class="thw-score-chips">${chips.map((c) => `<span class="thw-mini-chip">${esc(c)}</span>`).join('')}</div></div>`;
+      } else if (r.rec?.status === 'in_progress') {
+        const chips = [];
+        if (r.rec.test1AccuracyPct != null) chips.push(`T1 ${r.rec.test1AccuracyPct}%`);
+        if (r.rec.test2Score != null) chips.push(`T2 ${r.rec.test2Score}/${r.t2Total}`);
+        if (chips.length) scoreHtml = `<div class="thw-score-chips">${chips.map((c) => `<span class="thw-mini-chip">${esc(c)}</span>`).join('')}</div>`;
+      }
+
+      let timeHtml = '<span class="thw-muted">—</span>';
+      if (r.bucket === 'done' && r.rec) {
+        const durStr = r.rec.durationSec ? formatDurationCompact(r.rec.durationSec) : '';
+        const atStr = formatShortDateTimeVi(r.rec.updatedAt || r.rec.completedAt);
+        timeHtml = `<div class="thw-time-cell tabular">${atStr ? `<strong>${esc(atStr)}</strong>` : ''}${durStr ? `<span class="thw-muted"> · ${esc(durStr)}</span>` : ''}</div>`;
+      } else if (r.rec?.updatedAt) {
+        timeHtml = `<div class="thw-time-cell tabular"><span class="thw-muted">${esc(formatShortDateTimeVi(r.rec.updatedAt))}</span></div>`;
+      }
+
+      return `
+        <tr class="thw-row is-${r.bucket}">
+          <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(getMono(r.student.name))}</span><div style="min-width:0;"><strong>${esc(r.student.name)}</strong></div></div></td>
+          <td><div class="thw-vocab-cell"><div class="thw-vocab-bar"><div class="thw-vocab-fill ${pctW >= 100 ? 'is-full' : ''}" style="width:${pctW}%;"></div></div><span class="thw-vocab-num tabular">${r.masteredInTask}/${r.wordTotal}</span></div></td>
+          <td>${statusHtml}</td>
+          <td>${scoreHtml}</td>
+          <td>${timeHtml}</td>
+        </tr>
       `;
-    }
+    }).join('') || '<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--text-muted);">Không có học viên nào trong mục lọc này.</td></tr>';
 
-    // 4. Render Filter Chips
-    const filtersEl = document.getElementById('teacher-hw-filters');
-    if (filtersEl) {
-      const chips = [
-        { key: 'all', label: `Tất cả (${rows.length})` },
-        { key: 'done', label: `✓ Đã nộp (${doneCnt})` },
-        { key: 'progress', label: `Đang học (${progCnt})` },
-        { key: 'missing', label: `Chưa làm (${missCnt})` },
-      ];
-      filtersEl.innerHTML = chips.map((c) => `
-        <button type="button" class="thw-filter-chip ${teacherHwFilter === c.key ? 'active' : ''}" onclick="TasksModule.setTeacherHwFilter('${c.key}')">${c.label}</button>
-      `).join('');
-    }
+    const chips = [
+      { key: 'all', label: `Tất cả (${rows.length})` },
+      { key: 'done', label: `✓ Đã nộp (${doneCnt})` },
+      { key: 'progress', label: `Đang học (${progCnt})` },
+      { key: 'missing', label: `Chưa làm (${missCnt})` },
+    ];
 
-    // 5. Render Per-Student Matrix Table
-    const tbody = document.getElementById('teacher-hw-tbody');
-    if (tbody) {
-      const visibleRows = teacherHwFilter === 'all' ? rows : rows.filter((r) => r.bucket === teacherHwFilter);
-      const getMono = (name) => {
-        const pts = String(name || 'HV').trim().split(/\s+/).filter(Boolean);
-        return (pts.length >= 2 ? (pts[pts.length - 2][0] + pts[pts.length - 1][0]) : (pts[0] || 'HV').slice(0, 2)).toUpperCase();
-      };
+    bodyEl.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <div class="thw-filters-row">
+          ${chips.map((c) => `<button type="button" class="thw-filter-chip ${teacherDetailFilter === c.key ? 'active' : ''}" onclick="TasksModule.setTeacherDetailFilter('${c.key}')">${c.label}</button>`).join('')}
+        </div>
+        <button type="button" class="btn btn-primary thw-act-btn" onclick="TasksModule.copyTeacherHomeworkReminder('${esc(task.id)}', ${isExpired})">
+          ${isExpired ? 'Copy DS chưa làm (Zalo)' : 'Nhắc nộp bài (Zalo)'}
+        </button>
+      </div>
+      <div class="teacher-hw-table-wrap">
+        <table class="teacher-hw-table">
+          <thead>
+            <tr><th>Học viên</th><th>Học từ vựng</th><th>Trạng thái</th><th>Điểm chi tiết</th><th>Thời gian nộp</th></tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
 
-      tbody.innerHTML = visibleRows.map((r, idx) => {
-        const pctW = Math.min(100, Math.round((r.masteredInTask / Math.max(1, r.wordTotal)) * 100));
-        let statusHtml = '<span class="thw-status-pill is-missing">Chưa bắt đầu</span>';
-        if (r.bucket === 'done') {
-          statusHtml = '<span class="thw-status-pill is-done">✓ Đã nộp</span>';
-        } else if (r.isLocked) {
-          statusHtml = `<div class="teacher-status-cell is-locked"><span class="teacher-lock-pill">Khóa (${formatMmSs(r.lockRemainingMs)})</span><button type="button" class="btn-teacher-unlock" onclick="TasksModule.unlockStudentTasks('${esc(r.student.id)}')">Mở khóa</button></div>`;
-        } else if (r.rec?.status === 'in_progress') {
-          const stg = Number(r.rec.stage || 1);
-          statusHtml = `<span class="thw-status-pill is-testing">Đang làm Test ${Math.min(3, stg + 1)}</span>`;
-        } else if (r.masteredInTask >= r.wordTotal) {
-          statusHtml = '<span class="thw-status-pill is-ready">Đủ từ · Chưa thi</span>';
-        } else if (r.masteredInTask > 0) {
-          statusHtml = '<span class="thw-status-pill is-progress">Đang học từ</span>';
-        }
+  function openTeacherTaskDetailModal(taskId) {
+    const norm = normalizeTaskId(taskId);
+    if (!norm || !getTaskById(norm)) return;
+    teacherDetailTaskId = norm;
+    teacherDetailFilter = 'all';
+    renderTeacherTaskDetailModalBody();
+    document.getElementById('modal-teacher-task-detail')?.classList.add('open');
+  }
 
-        let scoreHtml = '<span class="thw-muted">—</span>';
-        if (r.bucket === 'done' && r.rec) {
-          const chips = [];
-          if (r.rec.test1AccuracyPct != null) chips.push(`T1 ${r.rec.test1AccuracyPct}%`);
-          if (r.rec.test2Score != null) chips.push(`T2 ${r.rec.test2Score}/${r.t2Total}`);
-          if (r.rec.test3ReadingScore != null) chips.push(`Quiz ${r.rec.test3ReadingScore}/${r.rec.test3ReadingTotal || 10}`);
-          if (r.rec.translationScore != null) chips.push(`AI ${Number(r.rec.translationScore).toFixed(1)}`);
-          scoreHtml = `
-            <div class="thw-score-cell">
-              <strong class="thw-overall-score tabular">${r.overallScore != null ? `${r.overallScore.toFixed(1)}/10` : 'Đạt'}</strong>
-              <div class="thw-score-chips">${chips.map((c) => `<span class="thw-mini-chip">${esc(c)}</span>`).join('')}</div>
-            </div>
-          `;
-        } else if (r.rec?.status === 'in_progress') {
-          const chips = [];
-          if (r.rec.test1AccuracyPct != null) chips.push(`T1 ${r.rec.test1AccuracyPct}%`);
-          if (r.rec.test2Score != null) chips.push(`T2 ${r.rec.test2Score}/${r.t2Total}`);
-          if (chips.length) {
-            scoreHtml = `<div class="thw-score-chips">${chips.map((c) => `<span class="thw-mini-chip">${esc(c)}</span>`).join('')}</div>`;
-          }
-        }
+  function closeTeacherTaskDetailModal(event) {
+    if (event && event.target !== document.getElementById('modal-teacher-task-detail')) return;
+    document.getElementById('modal-teacher-task-detail')?.classList.remove('open');
+  }
 
-        let timeHtml = '<span class="thw-muted">—</span>';
-        if (r.bucket === 'done' && r.rec) {
-          const durStr = r.rec.durationSec ? formatDurationCompact(r.rec.durationSec) : '';
-          const atStr = formatShortDateTimeVi(r.rec.updatedAt || r.rec.completedAt);
-          timeHtml = `<div class="thw-time-cell tabular">${atStr ? `<strong>${esc(atStr)}</strong>` : ''}${durStr ? `<span class="thw-muted"> · ${esc(durStr)}</span>` : ''}</div>`;
-        } else if (r.rec?.updatedAt) {
-          timeHtml = `<div class="thw-time-cell tabular"><span class="thw-muted">Cập nhật ${esc(formatShortDateTimeVi(r.rec.updatedAt))}</span></div>`;
-        }
+  function setTeacherDetailFilter(filter) {
+    teacherDetailFilter = ['all', 'done', 'progress', 'missing'].includes(filter) ? filter : 'all';
+    renderTeacherTaskDetailModalBody();
+  }
 
-        return `
-          <tr class="thw-row is-${r.bucket}">
-            <td>
-              <div class="teacher-student-cell">
-                <span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(getMono(r.student.name))}</span>
-                <div style="min-width:0;"><strong>${esc(r.student.name)}</strong></div>
-              </div>
-            </td>
-            <td>
-              <div class="thw-vocab-cell">
-                <div class="thw-vocab-bar"><div class="thw-vocab-fill ${pctW >= 100 ? 'is-full' : ''}" style="width:${pctW}%;"></div></div>
-                <span class="thw-vocab-num tabular">${r.masteredInTask}/${r.wordTotal}</span>
-              </div>
-            </td>
-            <td>${statusHtml}</td>
-            <td>${scoreHtml}</td>
-            <td>${timeHtml}</td>
-          </tr>
-        `;
-      }).join('') || '<tr><td colspan="5" style="text-align:center; padding:18px; color:var(--text-muted);">Không có học viên nào trong mục lọc này.</td></tr>';
+  function renderTeacherHomeworkTracker() {
+    renderTeacherAssignedMonitor();
+    if (document.getElementById('modal-teacher-task-detail')?.classList.contains('open') && teacherDetailTaskId) {
+      renderTeacherTaskDetailModalBody();
     }
   }
 
@@ -4159,11 +4279,15 @@
       const clean = String(k || '').trim();
       if (!clean) return;
       const escK = clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      if (clean.toLowerCase() === 'rely') {
-        tokens.push('rel(?:y|ies|ied|ying)');
-      } else if (clean.length >= 4 && !/\s/.test(clean)) {
-        const stem = clean.endsWith('e') ? clean.slice(0, -1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : escK;
-        tokens.push(`${stem}[a-z]{0,5}`);
+      if (clean.length >= 4 && !/\s/.test(clean)) {
+        const lower = clean.toLowerCase();
+        if (lower.endsWith('y') && !/[aeiou]y$/i.test(lower)) {
+          const yStem = escK.slice(0, -1);
+          tokens.push(`${yStem}(?:y|ies|ied|ying|ier|iest)`);
+        } else {
+          const stem = lower.endsWith('e') ? escK.slice(0, -1) : escK;
+          tokens.push(`${stem}[a-z]{0,6}`);
+        }
       } else {
         tokens.push(escK);
       }
@@ -4940,8 +5064,7 @@
     return `
       <div class="t3-v2-section">
         <div class="t3-v2-sec-head">
-          <span class="t3-v2-sec-title">2A · Matching Headings (${hDone}/${hTotal})</span>
-          <span class="t3-v2-sec-sub">Chọn tiêu đề phù hợp nhất cho từng đoạn A–D</span>
+          <span class="t3-v2-sec-title">Matching Headings (${hDone}/${hTotal})</span>
         </div>
         <div class="t3-v2-headings-list">${headingsListHtml}</div>
         <div class="t3-v2-heading-rows">${headingRowsHtml}</div>
@@ -4949,8 +5072,7 @@
 
       <div class="t3-v2-section">
         <div class="t3-v2-sec-head">
-          <span class="t3-v2-sec-title">2B · Summary Completion (${sDone}/${sTotal})</span>
-          <span class="t3-v2-sec-sub">Bấm hoặc kéo thả từ vào chỗ trống (có bẫy Word Family &amp; từ nhiễu)</span>
+          <span class="t3-v2-sec-title">Summary Completion (${sDone}/${sTotal})</span>
         </div>
         <div class="t2-wb-box" id="t3-v2-wb-wordbox">
           <div class="t2-wb-chip-grid">${chipsHtml}</div>
@@ -5206,30 +5328,30 @@
         <span class="tip-pill" style="margin:0; font-size:13px;">${overallPassed ? 'ĐẠT TEST 3' : (step2Res.passed ? 'BƯỚC 1 CHƯA ĐẠT (>= 6.0)' : 'CẦN ĐẠT BƯỚC 2 (>= 6/10)')}</span>
       </div>
 
-      <div class="t3-compare-block-title">Đối chiếu 1 · Tóm tắt ý chính (Bước 1 tự viết) vs Headings &amp; Summary chuẩn (Bước 2)</div>
+      <div class="t3-compare-block-title">Đối chiếu 1 · Tóm tắt &amp; Headings / Summary</div>
       <div class="t3-compare-grid">
         <div class="t3-compare-card">
-          <div class="t3-compare-col-head">Bài bạn tự tóm tắt (Bước 1 — Đã khóa)</div>
+          <div class="t3-compare-col-head">Tóm tắt của bạn (Bước 1)</div>
           <div class="t3-compare-student-text">${esc(snap.summary || '(Trống)')}</div>
-          <div class="t3-compare-col-head" style="margin-top:12px;">Ý chính tham khảo toàn bài</div>
-          <div class="t3-compare-note" style="font-size:14.5px; color:var(--text-bright); line-height:1.58;">${esc(activeTask.passage?.modelSummaryVi || '')}</div>
+          <div class="t3-compare-col-head" style="margin-top:12px;">Ý chính chuẩn</div>
+          <div class="t3-compare-note" style="font-size:14.5px; color:var(--ink); line-height:1.58;">${esc(activeTask.passage?.modelSummaryVi || '')}</div>
         </div>
         <div class="t3-compare-card">
-          <div class="t3-compare-col-head">Đối chiếu Matching Headings (${step2Res.hCorrect}/${step2Res.hTotal})</div>
+          <div class="t3-compare-col-head">Matching Headings (${step2Res.hCorrect}/${step2Res.hTotal})</div>
           <div class="t3-compare-items-stack">${headingRowsCompare}</div>
-          <div class="t3-compare-col-head" style="margin-top:12px;">Đối chiếu Summary Word Box (${step2Res.sCorrect}/${step2Res.sTotal})</div>
+          <div class="t3-compare-col-head" style="margin-top:12px;">Summary Word Box (${step2Res.sCorrect}/${step2Res.sTotal})</div>
           <div class="t3-compare-items-stack">${summaryRowsCompare}</div>
         </div>
       </div>
 
-      <div class="t3-compare-block-title">Đối chiếu 2 · Bản dịch của bạn (Bước 1) vs Bản dịch chuẩn &amp; Nhận xét AI</div>
+      <div class="t3-compare-block-title">Đối chiếu 2 · Bản dịch &amp; Phân tích AI</div>
       <div class="t3-compare-grid">
         <div class="t3-compare-card">
-          <div class="t3-compare-col-head">Bản dịch của bạn (Bước 1 — Đã khóa)</div>
+          <div class="t3-compare-col-head">Bản dịch của bạn (Bước 1)</div>
           <div class="t3-compare-student-text">${esc(snap.trans || '(Trống)')}</div>
         </div>
         <div class="t3-compare-card">
-          <div class="t3-compare-col-head">Bản dịch chuẩn tham khảo</div>
+          <div class="t3-compare-col-head">Bản dịch chuẩn</div>
           <div class="t3-compare-model-text">${esc(g.modelTranslation || generateTaskModelTranslation(activeTask))}</div>
         </div>
       </div>
@@ -6941,11 +7063,13 @@
   window.TasksModule = {
     renderTeacherDashboard,
     renderTeacherHomeworkTracker,
-    selectTeacherTrackedTask,
-    setTeacherHwFilter,
+    renderTeacherAssignedMonitor,
+    setTeacherAssignedTab,
+    dismissAssignedTask,
+    openTeacherTaskDetailModal,
+    closeTeacherTaskDetailModal,
+    setTeacherDetailFilter,
     copyTeacherHomeworkReminder,
-    copyQuickSingleTaskLink,
-    jumpToTrackTask,
     setTeacherTableView,
     refreshTeacherDashboard,
     unlockStudentTasks,

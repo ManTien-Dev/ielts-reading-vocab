@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
   <link rel="stylesheet" href="css/enhancements.css?v=20261122a">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261122a">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261122b">
 </head>
 <body>
 
@@ -1498,22 +1498,18 @@
     <!-- Màn hình Làm Task theo Link Giáo viên giao -->
     <!-- Màn hình Dành Riêng Cho Giáo Viên: Siêu gọn - Chỉ Quản lý Lớp & Giao Task -->
     <section class="screen" id="screen-teacher" aria-label="Bảng quản lý giáo viên" style="display:none;">
-      <!-- PANEL 1 (HERO): THEO DÕI BÀI TẬP ĐANG GIAO (HOMEWORK COMMAND CENTER) -->
-      <div class="teacher-panel teacher-hw-panel" id="teacher-homework-panel">
-        <div class="teacher-panel-head thw-head">
+      <div class="teacher-panel">
+        <div class="teacher-panel-head">
           <div class="teacher-panel-brand">
             <div class="teacher-mascot-pedestal" aria-hidden="true">
               <img src="assets/images/totoro_professor.png" alt="" class="teacher-totoro-badge">
             </div>
             <div>
-              <h2 class="teacher-panel-title">Theo Dõi Bài Tập</h2>
+              <h2 class="teacher-panel-title">Theo Dõi Học Sinh</h2>
               <div class="teacher-panel-sub" id="teacher-sync-status">Đang đồng bộ dữ liệu lớp...</div>
             </div>
           </div>
           <div class="teacher-head-actions">
-            <div class="thw-picker-wrap">
-              <select class="scope-select thw-picker-select" id="teacher-hw-picker" aria-label="Chọn bất kỳ Task nào để theo dõi" onchange="TasksModule.selectTeacherTrackedTask(this.value)"></select>
-            </div>
             <button type="button" class="btn-subtle" id="btn-teacher-task-stats" onclick="TasksModule.openTaskSummaryModal()">
               <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19V11" stroke-linecap="round"/></svg>
               <span>Thống kê Task</span>
@@ -1526,40 +1522,6 @@
               <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/></svg>
               <span>Sao chép báo cáo</span>
             </button>
-          </div>
-        </div>
-
-        <div class="thw-pills-strip" id="teacher-hw-pills" aria-label="Các Task đang theo dõi"></div>
-        <div class="thw-summary-card" id="teacher-hw-summary"></div>
-        <div class="thw-filters-row" id="teacher-hw-filters" role="group" aria-label="Lọc trạng thái học viên"></div>
-
-        <div class="teacher-hw-table-wrap">
-          <table class="teacher-hw-table">
-            <thead>
-              <tr>
-                <th>Học viên</th>
-                <th>Học từ vựng</th>
-                <th>Trạng thái</th>
-                <th>Điểm chi tiết</th>
-                <th>Thời gian nộp</th>
-              </tr>
-            </thead>
-            <tbody id="teacher-hw-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- PANEL 2: TỔNG QUAN CHUYÊN CẦN & HỌC VIÊN -->
-      <div class="teacher-panel">
-        <div class="teacher-panel-head">
-          <div class="teacher-panel-brand">
-            <span class="tot-icon-tile" aria-hidden="true">
-              <svg viewBox="2 2 20 20" fill="none"><circle cx="9" cy="8" r="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.7"/><path d="M3.5 18c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="var(--accent)" stroke-width="1.7" stroke-linecap="round"/><circle cx="16.5" cy="9" r="2.3" stroke="var(--streak)" stroke-width="1.6"/><path d="M15.2 13.5c2.2.3 4.3 1.7 4.8 4.2" stroke="var(--streak)" stroke-width="1.6" stroke-linecap="round"/></svg>
-            </span>
-            <div>
-              <h2 class="teacher-panel-title">Tổng Quan Học Viên</h2>
-              <div class="teacher-panel-sub">Giờ học, chuỗi ngày, tổng từ đã thuộc và tiến độ toàn khóa</div>
-            </div>
           </div>
         </div>
         <div class="teacher-kpi-strip" id="teacher-kpi-strip"></div>
@@ -1601,8 +1563,8 @@
               <svg viewBox="3 5 26 24" fill="none"><path d="M10.2 13.8L8.8 7.2L13.2 10.6C15 10 17 10 18.8 10.6L23.2 7.2L21.8 13.8C23.4 15.2 24 17.2 24 18.8H8C8 17.2 8.6 15.2 10.2 13.8Z" fill="#595651"/><path d="M14.2 10C15.8 7.5 19.2 7.4 20.6 9.5C18.5 11 15.8 11.2 14.2 10Z" fill="#4E9460"/><circle cx="13" cy="14.2" r="1.8" fill="#FFFFFF"/><circle cx="13.2" cy="14.2" r="0.9" fill="#181A1F"/><circle cx="19" cy="14.2" r="1.8" fill="#FFFFFF"/><circle cx="18.8" cy="14.2" r="0.9" fill="#181A1F"/><path d="M4.5 18.8H27.5L26 26.5H6L4.5 18.8Z" fill="#EFE4CE" stroke="#8C5926" stroke-width="1.6" stroke-linejoin="round"/><path d="M16 19.2V26.2" stroke="#8C5926" stroke-width="1.5"/></svg>
             </span>
             <div>
-              <h2 class="teacher-panel-title">Giao Task theo Link (50 từ / Task)</h2>
-              <div class="teacher-panel-sub">Tick chọn Task rồi copy link gửi học sinh. Hoàn thành trọn Task tự động đồng bộ từ đã thuộc sang bộ chính.</div>
+              <h2 class="teacher-panel-title">Giao Task theo Link</h2>
+              <div class="teacher-panel-sub">Theo dõi các Task đang giao (ai đã làm / đang học / chưa làm), nhắc nộp trước hạn và thống kê sau khi đóng hạn.</div>
             </div>
           </div>
           <div class="teacher-sel-actions">
@@ -1640,6 +1602,9 @@
             </div>
           </div>
         </div>
+
+        <!-- Integrated Active & Recently Closed Assignment Monitor (No 110-task clutter!) -->
+        <div class="teacher-assigned-monitor" id="teacher-assigned-monitor" style="display:none;"></div>
 
         <div class="task-suite-tabs" id="teacher-task-suite-tabs"></div>
         <div class="teacher-task-dash-grid" id="teacher-dash-task-grid"></div>
@@ -1955,6 +1920,20 @@
     </div>
   </div>
 
+  <!-- MODAL: CHI TIẾT THEO DÕI HỌC SINH LÀM 1 TASK (GIÁO VIÊN) -->
+  <div class="modal-overlay" id="modal-teacher-task-detail" onclick="TasksModule.closeTeacherTaskDetailModal(event)">
+    <div class="modal-card modal-card-wide" style="max-width:880px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="teacher-task-detail-title">Chi tiết tiến độ Task</div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;" id="teacher-task-detail-sub"></div>
+        </div>
+        <button class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="TasksModule.closeTeacherTaskDetailModal()">✕</button>
+      </div>
+      <div class="modal-body" id="teacher-task-detail-body" style="padding:16px 22px 20px;"></div>
+    </div>
+  </div>
+
   <!-- MODAL: BẢNG THỐNG KÊ HOÀN THÀNH TASK -->
   <div class="modal-overlay" id="modal-task-summary" onclick="TasksModule.closeTaskSummaryModal(event)">
     <div class="modal-card modal-card-wide" onclick="event.stopPropagation()">
@@ -2084,7 +2063,7 @@
   <script src="js/core/AppCore.js?v=20261121c"></script>
   <script src="js/recognition_test.js?v=20261121aa"></script>
   <script src="js/app.js?v=20261122a"></script>
-  <script src="js/tasks.js?v=20261122a"></script>
+  <script src="js/tasks.js?v=20261122b"></script>
   <script src="js/totoro_ui.js?v=20261121z"></script>
 </body>
 </html>
