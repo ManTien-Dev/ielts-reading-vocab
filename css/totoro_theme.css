@@ -5751,6 +5751,10 @@ html[data-theme="dark"] .thw-act-btn.is-danger {
 }
 
 /* Per-Student Homework Matrix Table (inside #modal-teacher-task-detail) */
+.teacher-detail-modal-card {
+  width: min(980px, 95vw) !important;
+  max-width: 980px !important;
+}
 .teacher-hw-table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -5765,7 +5769,7 @@ html[data-theme="dark"] .thw-act-btn.is-danger {
 }
 .teacher-hw-table thead th {
   text-align: left;
-  padding: 10px 14px;
+  padding: 10px 11px;
   font-size: 11.5px;
   font-weight: 800;
   text-transform: uppercase;
@@ -5775,8 +5779,13 @@ html[data-theme="dark"] .thw-act-btn.is-danger {
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
+.teacher-hw-table thead th:last-child,
+.teacher-hw-table tbody td:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
 .teacher-hw-table tbody td {
-  padding: 10px 14px;
+  padding: 10px 11px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   color: var(--ink);
@@ -5785,7 +5794,7 @@ html[data-theme="dark"] .thw-act-btn.is-danger {
   border-bottom: none;
 }
 .teacher-hw-table tbody td:first-child {
-  min-width: 185px;
+  min-width: 165px;
 }
 .teacher-hw-table tbody tr.is-done {
   background: color-mix(in srgb, #4e7a51 4%, transparent);
@@ -5794,7 +5803,7 @@ html[data-theme="dark"] .thw-act-btn.is-danger {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 120px;
+  min-width: 108px;
 }
 .thw-vocab-bar {
   flex: 1 1 70px;
@@ -5890,6 +5899,35 @@ html[data-theme="dark"] .thw-overall-score {
 }
 .thw-muted {
   color: var(--ink-3);
+}
+.thw-remind-btn {
+  height: 29px !important;
+  padding: 0 11px !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  border-radius: 8.5px !important;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface)) !important;
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border)) !important;
+  color: var(--accent) !important;
+}
+.thw-remind-btn:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  color: #ffffff !important;
+}
+html[data-theme="dark"] .thw-remind-btn:hover {
+  color: #0e1c12 !important;
+}
+.thw-remind-btn.is-copied {
+  background: rgba(47, 107, 50, 0.14) !important;
+  border-color: rgba(47, 107, 50, 0.38) !important;
+  color: #255d28 !important;
+}
+html[data-theme="dark"] .thw-remind-btn.is-copied {
+  background: rgba(114, 189, 134, 0.18) !important;
+  border-color: rgba(114, 189, 134, 0.45) !important;
+  color: #9be2ae !important;
 }
 
 @media (max-width: 767px) {
