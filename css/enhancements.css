@@ -7562,3 +7562,282 @@ html[data-skill="listening"] .tot-skill-trigger {
     min-width: 0;
   }
 }
+
+
+/* =========================================================
+   TOTORO VOICE & STT TEST LAB MODAL (Word + Long Sentence)
+   ========================================================= */
+.vlab-card {
+  width: min(680px, 95vw) !important;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.vlab-body {
+  padding: 16px 20px 22px !important;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.vlab-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg-soft, #f3f1ea);
+  border: 1px solid var(--border, rgba(100, 116, 139, 0.18));
+}
+.vlab-tab {
+  height: 38px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-2, #4b5563);
+  font-size: 13.5px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.vlab-tab.active {
+  background: var(--surface, #ffffff);
+  color: var(--accent, #2f6b32);
+  box-shadow: 0 2px 8px rgba(30, 48, 36, 0.08);
+}
+.vlab-controls-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg-soft, #f6f4ee);
+  border: 1px solid var(--border, rgba(100, 116, 139, 0.16));
+}
+.vlab-ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.vlab-ctrl-lbl {
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--ink-3, #6b7280);
+  min-width: 72px;
+}
+.vlab-pill {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong, rgba(100, 116, 139, 0.25));
+  background: var(--surface, #ffffff);
+  color: var(--ink-2, #374151);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.vlab-pill.active {
+  border-color: var(--accent, #2f6b32);
+  background: rgba(47, 107, 50, 0.12);
+  color: var(--accent, #2f6b32);
+}
+.vlab-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vlab-sec-label {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--ink-2, #4b5563);
+}
+.vlab-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.vlab-chip {
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong, rgba(100, 116, 139, 0.24));
+  background: var(--surface, #ffffff);
+  color: var(--ink, #1f2937);
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.vlab-chip.active {
+  border-color: var(--accent, #2f6b32);
+  background: var(--accent, #2f6b32);
+  color: #ffffff;
+}
+.vlab-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vlab-input,
+.vlab-textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1.5px solid var(--border-strong, rgba(100, 116, 139, 0.28));
+  background: var(--surface, #ffffff);
+  color: var(--ink, #1f2937);
+  font-family: inherit;
+  font-size: 15px;
+  padding: 9px 13px;
+  outline: none;
+}
+.vlab-input {
+  font-weight: 750;
+  height: 40px;
+}
+.vlab-textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+.vlab-input:focus,
+.vlab-textarea:focus {
+  border-color: var(--accent, #2f6b32);
+}
+.vlab-sent-audio-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.vlab-result-box {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border, rgba(100, 116, 139, 0.22));
+  background: var(--surface, #ffffff);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vlab-result-box.is-pass {
+  border-color: rgba(31, 122, 62, 0.4);
+  background: rgba(31, 122, 62, 0.08);
+}
+.vlab-result-box.is-fail {
+  border-color: rgba(217, 72, 59, 0.36);
+  background: rgba(217, 72, 59, 0.07);
+}
+.vlab-result-box.is-warn {
+  border-color: rgba(217, 119, 6, 0.36);
+  background: rgba(217, 119, 6, 0.08);
+}
+.vlab-res-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.vlab-res-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--ink, #111827);
+}
+.vlab-res-meta {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-3, #6b7280);
+}
+.vlab-res-heard {
+  font-size: 20px;
+  font-weight: 850;
+  color: var(--ink, #111827);
+  line-height: 1.35;
+}
+.vlab-res-heard.is-sentence {
+  font-size: 15.5px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+.vlab-res-note,
+.vlab-res-text {
+  font-size: 13px;
+  color: var(--ink-2, #4b5563);
+  line-height: 1.45;
+}
+.vlab-diff-wrap {
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-strong, rgba(100, 116, 139, 0.25));
+}
+.vlab-diff-lbl {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3, #6b7280);
+  margin-bottom: 6px;
+}
+.vlab-diff-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.vlab-dw {
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.vlab-dw.is-hit {
+  background: rgba(31, 122, 62, 0.14);
+  color: #166534;
+}
+.vlab-dw.is-miss {
+  background: rgba(217, 72, 59, 0.14);
+  color: #991b1b;
+  text-decoration: underline wavy rgba(217, 72, 59, 0.6);
+}
+.vlab-playback {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-strong, rgba(100, 116, 139, 0.2));
+}
+.vlab-playback-lbl {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3, #6b7280);
+}
+.vlab-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vlab-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.vlab-hist-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--bg-soft, #f6f4ee);
+  font-size: 12.5px;
+}
+.vlab-hist-tag {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(100, 116, 139, 0.14);
+  color: var(--ink-2, #374151);
+}
+.vlab-hist-tag.is-pass { background: rgba(31, 122, 62, 0.15); color: #166534; }
+.vlab-hist-tag.is-fail { background: rgba(217, 72, 59, 0.14); color: #991b1b; }
+.vlab-hist-tag.is-warn { background: rgba(217, 119, 6, 0.14); color: #92400e; }
+.vlab-hist-main { flex: 1; min-width: 140px; color: var(--ink, #1f2937); }
+.vlab-hist-main small { color: var(--ink-3, #6b7280); }
+.vlab-hist-meta { font-size: 11px; color: var(--ink-3, #6b7280); }
+[data-theme="dark"] .vlab-dw.is-hit { color: #86efac; }
+[data-theme="dark"] .vlab-dw.is-miss { color: #fca5a5; }

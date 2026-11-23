@@ -20,6 +20,9 @@ const ALLOWED_STATIC = [
 const VERBATIM_PROMPT =
   'Um, well, I I think, uh, the the main reason is... I mean, it is, like, really useful, you know. So, er, I went, I went there last year.';
 
+const WORD_CONTEXT_PROMPT =
+  'Clear English vocabulary word pronunciation spoken aloud.';
+
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024; // 12 MB safety cap
 
 function isOriginAllowed(origin, requestUrl, env) {
@@ -188,11 +191,15 @@ export async function onRequestPost({ request, env }) {
       );
     }
 
+    const t0 = Date.now();
     const mode = String(form.get('mode') || 'word').toLowerCase();
+    const enginePref = String(form.get('engine') || 'auto').toLowerCase();
     const isSpeaking = mode === 'speaking';
-    const model = isSpeaking ? 'whisper-large-v3' : 'whisper-large-v3-turbo';
+    // Use full `whisper-large-v3` by default for BOTH single words & speaking:
+    // far more accurate on quiet voices, short isolated words, and non-native accents than turbo!
+    const model = enginePref === 'turbo' ? 'whisper-large-v3-turbo' : 'whisper-large-v3';
     // Never inject target answer into prompt for `word` mode (prevents Whisper hallucination)
-    const prompt = isSpeaking ? VERBATIM_PROMPT : '';
+    const prompt = isSpeaking ? VERBATIM_PROMPT : WORD_CONTEXT_PROMPT;
 
     const audioBuffer = await file.arrayBuffer();
     const mime = file.type || 'audio/webm';
@@ -208,12 +215,20 @@ export async function onRequestPost({ request, env }) {
     const filename = `speech.${ext}`;
     const audioBlob = new Blob([audioBuffer], { type: mime });
 
+    // Optional explicit Cloudflare Workers AI test mode
+    if (enginePref === 'cf' && env.AI) {
+      const cfResult = await callCloudflareAI(audioBuffer, env);
+      cfResult.latencyMs = Date.now() - t0;
+      return jsonResponse(cfResult, 200, origin, url, allowed);
+    }
+
     // Layer 1: Groq Whisper with automatic multi-key rotation on 429/503
     const keys = getGroqKeys(env);
     let lastErr = null;
     for (const key of keys) {
       try {
         const result = await callGroq(audioBlob, filename, model, isSpeaking, prompt, key);
+        result.latencyMs = Date.now() - t0;
         return jsonResponse(result, 200, origin, url, allowed);
       } catch (err) {
         lastErr = err;
@@ -225,6 +240,7 @@ export async function onRequestPost({ request, env }) {
     if (env.AI) {
       try {
         const cfResult = await callCloudflareAI(audioBuffer, env);
+        cfResult.latencyMs = Date.now() - t0;
         return jsonResponse(cfResult, 200, origin, url, allowed);
       } catch (cfErr) {
         lastErr = cfErr;

@@ -1,14 +1,19 @@
 /* =========================================================
-   TOTORO IELTS MASTER — ULTRA-SENSITIVE SPEECH & STT ENGINE
+   TOTORO IELTS MASTER — ULTRA-SENSITIVE SPEECH & STT ENGINE V2
    ---------------------------------------------------------
-   Features:
-   - Mic recording with live 12-bar waveform & RMS metering
-   - Smart Auto-Stop VAD (stops ~1.25s after user finishes speaking)
-   - Browser DSP: 80Hz high-pass filter -> VAD silence trim ->
-     Peak Normalization to -3 dBFS (up to +29 dB boost for quiet voices)
-     -> clean 16 kHz Mono PCM WAV encoding
-   - Calls /api/transcribe (Groq Whisper + Cloudflare Workers AI fallback)
-   - Anti-hallucination + Vietnamese-accent-friendly phonetic matching
+   Fixes & Upgrades for Quiet Voices + Non-Native Accents:
+   1. Disables Chrome's aggressive `noiseSuppression` (which eats
+      soft onset/offset consonants on 0.5s words like "user").
+   2. Uses native `OfflineAudioContext` anti-aliased sinc resampling
+      to 16 kHz Mono (preserves /s, z, sh, th/ clarity cleanly).
+   3. Gentle non-destructive normalization to -2 dBFS (+ up to +30 dB
+      boost for quiet voices) with 350ms silence framing — NEVER slices
+      off weak initial/final consonants!
+   4. Uses full `whisper-large-v3` by default (far more accurate than
+      turbo on short words & non-native accents), with optional A/B
+      switches (`v3` | `turbo` | `cf`) and Raw WebM vs Boosted WAV.
+   5. Exposes `audioUrl` so user can replay the exact audio sent to AI,
+      plus `compareSentence()` for testing long sentences & paragraphs.
    ========================================================= */
 (function () {
   const FALLBACK_API_BASE = 'https://totoro-ieltsmaster.pages.dev';
@@ -30,11 +35,8 @@
     'music',
     'applause',
     'silence',
-    'okay',
-    'ok',
-    'hmm',
-    'uh',
-    'um',
+    'clear english vocabulary word pronunciation spoken aloud',
+    'clear english vocabulary word pronunciation',
   ]);
 
   let activeSession = null;
@@ -83,59 +85,70 @@
   }
 
   /* ---------------------------------------------------------
-     DSP PIPELINE: Resample 16kHz -> High-Pass -> VAD Trim ->
-     Peak Normalize (-3 dBFS) -> Soft-Clip -> 16-bit Mono WAV
+     STUDIO DSP PIPELINE (Anti-Aliased Resample + Gentle Boost)
      --------------------------------------------------------- */
-  function downsampleTo16k(monoFloat32, srcRate) {
-    const dstRate = 16000;
-    if (!srcRate || srcRate === dstRate) return monoFloat32;
-    const ratio = srcRate / dstRate;
-    const outLen = Math.max(1, Math.round(monoFloat32.length / ratio));
-    const out = new Float32Array(outLen);
-    for (let i = 0; i < outLen; i++) {
-      const start = Math.floor(i * ratio);
-      const end = Math.min(monoFloat32.length, Math.max(start + 1, Math.floor((i + 1) * ratio)));
-      let sum = 0;
-      for (let j = start; j < end; j++) sum += monoFloat32[j];
-      out[i] = sum / (end - start);
+  async function resampleBufferTo16kMono(audioBuf) {
+    const targetRate = 16000;
+    const duration = audioBuf.duration || (audioBuf.length / (audioBuf.sampleRate || 48000));
+    const targetLen = Math.max(1, Math.ceil(duration * targetRate));
+    const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+
+    if (OfflineCtx && audioBuf.sampleRate !== targetRate) {
+      try {
+        const offline = new OfflineCtx(1, targetLen, targetRate);
+        const src = offline.createBufferSource();
+        src.buffer = audioBuf;
+        // Subtle 75Hz high-pass biquad removes DC offset & desk/AC rumble without touching voice
+        const hp = offline.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 75;
+        src.connect(hp);
+        hp.connect(offline.destination);
+        src.start(0);
+        const rendered = await offline.startRendering();
+        return rendered.getChannelData(0);
+      } catch (_) {}
+    }
+
+    // Fallback mono mix + linear interpolation
+    const chCount = audioBuf.numberOfChannels || 1;
+    const len = audioBuf.length;
+    const mono = new Float32Array(len);
+    for (let c = 0; c < chCount; c++) {
+      const data = audioBuf.getChannelData(c);
+      for (let i = 0; i < len; i++) mono[i] += data[i] / chCount;
+    }
+    if (audioBuf.sampleRate === targetRate) return mono;
+    const ratio = audioBuf.sampleRate / targetRate;
+    const out = new Float32Array(targetLen);
+    for (let i = 0; i < targetLen; i++) {
+      const pos = i * ratio;
+      const idx = Math.floor(pos);
+      const frac = pos - idx;
+      const a = mono[Math.min(len - 1, idx)] || 0;
+      const b = mono[Math.min(len - 1, idx + 1)] || a;
+      out[i] = a + (b - a) * frac;
     }
     return out;
   }
 
-  function applyHighPass80Hz(samples, sampleRate) {
-    // 1st-order RC high-pass filter (~80Hz) removes DC offset & fan/AC rumble
-    const rc = 1 / (2 * Math.PI * 80);
-    const dt = 1 / sampleRate;
-    const alpha = rc / (rc + dt);
-    const out = new Float32Array(samples.length);
-    let prevX = 0;
-    let prevY = 0;
-    for (let i = 0; i < samples.length; i++) {
-      const x = samples[i];
-      const y = alpha * (prevY + x - prevX);
-      out[i] = y;
-      prevX = x;
-      prevY = y;
-    }
-    return out;
-  }
-
-  function trimAndNormalizeSpeech(samples16k) {
+  function frameAndNormalizeSpeech(samples16k, isSingleWord) {
     const sr = 16000;
-    const filtered = applyHighPass80Hz(samples16k, sr);
-    const frameSize = Math.floor(sr * 0.02); // 20ms frames
-    const numFrames = Math.floor(filtered.length / frameSize);
-    if (numFrames < 3) {
-      return { silent: true, samples: filtered, peakRaw: 0, gainApplied: 1 };
+    if (!samples16k || samples16k.length < sr * 0.08) {
+      return { silent: true, samples: samples16k, peakRaw: 0, gainApplied: 1 };
     }
 
-    const frameRms = new Float32Array(numFrames);
+    // Compute overall peak and 20ms frame RMS
+    const frameSize = Math.floor(sr * 0.02);
+    const numFrames = Math.floor(samples16k.length / frameSize);
     let peakRaw = 0;
+    const frameRms = new Float32Array(numFrames);
+
     for (let f = 0; f < numFrames; f++) {
       let sumSq = 0;
       const base = f * frameSize;
       for (let i = 0; i < frameSize; i++) {
-        const v = filtered[base + i];
+        const v = samples16k[base + i];
         const av = Math.abs(v);
         if (av > peakRaw) peakRaw = av;
         sumSq += v * v;
@@ -143,64 +156,76 @@
       frameRms[f] = Math.sqrt(sumSq / frameSize);
     }
 
-    if (peakRaw < 0.0035) {
-      return { silent: true, samples: filtered, peakRaw, gainApplied: 1 };
+    // Truly dead mic check (super sensitive floor so quiet voices pass easily)
+    if (peakRaw < 0.0018) {
+      return { silent: true, samples: samples16k, peakRaw, gainApplied: 1 };
     }
 
-    // Estimate ambient noise floor from lowest 20% energy frames
-    const sortedRms = Array.from(frameRms).sort((a, b) => a - b);
-    const noiseFloor = sortedRms[Math.floor(sortedRms.length * 0.2)] || 0.001;
-    const threshold = Math.max(0.006, Math.min(peakRaw * 0.22, noiseFloor * 2.6));
+    // Super gentle trim: ONLY strip dead silence > 400ms from ends; NEVER slice soft consonants!
+    const sorted = Array.from(frameRms).sort((a, b) => a - b);
+    const noiseFloor = sorted[Math.floor(sorted.length * 0.15)] || 0.0005;
+    const gentleThresh = Math.max(0.0025, Math.min(peakRaw * 0.08, noiseFloor * 2.0));
 
-    let firstActive = -1;
-    let lastActive = -1;
-    let activeFrames = 0;
+    let firstActive = 0;
+    let lastActive = numFrames - 1;
+    let foundAny = false;
     for (let f = 0; f < numFrames; f++) {
-      if (frameRms[f] >= threshold) {
-        if (firstActive === -1) firstActive = f;
+      if (frameRms[f] >= gentleThresh) {
+        if (!foundAny) { firstActive = f; foundAny = true; }
         lastActive = f;
-        activeFrames++;
       }
     }
 
-    // Require at least ~80ms of actual voiced activity
-    if (firstActive === -1 || activeFrames < 4) {
-      return { silent: true, samples: filtered, peakRaw, gainApplied: 1 };
+    if (!foundAny) {
+      return { silent: true, samples: samples16k, peakRaw, gainApplied: 1 };
     }
 
-    const padLeadFrames = 8; // 160ms before speech
-    const padTailFrames = 10; // 200ms after speech
-    const startSample = Math.max(0, (firstActive - padLeadFrames) * frameSize);
-    const endSample = Math.min(filtered.length, (lastActive + 1 + padTailFrames) * frameSize);
-    const trimmed = filtered.subarray(startSample, endSample);
+    // Keep generous 360ms lead & 460ms tail around detected sound
+    const leadFrames = 18; // 360ms
+    const tailFrames = 23; // 460ms
+    const startSample = Math.max(0, (firstActive - leadFrames) * frameSize);
+    const endSample = Math.min(samples16k.length, (lastActive + 1 + tailFrames) * frameSize);
+    const core = samples16k.subarray(startSample, endSample);
 
-    // Compute peak inside trimmed region and normalize to -3 dBFS (0.708)
-    let trimPeak = 0;
-    for (let i = 0; i < trimmed.length; i++) {
-      const av = Math.abs(trimmed[i]);
-      if (av > trimPeak) trimPeak = av;
+    // Measure peak inside core and normalize to -2 dBFS (0.794)
+    let corePeak = 0;
+    for (let i = 0; i < core.length; i++) {
+      const av = Math.abs(core[i]);
+      if (av > corePeak) corePeak = av;
     }
-    if (trimPeak < 0.0035) {
-      return { silent: true, samples: trimmed, peakRaw: trimPeak, gainApplied: 1 };
+    if (corePeak < 0.0018) {
+      return { silent: true, samples: core, peakRaw: corePeak, gainApplied: 1 };
     }
 
-    const targetPeak = 0.708; // -3 dBFS
-    const maxGain = 28; // up to ~+29 dB boost for very quiet voices
-    const gain = Math.min(maxGain, targetPeak / trimPeak);
+    const targetPeak = 0.794; // -2 dBFS
+    const maxGain = 32; // up to +30 dB for whisper-quiet voices
+    const gain = Math.min(maxGain, targetPeak / corePeak);
 
-    const normalized = new Float32Array(trimmed.length);
-    for (let i = 0; i < trimmed.length; i++) {
-      const boosted = trimmed[i] * gain;
-      // Gentle soft-clipping above 0.88 prevents harsh distortion
-      normalized[i] = Math.abs(boosted) > 0.88 ? Math.tanh(boosted) : boosted;
+    // Add 320ms clean silence framing before & after short single-word audio
+    // (Whisper's encoder needs clean onset/offset framing for short <2s clips!)
+    const padSamples = isSingleWord ? Math.floor(sr * 0.32) : Math.floor(sr * 0.15);
+    const out = new Float32Array(padSamples + core.length + padSamples);
+
+    for (let i = 0; i < core.length; i++) {
+      const boosted = core[i] * gain;
+      // Smooth soft-knee limiter above 0.88 prevents clipping pops
+      out[padSamples + i] = Math.abs(boosted) > 0.88 ? Math.tanh(boosted) : boosted;
+    }
+
+    // Apply tiny 15ms fade-in/out on the core boundaries to prevent digital click
+    const fadeLen = Math.min(Math.floor(sr * 0.015), Math.floor(core.length / 4));
+    for (let i = 0; i < fadeLen; i++) {
+      const k = i / fadeLen;
+      out[padSamples + i] *= k;
+      out[padSamples + core.length - 1 - i] *= k;
     }
 
     return {
       silent: false,
-      samples: normalized,
-      peakRaw: trimPeak,
+      samples: out,
+      peakRaw: corePeak,
       gainApplied: +gain.toFixed(2),
-      durationSec: +(normalized.length / sr).toFixed(2),
+      durationSec: +(out.length / sr).toFixed(2),
     };
   }
 
@@ -218,13 +243,13 @@
     view.setUint32(4, 36 + byteLen, true);
     writeStr(8, 'WAVE');
     writeStr(12, 'fmt ');
-    view.setUint32(16, 16, true); // PCM header size
-    view.setUint16(20, 1, true); // PCM format
-    view.setUint16(22, 1, true); // mono
-    view.setUint32(24, sr, true); // 16000 Hz
-    view.setUint32(28, sr * 2, true); // byte rate
-    view.setUint16(32, 2, true); // block align
-    view.setUint16(34, 16, true); // 16-bit
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sr, true);
+    view.setUint32(28, sr * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
     writeStr(36, 'data');
     view.setUint32(40, byteLen, true);
 
@@ -237,7 +262,7 @@
     return new Blob([buffer], { type: 'audio/wav' });
   }
 
-  async function processBlobToNormalizedWav(rawBlob) {
+  async function processBlobToNormalizedWav(rawBlob, isSingleWord) {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) {
       return { blob: rawBlob, filename: 'speech.webm', silent: false, gainApplied: 1, boosted: false };
@@ -246,16 +271,8 @@
     try {
       const arrayBuf = await rawBlob.arrayBuffer();
       const audioBuf = await ctx.decodeAudioData(arrayBuf.slice(0));
-      // Mix down to mono
-      const len = audioBuf.length;
-      const mono = new Float32Array(len);
-      const chCount = audioBuf.numberOfChannels || 1;
-      for (let c = 0; c < chCount; c++) {
-        const chData = audioBuf.getChannelData(c);
-        for (let i = 0; i < len; i++) mono[i] += chData[i] / chCount;
-      }
-      const samples16k = downsampleTo16k(mono, audioBuf.sampleRate);
-      const dsp = trimAndNormalizeSpeech(samples16k);
+      const samples16k = await resampleBufferTo16kMono(audioBuf);
+      const dsp = frameAndNormalizeSpeech(samples16k, isSingleWord);
       if (dsp.silent) {
         return { silent: true, peakRaw: dsp.peakRaw, gainApplied: 1, boosted: false };
       }
@@ -266,11 +283,10 @@
         silent: false,
         peakRaw: dsp.peakRaw,
         gainApplied: dsp.gainApplied,
-        boosted: dsp.gainApplied >= 2.2,
+        boosted: dsp.gainApplied >= 2.0,
         durationSec: dsp.durationSec,
       };
     } catch (_) {
-      // Fallback: send raw recording directly if browser cannot decode its own MediaRecorder container
       const mime = rawBlob.type || 'audio/webm';
       const ext = /mp4|m4a|aac/i.test(mime) ? 'm4a' : /ogg/i.test(mime) ? 'ogg' : 'webm';
       return { blob: rawBlob, filename: `speech.${ext}`, silent: false, gainApplied: 1, boosted: false };
@@ -280,7 +296,7 @@
   }
 
   /* ---------------------------------------------------------
-     SMART PHONETIC & ACCENT-FRIENDLY WORD MATCHING
+     SMART PHONETIC & ACCENT-FRIENDLY WORD + SENTENCE MATCHER
      --------------------------------------------------------- */
   function normalizeEnglishText(raw) {
     let s = String(raw || '')
@@ -291,7 +307,6 @@
       .replace(/\s+/g, ' ')
       .trim();
 
-    // Unify common UK/US spelling differences
     const tokens = s.split(' ').filter(Boolean).map((tok) =>
       tok
         .replace(/our$/g, 'or')
@@ -322,7 +337,6 @@
   function phoneticSkeleton(word) {
     let w = normalizeEnglishText(word).replace(/[^a-z]/g, '');
     if (!w) return '';
-    // Normalize common English phonetic equivalents & gentle Vietnamese-accent shifts
     w = w
       .replace(/^kn/, 'n')
       .replace(/^wr/, 'r')
@@ -345,7 +359,6 @@
       .replace(/w/g, 'v')
       .replace(/y/g, 'i')
       .replace(/([a-z])\1+/g, '$1');
-    // Collapse unstressed internal vowels gently while keeping initial sound intact
     if (w.length > 3) {
       const head = w[0];
       const tail = w.slice(1).replace(/[aeiou]+/g, 'a');
@@ -394,8 +407,6 @@
   function scoreSingleWord(spokenTok, targetTok) {
     if (!spokenTok || !targetTok) return 0;
     if (spokenTok === targetTok) return 1.0;
-
-    // Gentle morphological tolerance for trailing -s/-ed when accent drops/adds final consonant
     if (stripInflection(spokenTok) === stripInflection(targetTok)) return 0.94;
 
     const charSim = similarity(spokenTok, targetTok);
@@ -403,13 +414,10 @@
     const pTarget = phoneticSkeleton(targetTok);
     const phonSim = similarity(pSpoken, pTarget);
 
-    // Short words (<= 4 chars) need tighter accuracy so "cat" never matches "cut"
     if (targetTok.length <= 4) {
       if (pSpoken && pSpoken === pTarget && charSim >= 0.6) return 0.88;
       return charSim >= 0.85 ? charSim : Math.min(charSim, 0.55);
     }
-
-    // Medium/long academic words: reward strong phonetic skeleton match
     if (pSpoken && pSpoken === pTarget) return Math.max(0.9, charSim);
     return Math.max(charSim, phonSim * 0.94);
   }
@@ -420,7 +428,6 @@
 
     if (!spokenNorm || WHISPER_HALLUCINATIONS.has(spokenNorm)) {
       const targetNormCheck = normalizeEnglishText(targetLemma);
-      // Only allow words like "okay" / "music" / "silence" if that IS actually the target word!
       if (!spokenNorm || !targetNormCheck.split('/').some((v) => v.trim() === spokenNorm)) {
         return {
           matched: false,
@@ -432,7 +439,6 @@
       }
     }
 
-    // Support slash variants like "colour / color" or "rise / increase"
     const rawVariants = String(targetLemma || '')
       .split('/')
       .map((v) => v.replace(/\([^)]*\)/g, '').trim())
@@ -440,7 +446,6 @@
     const variants = rawVariants.length ? rawVariants : [String(targetLemma || '').trim()];
 
     const spokenTokens = spokenNorm.split(' ').filter(Boolean);
-    // Also strip filler words if student says "a ...", "the ...", "to ..."
     const contentSpokenTokens = spokenTokens.filter((t) => !['a', 'an', 'the', 'to', 'uh', 'um'].includes(t));
 
     let bestScore = 0;
@@ -456,10 +461,8 @@
         score = 1.0;
       } else if (targetTokens.length === 1) {
         const tgt = targetTokens[0];
-        // Check whole spoken joined (handles Whisper splitting compound words like "with draw" -> "withdraw")
         const joinedSpoken = spokenTokens.join('');
         score = Math.max(score, scoreSingleWord(joinedSpoken, tgt));
-        // Check each spoken token (in case user said "the word ubiquitous")
         if (spokenTokens.length <= 4) {
           for (const tok of spokenTokens) {
             score = Math.max(score, scoreSingleWord(tok, tgt));
@@ -469,7 +472,6 @@
           score = Math.max(score, scoreSingleWord(contentSpokenTokens[0], tgt));
         }
       } else {
-        // Multi-word phrase / collocation: match each target token against best spoken token
         let matchedSum = 0;
         for (const tTok of targetTokens) {
           let bestTok = 0;
@@ -480,7 +482,6 @@
         }
         const tokenAvg = matchedSum / targetTokens.length;
         const fullSim = similarity(spokenNorm, targetNorm);
-        // Penalize extra unrelated chatter if user read a whole paragraph
         const lengthPenalty = spokenTokens.length > targetTokens.length + 3 ? 0.85 : 1;
         score = Math.max(tokenAvg, fullSim) * lengthPenalty;
       }
@@ -507,16 +508,47 @@
     };
   }
 
+  function compareSentence(spokenRaw, referenceText) {
+    const refWordsRaw = String(referenceText || '').trim().split(/\s+/).filter(Boolean);
+    const spokenTokens = normalizeEnglishText(spokenRaw).split(' ').filter(Boolean);
+    const usedSpoken = new Set();
+
+    const items = refWordsRaw.map((rawWord) => {
+      const normRef = normalizeEnglishText(rawWord);
+      if (!normRef) return { word: rawWord, hit: true, score: 1 };
+      let bestIdx = -1;
+      let bestScore = 0;
+      for (let i = 0; i < spokenTokens.length; i++) {
+        if (usedSpoken.has(i)) continue;
+        const sc = scoreSingleWord(spokenTokens[i], normRef);
+        if (sc > bestScore) {
+          bestScore = sc;
+          bestIdx = i;
+        }
+      }
+      const hit = bestScore >= 0.78;
+      if (hit && bestIdx >= 0) usedSpoken.add(bestIdx);
+      return { word: rawWord, hit, score: +bestScore.toFixed(2) };
+    });
+
+    const total = items.length;
+    const hits = items.filter((x) => x.hit).length;
+    const accuracyPct = total > 0 ? Math.round((hits / total) * 100) : 0;
+    return { items, hits, total, accuracyPct };
+  }
+
   /* ---------------------------------------------------------
      NETWORK UPLOAD TO /api/transcribe
      --------------------------------------------------------- */
-  async function transcribeBlob(blob, filename, mode = 'word') {
+  async function transcribeBlob(blob, filename, mode = 'word', engine = 'auto') {
     const fd = new FormData();
     fd.append('file', blob, filename || 'speech.wav');
     fd.append('mode', mode);
+    if (engine && engine !== 'auto') fd.append('engine', engine);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 22000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    const t0 = Date.now();
     try {
       const res = await fetch(getApiUrl('/api/transcribe'), {
         method: 'POST',
@@ -527,6 +559,7 @@
       if (!res.ok || !data.ok) {
         throw new Error(data.error || `Lỗi máy chủ STT (HTTP ${res.status})`);
       }
+      data.clientLatencyMs = Date.now() - t0;
       return data;
     } catch (err) {
       if (err?.name === 'AbortError') {
@@ -539,7 +572,7 @@
   }
 
   /* ---------------------------------------------------------
-     RECORDING SESSION CONTROLLER (START / STOP / ABORT)
+     RECORDING SESSION CONTROLLER
      --------------------------------------------------------- */
   function cleanupSession(sess) {
     if (!sess) return;
@@ -591,18 +624,6 @@
     return Boolean(activeSession && !activeSession.stopping && !activeSession.aborted);
   }
 
-  /**
-   * Start a recording + DSP + STT session.
-   * Options:
-   *  - mode: 'word' | 'speaking'
-   *  - maxDurationMs: default 5500 for 'word', 120000 for 'speaking'
-   *  - autoStopOnSilence: default true for 'word'
-   *  - onStart()
-   *  - onLevel({ rms, bars, speechDetected })
-   *  - onProcessing({ boosted, gainApplied, durationSec })
-   *  - onResult({ ok, text, words, segments, engine, boosted, gainApplied, durationSec, silent })
-   *  - onError(message)
-   */
   async function startRecording(opts = {}) {
     if (!isSupported()) {
       opts.onError?.('Trình duyệt hiện tại không hỗ trợ thu âm micro.');
@@ -611,16 +632,19 @@
     if (activeSession) abort();
 
     const mode = opts.mode || 'word';
-    const maxDurationMs = opts.maxDurationMs || (mode === 'word' ? 5800 : 120000);
+    const engine = opts.engine || 'auto';
+    const skipDsp = Boolean(opts.skipDsp);
+    const maxDurationMs = opts.maxDurationMs || (mode === 'word' ? 6500 : 120000);
     const autoStopOnSilence = opts.autoStopOnSilence !== undefined ? Boolean(opts.autoStopOnSilence) : mode === 'word';
 
     let stream;
     permissionRequestActive = true;
     try {
+      // Turn OFF aggressive WebRTC noiseSuppression so quiet single-word starts/ends ("user") aren't swallowed!
       stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
-          noiseSuppression: true,
+          noiseSuppression: false,
           autoGainControl: true,
           channelCount: 1,
         },
@@ -657,7 +681,6 @@
     };
     activeSession = sess;
 
-    // Live audio level meter + VAD auto-stop
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (AudioCtx) {
       try {
@@ -683,7 +706,6 @@
           }
           const rms = Math.sqrt(sumSq / timeData.length);
 
-          // Build 12 responsive bars from lower-mid voice frequencies
           const bars = [];
           const binsPerBar = 4;
           for (let b = 0; b < 12; b++) {
@@ -691,25 +713,24 @@
             for (let k = 0; k < binsPerBar; k++) {
               acc += freqData[1 + b * binsPerBar + k] || 0;
             }
-            // Boost quiet voices visually so user sees clear feedback even when speaking softly
-            const norm = Math.min(1, (acc / (binsPerBar * 255)) * 2.1 + rms * 2.4);
+            const norm = Math.min(1, (acc / (binsPerBar * 255)) * 2.2 + rms * 2.6);
             bars.push(+norm.toFixed(3));
           }
 
           const now = Date.now();
-          if (rms > 0.014) {
+          if (rms > 0.011) {
             if (!sess.speechDetectedAt) sess.speechDetectedAt = now;
             sess.lastVoiceAt = now;
           }
 
           opts.onLevel?.({ rms, bars, speechDetected: Boolean(sess.speechDetectedAt) });
 
-          // Auto-stop ~1.15s after speech finishes in single-word mode
+          // Generous auto-stop: wait >= 550ms after speech onset & 1400ms of trailing silence
           if (
             autoStopOnSilence &&
             sess.speechDetectedAt &&
-            now - sess.speechDetectedAt >= 320 &&
-            now - sess.lastVoiceAt >= 1150
+            now - sess.speechDetectedAt >= 550 &&
+            now - sess.lastVoiceAt >= 1400
           ) {
             stop();
             return;
@@ -736,6 +757,7 @@
       const wasAborted = sess.aborted;
       const chunks = sess.chunks.slice();
       const recMime = sess.recorder?.mimeType || mimeType || 'audio/webm';
+      const recDurationSec = +((Date.now() - sess.startedAt) / 1000).toFixed(2);
       cleanupSession(sess);
       if (wasAborted) return;
 
@@ -748,19 +770,37 @@
       opts.onProcessing?.({ stage: 'dsp' });
 
       try {
-        const processed = await processBlobToNormalizedWav(rawBlob);
-        if (sess.aborted) return;
-        if (processed.silent) {
-          opts.onResult?.({ ok: true, silent: true, text: '', engine: '', gainApplied: 1 });
-          return;
+        let uploadBlob = rawBlob;
+        let filename = /mp4|m4a|aac/i.test(recMime) ? 'speech.m4a' : /ogg/i.test(recMime) ? 'speech.ogg' : 'speech.webm';
+        let boosted = false;
+        let gainApplied = 1;
+        let durationSec = recDurationSec;
+
+        if (!skipDsp) {
+          const processed = await processBlobToNormalizedWav(rawBlob, mode === 'word');
+          if (sess.aborted) return;
+          if (processed.silent) {
+            opts.onResult?.({
+              ok: true,
+              silent: true,
+              text: '',
+              engine: '',
+              gainApplied: 1,
+              audioUrl: URL.createObjectURL(rawBlob),
+            });
+            return;
+          }
+          uploadBlob = processed.blob;
+          filename = processed.filename;
+          boosted = processed.boosted;
+          gainApplied = processed.gainApplied;
+          durationSec = processed.durationSec || recDurationSec;
         }
-        opts.onProcessing?.({
-          stage: 'upload',
-          boosted: processed.boosted,
-          gainApplied: processed.gainApplied,
-          durationSec: processed.durationSec,
-        });
-        const stt = await transcribeBlob(processed.blob, processed.filename, mode);
+
+        const audioUrl = URL.createObjectURL(uploadBlob);
+        opts.onProcessing?.({ stage: 'upload', boosted, gainApplied, durationSec });
+
+        const stt = await transcribeBlob(uploadBlob, filename, mode, engine);
         if (sess.aborted) return;
         opts.onResult?.({
           ok: true,
@@ -769,9 +809,12 @@
           words: stt.words || [],
           segments: stt.segments || [],
           engine: stt.engine || '',
-          boosted: processed.boosted,
-          gainApplied: processed.gainApplied,
-          durationSec: processed.durationSec,
+          latencyMs: stt.clientLatencyMs || stt.latencyMs || 0,
+          boosted,
+          gainApplied,
+          durationSec,
+          audioUrl,
+          rawMode: skipDsp,
         });
       } catch (err) {
         if (sess.aborted) return;
@@ -802,6 +845,7 @@
     stop,
     abort,
     matchSpokenTarget,
+    compareSentence,
     checkHealth,
     getApiUrl,
   };

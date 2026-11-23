@@ -41,7 +41,7 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261123b">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261123c">
   <link rel="stylesheet" href="css/totoro_theme.css?v=20261123d">
 </head>
 <body>
@@ -397,9 +397,9 @@
           <span class="lsb-text">Khi bấm <strong>Đã thuộc</strong>, Test 1 sẽ chuyển thành <strong>Nghe mẫu → Nói lại từ bằng Mic AI</strong> (tự khuếch đại giọng nhỏ).</span>
         </div>
         <div class="lsb-actions">
-          <button type="button" class="lsb-mic-test-btn" id="btn-listening-quick-mic-test" onclick="runQuickListeningMicTest()">
+          <button type="button" class="lsb-mic-test-btn" id="btn-listening-voice-lab" onclick="TotoroVoiceLab.open('word')">
             <span class="lsb-mic-dot" aria-hidden="true"></span>
-            <span id="lsb-mic-test-label">Test Mic AI</span>
+            <span>Phòng Test Giọng (Từ đơn &amp; Câu dài)</span>
           </button>
           <button type="button" class="lsb-switch-btn" onclick="window.TotoroUI?.setActiveSkill?.('Reading')">Về Reading</button>
         </div>
@@ -2132,7 +2132,8 @@
   <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119t"></script>
   <script src="js/core/AppCore.js?v=20261123b"></script>
   <script src="js/recognition_test.js?v=20261123a"></script>
-  <script src="js/speech_stt.js?v=20261123a"></script>
+  <script src="js/speech_stt.js?v=20261123b"></script>
+  <script src="js/voice_lab.js?v=20261123a"></script>
   <script src="js/app.js?v=20261123d"></script>
   <script src="data/v2_paraphrase.js?v=20261122e"></script>
   <script src="data/v2_foundation.js?v=20261122e"></script>
