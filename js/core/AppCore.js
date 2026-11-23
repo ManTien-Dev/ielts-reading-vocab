@@ -46,26 +46,34 @@
     async handleSkillMenuClick(skillId) {
       const res = await skills.switchTo(skillId);
       if (!res.ok && res.reason === 'upcoming') {
-        window.__VOCAB_BRIDGE__?.showToast?.(`${res.mode.label} đang được thiết kế riêng — hiện bạn tiếp tục học IELTS Reading nhé!`);
+        window.__VOCAB_BRIDGE__?.showToast?.(`${res.mode.label} đang được thiết kế riêng — hiện bạn có thể học IELTS Reading & Listening nhé!`);
       } else if (res.ok) {
         this.renderSkillModesMenu();
+        const pretty = skillId === 'listening' ? 'Listening' : 'Reading';
+        if (window.TotoroUI?.getActiveSkill?.() !== pretty) {
+          window.TotoroUI?.setActiveSkill?.(pretty, { silent: true });
+        }
       }
     },
   };
 
-  // Register live ReadingMode + clean OOP stubs for Listening, Writing, Speaking
+  // Register live ReadingMode + live ListeningMode + clean OOP stubs for Writing, Speaking
   const readingMode = new window.ReadingSkillMode(core);
   skills.register(readingMode);
 
-  if (window.UpcomingSkillMode) {
-    skills.register(new window.UpcomingSkillMode({
+  if (window.CoreSkillOOP?.BaseSkillMode) {
+    const listeningMode = new window.CoreSkillOOP.BaseSkillMode({
       id: 'listening',
       label: 'IELTS Listening',
       shortLabel: 'Listening',
-      pedagogyType: 'audio_dictation_traps',
-      description: 'Luyện nghe-chép chính tả Section 1–4, bẫy đồng âm & đa giọng UK/US/AU.',
-    }, core));
+      status: 'live',
+      pedagogyType: 'audio_shadowing_stt',
+      description: 'Nghe mẫu → Nói lại từ bằng AI Mic (Test 1 Shadowing · khuếch đại giọng nhỏ).',
+    }, core);
+    skills.register(listeningMode);
+  }
 
+  if (window.UpcomingSkillMode) {
     skills.register(new window.UpcomingSkillMode({
       id: 'writing',
       label: 'IELTS Writing',

@@ -41,8 +41,8 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261122j">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261123a">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261123b">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261123c">
 </head>
 <body>
 
@@ -206,7 +206,7 @@
         </button>
         <div class="tot-popover" id="skill-popover">
           <button type="button" class="tot-skill-opt active" data-tot-skill="Reading"><div><div style="font-size:13px;font-weight:750;">IELTS Reading</div><div style="font-size:11px;color:var(--ink-3);">4.489 họ từ · 110 Tasks</div></div><span class="tot-tag">Đang mở</span></button>
-          <button type="button" class="tot-skill-opt" data-tot-skill="Listening"><div><div style="font-size:13px;font-weight:750;">IELTS Listening</div><div style="font-size:11px;color:var(--ink-3);">Dictation · Section 1–4</div></div><span class="tot-tag soon">Sắp mở</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Listening"><div><div style="font-size:13px;font-weight:750;">IELTS Listening</div><div style="font-size:11px;color:var(--ink-3);">Nghe → Nói lại từ · Shadowing</div></div><span class="tot-tag">Sẵn sàng</span></button>
           <button type="button" class="tot-skill-opt" data-tot-skill="Writing"><div><div style="font-size:13px;font-weight:750;">IELTS Writing</div><div style="font-size:11px;color:var(--ink-3);">Flow Ideas · Task 1 &amp; 2</div></div><span class="tot-tag soon">Sắp mở</span></button>
           <button type="button" class="tot-skill-opt" data-tot-skill="Speaking"><div><div style="font-size:13px;font-weight:750;">IELTS Speaking</div><div style="font-size:11px;color:var(--ink-3);">Spoken Chunks · Part 1–3</div></div><span class="tot-tag soon">Sắp mở</span></button>
         </div>
@@ -390,6 +390,21 @@
         <div class="study-heading-copy"><h1>Flashcards</h1></div>
       </div>
 
+      <!-- Banner chế độ Listening (chỉ hiện khi chọn kỹ năng IELTS Listening) -->
+      <div class="listening-study-banner" id="listening-study-banner" role="region" aria-label="Chế độ IELTS Listening Shadowing">
+        <div class="lsb-left">
+          <span class="lsb-badge">🎧 IELTS LISTENING</span>
+          <span class="lsb-text">Khi bấm <strong>Đã thuộc</strong>, Test 1 sẽ chuyển thành <strong>Nghe mẫu → Nói lại từ bằng Mic AI</strong> (tự khuếch đại giọng nhỏ).</span>
+        </div>
+        <div class="lsb-actions">
+          <button type="button" class="lsb-mic-test-btn" id="btn-listening-quick-mic-test" onclick="runQuickListeningMicTest()">
+            <span class="lsb-mic-dot" aria-hidden="true"></span>
+            <span id="lsb-mic-test-label">Test Mic AI</span>
+          </button>
+          <button type="button" class="lsb-switch-btn" onclick="window.TotoroUI?.setActiveSkill?.('Reading')">Về Reading</button>
+        </div>
+      </div>
+
       <!-- 1. Thanh chọn phạm vi & Tìm nhanh thẻ / Công cụ (giữ nguyên bố cục toàn chiều rộng) -->
       <div class="study-top-bar">
         <div class="study-bar-left">
@@ -418,8 +433,9 @@
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg>
             <span>Từ vựng</span>
           </button>
-          <button type="button" class="btn-deck-tool tot-tool-quiet" id="btn-top-signalwords" onclick="openSignalWordsModal()" title="Xem bảng phân loại từ nối chỉ hướng nghĩa" style="display:none;">
-            <span>Bảng từ nối</span>
+          <button type="button" class="btn-deck-tool tot-tool-quiet" id="btn-top-my-vocab" onclick="MyVocabUI.openModal()" title="Quản lý &amp; Import danh sách Từ của tôi (lưu cục bộ trên máy này)">
+            <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+            <span>Từ của tôi</span>
           </button>
           <button type="button" class="btn-deck-tool tot-tool-quiet" id="btn-top-shuffle" onclick="shuffleCurrentScope()" title="Trộn ngẫu nhiên thứ tự">
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="16 3 21 3 21 8"/><line x1="4" x2="21" y1="20" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" x2="21" y1="15" y2="21"/></svg>
@@ -914,6 +930,7 @@
             <div class="task-lock-banner" id="fc-finished-task-warn" style="display:none; max-width:460px; margin:2px auto 6px; text-align:left; font-size:13.5px; line-height:1.5;"></div>
             <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
               <button class="btn btn-primary" id="btn-finished-task-exam" style="display:none;" onclick="TasksModule.onClickStartTaskExam()">Làm bài Test kết thúc Task →</button>
+              <button class="btn btn-primary" id="btn-finished-myvocab-add" style="display:none;" onclick="MyVocabUI.openModal(MyVocabStore.getDeckIdFromScope(window.__VOCAB_BRIDGE__?.getCurrentScopeKey?.()), true)">+ Thêm / Import từ ngay</button>
               <button class="btn btn-primary" onclick="restartScopeStudy()">Ôn tập lại từ đầu</button>
               <button class="btn" onclick="activateUnmasteredOnly()">Chỉ ôn từ chưa thuộc</button>
             </div>
@@ -1451,23 +1468,6 @@
             </div>
           </div>
 
-          <div class="tot-exam-card ink-brackets has-stamp" data-practice-cat="live">
-            <svg class="ghibli-stamp ok" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.13;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-              <circle cx="32" cy="32" r="26" stroke="currentColor" stroke-width="2.2" stroke-dasharray="4 3"/>
-              <path d="M20 26L17 15L25 21.5C29 20.5 35 20.5 39 21.5L47 15L44 26C48.5 29.5 51 35 51 41C51 49.5 43 54 32 54C21 54 13 49.5 13 41C13 35 15.5 29.5 20 26Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/>
-              <circle cx="25" cy="32" r="2" fill="currentColor"/><circle cx="39" cy="32" r="2" fill="currentColor"/>
-            </svg>
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="tot-pos-badge">Signal Words</span><span class="tot-hist-badge tabular">40 từ nối</span></div>
-              <div style="font-size:15px;font-weight:750;margin-top:8px;color:var(--ink);">Bảng Từ Nối Chỉ Hướng Nghĩa</div>
-              <div style="font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5;">Nhận diện bẫy đảo chiều, quan hệ tương phản &amp; nhân quả trong Academic Reading.</div>
-            </div>
-            <div style="display:flex;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid var(--border);">
-              <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" data-tot-view="task">Làm Task</button>
-              <button type="button" class="tot-demo-btn tot-btn-soft" style="height:31px;font-size:12px;" onclick="openSignalWordsModal()">Mở bảng từ nối</button>
-            </div>
-          </div>
-
           <div class="tot-exam-card ink-brackets has-stamp" data-practice-cat="cambridge">
             <svg class="ghibli-stamp" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.11;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
               <path d="M18 22L14 8L24 16C29 14.5 35 14.5 40 16L50 8L46 22C52 26 55 33 55 41C55 52 45.5 58 32 58C18.5 58 9 52 9 41C9 33 12 26 18 22Z" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/>
@@ -1626,6 +1626,85 @@
     </div>
   </div>
 
+  <!-- MODAL: MY VOCAB (TỪ CỦA TÔI — LƯU CỤC BỘ TRÊN MÁY HỌC SINH) -->
+  <div class="modal-overlay" id="modal-my-vocab" onclick="MyVocabUI.closeModal(event)">
+    <div class="modal-card modal-card-wide mv-modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Từ của tôi (My Vocab)</div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">Tự tạo &amp; Import danh sách từ riêng để học Flashcard — lưu 100% cục bộ trên máy này.</div>
+        </div>
+        <button type="button" class="btn-icon-glass" style="width:32px; height:32px; font-size:1rem;" onclick="MyVocabUI.closeModal()" aria-label="Đóng">✕</button>
+      </div>
+      <div class="modal-body mv-modal-body">
+        <div class="mv-layout">
+          <aside class="mv-sidebar">
+            <div class="mv-side-hdr">Danh sách cá nhân</div>
+            <div class="mv-decks-list" id="mv-decks-list"></div>
+            <button type="button" class="btn-subtle mv-side-btn" onclick="MyVocabUI.promptCreateDeck()">+ Tạo danh sách mới</button>
+            <div class="mv-backup-row">
+              <button type="button" class="btn-subtle mv-mini-act" onclick="MyVocabUI.exportBackup()" title="Tải xuống bản sao lưu (.json)">Xuất .json</button>
+              <label class="btn-subtle mv-mini-act" title="Nhập từ file .txt, .csv hoặc bản sao lưu .json" style="cursor:pointer;">
+                Nhập file
+                <input type="file" accept=".txt,.csv,.json" style="display:none;" onchange="MyVocabUI.handleTextFileImport(this)">
+              </label>
+            </div>
+            <div class="mv-local-badge">
+              Lưu riêng trên thiết bị này (<code>localStorage</code>) — không trộn vào 5.000 từ của lớp và không làm nặng đồng bộ lớp.
+            </div>
+          </aside>
+
+          <div class="mv-main">
+            <div class="mv-toolbar">
+              <div class="mv-toolbar-title" id="mv-active-deck-title">Từ của tôi (0 từ)</div>
+              <div class="mv-toolbar-actions">
+                <button type="button" class="btn-subtle mv-act-btn" onclick="MyVocabUI.togglePanel('add')">+ Thêm 1 từ</button>
+                <button type="button" class="btn-subtle mv-act-btn" onclick="MyVocabUI.togglePanel('import')">+ Import danh sách</button>
+                <button type="button" class="btn btn-primary mv-act-btn" id="btn-mv-study-now" onclick="MyVocabUI.studyCurrentDeck()">Học Flashcard →</button>
+              </div>
+            </div>
+
+            <form class="mv-collapsible" id="mv-panel-add" onsubmit="MyVocabUI.submitSingleWord(event)">
+              <div class="mv-form-grid">
+                <input type="text" class="mv-input" id="mv-add-word" placeholder="Từ / cụm từ tiếng Anh (vd: mitigate)" autocomplete="off">
+                <input type="text" class="mv-input" id="mv-add-meaning" placeholder="Nghĩa tiếng Việt (để trống nếu muốn tự tra từ điển app)" autocomplete="off">
+              </div>
+              <input type="text" class="mv-input" id="mv-add-context" placeholder="Câu ngữ cảnh ví dụ (tùy chọn)" autocomplete="off">
+              <div class="mv-form-foot">
+                <button type="button" class="btn-subtle mv-act-btn" onclick="MyVocabUI.togglePanel('add', false)">Đóng</button>
+                <button type="submit" class="btn btn-primary mv-act-btn">Lưu vào danh sách</button>
+              </div>
+            </form>
+
+            <div class="mv-collapsible" id="mv-panel-import">
+              <div style="font-size:12.5px; font-weight:700; color:var(--ink);">Dán nhiều dòng (hỗ trợ Quizlet <code>Tab</code>, <code>từ - nghĩa</code>, hoặc <code>từ | /ipa/ | nghĩa</code> — tự điền IPA!)</div>
+              <textarea class="mv-textarea" id="mv-import-textarea" placeholder="mitigate - làm giảm nhẹ, giảm thiểu&#10;resilience | /rɪˈzɪl.jəns/ | khả năng chống chịu&#10;prohibitively expensive - đắt đỏ quá mức"></textarea>
+              <div class="mv-form-foot">
+                <label class="btn-subtle mv-act-btn" style="cursor:pointer; margin-right:auto;">
+                  Chọn file .txt / .csv
+                  <input type="file" accept=".txt,.csv,.json" style="display:none;" onchange="MyVocabUI.handleTextFileImport(this)">
+                </label>
+                <button type="button" class="btn-subtle mv-act-btn" onclick="MyVocabUI.togglePanel('import', false)">Đóng</button>
+                <button type="button" class="btn btn-primary mv-act-btn" onclick="MyVocabUI.submitBulkImport()">Import ngay</button>
+              </div>
+            </div>
+
+            <input type="search" class="mv-input" id="mv-search-input" placeholder="Tìm nhanh trong danh sách này..." oninput="MyVocabUI.onSearch(this.value)" autocomplete="off">
+
+            <div class="mv-table-wrap">
+              <table class="mv-table">
+                <thead>
+                  <tr><th>Từ vựng</th><th>Nghĩa &amp; Ngữ cảnh</th><th>Nguồn</th><th style="width:42px;"></th></tr>
+                </thead>
+                <tbody id="mv-words-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: WORD LIST -->
   <div class="modal-overlay" id="modal-word-list" onclick="closeWordListModal(event)">
     <div class="modal-card" onclick="event.stopPropagation()">
@@ -1710,6 +1789,38 @@
             Gõ chính xác từ tiếng Anh vừa học (còn 2 lần thử).
           </div>
         </div>
+        <div id="recall-listening-body" style="display:none;">
+          <div class="rl-audio-row">
+            <button type="button" class="rl-audio-btn is-primary" id="btn-rl-play-uk" onclick="playListeningRecallAudio('en-GB', 0.92)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+              <span>Nghe mẫu (UK)</span>
+            </button>
+            <button type="button" class="rl-audio-btn" id="btn-rl-play-us" onclick="playListeningRecallAudio('en-US', 0.92)">
+              <span>US</span>
+            </button>
+            <button type="button" class="rl-audio-btn" id="btn-rl-play-slow" onclick="playListeningRecallAudio('en-GB', 0.68)" title="Nghe chậm 0.68× để bắt rõ từng âm tiết">
+              <span>Chậm 0.7×</span>
+            </button>
+          </div>
+          <div class="rl-cue-box" id="rl-cue-box">
+            <span class="rl-cue-pos" id="rl-cue-pos"></span>
+            <span class="rl-cue-meaning" id="rl-cue-meaning"></span>
+          </div>
+          <div class="rl-mic-stage" id="rl-mic-stage">
+            <div class="rl-waveform" id="rl-waveform" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <button type="button" class="rl-mic-btn" id="btn-rl-mic" onclick="toggleListeningRecallMic()">
+              <span class="rl-mic-ico" id="rl-mic-ico" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              </span>
+              <span class="rl-mic-label" id="rl-mic-label">Bấm để nói lại từ</span>
+            </button>
+            <div class="rl-mic-sub" id="rl-mic-sub">Tự động kích giọng nhỏ &amp; dừng khi nói xong · Phím tắt: <strong>Space</strong> nói · <strong>R</strong> nghe lại</div>
+          </div>
+          <div class="rl-heard-box" id="rl-heard-box" style="display:none;"></div>
+        </div>
         <div id="recall-stage2-body" style="display:none;">
           <div id="recall-stage2-prompt" style="font-size:15px; color:var(--text-muted); margin-bottom:12px;">
             Chỉ click đúng các từ đồng nghĩa (còn 2 lần thử):
@@ -1788,7 +1899,6 @@
             </div>
             <div class="tot-set-btn-row">
               <button type="button" class="btn-subtle" id="btn-menu-class-report" onclick="closeMenuModal(); openClassReportModal();">Bảng xếp hạng</button>
-              <button type="button" class="btn-subtle" onclick="closeMenuModal(); openSignalWordsModal();">Bảng từ nối</button>
               <button type="button" class="btn-subtle danger-soft" id="btn-menu-logout" onclick="closeMenuModal(); logoutCurrentAccount();">Đăng xuất / Đổi ID</button>
             </div>
           </div>
@@ -2048,18 +2158,20 @@
   <script src="js/core/EventBus.js?v=20261119t"></script>
   <script src="js/core/LazyDataLoader.js?v=20261119t"></script>
   <script src="js/core/AudioEngine.js?v=20261123a"></script>
+  <script src="js/core/MyVocabStore.js?v=20261123c"></script>
   <script src="js/core/AntiCheatGuard.js?v=20261121b"></script>
   <script src="js/core/BaseSkillMode.js?v=20261119t"></script>
   <script src="js/skills/reading/ReadingMode.js?v=20261119t"></script>
   <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119t"></script>
-  <script src="js/core/AppCore.js?v=20261121c"></script>
+  <script src="js/core/AppCore.js?v=20261123b"></script>
   <script src="js/recognition_test.js?v=20261123a"></script>
-  <script src="js/app.js?v=20261123b"></script>
+  <script src="js/speech_stt.js?v=20261123a"></script>
+  <script src="js/app.js?v=20261123d"></script>
   <script src="data/v2_paraphrase.js?v=20261122e"></script>
   <script src="data/v2_foundation.js?v=20261122e"></script>
   <script src="data/v2_academic.js?v=20261122e"></script>
   <script src="data/v2_advanced.js?v=20261122e"></script>
   <script src="js/tasks.js?v=20261122j"></script>
-  <script src="js/totoro_ui.js?v=20261122d"></script>
+  <script src="js/totoro_ui.js?v=20261123a"></script>
 </body>
 </html>

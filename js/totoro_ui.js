@@ -940,18 +940,66 @@
       }
     });
 
+    // Active Skill persistence (Reading | Listening)
+    const SKILL_STORAGE_KEY = 'totoro_active_skill_v1';
+    let activeSkill = 'Reading';
+    try {
+      const savedSkill = localStorage.getItem(SKILL_STORAGE_KEY);
+      if (savedSkill === 'Listening' || savedSkill === 'Reading') activeSkill = savedSkill;
+    } catch (_) {}
+
+    function setActiveSkill(skill, opts = {}) {
+      const next = (skill === 'Listening' || String(skill || '').toLowerCase() === 'listening') ? 'Listening' : 'Reading';
+      activeSkill = next;
+      html.setAttribute('data-skill', next.toLowerCase());
+      try { localStorage.setItem(SKILL_STORAGE_KEY, next); } catch (_) {}
+
+      const chipTxt = document.getElementById('header-mode-chip-text');
+      if (chipTxt) chipTxt.textContent = next;
+
+      document.querySelectorAll('[data-tot-skill]').forEach((btn) => {
+        const s = btn.dataset.totSkill;
+        const isCurrent = s === next;
+        btn.classList.toggle('active', isCurrent);
+        const tag = btn.querySelector('.tot-tag');
+        if (tag && (s === 'Reading' || s === 'Listening')) {
+          tag.classList.remove('soon');
+          tag.textContent = isCurrent ? 'Đang mở' : 'Sẵn sàng';
+        }
+      });
+
+      const coreId = next.toLowerCase();
+      if (window.AppCore?.skills && window.AppCore.skills.getActiveId?.() !== coreId) {
+        window.AppCore.skills.switchTo(coreId).then(() => window.AppCore?.renderSkillModesMenu?.()).catch(() => {});
+      }
+
+      if (!opts.silent) {
+        if (next === 'Listening') {
+          window.__VOCAB_BRIDGE__?.showToast?.('🎧 Đã chuyển sang IELTS Listening — Bấm "Đã thuộc" để kiểm tra Nghe → Nói lại từ!');
+        } else {
+          window.__VOCAB_BRIDGE__?.showToast?.('📖 Đã chuyển sang IELTS Reading (4.489 họ từ · Test 1 gõ từ)');
+        }
+      }
+      document.dispatchEvent(new CustomEvent('totoro:skill-changed', { detail: { skill: next } }));
+    }
+
     // Skill options
     document.querySelectorAll('[data-tot-skill]').forEach((b) => {
       b.addEventListener('click', () => {
         const s = b.dataset.totSkill;
         closePopovers();
-        if (s === 'Reading') {
-          window.__VOCAB_BRIDGE__?.showToast?.('Đang học: IELTS Reading (4.489 họ từ)');
+        if (s === 'Reading' || s === 'Listening') {
+          setActiveSkill(s, { silent: false });
         } else {
           window.__VOCAB_BRIDGE__?.showToast?.(`IELTS ${s} đang được hoàn thiện — sắp mở!`);
         }
       });
     });
+
+    // Apply persisted skill silently on boot
+    setActiveSkill(activeSkill, { silent: true });
+    window.__TOTORO_SET_SKILL__ = setActiveSkill;
+    window.__TOTORO_GET_SKILL__ = () => activeSkill;
 
     // Home chart & leaderboard period switches + Practice filter tabs
     document.querySelectorAll('[data-home-chart]').forEach((b) => {
@@ -1096,6 +1144,8 @@
   window.TotoroUI = {
     switchView,
     getActiveView: () => activeView,
+    getActiveSkill: () => (typeof window.__TOTORO_GET_SKILL__ === 'function' ? window.__TOTORO_GET_SKILL__() : (html.getAttribute('data-skill') === 'listening' ? 'Listening' : 'Reading')),
+    setActiveSkill: (skill, opts) => (typeof window.__TOTORO_SET_SKILL__ === 'function' ? window.__TOTORO_SET_SKILL__(skill, opts) : undefined),
     onUserEntered,
     setStyleMode,
     setPalette,

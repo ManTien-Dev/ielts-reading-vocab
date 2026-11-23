@@ -85,7 +85,7 @@
   let recallTargetItem = null;
   let recallSubmitted = false;
   let recallStage = 1;
-  let recallMode = 'standard'; // 'standard' | 'quick_vi'
+  let recallMode = 'standard'; // 'standard' | 'quick_vi' | 'listening_shadow'
   let recallStage2Type = 'synonym'; // 'synonym' | 'wordfamily' | 'meaning_vi' | 'wordbox'
   let recallStage2Queue = [];
   let recallWbSentence = '';
@@ -93,6 +93,9 @@
   let recallAttemptsLeft = 2;
   let recallSynOptions = [];
   let recallSynSelected = new Set();
+  let recallTimerPausedAt = 0;
+  let listeningRecallBusy = false;
+  let listeningAutoPlayTimer = null;
   let recallDeadlineTimer = null;
   let recallDeadlineAt = 0;
   let recallLeaveWarnings = 0;
@@ -231,6 +234,14 @@
     }
   }
 
+  function isMyVocabScopeKey(key) {
+    return Boolean(window.MyVocabStore?.isMyVocabScope?.(key));
+  }
+
+  function isMyVocabWordId(wid) {
+    return String(wid || '').startsWith('mv_w_');
+  }
+
   function getScopeDef(key) {
     if (key === REVIEW_OLD_SCOPE_KEY && customReviewState) {
       return {
@@ -238,6 +249,19 @@
         name: customReviewState.title || 'Ôn tập từ vựng cũ',
         getList: () => customReviewState.words || [],
       };
+    }
+    if (isMyVocabScopeKey(key) && window.MyVocabStore) {
+      const deckId = window.MyVocabStore.getDeckIdFromScope(key);
+      const deck = window.MyVocabStore.getDeck(deckId);
+      if (deck) {
+        return {
+          key: window.MyVocabStore.getScopeKey(deck.id),
+          name: `Từ của tôi · ${deck.name}`,
+          isMyVocab: true,
+          myVocabDeckId: deck.id,
+          getList: () => window.MyVocabStore.getFlashcardItems(deck.id),
+        };
+      }
     }
     const found = getAllScopes().find(s => s.key === key);
     if (found) return found;
@@ -415,7 +439,7 @@
     ensureLemmaPeerIndex();
     const uniq = new Set();
     Object.entries(assessMap).forEach(([wid, lvl]) => {
-      if (lvl === 3) {
+      if (lvl === 3 && !isMyVocabWordId(wid)) {
         const lem = _idToLemmaCache?.get(wid);
         uniq.add(lem || wid);
       }
@@ -960,9 +984,25 @@
       try { return JSON.parse(localStorage.getItem(getUserStorageKey(scoped)) || '{}')?.assessments || {}; } catch (_) { return {}; }
     })();
     Object.keys(srcAssess).forEach(k => {
+      if (isMyVocabWordId(k)) return;
       const v = srcAssess[k];
       if (v === 1 || v === 2 || v === 3) compactAssess[k] = v;
     });
+
+    const isSelfScoped = Boolean(currentUser && getScopedUid(currentUser.id) === scoped);
+    const cloudSrsData = {};
+    if (isSelfScoped && srsData && typeof srsData === 'object') {
+      Object.keys(srsData).forEach((k) => {
+        if (!isMyVocabWordId(k)) cloudSrsData[k] = srsData[k];
+      });
+    }
+    const cloudScopePositions = {};
+    if (isSelfScoped && scopePositions && typeof scopePositions === 'object') {
+      Object.keys(scopePositions).forEach((k) => {
+        if (!isMyVocabScopeKey(k)) cloudScopePositions[k] = scopePositions[k];
+      });
+    }
+    const cloudScopeKey = isMyVocabScopeKey(currentScopeKey) ? 'paraphrase' : currentScopeKey;
 
     let taskProgress = {};
     let taskLocks = {};
@@ -971,7 +1011,7 @@
       taskLocks = JSON.parse(localStorage.getItem(`${TASK_LOCKS_KEY_BASE}${scoped}`) || '{}') || {};
     } catch (_) {}
 
-    const recogExtra = (currentUser && getScopedUid(currentUser.id) === scoped && window.RecognitionTestModule?.exportCloudRecognitionData)
+    const recogExtra = (isSelfScoped && window.RecognitionTestModule?.exportCloudRecognitionData)
       ? window.RecognitionTestModule.exportCloudRecognitionData()
       : {};
 
@@ -983,9 +1023,9 @@
       wordsByDay,
       streakDays,
       assessments: compactAssess,
-      srsData: (currentUser && getScopedUid(currentUser.id) === scoped) ? srsData : {},
-      scopePositions: (currentUser && getScopedUid(currentUser.id) === scoped) ? scopePositions : {},
-      currentScopeKey,
+      srsData: cloudSrsData,
+      scopePositions: cloudScopePositions,
+      currentScopeKey: cloudScopeKey,
       taskProgress,
       taskLocks,
       teacherUnlockedAt: Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0),
@@ -2293,6 +2333,15 @@
     let html = SCOPES.map(it =>
       `<option value="${it.key}">${escapeHtml(it.name)}</option>`
     ).join('');
+    if (window.MyVocabStore && !isTeacherUser()) {
+      const mvDecks = window.MyVocabStore.getDecks() || [];
+      if (mvDecks.length > 0) {
+        html += `<optgroup label="Từ của tôi (Lưu trên máy)">${mvDecks.map((d) => {
+          const sk = window.MyVocabStore.getScopeKey(d.id);
+          return `<option value="${escapeHtml(sk)}">${escapeHtml(d.name)} (${d.words.length} từ)</option>`;
+        }).join('')}</optgroup>`;
+      }
+    }
     if (dynamicTaskScopes.length > 0) {
       html += `<optgroup label="Bộ từ Task được giao">${dynamicTaskScopes.map(it =>
         `<option value="${escapeHtml(it.key)}">${escapeHtml(it.name)}</option>`
@@ -2304,6 +2353,8 @@
     sel.innerHTML = html;
     if (customReviewState && currentScopeKey === REVIEW_OLD_SCOPE_KEY) {
       sel.value = REVIEW_OLD_SCOPE_KEY;
+    } else if (isMyVocabScopeKey(currentScopeKey) && Array.from(sel.options).some((o) => o.value === currentScopeKey)) {
+      sel.value = currentScopeKey;
     } else {
       sel.value = getAllScopes().some(s => s.key === currentScopeKey) ? currentScopeKey : SCOPES[0].key;
     }
@@ -2580,11 +2631,27 @@
       if (btnPrev) btnPrev.disabled = (currentCardIndex <= 0);
       const finExamBtn = document.getElementById('btn-finished-task-exam');
       if (finExamBtn) finExamBtn.style.display = isTaskScopeKey(currentScopeKey) ? 'inline-flex' : 'none';
+      const finMvBtn = document.getElementById('btn-finished-myvocab-add');
+      const isEmptyMyVocab = isMyVocabScopeKey(currentScopeKey) && fullScopeList.length === 0;
+      if (finMvBtn) finMvBtn.style.display = isEmptyMyVocab ? 'inline-flex' : 'none';
+      const finTitle = finishedBox?.querySelector('.fc-finished-title');
+      const finDesc = finishedBox?.querySelector('.fc-finished-desc');
+      if (finTitle && finDesc) {
+        if (isEmptyMyVocab) {
+          finTitle.textContent = 'Danh sách Từ của tôi đang trống';
+          finDesc.textContent = 'Bấm nút bên dưới để thêm từng từ hoặc dán/Import hàng loạt danh sách từ riêng của bạn (lưu hoàn toàn trên máy này).';
+        } else {
+          finTitle.textContent = 'Bạn đã hoàn thành lượt thẻ này!';
+          finDesc.textContent = 'Tất cả các thẻ trong danh sách đã được bạn xem qua. Bạn có thể ôn lại từ đầu hoặc lọc riêng các từ chưa thuộc.';
+        }
+      }
       window.TasksModule?.updateTaskStudyBar?.();
       return;
     }
     const finExamBtn = document.getElementById('btn-finished-task-exam');
     if (finExamBtn) finExamBtn.style.display = 'none';
+    const finMvBtn = document.getElementById('btn-finished-myvocab-add');
+    if (finMvBtn) finMvBtn.style.display = 'none';
     window.TasksModule?.updateTaskStudyBar?.();
 
     scene.style.display = 'block';
@@ -3143,9 +3210,22 @@
     if (badge) badge.classList.remove('is-speed-pulse');
   }
 
+  function pauseRecallCountdown(pause) {
+    if (pause) {
+      if (!recallTimerPausedAt && recallDeadlineAt > 0) {
+        recallTimerPausedAt = Date.now();
+      }
+    } else if (recallTimerPausedAt) {
+      const pausedMs = Math.max(0, Date.now() - recallTimerPausedAt);
+      if (recallDeadlineAt > 0) recallDeadlineAt += pausedMs;
+      recallTimerPausedAt = 0;
+    }
+  }
+
   function updateRecallCountdownBadge() {
     const badge = document.getElementById('recall-timer-badge');
     if (!badge || !recallTargetItem || recallSubmitted) return;
+    if (recallTimerPausedAt) return;
     const remMs = Math.max(0, recallDeadlineAt - Date.now());
     const rem = Math.max(0, Math.ceil(remMs / 1000));
     badge.textContent = `${rem}s`;
@@ -3641,6 +3721,8 @@
         targetWordEl.textContent = item.lemma || '';
       }
       if (stage1Body) stage1Body.style.display = 'none';
+      const listenBodyEl = document.getElementById('recall-listening-body');
+      if (listenBodyEl) listenBodyEl.style.display = 'none';
       if (stage2Body) stage2Body.style.display = 'block';
       if (btnSubmit) btnSubmit.style.display = 'none';
       if (fb) {
@@ -3699,6 +3781,8 @@
       targetWordEl.textContent = item.lemma || '';
     }
     if (stage1Body) stage1Body.style.display = 'none';
+    const listenBodyEl2 = document.getElementById('recall-listening-body');
+    if (listenBodyEl2) listenBodyEl2.style.display = 'none';
     if (stage2Body) stage2Body.style.display = 'block';
     if (btnSubmit) btnSubmit.style.display = 'inline-flex';
     if (fb) {
@@ -3757,6 +3841,8 @@
       }
     }
     if (stage1Body) stage1Body.style.display = 'none';
+    const listenBodyEl2 = document.getElementById('recall-listening-body');
+    if (listenBodyEl2) listenBodyEl2.style.display = 'none';
     if (stage2Body) stage2Body.style.display = 'block';
     if (fb) {
       fb.style.display = 'none';
@@ -3772,6 +3858,11 @@
 
   function failRecallCheck(item, reasonPrefix = 'Chưa chính xác!') {
     stopRecallInputTimer();
+    window.TotoroSpeechSTT?.abort?.();
+    if (listeningAutoPlayTimer) { clearTimeout(listeningAutoPlayTimer); listeningAutoPlayTimer = null; }
+    recallTimerPausedAt = 0;
+    listeningRecallBusy = false;
+    if (recallMode === 'listening_shadow') setListeningMicUI('disabled', 'Đã hết lượt thử cho thẻ này.');
     resetRecallSpeedBarUI(false);
     clearRecallActiveSession();
     recallSubmitted = true;
@@ -3836,10 +3927,309 @@
     }
   }
 
+  function isListeningSkillActive() {
+    const sk = window.TotoroUI?.getActiveSkill?.() || document.documentElement.getAttribute('data-skill') || 'reading';
+    return String(sk).toLowerCase() === 'listening';
+  }
+
+  function resetListeningWaveformUI() {
+    const wf = document.getElementById('rl-waveform');
+    if (!wf) return;
+    wf.classList.remove('is-recording', 'is-processing');
+    wf.querySelectorAll('span').forEach((bar) => {
+      bar.style.transform = 'scaleY(0.18)';
+    });
+  }
+
+  function updateListeningWaveformUI(bars) {
+    const wf = document.getElementById('rl-waveform');
+    if (!wf || !Array.isArray(bars)) return;
+    const spans = wf.querySelectorAll('span');
+    spans.forEach((bar, idx) => {
+      const v = Math.max(0.16, Math.min(1, Number(bars[idx] || 0.16)));
+      bar.style.transform = `scaleY(${v.toFixed(2)})`;
+    });
+  }
+
+  function setListeningMicUI(state, subText) {
+    const btn = document.getElementById('btn-rl-mic');
+    const lbl = document.getElementById('rl-mic-label');
+    const sub = document.getElementById('rl-mic-sub');
+    const wf = document.getElementById('rl-waveform');
+    if (btn) {
+      btn.classList.remove('is-recording', 'is-processing', 'is-passed');
+      btn.disabled = state === 'processing' || state === 'passed' || state === 'disabled';
+      if (state === 'recording') btn.classList.add('is-recording');
+      else if (state === 'processing') btn.classList.add('is-processing');
+      else if (state === 'passed') btn.classList.add('is-passed');
+    }
+    if (wf) {
+      wf.classList.toggle('is-recording', state === 'recording');
+      wf.classList.toggle('is-processing', state === 'processing');
+      if (state !== 'recording') resetListeningWaveformUI();
+    }
+    if (lbl) {
+      if (state === 'recording') lbl.textContent = 'Đang nghe… Bấm để chấm';
+      else if (state === 'processing') lbl.textContent = 'AI đang khuếch đại & chấm…';
+      else if (state === 'passed') lbl.textContent = '✓ Phát âm chuẩn!';
+      else if (state === 'disabled') lbl.textContent = 'Đã hết lượt thử';
+      else lbl.textContent = 'Bấm để nói lại từ';
+    }
+    if (sub && subText !== undefined) {
+      sub.innerHTML = subText;
+    }
+  }
+
+  function playListeningRecallAudio(accent = 'en-GB', rate = 0.92) {
+    const item = recallTargetItem;
+    if (!item || !item.lemma) return;
+    if (window.TotoroSpeechSTT?.isRecording?.()) {
+      window.TotoroSpeechSTT.abort();
+      listeningRecallBusy = false;
+      pauseRecallCountdown(false);
+      setListeningMicUI('idle');
+    }
+    speakCleanTextReliable(item.lemma, accent, rate, { engine: 'auto', respectCustom: false });
+  }
+
+  function advanceFromListeningStage1Pass(item) {
+    const expected = String(item.lemma || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const isSignal = currentScopeKey === 'signal_words' || Boolean(item?.strategy);
+    const hasSynTargets = isSignal
+      ? splitCsvItems(item?.word_forms).length > 0
+      : getCleanSynonyms(item).some((s) => {
+          const sl = String(s || '').trim().toLowerCase();
+          return sl && sl !== expected;
+        });
+    const hasFormTargets = !isSignal && (Array.isArray(item?.clean_forms) ? item.clean_forms : []).some((f) => {
+      const fl = String(f || '').trim().toLowerCase();
+      return fl && fl !== expected;
+    });
+    const hasMeaningChoices = !isSignal && Boolean(window.RecognitionTestModule?.buildMeaningDistractors) &&
+      (window.RecognitionTestModule.buildMeaningDistractors(item, currentScopeList, 3)?.length >= 2);
+
+    recallStage2Queue = [];
+    if (isSignal) {
+      if (hasSynTargets) recallStage2Queue.push('signal_equiv');
+    } else {
+      if (hasSynTargets) recallStage2Queue.push('synonym');
+      if (hasFormTargets) recallStage2Queue.push('wordfamily');
+      if (hasMeaningChoices) recallStage2Queue.push('meaning_vi');
+    }
+    advanceRecallStage2Queue(item);
+  }
+
+  async function toggleListeningRecallMic() {
+    if (!recallTargetItem || recallSubmitted || recallMode !== 'listening_shadow' || recallStage !== 1) return;
+    const stt = window.TotoroSpeechSTT;
+    if (!stt || !stt.isSupported()) {
+      const fb = document.getElementById('recall-feedback');
+      if (fb) {
+        fb.style.display = 'block';
+        fb.className = 'recall-feedback err';
+        fb.textContent = 'Trình duyệt này không hỗ trợ thu âm Micro. Hãy chuyển sang Chrome/Edge/Safari hoặc quay về chế độ Reading.';
+      }
+      return;
+    }
+
+    if (stt.isRecording()) {
+      stt.stop();
+      return;
+    }
+    if (listeningRecallBusy) return;
+
+    const item = recallTargetItem;
+    const fb = document.getElementById('recall-feedback');
+    const heardBox = document.getElementById('rl-heard-box');
+    if (fb) { fb.style.display = 'none'; fb.textContent = ''; }
+    if (heardBox) { heardBox.style.display = 'none'; heardBox.className = 'rl-heard-box'; heardBox.innerHTML = ''; }
+
+    stopSpeechPlayback();
+    listeningRecallBusy = true;
+
+    const started = await stt.startRecording({
+      mode: 'word',
+      maxDurationMs: 5800,
+      autoStopOnSilence: true,
+      onStart: () => {
+        setListeningMicUI(
+          'recording',
+          'Hãy nói rõ từ vừa nghe (tự dừng khi nói xong · còn <strong>' + recallAttemptsLeft + '</strong> lần thử)'
+        );
+      },
+      onLevel: ({ bars, speechDetected }) => {
+        updateListeningWaveformUI(bars);
+        if (speechDetected) {
+          const sub = document.getElementById('rl-mic-sub');
+          if (sub && !sub.dataset.voiceHit) {
+            sub.dataset.voiceHit = '1';
+            sub.textContent = 'Đã bắt được giọng nói… đang ghi âm!';
+          }
+        }
+      },
+      onProcessing: ({ stage, boosted, gainApplied }) => {
+        pauseRecallCountdown(true);
+        const subEl = document.getElementById('rl-mic-sub');
+        if (subEl) delete subEl.dataset.voiceHit;
+        const boostNote = (stage === 'upload' && boosted)
+          ? `Đã tự khuếch đại giọng nhỏ (${gainApplied}×) · đang nhận diện AI…`
+          : 'Đang gửi âm thanh chuẩn hóa tới AI Whisper…';
+        setListeningMicUI('processing', boostNote);
+      },
+      onResult: (res) => {
+        listeningRecallBusy = false;
+        pauseRecallCountdown(false);
+        const subEl = document.getElementById('rl-mic-sub');
+        if (subEl) delete subEl.dataset.voiceHit;
+
+        if (!recallTargetItem || recallTargetItem.id !== item.id || recallSubmitted) return;
+
+        if (res.silent) {
+          setListeningMicUI('idle', 'Chưa nghe thấy tiếng từ mic — hãy bấm nút và nói gần micro hơn nhé (không mất lượt thử).');
+          if (fb) {
+            fb.style.display = 'block';
+            fb.className = 'recall-feedback err';
+            fb.textContent = 'Chưa phát hiện âm thanh giọng nói. Kiểm tra mic chưa bị tắt tiếng rồi thử nói lại!';
+          }
+          return;
+        }
+
+        const check = stt.matchSpokenTarget(res.text || '', item.lemma || '');
+        const engineTag = String(res.engine || '').includes('cloudflare') ? 'CF AI' : 'Groq Whisper';
+        const boostBadge = res.boosted ? ` · +Gain ${res.gainApplied}×` : '';
+
+        if (check.isNoise) {
+          setListeningMicUI('idle', `Không mất lượt thử · hãy bấm nghe mẫu rồi nói rõ hơn (còn <strong>${recallAttemptsLeft}</strong> lần).`);
+          if (heardBox) {
+            heardBox.style.display = 'block';
+            heardBox.className = 'rl-heard-box is-warn';
+            heardBox.innerHTML = `<span class="rl-heard-lbl">Chưa bắt được từ rõ ràng</span><span class="rl-heard-meta">${escapeHtml(engineTag)}${escapeHtml(boostBadge)}</span>`;
+          }
+          return;
+        }
+
+        if (check.matched) {
+          stopRecallInputTimer();
+          setListeningMicUI('passed', 'Chuẩn phát âm! Đang chuyển sang bước tiếp theo…');
+          if (heardBox) {
+            heardBox.style.display = 'block';
+            heardBox.className = 'rl-heard-box is-pass';
+            heardBox.innerHTML = `<span class="rl-heard-lbl">✓ Bạn đã nói: <strong>"${escapeHtml(check.heard)}"</strong></span><span class="rl-heard-meta">${escapeHtml(engineTag)}${escapeHtml(boostBadge)}</span>`;
+          }
+          setTimeout(() => {
+            if (!recallTargetItem || recallTargetItem.id !== item.id || recallSubmitted) return;
+            advanceFromListeningStage1Pass(item);
+          }, 560);
+          return;
+        }
+
+        recallAttemptsLeft = Math.max(0, recallAttemptsLeft - 1);
+        if (heardBox) {
+          heardBox.style.display = 'block';
+          heardBox.className = 'rl-heard-box is-fail';
+          heardBox.innerHTML = `<span class="rl-heard-lbl">AI nghe thành: <strong>"${escapeHtml(check.heard)}"</strong></span><span class="rl-heard-meta">${escapeHtml(engineTag)}${escapeHtml(boostBadge)}</span>`;
+        }
+
+        if (recallAttemptsLeft > 0) {
+          setListeningMicUI('idle', `Còn <strong>${recallAttemptsLeft}</strong> lần thử · bấm <strong>Nghe mẫu</strong> hoặc phím <strong>R</strong> để nghe kỹ lại!`);
+          if (fb) {
+            fb.style.display = 'block';
+            fb.className = 'recall-feedback err';
+            fb.textContent = `Chưa khớp từ mẫu! Hãy nghe lại trọng âm & âm cuối rồi nói lại (còn ${recallAttemptsLeft} lần thử).`;
+          }
+          return;
+        }
+
+        setListeningMicUI('disabled', 'Đã hết lượt thử cho thẻ này.');
+        failRecallCheck(item, 'Phát âm chưa khớp!');
+      },
+      onError: (msg) => {
+        listeningRecallBusy = false;
+        pauseRecallCountdown(false);
+        const subEl = document.getElementById('rl-mic-sub');
+        if (subEl) delete subEl.dataset.voiceHit;
+        setListeningMicUI('idle', `Không mất lượt thử · còn <strong>${recallAttemptsLeft}</strong> lần thử.`);
+        if (fb) {
+          fb.style.display = 'block';
+          fb.className = 'recall-feedback err';
+          fb.textContent = msg || 'Lỗi micro hoặc kết nối STT. Hãy thử lại!';
+        }
+      },
+    });
+
+    if (!started) {
+      listeningRecallBusy = false;
+      pauseRecallCountdown(false);
+    }
+  }
+
+  let quickMicTesting = false;
+  async function runQuickListeningMicTest() {
+    const stt = window.TotoroSpeechSTT;
+    const btn = document.getElementById('btn-listening-quick-mic-test');
+    const lbl = document.getElementById('lsb-mic-test-label');
+    if (!stt || !stt.isSupported()) {
+      showToast('Trình duyệt không hỗ trợ thu âm Micro.');
+      return;
+    }
+    if (stt.isRecording()) {
+      stt.stop();
+      return;
+    }
+    if (quickMicTesting) return;
+    quickMicTesting = true;
+    const curItem = currentScopeList[currentCardIndex];
+    const sampleWord = curItem?.lemma || 'hello';
+    if (btn) btn.classList.add('is-recording');
+    if (lbl) lbl.textContent = `Đang nghe… nói "${sampleWord}"`;
+
+    const started = await stt.startRecording({
+      mode: 'word',
+      maxDurationMs: 5000,
+      autoStopOnSilence: true,
+      onProcessing: () => {
+        if (btn) btn.classList.remove('is-recording');
+        if (lbl) lbl.textContent = 'Đang chấm AI…';
+      },
+      onResult: (res) => {
+        quickMicTesting = false;
+        if (btn) btn.classList.remove('is-recording');
+        if (lbl) lbl.textContent = 'Test Mic AI';
+        if (res.silent) {
+          showToast('🎙️ Mic chưa thu được tiếng — hãy nói gần hơn hoặc kiểm tra mic hệ thống nhé!');
+          return;
+        }
+        const match = curItem ? stt.matchSpokenTarget(res.text || '', curItem.lemma || '') : null;
+        const gainNote = res.boosted ? ` (tự kích âm ${res.gainApplied}×)` : '';
+        if (match && match.matched) {
+          showToast(`✅ Mic rất chuẩn! AI nghe: "${res.text}"${gainNote}`);
+        } else {
+          showToast(`🎙️ AI nghe được: "${res.text || '(trống)'}"${gainNote}`);
+        }
+      },
+      onError: (msg) => {
+        quickMicTesting = false;
+        if (btn) btn.classList.remove('is-recording');
+        if (lbl) lbl.textContent = 'Test Mic AI';
+        showToast(msg || 'Không thể test mic lúc này.');
+      },
+    });
+    if (!started) {
+      quickMicTesting = false;
+      if (btn) btn.classList.remove('is-recording');
+      if (lbl) lbl.textContent = 'Test Mic AI';
+    }
+  }
+
   function openRecallModal(item) {
     if (!isExamAntiCheatBypassed() && !syncExamLock(true, 'Kiểm tra nhớ từ')) return;
     syncAntiCopyClasses();
     stopRecallInputTimer();
+    window.TotoroSpeechSTT?.abort?.();
+    if (listeningAutoPlayTimer) { clearTimeout(listeningAutoPlayTimer); listeningAutoPlayTimer = null; }
+    recallTimerPausedAt = 0;
+    listeningRecallBusy = false;
+
     const rule = getRecallRule(item);
     recallTargetItem = item;
     recallSubmitted = false;
@@ -3848,15 +4238,16 @@
     recallStage2Queue = [];
     recallWbSentence = '';
     recallWbTitle = '';
-    const useQuickVi = isReadingQuickScopeKey(currentScopeKey) && Boolean(window.RecognitionTestModule?.buildMeaningDistractors);
-    recallMode = useQuickVi ? 'quick_vi' : 'standard';
-    recallAttemptsLeft = useQuickVi ? 1 : rule.maxAttempts;
+    const useListeningShadow = isListeningSkillActive() && Boolean(window.TotoroSpeechSTT?.isSupported?.());
+    const useQuickVi = !useListeningShadow && isReadingQuickScopeKey(currentScopeKey) && Boolean(window.RecognitionTestModule?.buildMeaningDistractors);
+    recallMode = useListeningShadow ? 'listening_shadow' : (useQuickVi ? 'quick_vi' : 'standard');
+    recallAttemptsLeft = useListeningShadow ? (rule.strict ? 2 : 3) : (useQuickVi ? 1 : rule.maxAttempts);
     recallLeaveWarnings = 0;
     lastRecallLeaveAt = 0;
     recallSynOptions = [];
     recallSynSelected = new Set();
 
-    const limitSec = useQuickVi ? 5 : getRecallTimeLimitSec(item, 1);
+    const limitSec = useListeningShadow ? 45 : (useQuickVi ? 5 : getRecallTimeLimitSec(item, 1));
     recallDeadlineAt = Date.now() + limitSec * 1000;
 
     const stageBadge = document.getElementById('recall-stage-badge');
@@ -3865,6 +4256,7 @@
     const targetSubEl = document.querySelector('#recall-stage2-target .recall-stage-sub');
     const targetWordEl = document.getElementById('recall-stage2-word');
     const stage1Body = document.getElementById('recall-stage1-body');
+    const listenBody = document.getElementById('recall-listening-body');
     const stage2Body = document.getElementById('recall-stage2-body');
     const inp = document.getElementById('recall-word-input');
     const fb = document.getElementById('recall-feedback');
@@ -3872,7 +4264,39 @@
     const btnSubmit = document.getElementById('btn-recall-submit');
     const btnReturn = document.getElementById('btn-recall-return');
 
-    if (useQuickVi) {
+    if (useListeningShadow) {
+      resetRecallSpeedBarUI(false);
+      if (stageBadge) stageBadge.textContent = 'Test 1 · Nghe & Nói';
+      if (timerBadge) {
+        timerBadge.textContent = `${limitSec}s`;
+        timerBadge.classList.remove('is-urgent', 'is-speed-pulse');
+      }
+      if (hintBox) hintBox.style.display = 'none';
+      if (stage1Body) stage1Body.style.display = 'none';
+      if (stage2Body) stage2Body.style.display = 'none';
+      if (listenBody) listenBody.style.display = 'block';
+      if (btnSubmit) btnSubmit.style.display = 'none';
+
+      const posEl = document.getElementById('rl-cue-pos');
+      const meanEl = document.getElementById('rl-cue-meaning');
+      const heardBox = document.getElementById('rl-heard-box');
+      if (posEl) posEl.textContent = getCleanPos(item) || 'vocab';
+      if (meanEl) meanEl.textContent = item.clean_meaning || item.meaning || item.vi || item.definition || 'Nghe phát âm mẫu rồi nói lại từ này';
+      if (heardBox) {
+        heardBox.style.display = 'none';
+        heardBox.className = 'rl-heard-box';
+        heardBox.innerHTML = '';
+      }
+      setListeningMicUI(
+        'idle',
+        `Nghe phát âm mẫu rồi nói lại từ (còn <strong>${recallAttemptsLeft}</strong> lần) · <strong>Space</strong> nói · <strong>R</strong> nghe lại`
+      );
+      listeningAutoPlayTimer = setTimeout(() => {
+        if (recallTargetItem && recallTargetItem.id === item.id && recallMode === 'listening_shadow' && !recallSubmitted) {
+          playListeningRecallAudio('en-GB', 0.92);
+        }
+      }, 220);
+    } else if (useQuickVi) {
       const choices = window.RecognitionTestModule.buildMeaningDistractors(item, currentScopeList, 3);
       recallSynOptions = choices.map((c) => ({ text: c.meaning, isCorrect: c.isCorrect }));
       if (stageBadge) stageBadge.textContent = 'Phản xạ 5s';
@@ -3889,6 +4313,7 @@
         targetWordEl.textContent = item.lemma || '';
       }
       if (stage1Body) stage1Body.style.display = 'none';
+      if (listenBody) listenBody.style.display = 'none';
       if (stage2Body) stage2Body.style.display = 'block';
       if (btnSubmit) btnSubmit.style.display = 'none';
       renderRecallSynGrid(false);
@@ -3901,6 +4326,7 @@
       }
       if (hintBox) hintBox.style.display = 'none';
       if (stage1Body) stage1Body.style.display = 'block';
+      if (listenBody) listenBody.style.display = 'none';
       if (stage2Body) stage2Body.style.display = 'none';
       if (inp) {
         inp.value = '';
@@ -3933,7 +4359,7 @@
     document.querySelector('#modal-recall-check .recall-check-card')?.style.removeProperty('visibility');
     document.getElementById('modal-recall-check')?.classList.add('open');
     recallDeadlineTimer = setInterval(updateRecallCountdownBadge, 250);
-    if (!useQuickVi) setTimeout(() => inp?.focus(), 40);
+    if (!useQuickVi && !useListeningShadow) setTimeout(() => inp?.focus(), 40);
   }
 
   function abortRecallCheck() {
@@ -3968,9 +4394,15 @@
       return;
     }
     stopRecallInputTimer();
+    window.TotoroSpeechSTT?.abort?.();
+    if (listeningAutoPlayTimer) { clearTimeout(listeningAutoPlayTimer); listeningAutoPlayTimer = null; }
+    recallTimerPausedAt = 0;
+    listeningRecallBusy = false;
     resetRecallSpeedBarUI(false);
     clearRecallActiveSession();
     document.getElementById('modal-recall-check')?.classList.remove('open');
+    const listenBodyClose = document.getElementById('recall-listening-body');
+    if (listenBodyClose) listenBodyClose.style.display = 'none';
     document.querySelector('#modal-recall-check .recall-check-card')?.style.removeProperty('visibility');
     document.getElementById('fc-scene')?.style.removeProperty('visibility');
     recallTargetItem = null;
@@ -5263,6 +5695,18 @@
     }
     const el = document.activeElement;
     if (el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)) return;
+    if (document.getElementById('modal-recall-check')?.classList.contains('open') && recallMode === 'listening_shadow' && recallStage === 1 && !recallSubmitted) {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleListeningRecallMic();
+        return;
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        playListeningRecallAudio('en-GB', 0.92);
+        return;
+      }
+    }
     if (document.querySelector('.modal-overlay.open')) return;
 
     if (e.code === 'Space') {
@@ -5300,6 +5744,7 @@
     toggleTimer, resetTimer, setTimerMode, setCountdownMinutes, toggleTimerSound,
     switchLeaderboardTab, switchStreakChartTab,
     handleLoginSubmit, togglePasswordVisibility, logoutCurrentAccount,
+    playListeningRecallAudio, toggleListeningRecallMic, runQuickListeningMicTest,
   });
 
   function openCheatWarningModal(msg, onDismiss, warnNum = 1, maxStrikes = 3) {
@@ -5542,6 +5987,7 @@
   (function initRecallAntiCheat() {
     const handleLeaveAttempt = (reason) => {
       if (isExamAntiCheatBypassed()) return;
+      if (window.TotoroSpeechSTT?.isRequestingPermission?.()) return;
       const modal = document.getElementById('modal-recall-check');
       if (!modal?.classList.contains('open') || !recallTargetItem || recallSubmitted) return;
       if (document.getElementById('modal-cheat-warn')?.classList.contains('open')) return;
@@ -5741,6 +6187,20 @@
     setDynamicTaskScopes,
     activateTaskScope,
     loadMainScope: (scopeKey) => loadScope(scopeKey || 'paraphrase'),
+    refreshScopeSelect: () => {
+      populateScopeSelect();
+      if (isMyVocabScopeKey(currentScopeKey)) {
+        applyFilterAndBuildDeck(null, { speak: false });
+      }
+    },
+    openMyVocabDeck: (deckId) => {
+      if (!window.MyVocabStore) return;
+      const sk = window.MyVocabStore.getScopeKey(deckId);
+      onlyUnmastered = false;
+      onlyDueReview = false;
+      window.TotoroUI?.switchView?.('flashcard');
+      loadScope(sk);
+    },
     getAssessmentsMap: () => assessments,
     getSrsMap: () => srsData,
     isWordDueNow,
