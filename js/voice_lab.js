@@ -38,6 +38,7 @@
   let activeTab = 'word'; // 'word' | 'sentence'
   let enginePref = 'auto'; // 'auto' (v3) | 'turbo' | 'cf'
   let audioMode = 'boost'; // 'boost' (16k WAV) | 'raw' (WebM like Night IELTS)
+  let passThreshold = 0.55; // synced with TotoroSpeechSTT.getDefaultThreshold()
   let currentWord = 'user';
   let currentSentence = QUICK_SENTENCES[0].text;
   let lastAudioUrl = '';
@@ -135,6 +136,13 @@
           <span class="vlab-ctrl-lbl">Âm thanh:</span>
           <button type="button" class="vlab-pill ${audioMode === 'boost' ? 'active' : ''}" onclick="TotoroVoiceLab.setAudioMode('boost')">Kích giọng nhỏ WAV</button>
           <button type="button" class="vlab-pill ${audioMode === 'raw' ? 'active' : ''}" onclick="TotoroVoiceLab.setAudioMode('raw')">Thu gốc WebM (Night IELTS)</button>
+        </div>
+        <div class="vlab-ctrl-group">
+          <span class="vlab-ctrl-lbl">Ngưỡng đậu:</span>
+          <button type="button" class="vlab-pill ${Math.round(passThreshold * 100) === 50 ? 'active' : ''}" onclick="TotoroVoiceLab.setThreshold(0.50)">50% (Thoáng)</button>
+          <button type="button" class="vlab-pill ${Math.round(passThreshold * 100) === 55 ? 'active' : ''}" onclick="TotoroVoiceLab.setThreshold(0.55)">55% (Chuẩn ⭐)</button>
+          <button type="button" class="vlab-pill ${Math.round(passThreshold * 100) === 65 ? 'active' : ''}" onclick="TotoroVoiceLab.setThreshold(0.65)">65% (Vừa)</button>
+          <button type="button" class="vlab-pill ${Math.round(passThreshold * 100) === 75 ? 'active' : ''}" onclick="TotoroVoiceLab.setThreshold(0.75)">75% (Khó)</button>
         </div>
       </div>
 
@@ -255,9 +263,12 @@
 
     if (activeTab === 'word') {
       const target = currentWord.trim();
-      const match = target ? window.TotoroSpeechSTT.matchSpokenTarget(res.text || '', target) : null;
+      const match = target ? window.TotoroSpeechSTT.matchSpokenTarget(res.text || '', target, { threshold: passThreshold }) : null;
       const statusClass = !match ? 'is-neutral' : (match.matched ? 'is-pass' : 'is-fail');
       const pct = match ? Math.round(match.score * 100) : 0;
+      const phonPct = match ? Math.round((match.phonSim || 0) * 100) : 0;
+      const charPct = match ? Math.round((match.charSim || 0) * 100) : 0;
+      const thPct = Math.round(passThreshold * 100);
 
       box.className = `vlab-result-box ${statusClass}`;
       box.innerHTML = `
@@ -265,12 +276,12 @@
           <div class="vlab-res-title">
             ${!match
               ? '🎙️ Kết quả AI nghe được'
-              : (match.matched ? `✅ KHỚP (${pct}%)` : `❌ CHƯA KHỚP (${pct}%)`)}
+              : (match.matched ? `✅ ĐẠT (${pct}% ≥ ${thPct}%)` : `❌ CHƯA ĐẠT (${pct}% < ${thPct}%)`)}
           </div>
           <span class="vlab-res-meta">${esc(metaStr)}</span>
         </div>
         <div class="vlab-res-heard">"${esc(res.text || '(trống)')}"</div>
-        ${match && !match.matched ? `<div class="vlab-res-note">${esc(match.reason)}</div>` : ''}
+        ${match ? `<div class="vlab-res-note">So với <strong>"${esc(target)}"</strong> → Âm đọc (Phonetic): <strong>${phonPct}%</strong> · Mặt chữ: <strong>${charPct}%</strong>${!match.matched ? ` — ${esc(match.reason)}` : ''}</div>` : ''}
         ${audioPlayerHtml}
       `;
 
@@ -419,6 +430,9 @@
 
   function openModal(initialTab) {
     if (initialTab === 'word' || initialTab === 'sentence') activeTab = initialTab;
+    if (window.TotoroSpeechSTT?.getDefaultThreshold) {
+      passThreshold = window.TotoroSpeechSTT.getDefaultThreshold();
+    }
     const modal = ensureModalDom();
     render();
     modal.classList.add('open');
@@ -445,6 +459,12 @@
     },
     setAudioMode: (m) => {
       audioMode = m === 'raw' ? 'raw' : 'boost';
+      render();
+    },
+    setThreshold: (val) => {
+      passThreshold = window.TotoroSpeechSTT?.setDefaultThreshold
+        ? window.TotoroSpeechSTT.setDefaultThreshold(val)
+        : Number(val) || 0.55;
       render();
     },
     pickWord: (w) => {

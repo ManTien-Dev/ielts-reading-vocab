@@ -334,19 +334,47 @@
     return tokens.join(' ');
   }
 
-  function phoneticSkeleton(word) {
+  const THRESHOLD_STORAGE_KEY = 'totoro_stt_threshold_v1';
+
+  function getDefaultThreshold() {
+    try {
+      const saved = parseFloat(localStorage.getItem(THRESHOLD_STORAGE_KEY) || '');
+      if (Number.isFinite(saved) && saved >= 0.45 && saved <= 0.9) return saved;
+    } catch (_) {}
+    return 0.55; // Friendly default (~55%): passes natural VN accent & single-word quirks, blocks random words
+  }
+
+  function setDefaultThreshold(val) {
+    const num = Math.max(0.45, Math.min(0.9, Number(val) || 0.55));
+    try { localStorage.setItem(THRESHOLD_STORAGE_KEY, String(num)); } catch (_) {}
+    return num;
+  }
+
+  function toPhoneticCode(word) {
     let w = normalizeEnglishText(word).replace(/[^a-z]/g, '');
     if (!w) return '';
+    // Map English initial /juː/ words ("user", "use", "usual", "useful", "unique", "unit", "you") consistently
+    // Use consonant 'y' preserved (only non-initial 'y' -> 'i') so /j/ counts as a true initial consonant!
     w = w
+      .replace(/^you/, 'Yu')
+      .replace(/^use/, 'Yus')
+      .replace(/^usu/, 'Yusu')
+      .replace(/^uni/, 'Yuni')
+      .replace(/^uti/, 'Yuti')
+      .replace(/^eu/, 'Yu')
+      .replace(/^y/, 'Y')
       .replace(/^kn/, 'n')
       .replace(/^wr/, 'r')
       .replace(/^ps/, 's')
       .replace(/^wh/, 'w')
+      .replace(/sch/g, 'sk')
+      .replace(/tion|sion|cion/g, 'shn')
+      .replace(/tious|cious/g, 'shs')
+      .replace(/ture$/g, 'cher')
+      .replace(/sure$/g, 'ser')
       .replace(/ph/g, 'f')
       .replace(/gh(?=[aeiou]|$)/g, '')
       .replace(/ght/g, 't')
-      .replace(/tion|sion|cion/g, 'shn')
-      .replace(/tious|cious/g, 'shs')
       .replace(/qu/g, 'kw')
       .replace(/ck/g, 'k')
       .replace(/c(?=[eiy])/g, 's')
@@ -358,13 +386,23 @@
       .replace(/dg|j/g, 'g')
       .replace(/w/g, 'v')
       .replace(/y/g, 'i')
+      .replace(/Y/g, 'y')
+      .replace(/(er|or|ar|ir|ur)$/g, 'a')
+      .replace(/ual$/g, 'al')
+      .replace(/e$/g, '')
       .replace(/([a-z])\1+/g, '$1');
-    if (w.length > 3) {
-      const head = w[0];
-      const tail = w.slice(1).replace(/[aeiou]+/g, 'a');
-      w = head + tail;
-    }
+
+    // Normalize vowel groups gently while preserving rough vowel quality
+    w = w
+      .replace(/(ee|ea|ie|ei)/g, 'i')
+      .replace(/(oo|ou|uu)/g, 'u')
+      .replace(/(ai|ay|ae)/g, 'e')
+      .replace(/(oa|ow|au|aw)/g, 'o');
     return w;
+  }
+
+  function consonantCore(phon) {
+    return String(phon || '').replace(/[aeiou]/g, '');
   }
 
   function levenshtein(a, b) {
@@ -396,35 +434,73 @@
   }
 
   function stripInflection(tok) {
-    if (tok.length <= 4) return tok;
+    if (tok.length <= 3) return tok;
     if (tok.endsWith('ies') && tok.length > 4) return tok.slice(0, -3) + 'y';
     if (tok.endsWith('es') && tok.length > 4) return tok.slice(0, -2);
-    if (tok.endsWith('s') && !tok.endsWith('ss') && tok.length > 4) return tok.slice(0, -1);
-    if (tok.endsWith('ed') && tok.length > 5) return tok.slice(0, -2);
+    if (tok.endsWith('s') && !tok.endsWith('ss') && tok.length > 3) return tok.slice(0, -1);
+    if (tok.endsWith('ed') && tok.length > 4) return tok.slice(0, -2);
+    if (tok.endsWith('er') && tok.length > 4) return tok.slice(0, -1);
     return tok;
   }
 
-  function scoreSingleWord(spokenTok, targetTok) {
-    if (!spokenTok || !targetTok) return 0;
-    if (spokenTok === targetTok) return 1.0;
-    if (stripInflection(spokenTok) === stripInflection(targetTok)) return 0.94;
+  function scoreSingleWordDetailed(spokenTok, targetTok) {
+    if (!spokenTok || !targetTok) return { score: 0, charSim: 0, phonSim: 0 };
+    if (spokenTok === targetTok) return { score: 1.0, charSim: 1.0, phonSim: 1.0 };
 
     const charSim = similarity(spokenTok, targetTok);
-    const pSpoken = phoneticSkeleton(spokenTok);
-    const pTarget = phoneticSkeleton(targetTok);
-    const phonSim = similarity(pSpoken, pTarget);
+    const pSpoken = toPhoneticCode(spokenTok);
+    const pTarget = toPhoneticCode(targetTok);
+    const rawPhonSim = similarity(pSpoken, pTarget);
 
-    if (targetTok.length <= 4) {
-      if (pSpoken && pSpoken === pTarget && charSim >= 0.6) return 0.88;
-      return charSim >= 0.85 ? charSim : Math.min(charSim, 0.55);
+    // Anti-gibberish guard: compare consonant cores so words missing key consonants (e.g. "you are" vs "user") don't falsely pass
+    const cSpoken = consonantCore(pSpoken);
+    const cTarget = consonantCore(pTarget);
+    const consSim = (cSpoken && cTarget) ? similarity(cSpoken, cTarget) : 0;
+    const phonSim = (cSpoken && cTarget) ? (rawPhonSim * 0.65 + consSim * 0.35) : rawPhonSim;
+    let sharedCons = 0;
+    if (cSpoken && cTarget) {
+      const setT = new Set(cTarget.split(''));
+      for (const ch of cSpoken) {
+        if (setT.has(ch)) sharedCons++;
+      }
     }
-    if (pSpoken && pSpoken === pTarget) return Math.max(0.9, charSim);
-    return Math.max(charSim, phonSim * 0.94);
+    const hasPhoneticAnchor =
+      sharedCons > 0 ||
+      (pSpoken && pTarget && pSpoken[0] === pTarget[0] && charSim >= 0.4) ||
+      charSim >= 0.5;
+
+    if (!hasPhoneticAnchor) {
+      return { score: Math.min(0.28, charSim * 0.6), charSim, phonSim };
+    }
+
+    // Morphological / dropped-ending closeness ("use" vs "user", "users" vs "user")
+    const morphBonus = stripInflection(spokenTok) === stripInflection(targetTok) ? 0.92 : 0;
+
+    // Prefix / stem closeness when learner drops a soft trailing syllable ("use" -> "user", "unprecedent" -> "unprecedented")
+    let prefixBonus = 0;
+    const minL = Math.min(spokenTok.length, targetTok.length);
+    const maxL = Math.max(spokenTok.length, targetTok.length);
+    if (minL >= 3 && (targetTok.startsWith(spokenTok) || spokenTok.startsWith(targetTok))) {
+      prefixBonus = Math.min(0.92, (minL / maxL) + 0.12);
+    }
+
+    // Penalize severe length mismatch (e.g. "a" vs "environment")
+    const lenRatio = minL / maxL;
+    const rawBest = Math.max(charSim, phonSim, morphBonus, prefixBonus);
+    const finalScore = lenRatio < 0.4 ? rawBest * 0.72 : rawBest;
+    return { score: Math.min(1, finalScore), charSim, phonSim };
   }
 
-  function matchSpokenTarget(spokenRaw, targetLemma) {
+  function scoreSingleWord(spokenTok, targetTok) {
+    return scoreSingleWordDetailed(spokenTok, targetTok).score;
+  }
+
+  function matchSpokenTarget(spokenRaw, targetLemma, opts = {}) {
     const heardClean = String(spokenRaw || '').trim();
     const spokenNorm = normalizeEnglishText(heardClean);
+    const threshold = Number.isFinite(Number(opts.threshold))
+      ? Math.max(0.45, Math.min(0.9, Number(opts.threshold)))
+      : getDefaultThreshold();
 
     if (!spokenNorm || WHISPER_HALLUCINATIONS.has(spokenNorm)) {
       const targetNormCheck = normalizeEnglishText(targetLemma);
@@ -432,6 +508,9 @@
         return {
           matched: false,
           score: 0,
+          charSim: 0,
+          phonSim: 0,
+          threshold,
           heard: heardClean,
           isNoise: true,
           reason: 'Chưa nghe rõ từ tiếng Anh — hãy nói to, rõ hơn gần mic rồi thử lại.',
@@ -448,7 +527,19 @@
     const spokenTokens = spokenNorm.split(' ').filter(Boolean);
     const contentSpokenTokens = spokenTokens.filter((t) => !['a', 'an', 'the', 'to', 'uh', 'um'].includes(t));
 
+    // Build candidate spoken strings (single tokens + adjacent 2/3-word joins like "you sir" -> "yousir")
+    const mergedCandidates = new Set();
+    if (spokenTokens.length) mergedCandidates.add(spokenTokens.join(''));
+    if (contentSpokenTokens.length) mergedCandidates.add(contentSpokenTokens.join(''));
+    for (let i = 0; i < spokenTokens.length; i++) {
+      mergedCandidates.add(spokenTokens[i]);
+      if (i + 1 < spokenTokens.length) mergedCandidates.add(spokenTokens[i] + spokenTokens[i + 1]);
+      if (i + 2 < spokenTokens.length) mergedCandidates.add(spokenTokens[i] + spokenTokens[i + 1] + spokenTokens[i + 2]);
+    }
+
     let bestScore = 0;
+    let bestCharSim = 0;
+    let bestPhonSim = 0;
     let bestVariant = variants[0] || '';
 
     for (const variant of variants) {
@@ -457,19 +548,20 @@
       const targetTokens = targetNorm.split(' ').filter(Boolean);
 
       let score = 0;
+      let charSim = 0;
+      let phonSim = 0;
+
       if (spokenNorm === targetNorm) {
-        score = 1.0;
+        score = 1.0; charSim = 1.0; phonSim = 1.0;
       } else if (targetTokens.length === 1) {
         const tgt = targetTokens[0];
-        const joinedSpoken = spokenTokens.join('');
-        score = Math.max(score, scoreSingleWord(joinedSpoken, tgt));
-        if (spokenTokens.length <= 4) {
-          for (const tok of spokenTokens) {
-            score = Math.max(score, scoreSingleWord(tok, tgt));
+        for (const cand of mergedCandidates) {
+          const det = scoreSingleWordDetailed(cand, tgt);
+          if (det.score > score) {
+            score = det.score;
+            charSim = det.charSim;
+            phonSim = det.phonSim;
           }
-        }
-        if (contentSpokenTokens.length === 1) {
-          score = Math.max(score, scoreSingleWord(contentSpokenTokens[0], tgt));
         }
       } else {
         let matchedSum = 0;
@@ -482,29 +574,35 @@
         }
         const tokenAvg = matchedSum / targetTokens.length;
         const fullSim = similarity(spokenNorm, targetNorm);
-        const lengthPenalty = spokenTokens.length > targetTokens.length + 3 ? 0.85 : 1;
-        score = Math.max(tokenAvg, fullSim) * lengthPenalty;
+        const fullPhon = similarity(toPhoneticCode(spokenNorm), toPhoneticCode(targetNorm));
+        const lengthPenalty = spokenTokens.length > targetTokens.length + 4 ? 0.85 : 1;
+        score = Math.max(tokenAvg, fullSim, fullPhon) * lengthPenalty;
+        charSim = fullSim;
+        phonSim = fullPhon;
       }
 
       if (score > bestScore) {
         bestScore = score;
+        bestCharSim = charSim;
+        bestPhonSim = phonSim;
         bestVariant = variant;
       }
     }
 
-    const bestTargetClean = normalizeEnglishText(bestVariant);
-    const threshold = bestTargetClean.length <= 4 ? 0.84 : bestTargetClean.length <= 7 ? 0.77 : 0.74;
     const matched = bestScore >= threshold;
 
     return {
       matched,
       score: +bestScore.toFixed(3),
+      charSim: +bestCharSim.toFixed(3),
+      phonSim: +bestPhonSim.toFixed(3),
+      threshold,
       heard: heardClean,
       bestVariant,
       isNoise: false,
       reason: matched
-        ? 'Phát âm rõ ràng và chính xác!'
-        : `AI nghe thành "${heardClean}" — hãy nghe lại mẫu rồi nói rõ trọng âm & âm cuối nhé.`,
+        ? `Khớp âm đọc ${Math.round(bestScore * 100)}% (ngưỡng ${Math.round(threshold * 100)}%)!`
+        : `AI nghe thành "${heardClean}" (độ khớp ${Math.round(bestScore * 100)}% < ${Math.round(threshold * 100)}%) — hãy nghe lại mẫu rồi nói rõ hơn nhé.`,
     };
   }
 
@@ -846,6 +944,8 @@
     abort,
     matchSpokenTarget,
     compareSentence,
+    getDefaultThreshold,
+    setDefaultThreshold,
     checkHealth,
     getApiUrl,
   };
