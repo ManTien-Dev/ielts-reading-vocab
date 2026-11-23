@@ -324,79 +324,91 @@
     const allFull = d.FULL_TESTS || [];
     const hist = ReadingPracticeStore.getHistory();
 
-    const metaById = {
-      cambridge: {
-        tone: 'sage',
-        tag: 'Passage 1–3 · FULL TEST',
-        cta: 'Mở Cambridge →',
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5V21.5"/><path d="M8.5 8h7M8.5 11.5h5"/></svg>`
-      },
-      volume: {
-        tone: 'warm',
-        tag: 'Passage 1–3 · FULL TEST',
-        cta: 'Mở Volume →',
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M8 4v16M12 9h5M12 13h4"/></svg>`
-      },
-      actual: {
-        tone: 'dusk',
-        tag: 'Passage 1–3 · FULL TEST',
-        cta: 'Mở Actual Tests →',
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v4.5l3 2"/><path d="M9 2.5h6"/></svg>`
-      },
-      news: {
-        tone: 'info',
-        tag: 'Song ngữ · Tra từ lưu ngay',
-        cta: 'Đọc News →',
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5z"/><path d="M19 9h1.5a1.5 1.5 0 0 1 1.5 1.5V18a2 2 0 0 1-2 2h-1"/><path d="M8 9h7M8 13h7M8 16.5h4.5"/></svg>`
-      }
+    const stampById = {
+      cambridge: `<svg class="ghibli-stamp" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.11;" viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M18 22L14 8L24 16C29 14.5 35 14.5 40 16L50 8L46 22C52 26 55 33 55 41C55 52 45.5 58 32 58C18.5 58 9 52 9 41C9 33 12 26 18 22Z" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/><circle cx="23.5" cy="29" r="2.2" fill="currentColor"/><circle cx="40.5" cy="29" r="2.2" fill="currentColor"/><path d="M21 43L24.5 39.5L28 43M29 41.5L32 38.5L35 41.5M36 43L39.5 39.5L43 43" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      volume: `<svg class="ghibli-stamp warm" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.12;" viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M32 6V12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M10 26C14 14 22 11 32 11C42 11 50 14 54 26C48 23.5 43 23.5 38 25.5C34 23.5 30 23.5 26 25.5C21 23.5 16 23.5 10 26Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".08"/><path d="M32 24V48C32 52 36 53 38 49.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></svg>`,
+      actual: `<svg class="ghibli-stamp" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.11;" viewBox="0 0 64 64" fill="none" aria-hidden="true"><circle cx="32" cy="32" r="24" stroke="currentColor" stroke-width="2.1" stroke-dasharray="4 3"/><circle cx="32" cy="32" r="17" stroke="currentColor" stroke-width="1.8"/><path d="M32 20v12l8 5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      news: `<svg class="ghibli-stamp info" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.12;" viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M12 48C17 31 28 20 48 13C43 30 32 41 12 48Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".08"/><path d="M12 48L36 24M24 36L32 34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`
+    };
+
+    const titlesById = {
+      cambridge: 'Academic Reading · Cambridge',
+      volume: 'Academic Reading · Volume',
+      actual: 'Academic Reading · Actual Tests',
+      news: 'Đọc báo học thuật · Bilingual News'
     };
 
     const cardsHtml = sources.map((s) => {
-      const m = metaById[s.id] || metaById.cambridge;
       const pCount = allPassages.filter((p) => p.source === s.id).length;
       const fCount = allFull.filter((f) => f.source === s.id).length;
       const srcHist = hist.filter((h) => h.source === s.id);
-      const doneUnique = new Set(srcHist.map((h) => h.itemId)).size;
       const avgBand = srcHist.length
         ? (Math.round((srcHist.reduce((acc, x) => acc + (Number(x.band) || 0), 0) / srcHist.length) * 2) / 2).toFixed(1)
         : null;
 
-      const countLine = s.id === 'news'
-        ? `${pCount} bài báo chọn lọc`
-        : `${pCount} Passages · ${fCount} Full Test`;
+      const rightBadge = avgBand
+        ? `Band ${avgBand}`
+        : (s.id === 'news' ? `${pCount} bài báo` : `${pCount} Passages · ${fCount} Full`);
+
+      const actionsHtml = s.id === 'news'
+        ? `
+          <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('news')">Chọn chủ đề</button>
+          <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('news')">Đọc báo ngay</button>
+        `
+        : `
+          <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'all')">Chọn Passage</button>
+          <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'full')">Làm Full Test</button>
+        `;
 
       return `
-        <article class="rp-portal-card ink-brackets tone-${m.tone}" data-rp-portal="${esc(s.id)}"
+        <div class="tot-exam-card ink-brackets has-stamp rp-portal-card" data-rp-portal="${esc(s.id)}"
           onclick="ReadingPracticeApp.openSource('${esc(s.id)}')" role="button" tabindex="0">
-          <div class="rp-portal-top">
-            <span class="rp-portal-ico tone-${m.tone}" aria-hidden="true">${m.icon}</span>
-            <span class="rp-tag ${s.id === 'news' ? 'is-news' : ''}">${esc(m.tag)}</span>
+          ${stampById[s.id] || stampById.cambridge}
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <span class="tot-pos-badge">${esc(s.label)}</span>
+              <span class="tot-hist-badge ${s.id === 'news' ? 'info' : 'tabular'}">${esc(rightBadge)}</span>
+            </div>
+            <div class="rp-portal-title" style="font-size:15px;font-weight:750;margin-top:8px;color:var(--ink);">${esc(titlesById[s.id] || s.label)}</div>
+            <div style="font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5;">${esc(s.desc)}</div>
           </div>
-          <h3 class="rp-portal-title">${esc(s.label)}</h3>
-          <p class="rp-portal-desc">${esc(s.desc)}</p>
-          <div class="rp-portal-stats">
-            <span>${esc(countLine)}</span>
-            ${avgBand ? `<span class="rp-done-badge">✓ Band ${avgBand} (${doneUnique} bài)</span>` : ''}
+          <div style="display:flex;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid var(--border);position:relative;z-index:1;">
+            ${actionsHtml}
           </div>
-          <div class="rp-portal-foot">
-            <span class="rp-portal-cta">${esc(m.cta)}</span>
-          </div>
-        </article>
+        </div>
       `;
     }).join('');
 
     root.innerHTML = `
-      <div class="rp-hub-shell tot-section-shell ink-brackets">
-        <div class="rp-hub-head">
-          <div>
-            <h2 class="tot-shell-title">Luyện đọc · Reading Practice</h2>
-            <p class="tot-shell-sub">Chọn 1 trong 4 kho đề Reading bên dưới để luyện từng Passage 1–3, Full Test hoặc đọc báo song ngữ.</p>
+      <div class="tot-section-shell ink-brackets has-stamp">
+        <svg class="ghibli-stamp" style="right:26px;bottom:22px;width:116px;height:116px;opacity:0.09;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <circle cx="32" cy="32" r="29" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <path d="M32 7V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M12 24C16 14 23 11 32 11C41 11 48 14 52 24C47 21.8 42 21.8 38 23.5C34 21.6 30 21.6 26 23.5C22 21.8 17 21.8 12 24Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" fill-opacity=".1"/>
+          <path d="M32 22V39C32 41.2 34.4 42 35.4 40" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+          <path d="M22 29L19.5 21L26 25.5C29.5 24.5 34.5 24.5 38 25.5L44.5 21L42 29C47 33 49 40 48.5 47.5C47.8 53.5 41.5 56.5 32 56.5C22.5 56.5 16.2 53.5 15.5 47.5C15 40 17 33 22 29Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="25.5" cy="32.5" r="1.9" fill="currentColor"/><circle cx="38.5" cy="32.5" r="1.9" fill="currentColor"/>
+        </svg>
+        <div class="tot-shell-head">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="tot-icon-tile info" aria-hidden="true" style="width:36px;height:36px;">
+              <svg viewBox="2 2 24 24" fill="none">
+                <path d="M8.5 11.2L7 5.6L11.2 9C12.5 8.5 14 8.5 15.3 9L19.5 5.6L18 11.2C20.2 12.8 21.2 15.2 21 18.2C20.7 21.5 17.8 23.2 13.2 23.2C8.6 23.2 5.7 21.5 5.4 18.2C5.2 15.2 6.2 12.8 8.5 11.2Z" fill="#6B92B8" stroke="#3F5C78" stroke-width="1.1"/>
+                <ellipse cx="13.2" cy="18.8" rx="5.2" ry="3.4" fill="#FBF6E8"/>
+                <circle cx="10.6" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="10.8" cy="13.5" r="0.75" fill="#181A1F"/>
+                <circle cx="15.8" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="15.6" cy="13.5" r="0.75" fill="#181A1F"/>
+              </svg>
+            </span>
+            <div>
+              <h2 class="tot-shell-title">Luyện đọc · Practice</h2>
+              <p class="tot-shell-sub">Chọn kho đề Cambridge, Volume, Actual Tests hoặc đọc báo học thuật News.</p>
+            </div>
           </div>
         </div>
 
         ${buildResumeBannerHtml()}
 
-        <div class="rp-portal-grid" id="rp-portal-grid">
+        <div class="tot-practice-grid" id="rp-portal-grid">
           ${cardsHtml}
         </div>
       </div>
@@ -1164,10 +1176,10 @@
       renderPortal();
     },
 
-    openSource(src) {
+    openSource(src, part) {
       state.source = src || 'cambridge';
       state.view = 'source';
-      state.partFilter = 'all';
+      state.partFilter = part || 'all';
       state.newsTopic = 'all';
       state.searchQuery = '';
       renderHub();
