@@ -242,7 +242,7 @@
      3. READING PRACTICE APP CONTROLLER
      ========================================================= */
   const state = {
-    view: 'hub',          // 'hub' | 'exam'
+    view: 'portal',       // 'portal' (3x3 source grid) | 'source' (Passage 1-3 + FULL TEST) | 'exam'
     source: 'cambridge',  // 'cambridge' | 'volume' | 'actual' | 'news'
     partFilter: 'all',    // 'all' | 'p1' | 'p2' | 'p3' | 'full'
     newsTopic: 'all',
@@ -294,14 +294,122 @@
     return all;
   }
 
-  /* ---------- HUB RENDERER ---------- */
+  /* ---------- PORTAL 3x3 GRID RENDERER (Cambridge | Volume | Actual Tests | News) ---------- */
+  function buildResumeBannerHtml() {
+    const inProg = ReadingPracticeStore.getInProgress();
+    if (!inProg) return '';
+    return `
+      <div class="rp-resume-banner">
+        <div class="rp-resume-info">
+          <span class="rp-resume-dot"></span>
+          <div>
+            <div class="rp-resume-title">Đang làm dở: <strong>${esc(inProg.title)}</strong></div>
+            <div class="rp-resume-sub">Đã trả lời ${Object.keys(inProg.answers || {}).length}/${inProg.totalQuestions || 0} câu · Còn ${formatDuration(inProg.remainingSec)}</div>
+          </div>
+        </div>
+        <div class="rp-resume-actions">
+          <button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.discardResume()">Bỏ dở</button>
+          <button type="button" class="btn btn-primary rp-btn-sm" onclick="ReadingPracticeApp.resumeDraft()">Làm tiếp →</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPortal() {
+    const root = getRoot();
+    if (!root) return;
+    const d = DATA();
+    const sources = d.SOURCES || [];
+    const allPassages = Object.values(d.PASSAGES || {});
+    const allFull = d.FULL_TESTS || [];
+    const hist = ReadingPracticeStore.getHistory();
+
+    const metaById = {
+      cambridge: {
+        tone: 'sage',
+        tag: 'Passage 1–3 · FULL TEST',
+        cta: 'Mở Cambridge →',
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5V21.5"/><path d="M8.5 8h7M8.5 11.5h5"/></svg>`
+      },
+      volume: {
+        tone: 'warm',
+        tag: 'Passage 1–3 · FULL TEST',
+        cta: 'Mở Volume →',
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M8 4v16M12 9h5M12 13h4"/></svg>`
+      },
+      actual: {
+        tone: 'dusk',
+        tag: 'Passage 1–3 · FULL TEST',
+        cta: 'Mở Actual Tests →',
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v4.5l3 2"/><path d="M9 2.5h6"/></svg>`
+      },
+      news: {
+        tone: 'info',
+        tag: 'Song ngữ · Tra từ lưu ngay',
+        cta: 'Đọc News →',
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5z"/><path d="M19 9h1.5a1.5 1.5 0 0 1 1.5 1.5V18a2 2 0 0 1-2 2h-1"/><path d="M8 9h7M8 13h7M8 16.5h4.5"/></svg>`
+      }
+    };
+
+    const cardsHtml = sources.map((s) => {
+      const m = metaById[s.id] || metaById.cambridge;
+      const pCount = allPassages.filter((p) => p.source === s.id).length;
+      const fCount = allFull.filter((f) => f.source === s.id).length;
+      const srcHist = hist.filter((h) => h.source === s.id);
+      const doneUnique = new Set(srcHist.map((h) => h.itemId)).size;
+      const avgBand = srcHist.length
+        ? (Math.round((srcHist.reduce((acc, x) => acc + (Number(x.band) || 0), 0) / srcHist.length) * 2) / 2).toFixed(1)
+        : null;
+
+      const countLine = s.id === 'news'
+        ? `${pCount} bài báo chọn lọc`
+        : `${pCount} Passages · ${fCount} Full Test`;
+
+      return `
+        <article class="rp-portal-card ink-brackets tone-${m.tone}" data-rp-portal="${esc(s.id)}"
+          onclick="ReadingPracticeApp.openSource('${esc(s.id)}')" role="button" tabindex="0">
+          <div class="rp-portal-top">
+            <span class="rp-portal-ico tone-${m.tone}" aria-hidden="true">${m.icon}</span>
+            <span class="rp-tag ${s.id === 'news' ? 'is-news' : ''}">${esc(m.tag)}</span>
+          </div>
+          <h3 class="rp-portal-title">${esc(s.label)}</h3>
+          <p class="rp-portal-desc">${esc(s.desc)}</p>
+          <div class="rp-portal-stats">
+            <span>${esc(countLine)}</span>
+            ${avgBand ? `<span class="rp-done-badge">✓ Band ${avgBand} (${doneUnique} bài)</span>` : ''}
+          </div>
+          <div class="rp-portal-foot">
+            <span class="rp-portal-cta">${esc(m.cta)}</span>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    root.innerHTML = `
+      <div class="rp-hub-shell tot-section-shell ink-brackets">
+        <div class="rp-hub-head">
+          <div>
+            <h2 class="tot-shell-title">Luyện đọc · Reading Practice</h2>
+            <p class="tot-shell-sub">Chọn 1 trong 4 kho đề Reading bên dưới để luyện từng Passage 1–3, Full Test hoặc đọc báo song ngữ.</p>
+          </div>
+        </div>
+
+        ${buildResumeBannerHtml()}
+
+        <div class="rp-portal-grid" id="rp-portal-grid">
+          ${cardsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  /* ---------- SOURCE LIBRARY RENDERER (Inside Cambridge / Volume / Actual / News) ---------- */
   function renderHub() {
     const root = getRoot();
     if (!root) return;
     const d = DATA();
     const sources = d.SOURCES || [];
     const curSourceObj = sources.find((s) => s.id === state.source) || sources[0];
-    const inProg = ReadingPracticeStore.getInProgress();
 
     const sourceTabsHtml = sources.map((s) => `
       <button type="button" class="rp-source-tab ${state.source === s.id ? 'active' : ''}"
@@ -399,35 +507,22 @@
       `;
     }
 
-    const resumeBannerHtml = inProg ? `
-      <div class="rp-resume-banner">
-        <div class="rp-resume-info">
-          <span class="rp-resume-dot"></span>
-          <div>
-            <div class="rp-resume-title">Đang làm dở: <strong>${esc(inProg.title)}</strong></div>
-            <div class="rp-resume-sub">Đã trả lời ${Object.keys(inProg.answers || {}).length}/${inProg.totalQuestions || 0} câu · Còn ${formatDuration(inProg.remainingSec)}</div>
-          </div>
-        </div>
-        <div class="rp-resume-actions">
-          <button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.discardResume()">Bỏ dở</button>
-          <button type="button" class="btn btn-primary rp-btn-sm" onclick="ReadingPracticeApp.resumeDraft()">Làm tiếp →</button>
-        </div>
-      </div>
-    ` : '';
-
     root.innerHTML = `
       <div class="rp-hub-shell tot-section-shell ink-brackets">
         <div class="rp-hub-head">
-          <div>
-            <h2 class="tot-shell-title">Luyện đọc · Reading Practice</h2>
-            <p class="tot-shell-sub">${esc(curSourceObj?.desc || '')}</p>
+          <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+            <button type="button" class="btn-subtle rp-btn-sm" id="rp-btn-back-portal" onclick="ReadingPracticeApp.openPortal()">← Practice</button>
+            <div>
+              <h2 class="tot-shell-title">${esc(curSourceObj?.label || 'Reading Practice')}</h2>
+              <p class="tot-shell-sub">${esc(curSourceObj?.desc || '')}</p>
+            </div>
           </div>
           <div class="rp-source-bar" role="tablist" aria-label="Nguồn đề đọc">
             ${sourceTabsHtml}
           </div>
         </div>
 
-        ${resumeBannerHtml}
+        ${buildResumeBannerHtml()}
 
         <div class="rp-filter-toolbar">
           ${subBarHtml}
@@ -1044,7 +1139,7 @@
   /* ---------- PUBLIC API ---------- */
   const ReadingPracticeApp = {
     init() {
-      renderHub();
+      renderPortal();
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           this.closeDictPopover();
@@ -1057,13 +1152,30 @@
     render() {
       if (state.view === 'exam' && state.session) {
         renderExamWorkspace();
-      } else {
+      } else if (state.view === 'source') {
         renderHub();
+      } else {
+        renderPortal();
       }
+    },
+
+    openPortal() {
+      state.view = 'portal';
+      renderPortal();
+    },
+
+    openSource(src) {
+      state.source = src || 'cambridge';
+      state.view = 'source';
+      state.partFilter = 'all';
+      state.newsTopic = 'all';
+      state.searchQuery = '';
+      renderHub();
     },
 
     setSource(src) {
       state.source = src;
+      state.view = 'source';
       state.partFilter = 'all';
       state.newsTopic = 'all';
       renderHub();
@@ -1140,7 +1252,7 @@
 
     discardResume() {
       ReadingPracticeStore.clearInProgress();
-      renderHub();
+      this.render();
       toast('Đã xóa bài làm dở.');
     },
 
@@ -1149,7 +1261,7 @@
         persistDraft();
       }
       stopTimer();
-      state.view = 'hub';
+      state.view = 'source';
       state.session = null;
       renderHub();
     },
