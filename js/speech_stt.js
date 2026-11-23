@@ -350,11 +350,16 @@
     return num;
   }
 
-  function toPhoneticCode(word) {
+  const SOFT_ACOUSTIC_PAIRS = new Set([
+    'fp', 'pf', 'fh', 'hf', 'ph', 'hp', 'fv', 'vf', 'bv', 'vb', 'bp', 'pb',
+    'dt', 'td', 'gk', 'kg', 'sz', 'zs', 'mn', 'nm', 'lr', 'rl', 'ln', 'nl', 'rn', 'nr',
+    'cs', 'sc', 'gj', 'jg', 'vw', 'wv',
+  ]);
+
+  function toAcousticSeq(word) {
     let w = normalizeEnglishText(word).replace(/[^a-z]/g, '');
     if (!w) return '';
-    // Map English initial /juː/ words ("user", "use", "usual", "useful", "unique", "unit", "you") consistently
-    // Use consonant 'y' preserved (only non-initial 'y' -> 'i') so /j/ counts as a true initial consonant!
+    const isShort = w.length <= 3;
     w = w
       .replace(/^you/, 'Yu')
       .replace(/^use/, 'Yus')
@@ -368,10 +373,10 @@
       .replace(/^ps/, 's')
       .replace(/^wh/, 'w')
       .replace(/sch/g, 'sk')
-      .replace(/tion|sion|cion/g, 'shn')
-      .replace(/tious|cious/g, 'shs')
-      .replace(/ture$/g, 'cher')
-      .replace(/sure$/g, 'ser')
+      .replace(/tion|sion|cion/g, 'sn')
+      .replace(/tious|cious/g, 'ss')
+      .replace(/ture$/g, 'sr')
+      .replace(/sure$/g, 'sr')
       .replace(/ph/g, 'f')
       .replace(/gh(?=[aeiou]|$)/g, '')
       .replace(/ght/g, 't')
@@ -391,18 +396,48 @@
       .replace(/ual$/g, 'al')
       .replace(/e$/g, '')
       .replace(/([a-z])\1+/g, '$1');
-
-    // Normalize vowel groups gently while preserving rough vowel quality
-    w = w
-      .replace(/(ee|ea|ie|ei)/g, 'i')
-      .replace(/(oo|ou|uu)/g, 'u')
-      .replace(/(ai|ay|ae)/g, 'e')
-      .replace(/(oa|ow|au|aw)/g, 'o');
+    // For words >= 4 chars, collapse unstressed English schwa/vowels into neutral 'A'
+    // so "pan-na-na-man" / "Her-na-na-man" matches "phenomenon" like a human listener!
+    if (!isShort) {
+      w = w.replace(/[aeiou]+/g, 'A');
+    }
     return w;
   }
 
+  function acousticSubCost(a, b) {
+    if (a === b) return 0;
+    if (SOFT_ACOUSTIC_PAIRS.has(a + b)) return 0.35;
+    return 1.0;
+  }
+
+  function weightedDamerau(a, b) {
+    if (a === b) return 0;
+    const m = a.length;
+    const n = b.length;
+    if (!m) return n;
+    if (!n) return m;
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        const cost = acousticSubCost(a[i - 1], b[j - 1]);
+        let v = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+        if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+          v = Math.min(v, dp[i - 2][j - 2] + 0.5);
+        }
+        dp[i][j] = v;
+      }
+    }
+    return dp[m][n];
+  }
+
+  function toPhoneticCode(word) {
+    return toAcousticSeq(word);
+  }
+
   function consonantCore(phon) {
-    return String(phon || '').replace(/[aeiou]/g, '');
+    return String(phon || '').replace(/[aeiouA]/g, '');
   }
 
   function levenshtein(a, b) {
@@ -448,35 +483,33 @@
     if (spokenTok === targetTok) return { score: 1.0, charSim: 1.0, phonSim: 1.0 };
 
     const charSim = similarity(spokenTok, targetTok);
-    const pSpoken = toPhoneticCode(spokenTok);
-    const pTarget = toPhoneticCode(targetTok);
-    const rawPhonSim = similarity(pSpoken, pTarget);
+    const pSpoken = toAcousticSeq(spokenTok);
+    const pTarget = toAcousticSeq(targetTok);
+    const seqMax = Math.max(pSpoken.length, pTarget.length) || 1;
+    const seqSim = Math.max(0, 1 - weightedDamerau(pSpoken, pTarget) / seqMax);
 
-    // Anti-gibberish guard: compare consonant cores so words missing key consonants (e.g. "you are" vs "user") don't falsely pass
     const cSpoken = consonantCore(pSpoken);
     const cTarget = consonantCore(pTarget);
-    const consSim = (cSpoken && cTarget) ? similarity(cSpoken, cTarget) : 0;
-    const phonSim = (cSpoken && cTarget) ? (rawPhonSim * 0.65 + consSim * 0.35) : rawPhonSim;
-    let sharedCons = 0;
-    if (cSpoken && cTarget) {
-      const setT = new Set(cTarget.split(''));
-      for (const ch of cSpoken) {
-        if (setT.has(ch)) sharedCons++;
-      }
-    }
-    const hasPhoneticAnchor =
-      sharedCons > 0 ||
-      (pSpoken && pTarget && pSpoken[0] === pTarget[0] && charSim >= 0.4) ||
-      charSim >= 0.5;
+    const cMax = Math.max(cSpoken.length, cTarget.length) || 1;
+    const consSim = (cSpoken && cTarget) ? Math.max(0, 1 - weightedDamerau(cSpoken, cTarget) / cMax) : 0;
 
+    // Acoustic phonetic blend: 55% full syllable/vowel-neutralized sequence + 45% consonant skeleton
+    const phonSim = (cSpoken && cTarget) ? (seqSim * 0.55 + consSim * 0.45) : seqSim;
+
+    // Anti-gibberish guard: require real acoustic consonant overlap OR decent spelling match
+    const hasPhoneticAnchor = consSim >= 0.35 || charSim >= 0.5;
     if (!hasPhoneticAnchor) {
-      return { score: Math.min(0.28, charSim * 0.6), charSim, phonSim };
+      return { score: Math.min(0.28, Math.max(charSim * 0.6, phonSim * 0.5)), charSim, phonSim };
     }
 
-    // Morphological / dropped-ending closeness ("use" vs "user", "users" vs "user")
+    // Short 2-3 letter minimal pairs (e.g. "cat" vs "cut"): keep vowel distinction strict
+    if (targetTok.length <= 3) {
+      const shortScore = charSim * 0.7 + phonSim * 0.3;
+      return { score: shortScore, charSim, phonSim };
+    }
+
     const morphBonus = stripInflection(spokenTok) === stripInflection(targetTok) ? 0.92 : 0;
 
-    // Prefix / stem closeness when learner drops a soft trailing syllable ("use" -> "user", "unprecedent" -> "unprecedented")
     let prefixBonus = 0;
     const minL = Math.min(spokenTok.length, targetTok.length);
     const maxL = Math.max(spokenTok.length, targetTok.length);
@@ -484,7 +517,6 @@
       prefixBonus = Math.min(0.92, (minL / maxL) + 0.12);
     }
 
-    // Penalize severe length mismatch (e.g. "a" vs "environment")
     const lenRatio = minL / maxL;
     const rawBest = Math.max(charSim, phonSim, morphBonus, prefixBonus);
     const finalScore = lenRatio < 0.4 ? rawBest * 0.72 : rawBest;

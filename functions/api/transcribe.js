@@ -198,8 +198,8 @@ export async function onRequestPost({ request, env }) {
     // Use full `whisper-large-v3` by default for BOTH single words & speaking:
     // far more accurate on quiet voices, short isolated words, and non-native accents than turbo!
     const model = enginePref === 'turbo' ? 'whisper-large-v3-turbo' : 'whisper-large-v3';
-    // Never inject target answer into prompt for `word` mode (prevents Whisper hallucination)
-    const prompt = isSpeaking ? VERBATIM_PROMPT : WORD_CONTEXT_PROMPT;
+    // Never inject target answer or artificial word prompt for `word` mode (prevents syllable hyphenation & hallucinations)
+    const prompt = isSpeaking ? VERBATIM_PROMPT : '';
 
     const audioBuffer = await file.arrayBuffer();
     const mime = file.type || 'audio/webm';
