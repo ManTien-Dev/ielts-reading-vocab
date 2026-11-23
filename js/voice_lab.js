@@ -295,15 +295,19 @@
     } else {
       const ref = currentSentence.trim();
       let diffHtml = '';
-      let badgeTxt = 'Tự do';
+      let badgeTxt = 'Nói tự do';
+      let titleTxt = '🎙️ AI chép lại (Nói tự do)';
       let statusClass = 'is-pass';
       if (ref) {
-        const cmp = window.TotoroSpeechSTT.compareSentence(res.text || '', ref);
-        badgeTxt = `${cmp.accuracyPct}% (${cmp.hits}/${cmp.total} từ)`;
-        statusClass = cmp.accuracyPct >= 80 ? 'is-pass' : (cmp.accuracyPct >= 50 ? 'is-warn' : 'is-fail');
+        const cmp = window.TotoroSpeechSTT.compareSentence(res.text || '', ref, { threshold: 0.75 });
+        badgeTxt = `${cmp.passed ? '✓' : '✗'} ${cmp.accuracyPct}% (${cmp.hits}/${cmp.total} từ)`;
+        titleTxt = cmp.passed
+          ? `✅ ĐẠT CÂU (${cmp.accuracyPct}% ≥ ${cmp.thresholdPct}% · ${cmp.hits}/${cmp.total} từ)`
+          : `❌ CHƯA ĐẠT (${cmp.accuracyPct}% < ${cmp.thresholdPct}% · ${cmp.hits}/${cmp.total} từ)`;
+        statusClass = cmp.passed ? 'is-pass' : (cmp.accuracyPct >= 55 ? 'is-warn' : 'is-fail');
         diffHtml = `
           <div class="vlab-diff-wrap">
-            <div class="vlab-diff-lbl">So khớp từng từ với câu mẫu:</div>
+            <div class="vlab-diff-lbl">So khớp từng từ với câu mẫu (ngưỡng đậu: ${cmp.thresholdPct}%):</div>
             <div class="vlab-diff-words">
               ${cmp.items.map((w) => `<span class="vlab-dw ${w.hit ? 'is-hit' : 'is-miss'}">${esc(w.word)}</span>`).join(' ')}
             </div>
@@ -320,7 +324,7 @@
       box.className = `vlab-result-box ${statusClass}`;
       box.innerHTML = `
         <div class="vlab-res-top">
-          <div class="vlab-res-title">🎙️ AI chép lại (${esc(badgeTxt)})</div>
+          <div class="vlab-res-title">${esc(titleTxt)}</div>
           <span class="vlab-res-meta">${esc(metaStr + wpmMeta)}</span>
         </div>
         <div class="vlab-res-heard is-sentence">"${esc(res.text || '(trống)')}"</div>

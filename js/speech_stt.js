@@ -638,10 +638,18 @@
     };
   }
 
-  function compareSentence(spokenRaw, referenceText) {
+  const DEFAULT_WORD_THRESHOLD = 0.55;
+  const DEFAULT_SENTENCE_THRESHOLD = 0.75;
+
+  function getSentenceThreshold() {
+    return DEFAULT_SENTENCE_THRESHOLD;
+  }
+
+  function compareSentence(spokenRaw, referenceText, opts = {}) {
     const refWordsRaw = String(referenceText || '').trim().split(/\s+/).filter(Boolean);
     const spokenTokens = normalizeEnglishText(spokenRaw).split(' ').filter(Boolean);
     const usedSpoken = new Set();
+    const passPct = Math.round((Number.isFinite(Number(opts.threshold)) ? Number(opts.threshold) : DEFAULT_SENTENCE_THRESHOLD) * 100);
 
     const items = refWordsRaw.map((rawWord) => {
       const normRef = normalizeEnglishText(rawWord);
@@ -656,7 +664,7 @@
           bestIdx = i;
         }
       }
-      const hit = bestScore >= 0.78;
+      const hit = bestScore >= 0.72;
       if (hit && bestIdx >= 0) usedSpoken.add(bestIdx);
       return { word: rawWord, hit, score: +bestScore.toFixed(2) };
     });
@@ -664,7 +672,14 @@
     const total = items.length;
     const hits = items.filter((x) => x.hit).length;
     const accuracyPct = total > 0 ? Math.round((hits / total) * 100) : 0;
-    return { items, hits, total, accuracyPct };
+    return {
+      items,
+      hits,
+      total,
+      accuracyPct,
+      thresholdPct: passPct,
+      passed: accuracyPct >= passPct,
+    };
   }
 
   /* ---------------------------------------------------------
@@ -978,6 +993,9 @@
     compareSentence,
     getDefaultThreshold,
     setDefaultThreshold,
+    getSentenceThreshold,
+    DEFAULT_WORD_THRESHOLD,
+    DEFAULT_SENTENCE_THRESHOLD,
     checkHealth,
     getApiUrl,
   };
