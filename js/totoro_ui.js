@@ -421,6 +421,7 @@
 
     if (activeView === 'home') renderHomeDashboard();
     if (activeView === 'task') renderInlineTaskHub();
+    if (activeView === 'practice') window.ReadingPracticeApp?.render?.();
     if (activeView === 'flashcard' && opts.fromUser && prevView !== 'flashcard' && B?.getCurrentUser?.() && B?.isAutoSpeakOn?.()) {
       B?.speakCurrentWord?.();
     }
@@ -667,8 +668,247 @@
             `;
           }).join('')
         : '<div style="font-size:12.5px;color:var(--ink-3);padding:12px 0;">Bạn chưa hoàn thành Task nào. Chọn tab Task để bắt đầu nhé!</div>';
-      setTxt('home-history-total', `${snap.completedTasks.length} bài`);
+      setTxt('home-history-total', `${snap.completedTasks.length + (window.ReadingPracticeStore?.getHistory?.().length || 0)} bài`);
     }
+
+    if (activeHomeScope === 'reading') {
+      renderReadingHomePanel(snap);
+    } else if (activeHomeScope !== 'global') {
+      renderSkillHomeStub(activeHomeScope);
+    }
+  }
+
+  let activeHomeScope = 'global';
+
+  function renderReadingHomePanel(snapInput) {
+    const el = document.getElementById('home-scope-reading');
+    if (!el) return;
+    const B = window.__VOCAB_BRIDGE__;
+    const esc = B?.escapeHtml || ((x) => String(x ?? '').replace(/[&<>"']/g, (s) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s])));
+    const snap = snapInput || getRealStudentSnapshot();
+    const rpStats = window.ReadingPracticeStore?.getSummaryStats?.() || {
+      attemptsCount: 0, completedUnique: 0, avgBand: 0, totalMins: 0, recent: [], inProgress: null
+    };
+    const mvDecks = window.MyVocabStore?.getDecks?.() || [];
+    const mvTotalWords = mvDecks.reduce((sum, d) => sum + (d.words?.length || 0), 0);
+
+    // 4 official Reading decks breakdown
+    const assessments = B?.getAssessmentsMap?.() || {};
+    const f1 = window.APP_DATA?.file1_paraphrase_1500 || [];
+    const f2 = window.APP_DATA?.file2_families_3500 || [];
+    const deckGroups = [
+      { key: 'paraphrase', label: 'Paraphrase 1.500', list: f1 },
+      { key: 'foundation', label: 'Nền tảng', list: f2.filter((w) => (w.tier || w.level) === 'foundation' || (w.rank || 0) <= 1000) },
+      { key: 'academic', label: 'Học thuật', list: f2.filter((w) => (w.tier || w.level) === 'academic' || ((w.rank || 0) > 1000 && (w.rank || 0) <= 2200)) },
+      { key: 'advanced', label: 'Chuyên sâu', list: f2.filter((w) => (w.tier || w.level) === 'advanced' || (w.rank || 0) > 2200) }
+    ];
+    const deckBarsHtml = deckGroups.map((dg) => {
+      const total = dg.list.length || 1;
+      const done = dg.list.filter((w) => assessments[w.id] === 3).length;
+      const pct = Math.min(100, Math.round((done / total) * 100));
+      return `
+        <div class="rh-deck-row">
+          <div class="rh-deck-meta"><span>${esc(dg.label)}</span><strong class="tabular">${done}/${dg.list.length}</strong></div>
+          <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:${pct}%"></div></div>
+        </div>
+      `;
+    }).join('');
+
+    const inProg = rpStats.inProgress;
+    const resumeHtml = inProg ? `
+      <div class="rh-resume-card ink-brackets">
+        <div>
+          <div class="rh-resume-kicker">Đang làm dở · Reading Practice</div>
+          <div class="rh-resume-title">${esc(inProg.title)}</div>
+          <div class="rh-resume-sub">Đã trả lời ${Object.keys(inProg.answers || {}).length}/${inProg.totalQuestions || 0} câu · Còn ${Math.ceil((inProg.remainingSec || 0) / 60)} phút</div>
+        </div>
+        <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.resumeDraft();">Làm tiếp ngay →</button>
+      </div>
+    ` : '';
+
+    const rpHistHtml = rpStats.recent.length
+      ? rpStats.recent.map((h) => {
+          const dt = h.completedAt ? new Date(h.completedAt).toLocaleDateString('vi-VN') : '';
+          const srcLabel = h.source === 'cambridge' ? 'Cambridge' : h.source === 'volume' ? 'Volume' : h.source === 'actual' ? 'Actual' : 'News';
+          const openCall = h.isFull
+            ? `window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.startFullTest('${esc(h.itemId)}', { openInReview: true });`
+            : `window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.startPassage('${esc(h.itemId)}', { openInReview: true });`;
+          return `
+            <div class="rh-hist-item">
+              <div style="min-width:0;">
+                <div class="rh-hist-title">${esc(h.title)}</div>
+                <div class="rh-hist-meta">${esc(srcLabel)} · ${h.score}/${h.total} câu đúng · ${dt}</div>
+              </div>
+              <div class="rh-hist-right">
+                <span class="rh-band-pill tabular">Band ${(Number(h.band) || 0).toFixed(1)}</span>
+                <button type="button" class="tot-foot-btn" onclick="${openCall}">Xem giải</button>
+              </div>
+            </div>
+          `;
+        }).join('')
+      : `<div class="rh-empty">Chưa có lịch sử luyện đề Reading. Hãy vào tab <strong>Practice</strong> chọn Cambridge, Volume, Actual Tests hoặc News nhé!</div>`;
+
+    const recentTasks = snap.completedTasks
+      .slice()
+      .sort((a, b) => (b[1]?.updatedAt || 0) - (a[1]?.updatedAt || 0))
+      .slice(0, 4);
+
+    const taskHistHtml = recentTasks.length
+      ? recentTasks.map(([tid, info]) => {
+          const taskObj = (window.APP_TASKS_DATA?.tasks || []).find((t) => t.id === tid);
+          const label = taskObj ? `${taskObj.label} · ${taskObj.theme || ''}` : tid.toUpperCase();
+          const score = info.recognitionScore != null ? `${info.recognitionScore}%` : `${info.translationScore ?? '--'}/10`;
+          return `
+            <div class="rh-hist-item">
+              <div style="min-width:0;">
+                <div class="rh-hist-title">${esc(label)}</div>
+                <div class="rh-hist-meta">${info.updatedAt ? new Date(info.updatedAt).toLocaleDateString('vi-VN') : 'Đã nộp'}</div>
+              </div>
+              <span class="tot-hist-badge tabular">${esc(score)}</span>
+            </div>
+          `;
+        }).join('')
+      : `<div class="rh-empty">Chưa có Task Reading nào hoàn thành.</div>`;
+
+    const mvDecksHtml = mvDecks.slice(0, 4).map((d) => `
+      <div class="rh-hist-item">
+        <div style="min-width:0;">
+          <div class="rh-hist-title">${esc(d.name)}</div>
+          <div class="rh-hist-meta">${d.words?.length || 0} từ (lưu cục bộ trên máy)</div>
+        </div>
+        <button type="button" class="tot-foot-btn" onclick="window.__VOCAB_BRIDGE__?.openMyVocabDeck('${esc(d.id)}')">Học →</button>
+      </div>
+    `).join('');
+
+    el.innerHTML = `
+      <div class="rh-layout">
+        <div class="rh-hero ink-brackets">
+          <div>
+            <div class="rh-kicker">READING HOME · KHÔNG GIAN CHUYÊN SÂU</div>
+            <h2 class="rh-title">Tiến độ &amp; Lịch sử IELTS Reading</h2>
+            <p class="rh-sub">Tập trung toàn bộ từ vựng Reading, 110 Task bài tập và lịch sử luyện đề Cambridge · Volume · Actual · News.</p>
+          </div>
+          <div class="rh-hero-actions">
+            <button type="button" class="btn btn-primary tot-demo-btn" data-tot-view="practice" onclick="window.TotoroUI.switchView('practice')">Kho đề Practice →</button>
+            <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('flashcard')">Flashcard</button>
+            <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">Từ của tôi (${mvTotalWords})</button>
+          </div>
+        </div>
+
+        ${resumeHtml}
+
+        <div class="rh-kpi-grid">
+          <div class="rh-kpi-card ink-brackets">
+            <div class="rh-kpi-label">Từ vựng Reading</div>
+            <div class="rh-kpi-val tabular">${(snap.mastered || 0).toLocaleString('vi-VN')} <small>/ ${(snap.totalFamilies || 4489).toLocaleString('vi-VN')}</small></div>
+            <div class="rh-kpi-sub">+ ${mvTotalWords} từ trong sổ <strong>Từ của tôi</strong></div>
+            <div class="rh-decks-mini">${deckBarsHtml}</div>
+          </div>
+
+          <div class="rh-kpi-card ink-brackets">
+            <div class="rh-kpi-label">Task Bài tập Reading</div>
+            <div class="rh-kpi-val tabular">${snap.completedTasks.length} <small>/ 110 Tasks</small></div>
+            <div class="rh-kpi-sub">Đang hoàn thành ${Math.round((snap.completedTasks.length / 110) * 100)}% lộ trình từ vựng Reading.</div>
+            <div style="margin-top:auto;padding-top:12px;">
+              <button type="button" class="tot-demo-btn" style="width:100%;" onclick="window.TotoroUI.switchView('task')">Mở danh sách 110 Tasks →</button>
+            </div>
+          </div>
+
+          <div class="rh-kpi-card ink-brackets">
+            <div class="rh-kpi-label">Luyện đề Reading Practice</div>
+            <div class="rh-kpi-val tabular">${rpStats.avgBand ? `Band ${rpStats.avgBand.toFixed(1)}` : 'Chưa có'}</div>
+            <div class="rh-kpi-sub">${rpStats.attemptsCount} lượt nộp bài · ${rpStats.completedUnique} bài đọc đã làm · ${rpStats.totalMins} phút luyện</div>
+            <div style="margin-top:auto;padding-top:12px;">
+              <button type="button" class="btn btn-primary tot-demo-btn" style="width:100%;" onclick="window.TotoroUI.switchView('practice')">Làm đề mới ngay →</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="rh-bottom-grid">
+          <div class="tot-home-panel ink-brackets">
+            <div class="tot-panel-head">
+              <div>
+                <div class="tot-panel-title">Lịch sử Luyện đề Reading</div>
+                <div class="tot-panel-sub">Cambridge · Volume · Actual Tests · News</div>
+              </div>
+              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.switchView('practice')">Kho đề →</button>
+            </div>
+            <div class="rh-hist-list">${rpHistHtml}</div>
+          </div>
+
+          <div class="tot-home-panel ink-brackets">
+            <div class="tot-panel-head">
+              <div>
+                <div class="tot-panel-title">Từ của tôi &amp; Task gần đây</div>
+                <div class="tot-panel-sub">Ôn nhanh bộ từ cá nhân rút từ bài đọc</div>
+              </div>
+              <button type="button" class="tot-foot-btn" onclick="window.MyVocabUI?.openModal()">Quản lý →</button>
+            </div>
+            <div class="rh-subhead">Sổ Từ của tôi (cục bộ)</div>
+            <div class="rh-hist-list">${mvDecksHtml}</div>
+            <div class="rh-subhead" style="margin-top:12px;">Task Reading vừa xong</div>
+            <div class="rh-hist-list">${taskHistHtml}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSkillHomeStub(scope) {
+    const el = document.getElementById('home-scope-skill-stub');
+    if (!el) return;
+    const meta = {
+      listening: {
+        name: 'Listening Home',
+        badge: 'Shadowing sẵn sàng · Đề Section 1–4 sắp mở',
+        desc: 'Không gian trang chủ riêng cho IELTS Listening: luyện nghe-nhại (Shadowing), Dictation theo Section 1–4 và lịch sử Band Listening.',
+        cta: `<button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.setActiveSkill('Listening'); window.TotoroUI.switchView('flashcard');">Vào luyện nghe Listening →</button>`
+      },
+      writing: {
+        name: 'Writing Home',
+        badge: 'Đang phát triển · Sắp ra mắt',
+        desc: 'Không gian trang chủ riêng cho IELTS Writing: bản đồ Flow Ideas Task 2, biểu đồ Task 1, kho bài mẫu chữa chi tiết và lịch sử chấm Band.',
+        cta: `<button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchHomeScope('global')">← Quay về Home chung</button>`
+      },
+      speaking: {
+        name: 'Speaking Home',
+        badge: 'Đang phát triển · Sắp ra mắt',
+        desc: 'Không gian trang chủ riêng cho IELTS Speaking: Spoken Chunks Part 1–3, kho Cue Card theo quý và lịch sử luyện phát âm.',
+        cta: `<button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchHomeScope('global')">← Quay về Home chung</button>`
+      }
+    }[scope];
+    if (!meta) return;
+
+    el.innerHTML = `
+      <div class="rh-stub-card ink-brackets">
+        <span class="rp-tag">${meta.badge}</span>
+        <h2 class="rh-title" style="margin-top:10px;">${meta.name}</h2>
+        <p class="rh-sub" style="max-width:560px;margin:6px auto 18px;">${meta.desc}</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          ${meta.cta}
+          <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchHomeScope('reading')">Chuyển sang Reading Home</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function switchHomeScope(scope) {
+    const valid = ['global', 'reading', 'listening', 'writing', 'speaking'];
+    activeHomeScope = valid.includes(scope) ? scope : 'global';
+
+    document.querySelectorAll('#home-tier-bar [data-home-scope]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.homeScope === activeHomeScope);
+    });
+    const gEl = document.getElementById('home-scope-global');
+    const rEl = document.getElementById('home-scope-reading');
+    const sEl = document.getElementById('home-scope-skill-stub');
+    if (gEl) gEl.classList.toggle('active', activeHomeScope === 'global');
+    if (rEl) rEl.classList.toggle('active', activeHomeScope === 'reading');
+    if (sEl) sEl.classList.toggle('active', !['global', 'reading'].includes(activeHomeScope));
+
+    if (activeHomeScope === 'reading') renderReadingHomePanel();
+    else if (activeHomeScope !== 'global') renderSkillHomeStub(activeHomeScope);
+    else renderHomeDashboard();
   }
 
   // --- 5. REAL-DATA INLINE TASK HUB (110 TASKS + FIXED DONE/UNDONE CONTRAST) ---
@@ -1131,6 +1371,14 @@
     const artImg = document.getElementById('auth-art-img');
     if (artImg) artImg.addEventListener('load', positionLoginCardUnderUmbrella);
 
+    // Wire 5-Home Tier Bar (Home chung + 4 Home riêng theo kỹ năng)
+    document.querySelectorAll('#home-tier-bar [data-home-scope]').forEach((btn) => {
+      btn.addEventListener('click', () => switchHomeScope(btn.dataset.homeScope));
+    });
+    window.addEventListener('reading-practice-updated', () => {
+      if (activeView === 'home') renderHomeDashboard();
+    });
+
     syncCinemaRainLoop();
     requestAnimationFrame(positionLoginCardUnderUmbrella);
     syncHeaderAndAccount();
@@ -1143,6 +1391,8 @@
 
   window.TotoroUI = {
     switchView,
+    switchHomeScope,
+    getActiveHomeScope: () => activeHomeScope,
     getActiveView: () => activeView,
     getActiveSkill: () => (typeof window.__TOTORO_GET_SKILL__ === 'function' ? window.__TOTORO_GET_SKILL__() : (html.getAttribute('data-skill') === 'listening' ? 'Listening' : 'Reading')),
     setActiveSkill: (skill, opts) => (typeof window.__TOTORO_SET_SKILL__ === 'function' ? window.__TOTORO_SET_SKILL__(skill, opts) : undefined),

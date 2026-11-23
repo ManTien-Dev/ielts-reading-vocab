@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
   <link rel="stylesheet" href="css/enhancements.css?v=20261123b">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261123c">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261123d">
 </head>
 <body>
 
@@ -1181,10 +1181,36 @@
     </section>
 
     <!-- ==================================================================
-         TAB 1: HOME DASHBOARD — 1-TO-1 MATCH WITH ielts_master_redesign_demo_v3.html
+         TAB 1: 5-HOME ARCHITECTURE (Home chung + 4 Home riêng theo kỹ năng)
          ================================================================== -->
     <section class="tot-screen active" id="screen-home" aria-label="Trang chủ tiến độ học tập">
-      <div class="tot-home-layout">
+      <div class="home-tier-bar" id="home-tier-bar" role="tablist" aria-label="Chọn trang chủ">
+        <button type="button" class="home-tier-btn active" data-home-scope="global">
+          <span class="home-tier-dot is-global"></span>
+          <span>Home chung</span>
+          <small>Plan · Xếp hạng · Ôn tập</small>
+        </button>
+        <button type="button" class="home-tier-btn" data-home-scope="reading">
+          <span class="home-tier-dot is-reading"></span>
+          <span>Reading Home</span>
+          <small>Từ vựng · Task · Luyện đề</small>
+        </button>
+        <button type="button" class="home-tier-btn" data-home-scope="listening">
+          <span class="home-tier-dot is-listening"></span>
+          <span>Listening Home</span>
+        </button>
+        <button type="button" class="home-tier-btn" data-home-scope="writing">
+          <span class="home-tier-dot is-soon"></span>
+          <span>Writing Home</span>
+        </button>
+        <button type="button" class="home-tier-btn" data-home-scope="speaking">
+          <span class="home-tier-dot is-soon"></span>
+          <span>Speaking Home</span>
+        </button>
+      </div>
+
+      <!-- HOME 5 (HOME CHUNG): Theo dõi học tập, Plan, Streak, Bảng xếp hạng, 4 kỹ năng -->
+      <div class="tot-home-layout home-scope-panel active" id="home-scope-global">
         <div class="tot-home-top">
           <div class="tot-hero-card ink-brackets has-stamp">
             <!-- Full-Color Totoro Umbrella Trio on Home Hero -->
@@ -1264,7 +1290,7 @@
               <strong class="tabular" id="home-reading-pct" style="font-size:15.5px;color:var(--accent);flex-shrink:0;">0%</strong>
             </div>
             <div class="tot-mastery-bar"><div class="tot-seg-ok" id="home-reading-bar-ok" style="width:0%"></div><div class="tot-seg-warm" id="home-reading-bar-warm" style="width:0%"></div></div>
-            <div style="display:flex;gap:5px;"><button type="button" class="tot-mini-chip" data-tot-view="flashcard">Flashcard</button><button type="button" class="tot-mini-chip" data-tot-view="task">Task</button><button type="button" class="tot-mini-chip" data-tot-view="practice">Practice</button></div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;"><button type="button" class="tot-mini-chip is-accent" onclick="window.TotoroUI?.switchHomeScope('reading')">Reading Home</button><button type="button" class="tot-mini-chip" data-tot-view="flashcard">Flashcard</button><button type="button" class="tot-mini-chip" data-tot-view="task">Task</button><button type="button" class="tot-mini-chip" data-tot-view="practice">Practice</button></div>
           </div>
 
           <div class="tot-skill-card has-stamp">
@@ -1377,6 +1403,12 @@
           </div>
         </div>
       </div>
+
+      <!-- HOME 1: READING HOME (Tiến độ Từ vựng Reading · Lịch sử Task · Lịch sử & Band Luyện đề · Resume) -->
+      <div class="home-scope-panel" id="home-scope-reading"></div>
+
+      <!-- HOME 2-4: LISTENING / WRITING / SPEAKING HOME (Dynamic per-skill view) -->
+      <div class="home-scope-panel" id="home-scope-skill-stub"></div>
     </section>
 
     <!-- ==================================================================
@@ -1417,75 +1449,10 @@
     </section>
 
     <!-- ==================================================================
-         TAB 4: PRACTICE — 1-TO-1 MATCH WITH ielts_master_redesign_demo_v3.html
+         TAB 4: READING PRACTICE — Cambridge · Volume · Actual Tests · News
          ================================================================== -->
     <section class="tot-screen" id="screen-practice" aria-label="Luyện đề IELTS Reading">
-      <div class="tot-section-shell ink-brackets has-stamp">
-        <svg class="ghibli-stamp" style="right:26px;bottom:22px;width:116px;height:116px;opacity:0.09;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-          <circle cx="32" cy="32" r="29" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>
-          <path d="M32 7V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M12 24C16 14 23 11 32 11C41 11 48 14 52 24C47 21.8 42 21.8 38 23.5C34 21.6 30 21.6 26 23.5C22 21.8 17 21.8 12 24Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" fill-opacity=".1"/>
-          <path d="M32 22V39C32 41.2 34.4 42 35.4 40" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-          <path d="M22 29L19.5 21L26 25.5C29.5 24.5 34.5 24.5 38 25.5L44.5 21L42 29C47 33 49 40 48.5 47.5C47.8 53.5 41.5 56.5 32 56.5C22.5 56.5 16.2 53.5 15.5 47.5C15 40 17 33 22 29Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <circle cx="25.5" cy="32.5" r="1.9" fill="currentColor"/><circle cx="38.5" cy="32.5" r="1.9" fill="currentColor"/>
-        </svg>
-        <div class="tot-shell-head">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span class="tot-icon-tile info" aria-hidden="true" style="width:36px;height:36px;">
-              <svg viewBox="2 2 24 24" fill="none">
-                <path d="M8.5 11.2L7 5.6L11.2 9C12.5 8.5 14 8.5 15.3 9L19.5 5.6L18 11.2C20.2 12.8 21.2 15.2 21 18.2C20.7 21.5 17.8 23.2 13.2 23.2C8.6 23.2 5.7 21.5 5.4 18.2C5.2 15.2 6.2 12.8 8.5 11.2Z" fill="#6B92B8" stroke="#3F5C78" stroke-width="1.1"/>
-                <ellipse cx="13.2" cy="18.8" rx="5.2" ry="3.4" fill="#FBF6E8"/>
-                <circle cx="10.6" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="10.8" cy="13.5" r="0.75" fill="#181A1F"/>
-                <circle cx="15.8" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="15.6" cy="13.5" r="0.75" fill="#181A1F"/>
-              </svg>
-            </span>
-            <div>
-              <h2 class="tot-shell-title">Luyện đề IELTS · Reading</h2>
-              <p class="tot-shell-sub">Làm đề bấm giờ chuẩn phòng thi, tự động lưu lịch sử &amp; rút từ sai vào Flashcard.</p>
-            </div>
-          </div>
-          <div class="tot-seg" id="practice-filter-tabs">
-            <button type="button" class="tot-seg-btn active" data-practice-filter="all">Tất cả đề</button>
-            <button type="button" class="tot-seg-btn" data-practice-filter="live">Đang mở</button>
-            <button type="button" class="tot-seg-btn" data-practice-filter="cambridge">Đề Cambridge</button>
-          </div>
-        </div>
-        <div class="tot-practice-grid" id="practice-cards-grid">
-          <div class="tot-exam-card ink-brackets has-stamp" data-practice-cat="live">
-            <svg class="ghibli-stamp warm" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.12;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-              <path d="M32 6V12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-              <path d="M10 26C14 14 22 11 32 11C42 11 50 14 54 26C48 23.5 43 23.5 38 25.5C34 23.5 30 23.5 26 25.5C21 23.5 16 23.5 10 26Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".08"/>
-              <path d="M32 24V48C32 52 36 53 38 49.5" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
-            </svg>
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="tot-pos-badge">Speed Quiz</span><span class="tot-hist-badge tabular">5 giây / từ</span></div>
-              <div style="font-size:15px;font-weight:750;margin-top:8px;color:var(--ink);">Kiểm tra phản xạ toàn bộ từ vựng</div>
-              <div style="font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5;">Đúng → Đã thuộc · Sai → tự đẩy về Cần ôn &amp; tự động lưu mốc mỗi 50 từ.</div>
-            </div>
-            <div style="display:flex;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid var(--border);">
-              <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="openWordListModal()">Xem từ vựng</button>
-              <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="RecognitionTestModule.startListFinalExam()">Bắt đầu ngay</button>
-            </div>
-          </div>
-
-          <div class="tot-exam-card ink-brackets has-stamp" data-practice-cat="cambridge">
-            <svg class="ghibli-stamp" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.11;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-              <path d="M18 22L14 8L24 16C29 14.5 35 14.5 40 16L50 8L46 22C52 26 55 33 55 41C55 52 45.5 58 32 58C18.5 58 9 52 9 41C9 33 12 26 18 22Z" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/>
-              <circle cx="23.5" cy="29" r="2.2" fill="currentColor"/><circle cx="40.5" cy="29" r="2.2" fill="currentColor"/>
-              <path d="M21 43L24.5 39.5L28 43M29 41.5L32 38.5L35 41.5M36 43L39.5 39.5L43 43" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="tot-pos-badge">Cambridge 19</span><span class="tot-hist-badge info">Sắp mở</span></div>
-              <div style="font-size:15px;font-weight:750;margin-top:8px;color:var(--ink);">Academic Reading · Full Test (60p)</div>
-              <div style="font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5;">Urban Farming · Deep Sea Mining · Cognitive Biases — rút từ sai về Flashcard.</div>
-            </div>
-            <div style="display:flex;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid var(--border);">
-              <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="window.TotoroUI?.notifySkillSoon('Đề Cambridge 19')">Chọn Passage</button>
-              <button type="button" class="tot-demo-btn tot-btn-soft" style="height:31px;font-size:12px;" onclick="window.TotoroUI?.notifySkillSoon('Đề Cambridge 19')">Làm Full Test</button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div id="rp-app-root"></div>
     </section>
 
     <!-- Màn hình Làm Task theo Link Giáo viên giao -->
@@ -2171,7 +2138,9 @@
   <script src="data/v2_foundation.js?v=20261122e"></script>
   <script src="data/v2_academic.js?v=20261122e"></script>
   <script src="data/v2_advanced.js?v=20261122e"></script>
+  <script src="data/reading_practice_data.js?v=20261123d"></script>
+  <script src="js/reading_practice.js?v=20261123d"></script>
   <script src="js/tasks.js?v=20261122j"></script>
-  <script src="js/totoro_ui.js?v=20261123a"></script>
+  <script src="js/totoro_ui.js?v=20261123b"></script>
 </body>
 </html>
