@@ -1106,13 +1106,24 @@ body.is-teacher-mode #hdr-streak-pill { display: none !important; }
 }
 .tot-pal-chip.active { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 
+#skill-popover {
+  min-width: 292px;
+  width: 300px;
+}
 .tot-skill-opt {
   width: 100%; padding: 8px 10px; border-radius: 10px; border: none; background: none; color: var(--ink);
-  display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; cursor: pointer;
 }
+.tot-skill-opt-copy { min-width: 0; flex: 1 1 auto; }
+.tot-skill-opt-title { font-size: 13px; font-weight: 750; line-height: 1.25; }
+.tot-skill-opt-sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; line-height: 1.3; }
 .tot-skill-opt:hover { background: var(--surface-muted); }
 .tot-skill-opt.active { background: var(--accent-soft); }
-.tot-tag { font-size: 10px; font-weight: 750; padding: 2px 7px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); }
+.tot-tag {
+  font-size: 10.5px; font-weight: 750; padding: 3px 9px; border-radius: 999px;
+  background: var(--ok-soft); color: var(--ok);
+  white-space: nowrap; flex-shrink: 0;
+}
 .tot-tag.soon { background: var(--surface-muted); color: var(--ink-3); }
 
 .tot-acc-head { display: flex; align-items: center; gap: 10px; padding: 2px 4px 10px; border-bottom: 1px solid var(--border); }
@@ -5085,11 +5096,12 @@ html[data-theme="dark"] .anki-due-reminder {
     font-size: 18.5px !important;
     line-height: 1.25 !important;
   }
+  #screen-home .tot-hero-card > .tot-hero-actions,
   #screen-home .tot-hero-card > div:last-child {
     width: 100% !important;
     display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 7px !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
   }
   #screen-home .tot-hero-card .tot-demo-btn {
     width: 100% !important;
@@ -5414,14 +5426,27 @@ html[data-theme="dark"] .totoro-fc-soot {
 .deck-widget:hover .totoro-widget-charm {
   transform: translateY(-2px) rotate(-4deg) scale(1.06);
 }
+.tot-hero-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.tot-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 .totoro-hero-trio {
-  position: absolute !important;
-  right: 322px;
-  bottom: 2px;
-  width: 98px;
-  height: 56px;
+  position: relative !important;
+  right: auto;
+  bottom: auto;
+  align-self: flex-end;
+  flex-shrink: 0;
+  width: 92px;
+  height: 52px;
+  margin: 0 2px -12px 4px;
   pointer-events: none;
-  z-index: 0;
+  z-index: 1;
   opacity: 0.94;
   filter: drop-shadow(0 2px 5px rgba(48, 52, 42, 0.1));
   transition: transform 280ms var(--ease-out);
@@ -5437,13 +5462,9 @@ html[data-theme="dark"] .totoro-fc-soot {
 }
 
 /* Clean scaling on Mobile & Tablet so Flashcards stay roomy and never overlap text */
-@media (max-width: 1199px) {
+@media (max-width: 1260px) {
   .totoro-hero-trio {
-    right: 14px;
-    bottom: -2px;
-    width: 88px;
-    height: 50px;
-    opacity: 0.42;
+    display: none;
   }
 }
 @media (max-width: 767px) {
@@ -7945,6 +7966,9 @@ mark.rp-hl-mark.hl-purple {
   border-color: var(--accent);
   color: var(--accent);
 }
+/* On Global Home, center nav already lists Tổng quan / Reading / Listening / Writing / Speaking — hide duplicate skill dropdown */
+body.is-global-home .tot-skill-wrap,
+body.is-teacher-mode .tot-skill-wrap,
 body.is-global-home #btn-back-global-home,
 body.is-teacher-mode #btn-back-global-home {
   display: none !important;
