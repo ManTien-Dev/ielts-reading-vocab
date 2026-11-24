@@ -285,6 +285,55 @@
     return tNums.size;
   }
 
+  function getBookTestStatusMap(bookId) {
+    const d = DATA();
+    const ps = Object.values(d.PASSAGES || {}).filter((p) => p.bookId === bookId);
+    const fts = (d.FULL_TESTS || []).filter((t) => t.bookId === bookId);
+    const map = {};
+    for (let t = 1; t <= 4; t++) {
+      const testPs = ps.filter((p) => (p.testNum || 1) === t);
+      const testFt = fts.find((f) => (f.testNum || 1) === t);
+      const hasData = testPs.length > 0 || !!testFt;
+      const done = hasData && (
+        (testFt && !!ReadingPracticeStore.getBestAttempt(testFt.id)) ||
+        (testPs.length > 0 && testPs.every((p) => !!ReadingPracticeStore.getBestAttempt(p.id)))
+      );
+      map[t] = { hasData, done };
+    }
+    return map;
+  }
+
+  function getBookVisualMeta(bk) {
+    if (!bk) return { era: 'cam-latest', brand: 'IELTS', numText: '20', kind: 'book' };
+    if (bk.source === 'cambridge') {
+      const n = Number(bk.num) || 1;
+      const era = n >= 16 ? 'cam-latest' : n >= 12 ? 'cam-modern' : n >= 8 ? 'cam-core' : 'cam-classic';
+      return { era, brand: 'CAMBRIDGE', numText: String(n), kind: 'book' };
+    }
+    if (bk.source === 'volume') {
+      const v = Number(bk.num) || 1;
+      return { era: `vol-${((v - 1) % 6) + 1}`, brand: 'VOLUME', numText: String(v).padStart(2, '0'), kind: 'volume' };
+    }
+    const yr = String(bk.num || bk.shortLabel || '2025');
+    const yrIdx = Math.abs(2026 - (Number(bk.num) || 2025)) % 4;
+    return { era: `act-${yrIdx + 1}`, brand: 'ACTUAL', numText: yr, kind: 'dossier' };
+  }
+
+  function renderBookendSvg() {
+    return `
+      <div class="rp-shelf-bookend" aria-hidden="true">
+        <svg viewBox="0 0 48 64" fill="none">
+          <path d="M8 58H42V61H8V58Z" fill="currentColor" opacity="0.28"/>
+          <path d="M17 24L13 13L21 19C24 18 28 18 31 19L39 13L35 24C39 27.5 41 33 40.5 40C40 48 34.5 54 26 54C17.5 54 12 48 11.5 40C11 33 13 27.5 17 24Z" fill="currentColor" opacity="0.18" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M26 15.5C28.5 12 33 11.8 35.5 14C33 16.5 29 17 26 15.5Z" fill="currentColor" opacity="0.35"/>
+          <circle cx="21.5" cy="30" r="1.7" fill="currentColor" opacity="0.7"/>
+          <circle cx="30.5" cy="30" r="1.7" fill="currentColor" opacity="0.7"/>
+          <path d="M20 42L22.5 39.8L25 42M26 41L28 39L30 41M31 42L33.5 39.8L36 42" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+        </svg>
+      </div>
+    `;
+  }
+
   function buildResumeBannerHtml() {
     const inProg = ReadingPracticeStore.getInProgress();
     if (!inProg) return '';
@@ -445,59 +494,155 @@
         ? books.filter((b) => b.group === 'recent')
         : books;
 
+      const readyBooksCount = books.filter((b) => countReadyTestsInBook(b.id) > 0).length;
+
       const camGroupToggle = state.source === 'cambridge' ? `
-        <div class="rp-book-group-toggle">
+        <div class="rp-book-group-toggle" role="group" aria-label="Phạm vi kệ sách Cambridge">
           <button type="button" class="rp-mini-tab ${state.camGroup === 'recent' ? 'active' : ''}"
+            aria-pressed="${state.camGroup === 'recent' ? 'true' : 'false'}"
             onclick="ReadingPracticeApp.setCamGroup('recent')">Cam 10 – 20 (Trọng tâm)</button>
           <button type="button" class="rp-mini-tab ${state.camGroup === 'all' ? 'active' : ''}"
+            aria-pressed="${state.camGroup === 'all' ? 'true' : 'false'}"
             onclick="ReadingPracticeApp.setCamGroup('all')">Tất cả Cam 1 – 20 (${books.length} cuốn)</button>
         </div>
       ` : '';
 
-      const bookPillsHtml = visibleBooks.map((bk) => {
+      const renderBookCard = (bk) => {
         const readyTests = countReadyTestsInBook(bk.id);
+        const testStatus = getBookTestStatusMap(bk.id);
         const active = state.selectedBookId === bk.id;
+        const meta = getBookVisualMeta(bk);
+        const pipsHtml = [1, 2, 3, 4].map((t) => {
+          const st = testStatus[t] || {};
+          return `<span class="rp-bk-pip ${st.done ? 'is-done' : (st.hasData ? 'is-ready' : '')}" aria-hidden="true"></span>`;
+        }).join('');
+        const statusDesc = readyTests > 0 ? `${readyTests}/${bk.testsCount} bài thi sẵn sàng` : 'Chưa nạp đề';
         return `
-          <button type="button" class="rp-book-pill ${active ? 'active' : ''} ${readyTests > 0 ? 'has-data' : 'is-empty'}"
-            data-rp-book="${esc(bk.id)}" onclick="ReadingPracticeApp.selectBook('${esc(bk.id)}')">
-            <span class="rp-book-name">${esc(bk.shortLabel)}</span>
-            <span class="rp-book-dot">${readyTests > 0 ? `${readyTests}/${bk.testsCount}` : 'Sắp nạp'}</span>
+          <button type="button"
+            class="rp-book-pill rp-bk-item is-${meta.kind} ${active ? 'active' : ''} ${readyTests > 0 ? 'has-data' : 'is-empty'}"
+            data-rp-book="${esc(bk.id)}"
+            data-era="${esc(meta.era)}"
+            aria-pressed="${active ? 'true' : 'false'}"
+            aria-label="${esc(bk.title)} — ${esc(statusDesc)}"
+            onkeydown="ReadingPracticeApp.onShelfKeydown(event, '${esc(bk.id)}')"
+            onclick="ReadingPracticeApp.selectBook('${esc(bk.id)}')">
+            <span class="rp-bk-spine" aria-hidden="true"></span>
+            ${(readyTests > 0 || active) ? '<span class="rp-bk-ribbon" aria-hidden="true"></span>' : ''}
+            <span class="rp-bk-face">
+              <span class="rp-bk-brand">${esc(meta.brand)}</span>
+              <span class="rp-bk-num">${esc(meta.numText)}</span>
+              <span class="rp-bk-foot">
+                <span class="rp-bk-pips">${pipsHtml}</span>
+                ${readyTests > 0 ? `<span class="rp-bk-count">${readyTests}/${bk.testsCount}</span>` : '<span class="rp-bk-count is-muted">—</span>'}
+              </span>
+            </span>
           </button>
         `;
-      }).join('');
+      };
+
+      // Organize books onto authentic wooden shelf tiers (balanced 10+10 for All Cam 1–20, 1 row otherwise)
+      const shelfTiers = [];
+      if (state.source === 'cambridge' && state.camGroup === 'all' && visibleBooks.length > 11) {
+        shelfTiers.push({ label: 'Kệ trên · Cam 20 – 11', items: visibleBooks.slice(0, 10), cols: 10, compact: false });
+        shelfTiers.push({ label: 'Kệ dưới · Cam 10 – 1', items: visibleBooks.slice(10), cols: 10, compact: false });
+      } else {
+        const tierLabel = state.source === 'cambridge'
+          ? 'Kệ trọng tâm · Cam 20 – 10'
+          : (state.source === 'volume' ? 'Kệ tuyển tập · Volume 1 – 6' : 'Hồ sơ đề thi · 2026 – 2023');
+        shelfTiers.push({
+          label: tierLabel,
+          items: visibleBooks,
+          cols: visibleBooks.length,
+          compact: state.source !== 'cambridge'
+        });
+      }
+
+      const tiersHtml = shelfTiers.map((tier, idx) => `
+        <div class="rp-shelf-tier ${tier.compact ? 'is-compact-tier' : ''}" data-tier="${idx}">
+          ${shelfTiers.length > 1 ? `<div class="rp-tier-tag">${esc(tier.label)}</div>` : ''}
+          <div class="rp-shelf-row ${tier.compact ? 'is-compact-row' : ''}" style="--shelf-cols:${tier.cols};" role="group" aria-label="${esc(tier.label)}">
+            ${tier.items.map(renderBookCard).join('')}
+            ${tier.compact ? renderBookendSvg() : ''}
+          </div>
+          <div class="rp-shelf-plank" aria-hidden="true"></div>
+        </div>
+      `).join('');
 
       const curBook = books.find((b) => b.id === state.selectedBookId) || books[0];
+      const curMeta = getBookVisualMeta(curBook);
+      const curReadyCount = countReadyTestsInBook(curBook?.id);
+      const curTestStatus = getBookTestStatusMap(curBook?.id);
       const bookPassages = Object.values(d.PASSAGES || {}).filter((p) => p.bookId === curBook?.id);
       const bookFullTests = (d.FULL_TESTS || []).filter((t) => t.bookId === curBook?.id);
 
       // 4 Test tabs inside the selected Book
       const testTabsHtml = [1, 2, 3, 4].map((tNum) => {
-        const hasP = bookPassages.some((p) => (p.testNum || 1) === tNum);
+        const st = curTestStatus[tNum] || {};
+        const hasP = st.hasData;
         const isAct = state.selectedTestNum === tNum;
+        const stateText = st.done ? 'Đã làm' : (hasP ? 'Sẵn sàng' : 'Trống');
         return `
-          <button type="button" class="rp-test-tab ${isAct ? 'active' : ''} ${hasP ? 'has-data' : 'is-empty'}"
-            data-rp-test="${tNum}" onclick="ReadingPracticeApp.selectTestNum(${tNum})">
-            <span>Test ${tNum}</span>
-            <small>${hasP ? 'Sẵn sàng' : 'Trống'}</small>
+          <button type="button"
+            class="rp-test-tab ${isAct ? 'active' : ''} ${hasP ? 'has-data' : 'is-empty'} ${st.done ? 'is-done' : ''}"
+            data-rp-test="${tNum}"
+            aria-pressed="${isAct ? 'true' : 'false'}"
+            onclick="ReadingPracticeApp.selectTestNum(${tNum})">
+            <span class="rp-test-dot" aria-hidden="true"></span>
+            <span class="rp-test-name">Test ${tNum}</span>
+            <small>${stateText}</small>
           </button>
         `;
       }).join('');
 
+      const shelfHeading = state.source === 'cambridge'
+        ? 'Kệ sách Cambridge IELTS'
+        : (state.source === 'volume' ? 'Kệ sách Recent Actual Volume' : 'Kệ hồ sơ Actual Tests');
+      const unitNoun = state.source === 'volume' ? 'tập' : (state.source === 'actual' ? 'năm' : 'cuốn');
+
       shelfHtml = `
-        <div class="rp-shelf-box">
+        <section class="rp-shelf-box rp-bookcase" aria-label="${esc(shelfHeading)}">
           <div class="rp-shelf-top">
-            <div class="rp-shelf-label">${state.source === 'cambridge' ? 'Chọn cuốn Cambridge' : (state.source === 'volume' ? 'Chọn tập Volume' : 'Chọn năm Actual Tests')}</div>
-            ${camGroupToggle}
-          </div>
-          <div class="rp-book-rail" id="rp-book-rail">${bookPillsHtml}</div>
-          <div class="rp-book-detail-head">
-            <div>
-              <strong class="rp-cur-book-title">${esc(curBook?.title || '')}</strong>
-              <span class="rp-cur-book-sub">4 Tests · Chọn từng Passage 1–3 hoặc làm trọn bộ FULL TEST chuẩn phòng thi máy</span>
+            <div class="rp-shelf-title-wrap">
+              <span class="rp-shelf-label">${esc(shelfHeading)}</span>
+              <span class="rp-shelf-stat">${readyBooksCount}/${books.length} ${unitNoun} sẵn sàng</span>
             </div>
-            <div class="rp-test-tabs" id="rp-test-tabs">${testTabsHtml}</div>
+            <div class="rp-shelf-controls">
+              ${camGroupToggle}
+              <div class="rp-shelf-scroll-btns" aria-label="Cuộn kệ sách">
+                <button type="button" class="rp-shelf-nav-btn" aria-label="Cuộn kệ sách sang trái" onclick="ReadingPracticeApp.scrollShelf(-1)">
+                  <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3.5L5.5 8L10 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button type="button" class="rp-shelf-nav-btn" aria-label="Cuộn kệ sách sang phải" onclick="ReadingPracticeApp.scrollShelf(1)">
+                  <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+
+          <div class="rp-book-rail rp-bookcase-tiers" id="rp-book-rail">
+            ${tiersHtml}
+          </div>
+
+          <div class="rp-book-detail-head rp-book-desk">
+            <div class="rp-desk-book">
+              <div class="rp-desk-cover is-${esc(curMeta.kind)} ${curReadyCount > 0 ? 'has-data' : 'is-empty'}" data-era="${esc(curMeta.era)}" aria-hidden="true">
+                <span class="rp-desk-cover-spine"></span>
+                <span class="rp-desk-cover-brand">${esc(curMeta.brand.slice(0, 3))}</span>
+                <span class="rp-desk-cover-num">${esc(curMeta.numText)}</span>
+              </div>
+              <div class="rp-desk-meta">
+                <div class="rp-desk-title-row">
+                  <strong class="rp-cur-book-title">${esc(curBook?.title || '')}</strong>
+                  <span class="rp-desk-badge ${curReadyCount > 0 ? 'is-ready' : 'is-empty'}">
+                    ${curReadyCount > 0 ? `${curReadyCount}/${curBook?.testsCount || 4} Tests sẵn sàng` : 'Chưa nạp đề'}
+                  </span>
+                </div>
+                <span class="rp-cur-book-sub">Chọn từng Passage 1–3 hoặc làm trọn bộ FULL TEST chuẩn phòng thi máy Inspera</span>
+              </div>
+            </div>
+            <div class="rp-test-tabs" id="rp-test-tabs" role="group" aria-label="Chọn bộ Test trong sách">${testTabsHtml}</div>
+          </div>
+        </section>
       `;
 
       // Exact order required by user: Passage 1 -> Passage 2 -> Passage 3 -> FULL TEST
@@ -522,9 +667,16 @@
 
       if (!testPassages.length && !testFulls.length && !q) {
         contentHtml = `
-          <div class="rp-unloaded-box">
+          <div class="rp-unloaded-box" role="status">
+            <div class="rp-unloaded-icon" aria-hidden="true">
+              <svg viewBox="0 0 28 28" fill="none">
+                <path d="M6 5.5C6 4.67 6.67 4 7.5 4H20.5C21.33 4 22 4.67 22 5.5V22.5C22 23.33 21.33 24 20.5 24H7.5C6.67 24 6 23.33 6 22.5V5.5Z" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M10 4V24" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M13.5 10.5H18.5M13.5 14H17.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
             <div class="rp-unloaded-title">${esc(curBook?.title || '')} · Test ${state.selectedTestNum} chưa nạp đề</div>
-            <p class="rp-unloaded-desc">Khung danh mục đã sẵn sàng đủ 4 phần (<strong>Passage 1 → Passage 2 → Passage 3 → FULL TEST</strong>). Bạn chỉ cần thêm bài vào <code>data/reading_practice_data.js</code> với <code>bookId: '${esc(curBook?.id || '')}', testNum: ${state.selectedTestNum}</code> là đề sẽ tự hiện tại đây.</p>
+            <p class="rp-unloaded-desc">Khung danh mục đã sẵn sàng đủ 4 phần (<strong>Passage 1 → Passage 2 → Passage 3 → FULL TEST</strong>). Thêm bài vào <code>data/reading_practice_data.js</code> với <code>bookId: '${esc(curBook?.id || '')}', testNum: ${state.selectedTestNum}</code> để mở khóa ngay.</p>
             <button type="button" class="btn btn-primary rp-btn-sm" onclick="ReadingPracticeApp.jumpToFirstReady('${esc(state.source)}')">Mở bộ đề đang sẵn sàng →</button>
           </div>
         `;
@@ -543,7 +695,7 @@
               <span class="rp-section-badge">${esc(sec.badge)}</span>
             </div>
             ${sec.items.length
-              ? `<div class="rp-cards-grid">${sec.items.map((it) => renderHubCard(it, sec.isFull)).join('')}</div>`
+              ? `<div class="rp-cards-grid ${sec.items.length === 1 ? 'is-single' : ''}">${sec.items.map((it) => renderHubCard(it, sec.isFull)).join('')}</div>`
               : `<div class="rp-empty-inline">Không có đề khớp trong mục ${esc(sec.title)}.</div>`}
           </div>
         `).join('');
@@ -1472,6 +1624,38 @@
       state.selectedBookId = bookId;
       state.selectedTestNum = 1;
       renderHub();
+      const btn = document.querySelector(`.rp-book-pill[data-rp-book="${bookId}"]`);
+      if (btn && typeof btn.scrollIntoView === 'function') {
+        btn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    },
+
+    onShelfKeydown(ev, bookId) {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key)) return;
+      const pills = Array.from(document.querySelectorAll('#rp-book-rail .rp-book-pill'));
+      if (!pills.length) return;
+      const idx = pills.findIndex((el) => el.dataset.rpBook === bookId);
+      if (idx < 0) return;
+      ev.preventDefault();
+      let nextIdx = idx;
+      if (ev.key === 'ArrowRight') nextIdx = Math.min(pills.length - 1, idx + 1);
+      else if (ev.key === 'ArrowLeft') nextIdx = Math.max(0, idx - 1);
+      else if (ev.key === 'Home') nextIdx = 0;
+      else if (ev.key === 'End') nextIdx = pills.length - 1;
+      const target = pills[nextIdx];
+      if (target) {
+        target.focus();
+        target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    },
+
+    scrollShelf(dir) {
+      const rows = document.querySelectorAll('#rp-book-rail .rp-shelf-row');
+      rows.forEach((row) => {
+        if (row.scrollWidth > row.clientWidth + 4) {
+          row.scrollBy({ left: (dir || 1) * 280, behavior: 'smooth' });
+        }
+      });
     },
 
     selectTestNum(num) {
