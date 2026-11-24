@@ -8430,10 +8430,21 @@ html[data-skill="listening"] .fc-face-front.is-listening-revealed #fc-front-pron
 .lt-step-dot {
   padding: 3px 9px;
   border-radius: 999px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
   font-size: 11px;
   font-weight: 700;
   color: var(--ink-2, #4b5563);
   white-space: nowrap;
+}
+.lt-step-dot.is-clickable {
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.lt-step-dot.is-clickable:hover:not(.is-active) {
+  background: var(--surface, #ffffff);
+  color: var(--ink, #111827);
 }
 .lt-step-dot.is-active {
   background: var(--accent, #2f6b32);

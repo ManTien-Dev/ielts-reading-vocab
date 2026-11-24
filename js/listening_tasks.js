@@ -421,6 +421,14 @@
     document.getElementById('modal-listening-brief')?.classList.remove('open');
   }
 
+  function isTeacherMode() {
+    try {
+      return Boolean(window.__VOCAB_BRIDGE__?.isTeacherUser?.());
+    } catch (_) {
+      return false;
+    }
+  }
+
   function openTaskBrief(taskId) {
     const task = (getTasksData().tasks || []).find((t) => t.id === taskId);
     if (!task) return;
@@ -450,6 +458,13 @@
            </div>`
         : '';
 
+      const teacherQuickBtns = (isTeacherMode() && hasFull3)
+        ? `
+          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 2)">Test 2</button>
+          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 3)">Test 3</button>
+        `
+        : '';
+
       bodyEl.innerHTML = `
         <div class="task-notice-box" style="margin-bottom:14px;font-size:14px;line-height:1.6;">
           <div><strong>Chủ đề:</strong> ${esc(task.topicTitle || task.theme || '')}</div>
@@ -459,6 +474,7 @@
         ${scoreRow}
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Học Flashcard (${totalW} từ)</button>
+          ${teacherQuickBtns}
           <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}')">${hasFull3 ? 'Bắt đầu 3 Test →' : 'Làm Test 1 →'}</button>
         </div>
       `;
@@ -724,11 +740,18 @@
       const has3 = Boolean(examState.task.hasFullTests);
       if (has3) {
         const s3Lbl = examState.task.test3MapLabelling ? '3. Map' : '3. Note';
+        const canSwitch = isTeacherMode();
         stepper.innerHTML = [
           { n: 1, lbl: '1. Viết' },
           { n: 2, lbl: '2. Hội thoại' },
           { n: 3, lbl: s3Lbl },
-        ].map((st) => `<span class="lt-step-dot ${examState.stage === st.n ? 'is-active' : (examState.stage > st.n ? 'is-done' : '')}">${st.lbl}</span>`).join('');
+        ].map((st) => {
+          const cls = `lt-step-dot ${examState.stage === st.n ? 'is-active' : (examState.stage > st.n ? 'is-done' : '')}${canSwitch ? ' is-clickable' : ''}`;
+          if (canSwitch) {
+            return `<button type="button" class="${cls}" onclick="ListeningTasksModule.goToStage(${st.n})" title="Giáo viên: chuyển nhanh sang Test ${st.n}">${st.lbl}</button>`;
+          }
+          return `<span class="${cls}">${st.lbl}</span>`;
+        }).join('');
         stepper.style.display = 'inline-flex';
       } else {
         stepper.style.display = 'none';
@@ -821,7 +844,7 @@
             </div>
             <div class="lt-sum-actions">
               ${hasT2
-                ? `<button type="button" class="btn btn-primary" onclick="ListeningTasksModule.goToStage(2)">Sang Test 2 (12 Hội Thoại) →</button>`
+                ? `<button type="button" class="btn btn-primary" onclick="ListeningTasksModule.goToStage(2)">Sang Test 2 →</button>`
                 : `<button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeExam()">Hoàn tất &amp; Quay lại</button>`}
             </div>
           </div>
@@ -1006,9 +1029,7 @@
       const score = convs.reduce((acc, c, i) => acc + (examState.t2Answers[i] === c.answerIndex ? 1 : 0), 0);
       const pct = Math.round((score / Math.max(1, convs.length)) * 100);
       const hasT3 = Boolean(examState.task.test3MapLabelling || examState.task.test3NoteCompletion);
-      const t3BtnLabel = examState.task.test3MapLabelling
-        ? 'Sang Test 3 (Bản đồ Map Labelling) →'
-        : 'Sang Test 3 (Note Completion) →';
+      const t3BtnLabel = 'Sang Test 3 →';
 
       body.innerHTML = `
         <div class="lt-summary-card">
@@ -1751,7 +1772,13 @@
   function goToStage(stageNum) {
     if (!examState) return;
     stopAllAudio();
-    examState.stage = stageNum;
+    const target = Number(stageNum);
+    if (isTeacherMode()) {
+      if (target === 1 && examState.t1Done) { examState.t1Done = false; examState.t1Idx = 0; }
+      if (target === 2 && examState.t2Done) { examState.t2Done = false; examState.t2Idx = 0; }
+      if (target === 3 && examState.t3Phase === 'submitted') { examState.t3Phase = 'preread'; }
+    }
+    examState.stage = target;
     renderExamStage();
   }
 
