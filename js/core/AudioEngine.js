@@ -16,6 +16,11 @@
       this._preferredVoiceName = this._loadPreferredVoiceName();
       this._studioAudio = null;
       this._audioUnlocked = false;
+      this._audioCtx = null;
+      this._compressor = null;
+      this._activeSource = null;
+      this._youdaoCache = new Map();
+      this._proxyFailed = false;
       this._activeUtterance = null;
       this._speakSeq = 0;
       this._watchdog = null;
@@ -66,7 +71,163 @@
       return this._studioAudio;
     }
 
+    _ensureAudioCtx() {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        if (!this._audioCtx) {
+          this._audioCtx = new Ctx();
+          const comp = this._audioCtx.createDynamicsCompressor();
+          comp.threshold.value = -14;
+          comp.knee.value = 12;
+          comp.ratio.value = 4;
+          comp.attack.value = 0.003;
+          comp.release.value = 0.12;
+          comp.connect(this._audioCtx.destination);
+          this._compressor = comp;
+        }
+        if (this._audioCtx.state === 'suspended') {
+          this._audioCtx.resume().catch(() => {});
+        }
+        return this._audioCtx;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    _computeNormalizedGain(buffer) {
+      try {
+        const TARGET_RMS = 0.20;
+        const SILENCE_FLOOR = 0.015;
+        let sumSq = 0;
+        let activeSamples = 0;
+        let peak = 0;
+        const chCount = Math.min(2, buffer.numberOfChannels || 1);
+        for (let c = 0; c < chCount; c++) {
+          const data = buffer.getChannelData(c);
+          for (let i = 0; i < data.length; i++) {
+            const a = Math.abs(data[i]);
+            if (a > peak) peak = a;
+            if (a >= SILENCE_FLOOR) {
+              sumSq += a * a;
+              activeSamples++;
+            }
+          }
+        }
+        if (peak < 0.005) return 1.0;
+        const rms = activeSamples > 64 ? Math.sqrt(sumSq / activeSamples) : (peak * 0.35);
+        let gain = TARGET_RMS / Math.max(rms, 0.025);
+        if (peak * gain > 0.92) gain = 0.92 / peak;
+        return Math.max(0.45, Math.min(3.2, gain));
+      } catch (_) {
+        return 1.0;
+      }
+    }
+
+    _stopWebAudioSource() {
+      if (this._activeSource) {
+        try {
+          this._activeSource.onended = null;
+          this._activeSource.stop();
+          this._activeSource.disconnect();
+        } catch (_) {}
+        this._activeSource = null;
+      }
+    }
+
+    _getYoudaoProxyUrl(clean, typeCode) {
+      try {
+        const base = typeof window.__APP_BASE_PATH__ === 'string' ? window.__APP_BASE_PATH__ : '';
+        return `${base}/api/youdao-tts?audio=${encodeURIComponent(clean)}&type=${typeCode}`;
+      } catch (_) {
+        return `/api/youdao-tts?audio=${encodeURIComponent(clean)}&type=${typeCode}`;
+      }
+    }
+
+    _playNormalizedYoudaoViaWebAudio(clean, accent, rate, seq, allowFallbackToBrowser) {
+      if (this._proxyFailed || window.location.protocol === 'file:') return false;
+      const ctx = this._ensureAudioCtx();
+      if (!ctx || !this._compressor) return false;
+
+      const isGb = String(accent).toLowerCase().startsWith('en-gb');
+      const typeCode = isGb ? 1 : 2;
+      const cacheKey = `${typeCode}:${clean.toLowerCase()}`;
+      const numRate = Number(rate);
+      const studioRate = (Number.isFinite(numRate) && Math.abs(numRate - 0.92) > 0.14)
+        ? Math.max(0.68, Math.min(1.35, numRate))
+        : 1.0;
+
+      const startDecoded = (entry) => {
+        if (this._speakSeq !== seq) return;
+        const runPlay = () => {
+          if (this._speakSeq !== seq) return;
+          try {
+            this._stopWebAudioSource();
+            const src = ctx.createBufferSource();
+            src.buffer = entry.buffer;
+            src.playbackRate.value = studioRate;
+            const gainNode = ctx.createGain();
+            gainNode.gain.value = entry.gain;
+            src.connect(gainNode);
+            gainNode.connect(this._compressor);
+            this._activeSource = src;
+            src.onended = () => {
+              if (this._activeSource === src) this._activeSource = null;
+              if (this._speakSeq === seq) this._emitPlaybackState(false);
+            };
+            this._emitPlaybackState(true);
+            src.start(0);
+          } catch (_) {
+            this._playDirectYoudaoElement(clean, accent, rate, seq, allowFallbackToBrowser);
+          }
+        };
+        if (ctx.state === 'suspended') {
+          ctx.resume().then(runPlay).catch(() => {
+            this._playDirectYoudaoElement(clean, accent, rate, seq, allowFallbackToBrowser);
+          });
+        } else {
+          runPlay();
+        }
+      };
+
+      const cached = this._youdaoCache.get(cacheKey);
+      if (cached) {
+        startDecoded(cached);
+        return true;
+      }
+
+      const proxyUrl = this._getYoudaoProxyUrl(clean, typeCode);
+      fetch(proxyUrl)
+        .then((res) => {
+          if (!res.ok) {
+            if (res.status === 404) this._proxyFailed = true;
+            throw new Error(`HTTP ${res.status}`);
+          }
+          return res.arrayBuffer();
+        })
+        .then((arr) => {
+          if (this._speakSeq !== seq) return null;
+          return ctx.decodeAudioData(arr.slice(0));
+        })
+        .then((buffer) => {
+          if (!buffer || this._speakSeq !== seq) return;
+          const entry = { buffer, gain: this._computeNormalizedGain(buffer) };
+          if (this._youdaoCache.size >= 250) {
+            const firstKey = this._youdaoCache.keys().next().value;
+            if (firstKey) this._youdaoCache.delete(firstKey);
+          }
+          this._youdaoCache.set(cacheKey, entry);
+          startDecoded(entry);
+        })
+        .catch(() => {
+          if (this._speakSeq !== seq) return;
+          this._playDirectYoudaoElement(clean, accent, rate, seq, allowFallbackToBrowser);
+        });
+      return true;
+    }
+
     unlockAudio() {
+      this._ensureAudioCtx();
       if (this._audioUnlocked) return;
       this._audioUnlocked = true;
       try {
@@ -208,6 +369,7 @@
     stop() {
       this._speakSeq++;
       this._clearWatchdogs();
+      this._stopWebAudioSource();
       if (this._studioAudio) {
         try {
           this._studioAudio.onplaying = null;
@@ -239,6 +401,14 @@
     }
 
     playYoudaoAudio(clean, accent = 'en-US', rate = 0.92, seq = 0, allowFallbackToBrowser = true) {
+      if (!this.canUseYoudaoAudio(clean)) return false;
+      if (this._playNormalizedYoudaoViaWebAudio(clean, accent, rate, seq, allowFallbackToBrowser)) {
+        return true;
+      }
+      return this._playDirectYoudaoElement(clean, accent, rate, seq, allowFallbackToBrowser);
+    }
+
+    _playDirectYoudaoElement(clean, accent = 'en-US', rate = 0.92, seq = 0, allowFallbackToBrowser = true) {
       if (!this.canUseYoudaoAudio(clean)) return false;
       try {
         const audio = this._ensureStudioAudio();
@@ -302,7 +472,7 @@
               try { audio.pause(); } catch (_) {}
               fallbackToBrowser();
             }
-          }, 2200);
+          }, 4200);
         }
         return true;
       } catch (_) {
@@ -415,6 +585,7 @@
       if (!clean) return false;
       const seq = ++this._speakSeq;
       this._clearWatchdogs();
+      this._stopWebAudioSource();
       if (this._studioAudio) {
         try {
           this._studioAudio.onplaying = null;
@@ -429,12 +600,12 @@
         }
       } catch (_) {}
 
-      // Desktop: prefer locked browser neural voice FIRST for 100% consistent loudness across all 3,864 words
-      // (avoids Youdao MP3 per-word loudness jumps & fallback volume spikes). Mobile/WebKit keeps studio-first.
+      // Always prefer Youdao voice (RMS-normalized via /api/youdao-tts + Web Audio API so every word has identical volume!)
+      // Only use browser voice if user explicitly pinned a custom voice in Settings or engine === 'browser'.
       const hasPinnedBrowserVoice = Boolean(respectCustom && this._preferredVoiceName);
-      const useConsistentBrowser = (engine === 'browser') || hasPinnedBrowserVoice || (engine === 'auto' && this._hasDesktopBrowserVoice(accent));
+      const preferYoudao = (engine === 'youdao') || (engine === 'auto' && !hasPinnedBrowserVoice);
 
-      if (!useConsistentBrowser) {
+      if (preferYoudao) {
         if (this.playYoudaoAudio(clean, accent, rate, seq, true)) {
           return true;
         }
