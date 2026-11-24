@@ -1179,7 +1179,7 @@
   const SOURCES = [
     { id: 'cambridge', label: 'Cambridge', bookTitle: 'Cambridge IELTS 1 – 20', desc: 'Đầy đủ 20/20 cuốn Cambridge University Press (194 bài đọc · 71 Full Tests) — đã kiểm định sạch 0 lỗi đề & đáp án gốc.' },
     { id: 'volume', label: 'Volume', bookTitle: 'Real Reading Test — Volume 1–10', desc: 'Đầy đủ 10/10 tập Real Reading Test (114 bài đọc · 38 Full Tests) — chia rõ Test 1–4, Passage 1–3 & Full Test.' },
-    { id: 'actual', label: 'Recent Actual', bookTitle: 'IELTS Reading Recent Actual Tests', desc: 'Kho 270 bài đề thi thật đã kiểm định sạch chia 23 bộ (90 Full Tests) — 100% tách câu & đáp án chuẩn.' },
+    { id: 'actual', label: 'Recent Actual', bookTitle: 'IELTS Reading Recent Actual Tests', desc: 'Ngân hàng bài đọc đề thi thật gần đây — chọn luyện trực tiếp theo Passage 1, Passage 2, Passage 3 hoặc Full Test 60 phút.' },
     { id: 'news', label: 'News', bookTitle: 'The Economist · Nature · BBC Future', desc: 'Đọc báo học thuật chọn lọc theo chủ đề — dịch song ngữ & bấm tra từ lưu thẳng về Flashcard.' }
   ];
 

@@ -267,7 +267,9 @@
     view: 'portal',         // 'portal' | 'source' | 'exam'
     source: 'cambridge',    // 'cambridge' | 'volume' | 'actual' | 'news'
     camGroup: 'recent',     // 'recent' (Cam 10-20) | 'classic' (Cam 1-9)
-    actualGroup: 'recent',  // 'recent' (Bộ 1-10) | 'all' (Tất cả 30 bộ)
+    actualTab: 'p1',        // 'p1' | 'p2' | 'p3' | 'full'
+    actualQType: '',        // '' | 'tfng' | 'ynng' | 'gap' | 'select' | 'mcq'
+    actualPage: 1,
     selectedBookId: 'cam_20',
     selectedTestNum: 1,     // 1..4
     partFilter: 'all',      // 'all' | 'p1' | 'p2' | 'p3' | 'full'
@@ -893,10 +895,10 @@
       const summary = d.BANK_SUMMARY || {};
       let rightBadge = avgBand ? `Band ${avgBand}` : '';
       if (!rightBadge) {
-        if (s.id === 'cambridge') rightBadge = `${summary.cambridge?.booksReady || 20}/20 cuốn · ${summary.cambridge?.passages || 194} bài`;
-        else if (s.id === 'volume') rightBadge = `10 tập · ${summary.volume?.passages || 120} bài`;
-        else if (s.id === 'actual') rightBadge = `${summary.actual?.booksTotal || 30} bộ · ${summary.actual?.passages || 349} bài`;
-        else rightBadge = `${allPassages.filter((p) => p.source === 'news').length} bài báo`;
+        if (s.id === 'cambridge') rightBadge = `${summary.cambridge?.booksReady || 20}/20 cuốn`;
+        else if (s.id === 'volume') rightBadge = `10 tập · Real Reading`;
+        else if (s.id === 'actual') rightBadge = `Passage 1–3 · Full Test`;
+        else rightBadge = `Song ngữ · Tra từ`;
       }
 
       const actionsHtml = s.id === 'news'
@@ -904,10 +906,15 @@
           <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('news')">Chọn chủ đề</button>
           <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('news')">Đọc báo ngay</button>
         `
-        : `
-          <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'all')">Chọn bộ đề</button>
-          <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'full')">Làm Full Test</button>
-        `;
+        : s.id === 'actual'
+          ? `
+            <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('actual', 'p1')">Chọn bài đọc</button>
+            <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('actual', 'full')">Làm Full Test</button>
+          `
+          : `
+            <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'all')">Chọn bộ đề</button>
+            <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'full')">Làm Full Test</button>
+          `;
 
       return `
         <div class="tot-exam-card ink-brackets has-stamp rp-portal-card" data-rp-portal="${esc(s.id)}"
@@ -975,6 +982,7 @@
     const sources = d.SOURCES || [];
     const curSourceObj = sources.find((s) => s.id === state.source) || sources[0];
     const isNews = state.source === 'news';
+    const isActual = state.source === 'actual';
     const q = state.searchQuery.trim().toLowerCase();
     const matchesSearch = (obj) => {
       if (!q) return true;
@@ -986,7 +994,94 @@
     let subBarHtml = '';
     let contentHtml = '';
 
-    if (!isNews) {
+    if (isActual) {
+      const actualTab = ['p1', 'p2', 'p3', 'full'].includes(state.actualTab) ? state.actualTab : 'p1';
+      const isFullTab = actualTab === 'full';
+      const qtypeFilters = [
+        { key: 'tfng', label: 'T / F / NG' },
+        { key: 'ynng', label: 'Y / N / NG' },
+        { key: 'gap', label: 'Gap Fill' },
+        { key: 'select', label: 'Matching' },
+        { key: 'mcq', label: 'Multiple Choice' }
+      ];
+
+      shelfHtml = `
+        <div class="rp-actual-toolbar">
+          <div class="rp-actual-top-row">
+            <div class="rp-actual-tabs" role="tablist" aria-label="Chọn phần đề thi thật">
+              <button type="button" role="tab" class="rp-actual-tab ${actualTab === 'p1' ? 'active' : ''}" aria-selected="${actualTab === 'p1' ? 'true' : 'false'}" onclick="ReadingPracticeApp.setActualTab('p1')">Passage 1</button>
+              <button type="button" role="tab" class="rp-actual-tab ${actualTab === 'p2' ? 'active' : ''}" aria-selected="${actualTab === 'p2' ? 'true' : 'false'}" onclick="ReadingPracticeApp.setActualTab('p2')">Passage 2</button>
+              <button type="button" role="tab" class="rp-actual-tab ${actualTab === 'p3' ? 'active' : ''}" aria-selected="${actualTab === 'p3' ? 'true' : 'false'}" onclick="ReadingPracticeApp.setActualTab('p3')">Passage 3</button>
+              <button type="button" role="tab" class="rp-actual-tab ${actualTab === 'full' ? 'active' : ''}" aria-selected="${actualTab === 'full' ? 'true' : 'false'}" onclick="ReadingPracticeApp.setActualTab('full')">Full Test</button>
+            </div>
+            <input type="search" class="rp-search-input rp-actual-search" id="rp-hub-search"
+              value="${esc(state.searchQuery)}"
+              placeholder="Tìm tên bài đọc..."
+              oninput="ReadingPracticeApp.onSearch(this.value)" autocomplete="off">
+          </div>
+          ${!isFullTab ? `
+            <div class="rp-actual-qtypes" role="group" aria-label="Lọc theo dạng câu hỏi">
+              ${qtypeFilters.map((qf) => `
+                <button type="button" class="rp-actual-qpill ${state.actualQType === qf.key ? 'active' : ''}"
+                  aria-pressed="${state.actualQType === qf.key ? 'true' : 'false'}"
+                  onclick="ReadingPracticeApp.toggleActualQType('${qf.key}')">${esc(qf.label)}</button>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      if (state.loadingBank === 'actual') {
+        contentHtml = `
+          <div class="rp-unloaded-box rp-bank-loading" role="status" aria-live="polite">
+            <div class="rp-unloaded-title">Đang mở ngân hàng bài đọc…</div>
+            <p class="rp-unloaded-desc">Hệ thống đang nạp danh sách bài đọc, câu hỏi và đáp án chuẩn.</p>
+          </div>
+        `;
+      } else {
+        const PAGE_SIZE = 12;
+        const passageHasType = (p, typeKey) => {
+          if (!typeKey) return true;
+          return (p.groups || []).some((g) =>
+            g.type === typeKey || (g.questions || []).some((qq) => qq.type === typeKey)
+          );
+        };
+
+        let allItems = [];
+        if (isFullTab) {
+          allItems = (d.FULL_TESTS || [])
+            .filter((t) => t.source === 'actual')
+            .map((t, idx) => ({ ...t, _actualFullIdx: idx + 1 }))
+            .filter((t) => matchesSearch(t));
+        } else {
+          const pNum = actualTab === 'p2' ? 2 : (actualTab === 'p3' ? 3 : 1);
+          allItems = Object.values(d.PASSAGES || {})
+            .filter((p) => p.source === 'actual' && Number(p.passageNum) === pNum)
+            .filter((p) => passageHasType(p, state.actualQType) && matchesSearch(p));
+        }
+
+        const totalPages = Math.max(1, Math.ceil(allItems.length / PAGE_SIZE));
+        const curPage = Math.max(1, Math.min(totalPages, Number(state.actualPage) || 1));
+        state.actualPage = curPage;
+        const pageItems = allItems.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE);
+
+        const pagerHtml = totalPages > 1 ? `
+          <nav class="rp-actual-pager" aria-label="Chuyển trang bài đọc">
+            <button type="button" class="rp-pager-btn" ${curPage <= 1 ? 'disabled' : ''} onclick="ReadingPracticeApp.setActualPage(${curPage - 1})">← Trang trước</button>
+            <span class="rp-pager-info tabular">Trang ${curPage} / ${totalPages}</span>
+            <button type="button" class="rp-pager-btn" ${curPage >= totalPages ? 'disabled' : ''} onclick="ReadingPracticeApp.setActualPage(${curPage + 1})">Trang sau →</button>
+          </nav>
+        ` : '';
+
+        contentHtml = `
+          <div class="rp-section-block" data-rp-section="${esc(actualTab)}">
+            ${pageItems.length
+              ? `<div class="rp-cards-grid">${pageItems.map((it) => renderHubCard(it, isFullTab)).join('')}</div>${pagerHtml}`
+              : '<div class="rp-empty-inline">Không tìm thấy bài đọc khớp với bộ lọc hiện tại.</div>'}
+          </div>
+        `;
+      }
+    } else if (!isNews) {
       const books = getBooksForSource(state.source);
 
       const visibleBooks = state.source === 'cambridge'
@@ -1330,14 +1425,22 @@
         </div>
       `;
 
+    const isActualItem = item.source === 'actual';
+    const displaySeries = isActualItem
+      ? (isFull ? 'Recent Actual · 3 Passages' : '')
+      : (item.series || item.topic || '');
+    const displayTitle = (isActualItem && isFull && item._actualFullIdx)
+      ? `Full Test #${item._actualFullIdx}`
+      : item.title;
+
     return `
       <article class="rp-card ${isFull ? 'rp-card-full' : ''}" data-rp-item="${esc(item.id)}">
         <div class="rp-card-top">
           <span class="rp-tag ${isFull ? 'is-full' : isNews ? 'is-news' : ''}">${esc(pillLabel)}</span>
           ${scoreBadge}
         </div>
-        <div class="rp-card-series">${esc(item.series || item.topic || '')}</div>
-        <h4 class="rp-card-title">${esc(item.title)}</h4>
+        ${displaySeries ? `<div class="rp-card-series">${esc(displaySeries)}</div>` : ''}
+        <h4 class="rp-card-title">${esc(displayTitle)}</h4>
         <p class="rp-card-sub">${esc(item.subtitle || '')}</p>
         <div class="rp-card-tags">
           ${qTypes.map((qt) => `<span class="rp-qtype-tag">${esc(qt)}</span>`).join('')}
@@ -2648,7 +2751,13 @@
       state.partFilter = part || 'all';
       state.newsTopic = 'all';
       state.searchQuery = '';
+      if (targetSrc === 'actual') {
+        state.actualTab = ['p1', 'p2', 'p3', 'full'].includes(part) ? part : 'p1';
+        state.actualQType = '';
+        state.actualPage = 1;
+      }
       const pickDefaultBook = () => {
+        if (state.source === 'actual' || state.source === 'news') return;
         const books = getBooksForSource(state.source);
         if (books.length) {
           const ready = books.find((b) => countReadyTestsInBook(b.id) > 0) || books[0];
@@ -2661,7 +2770,7 @@
       renderHub();
       loadPromise.then(() => {
         if (state.view === 'source' && state.source === targetSrc) {
-          if (countReadyTestsInBook(state.selectedBookId) === 0) pickDefaultBook();
+          if (targetSrc !== 'actual' && countReadyTestsInBook(state.selectedBookId) === 0) pickDefaultBook();
           renderHub();
         }
       });
@@ -2680,9 +2789,23 @@
       closeAntiCheatModal();
     },
 
-    setActualGroup(grp) {
-      state.actualGroup = grp === 'all' ? 'all' : 'recent';
+    setActualTab(tab) {
+      state.actualTab = ['p1', 'p2', 'p3', 'full'].includes(tab) ? tab : 'p1';
+      state.actualPage = 1;
+      if (state.actualTab === 'full') state.actualQType = '';
       renderHub();
+    },
+
+    toggleActualQType(qtype) {
+      state.actualQType = state.actualQType === qtype ? '' : String(qtype || '');
+      state.actualPage = 1;
+      renderHub();
+    },
+
+    setActualPage(page) {
+      state.actualPage = Math.max(1, Number(page) || 1);
+      renderHub();
+      document.querySelector('.rp-actual-toolbar')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
     },
 
     selectBook(bookId) {
@@ -2751,6 +2874,7 @@
 
     onSearch(val) {
       state.searchQuery = String(val || '');
+      state.actualPage = 1;
       renderHub();
       const inp = document.getElementById('rp-hub-search');
       if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }

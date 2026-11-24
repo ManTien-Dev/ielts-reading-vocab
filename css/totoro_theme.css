@@ -13119,3 +13119,160 @@ mark.rp-hl-preview {
 [data-theme="dark"] .rp-lock-hub-sub {
   color: #fecaca;
 }
+
+/* =========================================================
+   RECENT ACTUAL TESTS — PASSAGE-FIRST BANK (NO FAKE BOOKS)
+   ========================================================= */
+.rp-actual-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--paper-2, rgba(255, 255, 255, 0.58));
+}
+.rp-actual-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rp-actual-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 11px;
+  background: rgba(44, 52, 46, 0.05);
+  border: 1px solid rgba(44, 52, 46, 0.08);
+}
+.rp-actual-tab {
+  height: 32px;
+  padding: 0 15px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2, #4d544f);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+.rp-actual-tab:hover {
+  color: var(--ink, #1f2421);
+}
+.rp-actual-tab.active {
+  background: var(--accent, #436846);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(45, 76, 48, 0.22);
+}
+.rp-actual-search {
+  width: min(260px, 100%);
+  height: 36px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.rp-actual-qtypes {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid rgba(44, 52, 46, 0.07);
+}
+.rp-actual-qpill {
+  height: 27px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(44, 52, 46, 0.13);
+  background: transparent;
+  color: var(--ink-2, #525954);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.rp-actual-qpill:hover {
+  border-color: rgba(67, 104, 70, 0.42);
+  color: var(--ink, #1f2421);
+}
+.rp-actual-qpill.active {
+  background: rgba(67, 104, 70, 0.12);
+  border-color: rgba(67, 104, 70, 0.48);
+  color: #2c5230;
+  font-weight: 700;
+}
+.rp-actual-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(44, 52, 46, 0.08);
+}
+.rp-pager-btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--paper, #fbf9f4);
+  color: var(--ink, #1f2421);
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.rp-pager-btn:hover:not(:disabled) {
+  border-color: rgba(67, 104, 70, 0.45);
+  background: rgba(67, 104, 70, 0.06);
+}
+.rp-pager-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.rp-pager-info {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-2, #545b56);
+}
+
+[data-theme="dark"] .rp-actual-toolbar {
+  background: rgba(255, 255, 255, 0.03);
+}
+[data-theme="dark"] .rp-actual-tabs {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.09);
+}
+[data-theme="dark"] .rp-actual-qtypes,
+[data-theme="dark"] .rp-actual-pager {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme="dark"] .rp-actual-qpill {
+  border-color: rgba(255, 255, 255, 0.14);
+}
+[data-theme="dark"] .rp-actual-qpill.active {
+  background: rgba(134, 189, 138, 0.16);
+  border-color: rgba(134, 189, 138, 0.5);
+  color: #b7e4bc;
+}
+
+@media (max-width: 720px) {
+  .rp-actual-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .rp-actual-tab {
+    padding: 0 6px;
+    font-size: 12px;
+  }
+  .rp-actual-search {
+    width: 100%;
+  }
+}
