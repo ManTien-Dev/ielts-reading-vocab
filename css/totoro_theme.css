@@ -10295,28 +10295,29 @@ body.rp-exam-fullscreen {
 
 /* =========================================================
    PRACTICE ATELIER — TOTORO MUJI STATIONERY DESIGN SYSTEM
+   (Always bright eye-friendly paper; isolated from outer dark mode)
    ========================================================= */
 .ins-mode-practice {
-  --prac-canvas: var(--bg, #eaece8);
+  --prac-canvas: #eaece8;
   --prac-dot: rgba(36, 34, 31, 0.068);
-  --prac-sheet: var(--surface, #fdfbf6);
-  --prac-sheet-sub: var(--surface-panel, #faf7f0);
-  --prac-sand: var(--surface-item, #efe6d8);
-  --prac-sand-deep: var(--surface-muted, #eae0d1);
-  --prac-ink: var(--ink, #24221f);
-  --prac-ink-2: var(--ink-2, #524d45);
-  --prac-ink-3: var(--ink-3, #7e776c);
-  --prac-bd: var(--border, rgba(36, 34, 31, 0.115));
-  --prac-bd-strong: var(--border-strong, rgba(36, 34, 31, 0.2));
-  --prac-accent: var(--accent, #4e724d);
-  --prac-accent-soft: var(--accent-soft, #e4ede0);
-  --prac-accent-ink: var(--accent-ink, #fdfbf6);
-  --prac-streak: var(--streak, #9c6931);
-  --prac-danger: var(--danger, #b86557);
-  --prac-danger-soft: var(--danger-soft, #f5e5e0);
-  --prac-lip: var(--lip-btn, #d4d7cf);
-  --prac-lip-card: var(--lip-card, #d1d4cc);
-  --prac-shadow-card: 0 3px 0 var(--prac-lip-card), 0 14px 32px -16px rgba(36, 34, 31, 0.16), 0 2px 6px rgba(36, 34, 31, 0.04);
+  --prac-sheet: #fdfbf6;
+  --prac-sheet-sub: #faf7f0;
+  --prac-sand: #efe6d8;
+  --prac-sand-deep: #eae0d1;
+  --prac-ink: #24221f;
+  --prac-ink-2: #524d45;
+  --prac-ink-3: #7e776c;
+  --prac-bd: rgba(36, 34, 31, 0.115);
+  --prac-bd-strong: rgba(36, 34, 31, 0.2);
+  --prac-accent: #4e724d;
+  --prac-accent-soft: #e4ede0;
+  --prac-accent-ink: #fdfbf6;
+  --prac-streak: #9c6931;
+  --prac-danger: #b86557;
+  --prac-danger-soft: #f5e5e0;
+  --prac-lip: #d4d7cf;
+  --prac-lip-card: #d1d4cc;
+  --prac-shadow-card: 0 2px 0 var(--prac-lip-card), 0 8px 20px -14px rgba(36, 34, 31, 0.12);
 
   --ins-bg: var(--prac-sheet);
   --ins-hdr: var(--prac-sheet);
@@ -10353,27 +10354,27 @@ body.rp-exam-fullscreen {
   --prac-lip-card: #dbe1e8;
   --prac-shadow-card: 0 3px 0 #dbe1e8, 0 12px 26px -14px rgba(15, 23, 42, 0.10);
 }
-.ins-mode-practice.ins-contrast-dark {
-  --prac-canvas: #0c0c0b;
-  --prac-dot: rgba(245, 241, 233, 0.055);
-  --prac-sheet: #1d1b18;
-  --prac-sheet-sub: #25231e;
-  --prac-sand: #2a2722;
-  --prac-sand-deep: #322e27;
-  --prac-ink: #f5f1e9;
-  --prac-ink-2: #c2baac;
-  --prac-ink-3: #8f877a;
-  --prac-bd: rgba(245, 241, 233, 0.13);
-  --prac-bd-strong: rgba(245, 241, 233, 0.24);
-  --prac-accent: #8ab886;
-  --prac-accent-soft: rgba(138, 184, 134, 0.18);
-  --prac-accent-ink: #111811;
-  --prac-streak: #e2b378;
-  --prac-danger: #e59587;
-  --prac-danger-soft: rgba(229, 149, 135, 0.18);
-  --prac-lip: #070706;
-  --prac-lip-card: #050504;
-  --prac-shadow-card: inset 0 1px 0 rgba(255, 250, 240, 0.08), 0 3px 0 #050504, 0 18px 34px -12px rgba(0, 0, 0, 0.72);
+.ins-mode-practice.ins-contrast-sepia {
+  --prac-canvas: #ebe2ce;
+  --prac-dot: rgba(82, 64, 38, 0.065);
+  --prac-sheet: #f8f1e1;
+  --prac-sheet-sub: #f2e8d2;
+  --prac-sand: #eadec4;
+  --prac-sand-deep: #dfd0b0;
+  --prac-ink: #2b241b;
+  --prac-ink-2: #5a4e3e;
+  --prac-ink-3: #837460;
+  --prac-bd: rgba(74, 56, 32, 0.14);
+  --prac-bd-strong: rgba(74, 56, 32, 0.25);
+  --prac-accent: #4c6f4a;
+  --prac-accent-soft: #e2ebd9;
+  --prac-accent-ink: #fdfbf6;
+  --prac-streak: #9a622a;
+  --prac-danger: #b55b4e;
+  --prac-danger-soft: #f3dfd8;
+  --prac-lip: #d6c8ac;
+  --prac-lip-card: #d0c0a2;
+  --prac-shadow-card: 0 2px 0 #d0c0a2, 0 10px 24px -14px rgba(60, 45, 24, 0.14);
 }
 
 /* =========================================================
@@ -10381,15 +10382,15 @@ body.rp-exam-fullscreen {
    ========================================================= */
 .ins-mode-practice .ins-header {
   position: relative;
-  height: 58px;
-  padding: 0 20px;
+  height: 48px;
+  padding: 0 10px;
   background: var(--prac-sheet);
   border-bottom: 1px solid var(--prac-bd);
-  box-shadow: 0 2px 0 var(--prac-lip), 0 8px 20px -14px rgba(36, 34, 31, 0.12);
+  box-shadow: 0 1px 0 var(--prac-lip);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 8px;
   z-index: 12;
 }
 .ins-mode-practice .ins-hdr-left {
@@ -10738,7 +10739,7 @@ body.rp-exam-fullscreen {
    2. MUJI DOT-GRID DESK + TWIN INK-BRACKET WASHI FOLIOS
    ========================================================= */
 .ins-mode-practice .ins-split-body {
-  padding: 14px 18px 12px;
+  padding: 4px 6px;
   gap: 0;
   background-color: var(--prac-canvas);
   background-image:
@@ -10752,10 +10753,10 @@ body.rp-exam-fullscreen {
   display: flex;
   min-width: 0;
   min-height: 0;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid var(--prac-bd);
   background: var(--prac-sheet);
-  box-shadow: var(--prac-shadow-card);
+  box-shadow: 0 1.5px 0 var(--prac-lip-card), 0 6px 16px -12px rgba(36, 34, 31, 0.11);
   overflow: hidden;
 }
 .prac-sheet-right {
@@ -10765,38 +10766,38 @@ body.rp-exam-fullscreen {
   flex: 1 1 100%;
   min-height: 0;
   background: transparent;
-  padding: 28px 36px 48px;
+  padding: 14px 18px 22px;
   position: relative;
   z-index: 1;
   scrollbar-width: thin;
   scrollbar-color: var(--prac-bd-strong) transparent;
 }
 .prac-sheet-right > .ins-pane {
-  padding: 26px 32px 48px;
+  padding: 14px 18px 22px;
 }
 
 /* Subtle Totoro Corner Stationery Watermark inside Left Folio */
 .prac-folio-stamp {
   position: absolute;
-  right: 18px;
-  bottom: 14px;
-  width: 72px;
-  height: 72px;
+  right: 12px;
+  bottom: 10px;
+  width: 60px;
+  height: 60px;
   color: var(--prac-accent);
-  opacity: 0.085;
+  opacity: 0.06;
   pointer-events: none;
   z-index: 0;
 }
 
 /* Whisper-Thin Resizer Pill between the Twin Folios */
 .ins-mode-practice .ins-resizer {
-  width: 14px;
+  width: 6px;
   margin: 0;
   background: transparent;
 }
 .ins-mode-practice .ins-resizer-box {
-  width: 4px;
-  height: 40px;
+  width: 3.5px;
+  height: 38px;
   border: 0;
   border-radius: 999px;
   background: var(--prac-bd-strong);
@@ -10805,7 +10806,7 @@ body.rp-exam-fullscreen {
 }
 .ins-mode-practice .ins-resizer:hover .ins-resizer-box {
   opacity: 1;
-  height: 56px;
+  height: 54px;
   background: var(--prac-accent);
 }
 
@@ -10819,8 +10820,8 @@ body.rp-exam-fullscreen {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 .prac-eyebrow-meta {
   display: inline-flex;
@@ -10867,26 +10868,26 @@ body.rp-exam-fullscreen {
 }
 .prac-title-rule {
   display: block;
-  width: 132px;
-  height: 9px;
-  margin: 0 0 18px;
+  width: 124px;
+  height: 8px;
+  margin: 0 0 12px;
   color: var(--prac-streak);
   opacity: 0.68;
 }
 .ins-mode-practice .ins-passage-sub {
-  margin: -6px 0 18px;
-  padding-bottom: 14px;
+  margin: -4px 0 13px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--prac-bd);
   font-size: calc(var(--ins-fs, 15px) - 0.5px);
-  line-height: 1.58;
+  line-height: 1.54;
   color: var(--prac-ink-2);
 }
 .ins-mode-practice .ins-para-block {
-  margin-bottom: 17px;
+  margin-bottom: 13px;
 }
 .ins-mode-practice .ins-para-en {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  line-height: 1.84;
+  line-height: 1.76;
   color: var(--prac-ink);
 }
 .ins-mode-practice .ins-para-lbl {
@@ -10996,18 +10997,18 @@ body.rp-exam-fullscreen {
    3. RIGHT QUESTION FOLIO — BOTANICAL HEADER + TACTILE CONTROLS
    ========================================================= */
 .ins-mode-practice .ins-q-group {
-  margin-bottom: 30px;
+  margin-bottom: 22px;
 }
 .ins-group-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 .prac-group-ico {
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
   background: var(--prac-accent-soft);
   border: 1px solid color-mix(in srgb, var(--prac-accent) 24%, transparent);
   color: var(--prac-accent);
@@ -11017,29 +11018,29 @@ body.rp-exam-fullscreen {
   flex-shrink: 0;
 }
 .prac-group-ico svg {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
 }
 .ins-mode-practice .ins-group-title {
-  font-size: calc(var(--ins-fs, 15px) + 1px);
+  font-size: calc(var(--ins-fs, 15px) + 0.5px);
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--prac-ink);
   margin: 0;
 }
 .ins-mode-practice .ins-group-inst {
-  margin: 0 0 18px;
-  padding: 11px 14px;
-  border-radius: 11px;
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  border-radius: 10px;
   border: 1px solid var(--prac-bd);
   background: var(--prac-sheet-sub);
   font-size: calc(var(--ins-fs, 15px) - 1.5px);
-  line-height: 1.58;
+  line-height: 1.52;
   color: var(--prac-ink-2);
 }
 
 .ins-mode-practice .ins-q-items {
-  gap: 16px;
+  gap: 12px;
 }
 .ins-mode-practice .ins-q-item {
   padding: 2px 4px;
@@ -11234,11 +11235,11 @@ body.rp-exam-fullscreen {
    4. TOTORO BOTTOM NAVIGATOR DOCK (54px — Tactile Pills!)
    ========================================================= */
 .ins-mode-practice .ins-footer {
-  height: 54px;
+  height: 44px;
   background: var(--prac-sheet);
   border-top: 1px solid var(--prac-bd);
-  padding: 0 18px;
-  gap: 12px;
+  padding: 0 10px;
+  gap: 8px;
 }
 .ins-mode-practice .ins-footer-parts {
   gap: 10px;
@@ -11342,13 +11343,13 @@ body.rp-exam-fullscreen {
 
 .ins-mode-practice .prac-submit-pill {
   width: auto !important;
-  height: 36px !important;
+  height: 32px !important;
   margin: auto 0;
-  padding: 0 18px;
-  border-radius: 11px;
+  padding: 0 16px;
+  border-radius: 10px;
   background: var(--prac-accent);
   color: var(--prac-accent-ink);
-  box-shadow: 0 2.5px 0 var(--lip-primary, rgba(38, 60, 38, 0.42));
+  box-shadow: 0 2px 0 var(--lip-primary, rgba(38, 60, 38, 0.42));
   font-size: 12.5px;
   font-weight: 800;
   white-space: nowrap;

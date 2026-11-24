@@ -838,7 +838,7 @@
                     ${curReadyCount > 0 ? `${curReadyCount}/${curBook?.testsCount || 4} Tests sẵn sàng` : 'Chưa nạp đề'}
                   </span>
                 </div>
-                <span class="rp-cur-book-sub">Chọn từng Passage 1–3 hoặc FULL TEST — có 2 chế độ: <strong>Luyện tập</strong> (highlight pastel, tra từ, check ngay) &amp; <strong>Thi thật</strong> (chuẩn Inspera CD-IELTS)</span>
+                <span class="rp-cur-book-sub">Chọn từng Passage 1–3 hoặc FULL TEST — có 2 chế độ: <strong>Luyện tập</strong> (highlight pastel 5 màu, làm lại tới khi đúng 100% mới mở giải &amp; tra từ) &amp; <strong>Thi thật</strong> (chuẩn Inspera CD-IELTS)</span>
               </div>
             </div>
             <div class="rp-test-tabs" id="rp-test-tabs" role="group" aria-label="Chọn bộ Test trong sách">${testTabsHtml}</div>
@@ -1047,7 +1047,8 @@
       ? 'practice'
       : 'exam';
     const isPractice = studyMode === 'practice';
-    const practiceContrast = config.practiceContrast || (isPractice && config.contrast ? config.contrast : 'totoro');
+    const rawPracContrast = config.practiceContrast || (isPractice && config.contrast ? config.contrast : 'totoro');
+    const practiceContrast = ['totoro', 'cd', 'sepia'].includes(rawPracContrast) ? rawPracContrast : 'totoro';
     const defaultContrast = isPractice ? practiceContrast : 'cd';
 
     state.session = {
@@ -1680,8 +1681,8 @@
             <div class="prac-pop-lbl">Nền giấy đọc bài</div>
             <div class="prac-pop-seg" style="margin-bottom:12px;">
               <button type="button" class="prac-seg-btn ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('totoro')">Washi ấm</button>
-              <button type="button" class="prac-seg-btn ${s.contrast === 'cd' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('cd')">Trắng</button>
-              <button type="button" class="prac-seg-btn ${s.contrast === 'dark' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('dark')">Tối</button>
+              <button type="button" class="prac-seg-btn ${s.contrast === 'cd' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('cd')">Trắng sáng</button>
+              <button type="button" class="prac-seg-btn ${s.contrast === 'sepia' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('sepia')">Giấy kem</button>
             </div>
           </div>
           <div class="prac-pop-lbl">Cỡ chữ bài đọc</div>
@@ -2632,7 +2633,8 @@
         state.session.contrast = 'cd';
         return;
       }
-      const next = ['cd', 'totoro', 'dark', 'yellow'].includes(mode) ? mode : 'totoro';
+      // Bright paper presets only (no dark/black background)
+      const next = ['totoro', 'cd', 'sepia'].includes(mode) ? mode : 'totoro';
       state.session.contrast = next;
       state.session.practiceContrast = next;
       persistDraft();
