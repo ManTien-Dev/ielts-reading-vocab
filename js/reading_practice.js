@@ -1181,7 +1181,10 @@
     const badge = document.getElementById('prac-hl-count');
     if (badge) badge.textContent = String(cnt);
     const clearBtn = document.getElementById('prac-hl-clear-all');
-    if (clearBtn) clearBtn.disabled = cnt === 0;
+    if (clearBtn) {
+      clearBtn.disabled = cnt === 0;
+      clearBtn.classList.toggle('is-empty', cnt === 0);
+    }
   }
 
   function computeReviewResult() {
@@ -1353,74 +1356,26 @@
       </div>
     ` : '';
 
-    // Part Sub-Banner (Exam 1:1 Inspera banner; Practice PRO shows sleek studio meta bar)
+    // Part Sub-Banner (ONLY in 1:1 Exam mode or News; Practice uses serene 1-bar layout!)
     const partLabel = s.isNews ? (curPassage.newsSource || 'Academic News') : `Part ${curPassage.passageNum || (s.activePassageIdx + 1)}`;
     const partSubText = s.isNews
       ? `Bấm vào bất kỳ từ nào để tra nghĩa & lưu vào "Từ của tôi" · ${curQs.length} câu kiểm tra nhanh.`
-      : (isPractice
-        ? `Questions ${qMin}–${qMax} · Bôi đen để tô màu pastel, bấm trực tiếp vào từ để tra nghĩa & lưu vào "Từ của tôi".`
-        : `Read the text and answer questions ${qMin}–${qMax}.`);
+      : `Read the text and answer questions ${qMin}–${qMax}.`;
 
     const groupsHtml = (curPassage.groups || []).map((g) => renderQuestionGroup(g, curPassage, isReview)).join('');
 
-    // Practice PRO Pastel Highlighter Studio Bar (top of Passage pane)
-    const practicePenBarHtml = isPractice ? `
-      <div class="prac-pen-bar" id="prac-pen-bar" role="toolbar" aria-label="Bộ bút highlight pastel">
-        <div class="prac-pen-swatches">
-          <span class="prac-pen-lead" title="Chọn màu bút chủ đạo">Bút pastel:</span>
-          ${PASTEL_PENS.map((pen) => `
-            <button type="button"
-              class="prac-pen-chip is-pen-${pen.id} ${s.activePenColor === pen.id ? 'active' : ''}"
-              data-pen-color="${pen.id}"
-              aria-pressed="${s.activePenColor === pen.id ? 'true' : 'false'}"
-              title="${esc(pen.name)} — ${esc(pen.role)}"
-              onclick="ReadingPracticeApp.setPenColor('${pen.id}')">
-              <span class="prac-pen-dot" style="background:${pen.swatch};" aria-hidden="true"></span>
-              <span class="prac-pen-role">${esc(pen.role)}</span>
-            </button>
-          `).join('')}
-        </div>
-        <div class="prac-pen-tools">
-          <button type="button"
-            class="prac-tool-pill ${s.brushAuto ? 'is-on' : ''}"
-            id="prac-btn-brush-auto"
-            aria-pressed="${s.brushAuto ? 'true' : 'false'}"
-            title="Bật để bôi đen là tô màu ngay bằng bút đang chọn"
-            onclick="ReadingPracticeApp.toggleBrushAuto()">
-            <span class="prac-tool-dot" aria-hidden="true"></span>
-            <span>Tô nhanh</span>
-          </button>
-          <button type="button"
-            class="prac-tool-pill prac-clear-hl-btn"
-            id="prac-hl-clear-all"
-            ${curHlCount === 0 ? 'disabled' : ''}
-            title="Xóa toàn bộ highlight trong bài đọc hiện tại"
-            onclick="ReadingPracticeApp.clearAllPassageHighlights()">
-            <span>Xóa màu</span>
-            <span class="prac-hl-cnt tabular" id="prac-hl-count">${curHlCount}</span>
-          </button>
-        </div>
-      </div>
-    ` : '';
-
-    // Practice PRO Questions Studio Toolbar (top of Questions pane)
-    const practiceQBarHtml = (isPractice && !isReview) ? `
-      <div class="prac-q-toolbar" id="prac-q-toolbar">
-        <div class="prac-q-stats">
-          <span class="prac-q-stat-pill tabular">Đã làm <strong>${curAnsweredCount}/${curQs.length}</strong></span>
-          ${curCheckedQs.length ? `<span class="prac-q-stat-pill is-checked tabular">Đã check: <strong>${curCheckedCorrect}/${curCheckedQs.length}</strong> đúng</span>` : ''}
-        </div>
-        <div class="prac-q-actions">
-          <button type="button" class="prac-check-all-btn" id="prac-btn-check-answered"
-            ${curAnsweredCount === 0 ? 'disabled' : ''}
-            onclick="ReadingPracticeApp.checkAnsweredQuestions()"
-            title="Kiểm tra đáp án ngay cho các câu bạn đã điền mà chưa cần nộp bài">
-            ✓ Kiểm tra câu đã làm
-          </button>
-          ${curCheckedQs.length ? `
-            <button type="button" class="prac-reset-check-btn" onclick="ReadingPracticeApp.clearCheckedQuestions()" title="Ẩn kết quả check để tự làm lại">Ẩn đáp án</button>
-          ` : ''}
-        </div>
+    // Subtle editorial eyebrow inside the left Washi sheet in Practice mode (0 extra toolbar height!)
+    const practicePassageEyebrowHtml = isPractice ? `
+      <div class="prac-sheet-eyebrow">
+        <span class="prac-eyebrow-meta">${esc(partLabel)} · Questions ${qMin}–${qMax}</span>
+        <button type="button"
+          class="prac-eyebrow-clear ${curHlCount === 0 ? 'is-empty' : ''}"
+          id="prac-hl-clear-all"
+          ${curHlCount === 0 ? 'disabled' : ''}
+          onclick="ReadingPracticeApp.clearAllPassageHighlights()"
+          title="Xóa toàn bộ highlight pastel trong bài đọc này">
+          Xóa <span id="prac-hl-count">${curHlCount}</span> màu
+        </button>
       </div>
     ` : '';
 
@@ -1502,23 +1457,23 @@
     const optionsOverlayHtml = `
       <div class="ins-options-overlay ${s.optionsOpen ? 'open' : ''}" id="ins-options-overlay">
         <div class="ins-options-head">
-          <h2>Options</h2>
+          <h2>${isPractice ? 'Tùy chỉnh hiển thị' : 'Options'}</h2>
           <button type="button" class="ins-options-x" onclick="ReadingPracticeApp.toggleOptionsOverlay(false)" aria-label="Close options">✕</button>
         </div>
         <div class="ins-options-body">
           ${!isReview ? `
             <button type="button" class="ins-opt-submit-btn" onclick="ReadingPracticeApp.toggleOptionsOverlay(false); ReadingPracticeApp.openPreSubmitModal();">
-              <span>Go to submission page (Nộp bài)</span>
+              <span>${isPractice ? 'Nộp bài & Chấm Band' : 'Go to submission page (Nộp bài)'}</span>
               <span>›</span>
             </button>
           ` : ''}
 
           ${!s.isNews ? `
             <div class="ins-opt-card">
-              <div class="ins-opt-sec-title">Chế độ học (Study Mode)</div>
+              <div class="ins-opt-sec-title">Chế độ học</div>
               <div class="ins-opt-choices">
                 <button type="button" class="ins-opt-row ${isPractice ? 'active' : ''}" onclick="ReadingPracticeApp.setStudyMode('practice')">
-                  <span>Luyện tập PRO <small>(5 màu pastel · Tra từ · Check từng câu)</small></span><span>${isPractice ? '✓' : ''}</span>
+                  <span>Luyện tập <small>(Bôi đen chọn 5 màu pastel · Bấm từ để tra · Check đáp án)</small></span><span>${isPractice ? '✓' : ''}</span>
                 </button>
                 <button type="button" class="ins-opt-row ${!isPractice ? 'active' : ''}" onclick="ReadingPracticeApp.setStudyMode('exam')">
                   <span>Thi thật CD-IELTS <small>(Chuẩn phòng thi máy Inspera 1:1)</small></span><span>${!isPractice ? '✓' : ''}</span>
@@ -1528,16 +1483,16 @@
           ` : ''}
 
           <div class="ins-opt-card">
-            <div class="ins-opt-sec-title">Contrast (Màu nền đọc bài)</div>
+            <div class="ins-opt-sec-title">Nền giấy đọc bài</div>
             <div class="ins-opt-choices">
               <button type="button" class="ins-opt-row ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('totoro')">
-                <span>Totoro Washi <small>(Giấy ấm dịu mắt · Luyện tập)</small></span><span>${s.contrast === 'totoro' ? '✓' : ''}</span>
+                <span>Totoro Washi <small>(Đồng bộ giao diện chính)</small></span><span>${s.contrast === 'totoro' ? '✓' : ''}</span>
               </button>
               <button type="button" class="ins-opt-row ${s.contrast === 'cd' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('cd')">
-                <span>Black on white <small>(Chuẩn thi máy CD-IELTS)</small></span><span>${s.contrast === 'cd' ? '✓' : ''}</span>
+                <span>Trắng thuần <small>(Chuẩn thi máy CD-IELTS)</small></span><span>${s.contrast === 'cd' ? '✓' : ''}</span>
               </button>
               <button type="button" class="ins-opt-row ${s.contrast === 'dark' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('dark')">
-                <span>White on black <small>(Nền tối dịu mắt)</small></span><span>${s.contrast === 'dark' ? '✓' : ''}</span>
+                <span>Chế độ tối <small>(Dịu mắt ban đêm)</small></span><span>${s.contrast === 'dark' ? '✓' : ''}</span>
               </button>
               <button type="button" class="ins-opt-row ${s.contrast === 'yellow' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('yellow')">
                 <span>Yellow on black <small>(Tương phản cao)</small></span><span>${s.contrast === 'yellow' ? '✓' : ''}</span>
@@ -1546,33 +1501,37 @@
           </div>
 
           <div class="ins-opt-card">
-            <div class="ins-opt-sec-title">Text size (Cỡ chữ)</div>
+            <div class="ins-opt-sec-title">Cỡ chữ</div>
             <div class="ins-opt-choices">
               <button type="button" class="ins-opt-row ${s.textSize === 'regular' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('regular')">
-                <span>Regular</span><span>${s.textSize === 'regular' ? '✓' : ''}</span>
+                <span>Vừa (Regular)</span><span>${s.textSize === 'regular' ? '✓' : ''}</span>
               </button>
               <button type="button" class="ins-opt-row ${s.textSize === 'large' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('large')">
-                <span>Large</span><span>${s.textSize === 'large' ? '✓' : ''}</span>
+                <span>Lớn (Large)</span><span>${s.textSize === 'large' ? '✓' : ''}</span>
               </button>
               <button type="button" class="ins-opt-row ${s.textSize === 'xlarge' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('xlarge')">
-                <span>Extra large</span><span>${s.textSize === 'xlarge' ? '✓' : ''}</span>
+                <span>Rất lớn (Extra large)</span><span>${s.textSize === 'xlarge' ? '✓' : ''}</span>
               </button>
             </div>
           </div>
 
-          <button type="button" class="ins-opt-exit-btn" onclick="ReadingPracticeApp.exitToHub()">← Exit to Practice Library (Lưu bài làm dở)</button>
+          ${isPractice && curHlCount > 0 ? `
+            <button type="button" class="ins-opt-exit-btn" onclick="ReadingPracticeApp.clearAllPassageHighlights(); ReadingPracticeApp.toggleOptionsOverlay(false);">
+              Xóa toàn bộ ${curHlCount} highlight trong bài đọc này
+            </button>
+          ` : ''}
+
+          <button type="button" class="ins-opt-exit-btn" onclick="ReadingPracticeApp.exitToHub()">← Quay về kho đề (Lưu bài làm dở)</button>
         </div>
       </div>
     `;
 
-    // Header Brand + Timer Block
+    // Header Left + Center + Right
     const brandBlockHtml = isPractice
       ? `
-        <div class="prac-brand-badge">
-          <span class="prac-brand-leaf" aria-hidden="true"></span>
-          <span class="prac-brand-txt">PRACTICE</span>
-          <span class="prac-brand-pro">PRO</span>
-        </div>
+        <button type="button" class="prac-back-btn" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề (tự động lưu bài làm dở)" aria-label="Quay về kho đề">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
       `
       : `<span class="ins-brand-mark">IELTS</span>`;
 
@@ -1582,13 +1541,15 @@
           <div class="prac-timer-row">
             ${s.showTimer ? `
               <button type="button" class="ins-hdr-timer" onclick="ReadingPracticeApp.togglePauseTimer()" title="Bấm để tạm dừng / tiếp tục đồng hồ">
-                <span id="rp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
-                <span class="ins-timer-exact tabular" id="rp-timer-exact">(${formatDuration(s.remainingSec)})</span>
+                <span class="tabular" id="rp-timer-exact">${formatDuration(s.remainingSec)}</span>
+                <span class="sr-only" id="rp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
                 ${s.paused ? '<span class="ins-paused-tag">PAUSED</span>' : ''}
               </button>
-            ` : `<span class="prac-timer-hidden-lbl">Đồng hồ đang ẩn · Luyện tập tự do</span>`}
-            <button type="button" class="prac-timer-eye" onclick="ReadingPracticeApp.toggleTimerVisibility()" title="${s.showTimer ? 'Ẩn đồng hồ cho đỡ áp lực' : 'Hiện lại đồng hồ'}">
-              ${s.showTimer ? 'Ẩn giờ' : 'Hiện giờ'}
+            ` : `<span class="prac-timer-hidden-lbl">Tự do</span>`}
+            <button type="button" class="prac-timer-eye" onclick="ReadingPracticeApp.toggleTimerVisibility()" title="${s.showTimer ? 'Ẩn đồng hồ' : 'Hiện đồng hồ'}" aria-label="${s.showTimer ? 'Ẩn đồng hồ' : 'Hiện đồng hồ'}">
+              ${s.showTimer
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>'}
             </button>
           </div>
         `
@@ -1611,7 +1572,23 @@
       </div>
     ` : '';
 
-    // Selection Popover: Practice PRO shows all 5 pastel swatches + Note + Tra từ + Xóa; Exam keeps 1:1 Inspera
+    // Single compact Check button in Practice Header (replaces bulky right toolbar!)
+    const practiceHeaderCheckHtml = (isPractice && !isReview) ? `
+      <div class="prac-hdr-check-wrap">
+        <button type="button"
+          class="prac-hdr-check-btn ${curCheckedQs.length ? 'has-checked' : ''}"
+          id="prac-btn-check-answered"
+          ${curAnsweredCount === 0 && !curCheckedQs.length ? 'disabled' : ''}
+          onclick="${curCheckedQs.length && curCheckedQs.length >= curAnsweredCount ? 'ReadingPracticeApp.clearCheckedQuestions()' : 'ReadingPracticeApp.checkAnsweredQuestions()'}"
+          title="${curCheckedQs.length && curCheckedQs.length >= curAnsweredCount ? 'Ẩn kết quả kiểm tra' : 'Kiểm tra ngay các câu đã điền'}">
+          ${curCheckedQs.length
+            ? `<span class="tabular">✓ ${curCheckedCorrect}/${curCheckedQs.length}</span>`
+            : `<span>Kiểm tra</span>${curAnsweredCount ? `<span class="prac-hdr-check-cnt tabular">${curAnsweredCount}</span>` : ''}`}
+        </button>
+      </div>
+    ` : '';
+
+    // Selection Popover: Practice shows 5 silky pastel dots + Note + Tra từ + Xóa right beside cursor
     const selPopoverHtml = isPractice ? `
       <div class="ins-sel-popover is-practice hidden" id="rp-hl-toolbar" role="toolbar" aria-label="Highlight màu pastel">
         <div class="prac-pop-swatches">
@@ -1620,7 +1597,7 @@
               class="prac-pop-dot ${s.activePenColor === pen.id ? 'is-active' : ''}"
               style="--swatch:${pen.swatch};"
               data-pop-color="${pen.id}"
-              title="${esc(pen.name)} (${esc(pen.role)})"
+              title="${esc(pen.name)} — ${esc(pen.role)}"
               aria-label="Highlight ${esc(pen.name)}"
               onclick="ReadingPracticeApp.applyHighlight('${pen.id}')"></button>
           `).join('')}
@@ -1661,8 +1638,11 @@
               </div>
             </div>
 
+            ${isPractice ? `<div class="ins-hdr-center">${modeSwitcherHtml}</div>` : ''}
+
             <div class="ins-hdr-right">
-              ${modeSwitcherHtml}
+              ${!isPractice ? modeSwitcherHtml : ''}
+              ${practiceHeaderCheckHtml}
               ${s.isNews && !isReview ? `
                 <button type="button" class="ins-hdr-pill ${s.showBilingual ? 'active' : ''}" id="rp-btn-bilingual" onclick="ReadingPracticeApp.toggleBilingual()">
                   ${s.showBilingual ? '✓ Song ngữ' : 'Song ngữ'}
@@ -1673,16 +1653,16 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/></svg>
                 </button>
               ` : ''}
-              <button type="button" class="ins-hdr-ico ${s.optionsOpen ? 'active' : ''}" id="ins-btn-options"
-                onclick="ReadingPracticeApp.toggleOptionsOverlay()" title="Options (Chế độ · Màu nền · Cỡ chữ)" aria-label="Options">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-              </button>
               <button type="button" class="ins-hdr-ico ${s.notesOpen ? 'active' : ''}" id="rp-btn-notes"
-                onclick="ReadingPracticeApp.toggleNotesDrawer()" title="Show / Hide notes" aria-label="Notes">
+                onclick="ReadingPracticeApp.toggleNotesDrawer()" title="Ghi chú (Notes)" aria-label="Notes">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 ${notesCount ? `<span class="ins-notes-badge">${notesCount}</span>` : ''}
               </button>
-              <button type="button" class="ins-hdr-exit" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề">Thoát</button>
+              <button type="button" class="ins-hdr-ico ${s.optionsOpen ? 'active' : ''}" id="ins-btn-options"
+                onclick="ReadingPracticeApp.toggleOptionsOverlay()" title="Tùy chỉnh nền giấy &amp; cỡ chữ" aria-label="Options">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </button>
+              ${!isPractice ? `<button type="button" class="ins-hdr-exit" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề">Thoát</button>` : ''}
             </div>
             ${isPractice && !isReview ? `
               <div class="prac-hdr-progress" aria-hidden="true">
@@ -1693,21 +1673,22 @@
 
           ${reviewStripHtml}
 
-          <!-- Part Sub-Banner -->
-          <div class="ins-part-banner">
-            <div class="ins-part-banner-main">
-              <strong>${esc(partLabel)}</strong>
-              <span>${esc(partSubText)}</span>
+          ${!isPractice ? `
+            <!-- Full-width Official Inspera Part Sub-Banner (Exam mode only) -->
+            <div class="ins-part-banner">
+              <div class="ins-part-banner-main">
+                <strong>${esc(partLabel)}</strong>
+                <span>${esc(partSubText)}</span>
+              </div>
             </div>
-            ${isPractice && !isReview ? `<span class="prac-dict-pill">✨ Bấm từ để tra &amp; lưu</span>` : ''}
-          </div>
+          ` : ''}
 
           <!-- Mobile Pane Toggle -->
           <div class="rp-mobile-pane-bar">
             <button type="button" class="rp-mob-tab ${state.mobilePane === 'passage' ? 'active' : ''}"
-              onclick="ReadingPracticeApp.setMobilePane('passage')">Passage</button>
+              onclick="ReadingPracticeApp.setMobilePane('passage')">Bài đọc</button>
             <button type="button" class="rp-mob-tab ${state.mobilePane === 'questions' ? 'active' : ''}"
-              onclick="ReadingPracticeApp.setMobilePane('questions')">Questions (${totalAnswered}/${allQ.length})</button>
+              onclick="ReadingPracticeApp.setMobilePane('questions')">Câu hỏi (${totalAnswered}/${allQ.length})</button>
           </div>
 
           <!-- 50/50 Split Workspace -->
@@ -1717,8 +1698,8 @@
               onmouseup="ReadingPracticeApp.handlePassageSelection(event)"
               oncontextmenu="ReadingPracticeApp.handlePassageContextMenu(event)"
               onclick="ReadingPracticeApp.handlePassageWordClick(event)">
-              ${practicePenBarHtml}
               <div class="ins-passage-inner">
+                ${practicePassageEyebrowHtml}
                 <h1 class="ins-passage-title">${esc(curPassage.title)}</h1>
                 ${(curPassage.subtitle && !(curPassage.paragraphs?.[0]?.en || '').startsWith(curPassage.subtitle.replace(/…$/, '').slice(0, 40))) ? `<p class="ins-passage-sub">${esc(curPassage.subtitle)}</p>` : ''}
                 <div class="rp-passage-content" id="rp-passage-content">
@@ -1729,23 +1710,24 @@
 
             <div class="ins-resizer" id="rp-resizer" title="Kéo để chia lại tỷ lệ bài đọc / câu hỏi"
               onmousedown="ReadingPracticeApp.startResize(event)">
-              <span class="ins-resizer-box" aria-hidden="true">↔</span>
+              <span class="ins-resizer-box" aria-hidden="true">${isPractice ? '' : '↔'}</span>
             </div>
 
             <section class="ins-pane ins-pane-right ${state.mobilePane === 'questions' ? 'mob-active' : ''}" id="rp-questions-pane">
-              ${practiceQBarHtml}
               <div class="ins-questions-inner">
                 ${groupsHtml}
               </div>
             </section>
 
-            <!-- Floating 40x40px Prev / Next Square Arrows -->
-            <div class="ins-float-arrows">
-              <button type="button" class="ins-arrow-btn ${curGlobalIdx <= 0 ? 'is-disabled' : ''}"
-                onclick="ReadingPracticeApp.stepQuestion(-1)" title="Previous question" ${curGlobalIdx <= 0 ? 'disabled' : ''}>←</button>
-              <button type="button" class="ins-arrow-btn is-next ${curGlobalIdx >= allQ.length - 1 ? 'is-disabled' : ''}"
-                onclick="ReadingPracticeApp.stepQuestion(1)" title="Next question" ${curGlobalIdx >= allQ.length - 1 ? 'disabled' : ''}>→</button>
-            </div>
+            ${!isPractice ? `
+              <!-- Official Floating 40x40px Prev / Next Square Arrows (Exam mode only) -->
+              <div class="ins-float-arrows">
+                <button type="button" class="ins-arrow-btn ${curGlobalIdx <= 0 ? 'is-disabled' : ''}"
+                  onclick="ReadingPracticeApp.stepQuestion(-1)" title="Previous question" ${curGlobalIdx <= 0 ? 'disabled' : ''}>←</button>
+                <button type="button" class="ins-arrow-btn is-next ${curGlobalIdx >= allQ.length - 1 ? 'is-disabled' : ''}"
+                  onclick="ReadingPracticeApp.stepQuestion(1)" title="Next question" ${curGlobalIdx >= allQ.length - 1 ? 'disabled' : ''}>→</button>
+              </div>
+            ` : ''}
           </div>
 
           <!-- Fixed Bottom Navigator Bar -->
@@ -1753,8 +1735,8 @@
             <div class="ins-footer-parts">${bottomPartsHtml}</div>
             ${!isReview ? (isPractice ? `
               <button type="button" class="ins-submit-check-btn prac-submit-pill" id="rp-btn-open-submit"
-                onclick="ReadingPracticeApp.openPreSubmitModal()" title="Nộp bài và chấm điểm Band" aria-label="Nộp và Chấm Band">
-                <span>Nộp &amp; Chấm Band →</span>
+                onclick="ReadingPracticeApp.openPreSubmitModal()" title="Nộp bài và chấm điểm Band" aria-label="Nộp bài">
+                <span>Nộp bài</span>
               </button>
             ` : `
               <button type="button" class="ins-submit-check-btn" id="rp-btn-open-submit"
@@ -1771,7 +1753,7 @@
         <!-- Selection / Right-Click Highlight Popover -->
         ${selPopoverHtml}
 
-        <!-- Click-to-Dictionary Popover (Practice PRO, Review & News mode) -->
+        <!-- Click-to-Dictionary Popover (Practice, Review & News mode) -->
         <div class="rp-dict-popover hidden" id="rp-dict-popover" onclick="event.stopPropagation()"></div>
 
         <!-- Pre-Submit Review Check Modal -->
