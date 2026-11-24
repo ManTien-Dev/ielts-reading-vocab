@@ -10230,16 +10230,31 @@ body.rp-exam-fullscreen {
 }
 
 /* =========================================================
-   DUAL-MODE STUDIO: TOTORO CALM WASHI PRACTICE & THI THẬT
-   100% Native to Totoro IELTS Master Design System (Muji Stationery)
+   DUAL-MODE STUDIO: ARTISAN TOTORO READING ATELIER & THI THẬT
+   Crafted with Totoro Muji Stationery DNA + Emil Kowalski Physics
    ========================================================= */
+
+/* Exam Mode Pane Wrappers (preserves 100% 1:1 Inspera split scrolling) */
+.ins-pane-wrap {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.ins-pane-wrap-right {
+  flex: 1 1 auto;
+}
+.ins-pane-wrap > .ins-pane {
+  flex: 1 1 100%;
+  min-height: 0;
+}
 
 /* Bookshelf Card Dual-Mode Action Footer */
 .rp-card-mode-btns {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 7px;
+  gap: 8px;
   width: 100%;
   flex-wrap: wrap;
 }
@@ -10258,7 +10273,7 @@ body.rp-exam-fullscreen {
   box-shadow: var(--shadow-btn);
   cursor: pointer;
   white-space: nowrap;
-  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), background-color 150ms ease, border-color 150ms ease;
+  transition: transform 150ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 .rp-btn-practice:hover {
   background: var(--accent-soft);
@@ -10267,7 +10282,7 @@ body.rp-exam-fullscreen {
   transform: translateY(-1px);
 }
 .rp-btn-practice:active {
-  transform: translateY(0);
+  transform: scale(0.97);
 }
 .rp-mode-dot-swatch {
   width: 9px;
@@ -10278,58 +10293,16 @@ body.rp-exam-fullscreen {
   box-shadow: 0 0 0 1px rgba(36, 34, 31, 0.14);
 }
 
-/* Native Totoro Segmented Mode Switcher (Luyện tập | Thi thật) */
-.rp-mode-switch {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px;
-  border-radius: 11px;
-  border: 1px solid var(--border);
-  background: var(--bg-subtle, #e4e7e2);
-  gap: 2px;
-}
-.rp-ms-btn {
-  border: 0;
-  background: transparent;
-  color: var(--ink-2, #524d45);
-  height: 27px;
-  padding: 0 13px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 150ms cubic-bezier(0.22, 1, 0.36, 1), color 150ms ease, box-shadow 150ms ease;
-}
-.rp-ms-btn:hover:not(.active) {
-  color: var(--ink, #24221f);
-}
-.rp-ms-btn.active {
-  background: var(--surface, #fdfbf6);
-  color: var(--ink, #24221f);
-  box-shadow: 0 1.5px 0 var(--lip-btn, rgba(0, 0, 0, 0.08)), 0 2px 6px rgba(36, 34, 31, 0.07);
-}
-.ins-mode-exam .rp-mode-switch {
-  background: var(--ins-banner);
-  border-color: var(--ins-border);
-  margin-right: 4px;
-}
-.ins-mode-exam .rp-ms-btn {
-  color: var(--ins-muted);
-}
-.ins-mode-exam .rp-ms-btn.active {
-  background: var(--ins-bg);
-  color: var(--ins-ink);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-}
-
 /* =========================================================
-   PRACTICE STUDIO — SERENE TOTORO WASHI (1 TOP BAR + 2 SHEETS)
+   PRACTICE ATELIER — TOTORO MUJI STATIONERY DESIGN SYSTEM
    ========================================================= */
 .ins-mode-practice {
   --prac-canvas: var(--bg, #eaece8);
+  --prac-dot: rgba(36, 34, 31, 0.068);
   --prac-sheet: var(--surface, #fdfbf6);
   --prac-sheet-sub: var(--surface-panel, #faf7f0);
+  --prac-sand: var(--surface-item, #efe6d8);
+  --prac-sand-deep: var(--surface-muted, #eae0d1);
   --prac-ink: var(--ink, #24221f);
   --prac-ink-2: var(--ink-2, #524d45);
   --prac-ink-3: var(--ink-3, #7e776c);
@@ -10338,8 +10311,12 @@ body.rp-exam-fullscreen {
   --prac-accent: var(--accent, #4e724d);
   --prac-accent-soft: var(--accent-soft, #e4ede0);
   --prac-accent-ink: var(--accent-ink, #fdfbf6);
+  --prac-streak: var(--streak, #9c6931);
+  --prac-danger: var(--danger, #b86557);
+  --prac-danger-soft: var(--danger-soft, #f5e5e0);
   --prac-lip: var(--lip-btn, #d4d7cf);
-  --prac-shadow: var(--shadow-panel, 0 2.5px 0 #d4d7cf, 0 10px 26px -14px rgba(36, 34, 31, 0.1));
+  --prac-lip-card: var(--lip-card, #d1d4cc);
+  --prac-shadow-card: 0 3px 0 var(--prac-lip-card), 0 14px 32px -16px rgba(36, 34, 31, 0.16), 0 2px 6px rgba(36, 34, 31, 0.04);
 
   --ins-bg: var(--prac-sheet);
   --ins-hdr: var(--prac-sheet);
@@ -10354,128 +10331,167 @@ body.rp-exam-fullscreen {
   --ins-input-bg: var(--prac-sheet);
   --ins-input-bd: var(--prac-bd-strong);
 
-  background: var(--prac-canvas) !important;
+  background-color: var(--prac-canvas) !important;
   color: var(--prac-ink);
-  font-family: var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-family: var(--font-ui, Verdana, Geneva, -apple-system, BlinkMacSystemFont, sans-serif);
 }
 
-/* Contrast overrides inside Practice mode */
+/* Contrast Presets inside Practice Atelier */
 .ins-mode-practice.ins-contrast-cd {
-  --prac-canvas: #f3f4f6;
+  --prac-canvas: #f2f4f6;
+  --prac-dot: rgba(24, 24, 27, 0.045);
   --prac-sheet: #ffffff;
-  --prac-sheet-sub: #f9fafb;
+  --prac-sheet-sub: #f8fafc;
+  --prac-sand: #f1f5f9;
+  --prac-sand-deep: #e2e8f0;
   --prac-ink: #18181b;
   --prac-ink-2: #52525b;
   --prac-ink-3: #71717a;
   --prac-bd: rgba(24, 24, 27, 0.10);
   --prac-bd-strong: rgba(24, 24, 27, 0.22);
-  --prac-lip: #e4e4e7;
-  --prac-shadow: 0 2px 0 #e4e4e7, 0 8px 22px -14px rgba(0, 0, 0, 0.08);
+  --prac-lip: #e2e8f0;
+  --prac-lip-card: #dbe1e8;
+  --prac-shadow-card: 0 3px 0 #dbe1e8, 0 12px 26px -14px rgba(15, 23, 42, 0.10);
 }
 .ins-mode-practice.ins-contrast-dark {
-  --prac-canvas: #0e0e0d;
-  --prac-sheet: #1b1a17;
-  --prac-sheet-sub: #23211d;
-  --prac-ink: #f3efe6;
-  --prac-ink-2: #bdb5a7;
-  --prac-ink-3: #8c8477;
-  --prac-bd: rgba(243, 239, 230, 0.12);
-  --prac-bd-strong: rgba(243, 239, 230, 0.22);
+  --prac-canvas: #0c0c0b;
+  --prac-dot: rgba(245, 241, 233, 0.055);
+  --prac-sheet: #1d1b18;
+  --prac-sheet-sub: #25231e;
+  --prac-sand: #2a2722;
+  --prac-sand-deep: #322e27;
+  --prac-ink: #f5f1e9;
+  --prac-ink-2: #c2baac;
+  --prac-ink-3: #8f877a;
+  --prac-bd: rgba(245, 241, 233, 0.13);
+  --prac-bd-strong: rgba(245, 241, 233, 0.24);
   --prac-accent: #8ab886;
-  --prac-accent-soft: rgba(138, 184, 134, 0.17);
-  --prac-accent-ink: #101611;
-  --prac-lip: #060605;
-  --prac-shadow: inset 0 1px 0 rgba(255, 250, 240, 0.07), 0 3px 0 #060605, 0 14px 28px -12px rgba(0, 0, 0, 0.65);
-}
-.ins-mode-practice.ins-contrast-yellow {
-  --prac-canvas: #000000;
-  --prac-sheet: #0c0c00;
-  --prac-sheet-sub: #141400;
-  --prac-ink: #ffee32;
-  --prac-ink-2: #d8c828;
-  --prac-ink-3: #a89a1c;
-  --prac-bd: #555500;
-  --prac-bd-strong: #999900;
-  --prac-accent: #ffee32;
-  --prac-accent-soft: rgba(255, 238, 50, 0.16);
-  --prac-accent-ink: #000000;
-  --prac-lip: #2b2b00;
-  --prac-shadow: none;
+  --prac-accent-soft: rgba(138, 184, 134, 0.18);
+  --prac-accent-ink: #111811;
+  --prac-streak: #e2b378;
+  --prac-danger: #e59587;
+  --prac-danger-soft: rgba(229, 149, 135, 0.18);
+  --prac-lip: #070706;
+  --prac-lip-card: #050504;
+  --prac-shadow-card: inset 0 1px 0 rgba(255, 250, 240, 0.08), 0 3px 0 #050504, 0 18px 34px -12px rgba(0, 0, 0, 0.72);
 }
 
-/* Single Quiet 54px Totoro Studio Header */
+/* =========================================================
+   1. TOTORO ATELIER HEADER (58px — Native Sibling to App Header)
+   ========================================================= */
 .ins-mode-practice .ins-header {
   position: relative;
-  height: 54px;
-  padding: 0 18px;
+  height: 58px;
+  padding: 0 20px;
   background: var(--prac-sheet);
   border-bottom: 1px solid var(--prac-bd);
+  box-shadow: 0 2px 0 var(--prac-lip), 0 8px 20px -14px rgba(36, 34, 31, 0.12);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
+  z-index: 12;
 }
 .ins-mode-practice .ins-hdr-left {
+  display: flex;
+  align-items: center;
   gap: 10px;
   min-width: 0;
   flex: 1 1 auto;
 }
 .ins-mode-practice .ins-hdr-right {
-  justify-content: flex-end;
-  gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .prac-back-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: 1px solid var(--prac-bd);
-  background: var(--prac-sheet-sub);
-  color: var(--prac-ink);
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 11px 0 8px;
+  border-radius: 11px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sand);
+  color: var(--prac-ink);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 0 var(--prac-lip);
   cursor: pointer;
   flex-shrink: 0;
-  box-shadow: 0 1.5px 0 var(--prac-lip);
-  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+  transition: transform 140ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 .prac-back-btn:hover {
   background: var(--prac-accent-soft);
-  border-color: color-mix(in srgb, var(--prac-accent) 40%, transparent);
+  border-color: color-mix(in srgb, var(--prac-accent) 42%, transparent);
   color: var(--prac-accent);
 }
+.prac-back-btn:active {
+  transform: scale(0.97);
+}
 .prac-back-btn svg {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
 }
-.ins-mode-practice .ins-hdr-meta {
-  flex-direction: row;
+
+.prac-totoro-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--prac-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--prac-accent) 24%, transparent);
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-width: 0;
+  justify-content: center;
+  flex-shrink: 0;
 }
+.prac-totoro-ico svg {
+  width: 24px;
+  height: 24px;
+}
+
 .ins-mode-practice .ins-hdr-title {
   font-size: 13.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--prac-ink);
 }
-.prac-timer-row {
+
+/* Warm Sand Timer Capsule (matching Flashcard clock aesthetic) */
+.prac-timer-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding-left: 10px;
-  border-left: 1px solid var(--prac-bd);
+  gap: 6px;
+  height: 34px;
+  padding: 0 8px 0 11px;
+  border-radius: 11px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sand);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.prac-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--prac-accent);
+  box-shadow: 0 0 0 3px var(--prac-accent-soft);
   flex-shrink: 0;
+}
+.prac-live-dot.is-paused {
+  background: var(--prac-streak);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--prac-streak) 22%, transparent);
 }
 .ins-mode-practice .ins-hdr-timer {
   font-size: 12.5px;
-  font-weight: 650;
-  color: var(--prac-ink-2);
+  font-weight: 700;
+  color: var(--prac-ink);
+  cursor: pointer;
 }
 .prac-timer-hidden-lbl {
   font-size: 12px;
-  color: var(--prac-ink-3);
+  font-weight: 650;
+  color: var(--prac-ink-2);
 }
 .prac-timer-eye {
   width: 24px;
@@ -10488,13 +10504,14 @@ body.rp-exam-fullscreen {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 150ms ease, background-color 150ms ease, color 150ms ease;
+  transition: transform 140ms var(--ease-out), background-color 150ms ease, color 150ms ease;
 }
 .prac-timer-eye:hover {
-  opacity: 1;
-  background: var(--prac-sheet-sub);
+  background: var(--prac-sheet);
   color: var(--prac-ink);
+}
+.prac-timer-eye:active {
+  transform: scale(0.95);
 }
 .prac-timer-eye svg {
   width: 14px;
@@ -10512,41 +10529,76 @@ body.rp-exam-fullscreen {
   border: 0;
 }
 
-/* Single Quiet Check Button in Header */
-.prac-hdr-check-wrap {
+/* Warm Sand Progress Capsule */
+.prac-prog-pill {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 11px;
+  border-radius: 11px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sheet-sub);
+  font-size: 12px;
+  color: var(--prac-ink-2);
+  white-space: nowrap;
 }
-.prac-hdr-check-btn {
+.prac-prog-pill strong {
+  color: var(--prac-ink);
+}
+.prac-prog-track {
+  width: 44px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--prac-sand-deep);
+  overflow: hidden;
+}
+.prac-prog-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--prac-accent);
+  transition: width 220ms var(--ease-out);
+}
+
+/* Tactile Header Buttons (Kiểm tra · Ghi chú · Giao diện) */
+.prac-hdr-check-btn,
+.prac-hdr-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
+  height: 34px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: 11px;
   border: 1px solid var(--prac-bd);
-  background: var(--prac-sheet-sub);
+  background: var(--prac-sheet);
   color: var(--prac-ink);
   font-size: 12px;
   font-weight: 700;
-  box-shadow: 0 1.5px 0 var(--prac-lip);
+  box-shadow: 0 2px 0 var(--prac-lip);
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition: transform 140ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.prac-hdr-check-btn:hover:not(:disabled) {
+.prac-hdr-check-btn:hover:not(:disabled),
+.prac-hdr-btn:hover,
+.prac-hdr-btn.active {
   background: var(--prac-accent-soft);
-  border-color: color-mix(in srgb, var(--prac-accent) 45%, transparent);
+  border-color: color-mix(in srgb, var(--prac-accent) 44%, transparent);
   color: var(--prac-accent);
 }
+.prac-hdr-check-btn:active:not(:disabled),
+.prac-hdr-btn:active {
+  transform: scale(0.97);
+}
 .prac-hdr-check-btn:disabled {
-  opacity: 0.42;
+  opacity: 0.45;
   cursor: not-allowed;
   box-shadow: none;
 }
 .prac-hdr-check-btn.has-checked {
   background: var(--prac-accent-soft);
-  border-color: color-mix(in srgb, var(--prac-accent) 45%, transparent);
+  border-color: color-mix(in srgb, var(--prac-accent) 46%, transparent);
   color: var(--prac-accent);
 }
 .prac-hdr-check-cnt {
@@ -10562,61 +10614,181 @@ body.rp-exam-fullscreen {
   font-size: 10.5px;
   font-weight: 800;
 }
-
-.ins-mode-practice .ins-hdr-ico {
+.prac-hdr-btn svg {
+  width: 15px;
+  height: 15px;
+}
+.ins-mode-practice .prac-hdr-ico {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
+  border-radius: 11px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sheet);
   color: var(--prac-ink-2);
+  box-shadow: 0 2px 0 var(--prac-lip);
+  transition: transform 140ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.ins-mode-practice .ins-hdr-ico:hover,
-.ins-mode-practice .ins-hdr-ico.active {
-  background: var(--prac-sheet-sub);
+.ins-mode-practice .prac-hdr-ico:hover,
+.ins-mode-practice .prac-hdr-ico.active {
+  background: var(--prac-accent-soft);
+  border-color: color-mix(in srgb, var(--prac-accent) 44%, transparent);
+  color: var(--prac-accent);
+}
+.ins-mode-practice .prac-hdr-ico:active {
+  transform: scale(0.97);
+}
+.ins-mode-practice .prac-hdr-ico svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Anchored Totoro "Giao diện" Popover (Origin-Aware Emil Physics!) */
+.prac-pop-wrap {
+  position: relative;
+}
+.prac-popover {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  width: 268px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sheet);
+  color: var(--prac-ink);
+  box-shadow: 0 3px 0 var(--prac-lip-card), 0 20px 40px -12px rgba(36, 34, 31, 0.24);
+  z-index: 990;
+  transform-origin: top right;
+  opacity: 0;
+  transform: scale(0.95) translateY(-4px);
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out), visibility 160ms;
+}
+.prac-popover.open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+  visibility: visible;
+}
+.prac-pop-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--prac-ink-3);
+  margin-bottom: 6px;
+}
+.prac-pop-seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 3px;
+  border-radius: 11px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sand);
+}
+.prac-seg-btn {
+  height: 29px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--prac-ink-2);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out), background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+.prac-seg-btn:hover:not(.active) {
   color: var(--prac-ink);
 }
-.ins-mode-practice .ins-hdr-ico svg {
-  width: 18px;
-  height: 18px;
+.prac-seg-btn:active {
+  transform: scale(0.96);
 }
-
-.prac-hdr-progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  background: transparent;
-  overflow: hidden;
-  pointer-events: none;
-}
-.prac-hdr-progress-fill {
-  height: 100%;
-  background: var(--prac-accent);
-  opacity: 0.72;
-  transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Two Symmetrical Washi Reading & Question Sheets on Calm Stone Canvas */
-.ins-mode-practice .ins-split-body {
-  padding: 12px 16px 10px;
-  gap: 0;
-  background: var(--prac-canvas);
-  background-image: var(--bg-glow, none);
-}
-.ins-mode-practice .ins-pane {
+.prac-seg-btn.active {
   background: var(--prac-sheet);
+  color: var(--prac-ink);
+  box-shadow: 0 1.5px 0 var(--prac-lip), 0 2px 5px rgba(36, 34, 31, 0.08);
+}
+.prac-pop-sep {
+  height: 1px;
+  background: var(--prac-bd);
+  margin: 12px 0 10px;
+}
+.prac-pop-danger-btn {
+  width: 100%;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--prac-danger) 35%, transparent);
+  background: var(--prac-danger-soft);
+  color: var(--prac-danger);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out), filter 150ms ease;
+}
+.prac-pop-danger-btn:hover {
+  filter: brightness(0.96);
+}
+.prac-pop-danger-btn:active {
+  transform: scale(0.97);
+}
+
+/* =========================================================
+   2. MUJI DOT-GRID DESK + TWIN INK-BRACKET WASHI FOLIOS
+   ========================================================= */
+.ins-mode-practice .ins-split-body {
+  padding: 14px 18px 12px;
+  gap: 0;
+  background-color: var(--prac-canvas);
+  background-image:
+    radial-gradient(var(--prac-dot) 1.1px, transparent 1.1px),
+    var(--bg-glow, none);
+  background-size: 22px 22px, 100% 100%;
+}
+
+.prac-sheet-shell {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 20px;
   border: 1px solid var(--prac-bd);
-  border-radius: 18px;
-  box-shadow: var(--prac-shadow);
-  padding: 26px 34px 44px;
+  background: var(--prac-sheet);
+  box-shadow: var(--prac-shadow-card);
+  overflow: hidden;
+}
+.prac-sheet-right {
+  flex: 1 1 auto;
+}
+.prac-sheet-shell > .ins-pane {
+  flex: 1 1 100%;
+  min-height: 0;
+  background: transparent;
+  padding: 28px 36px 48px;
+  position: relative;
+  z-index: 1;
   scrollbar-width: thin;
   scrollbar-color: var(--prac-bd-strong) transparent;
 }
-.ins-mode-practice .ins-pane-right {
-  padding: 24px 30px 44px;
+.prac-sheet-right > .ins-pane {
+  padding: 26px 32px 48px;
 }
 
-/* Whisper-Thin Resizer Handle between the 2 Washi Sheets */
+/* Subtle Totoro Corner Stationery Watermark inside Left Folio */
+.prac-folio-stamp {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  width: 72px;
+  height: 72px;
+  color: var(--prac-accent);
+  opacity: 0.085;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Whisper-Thin Resizer Pill between the Twin Folios */
 .ins-mode-practice .ins-resizer {
   width: 14px;
   margin: 0;
@@ -10624,20 +10796,20 @@ body.rp-exam-fullscreen {
 }
 .ins-mode-practice .ins-resizer-box {
   width: 4px;
-  height: 38px;
+  height: 40px;
   border: 0;
   border-radius: 999px;
   background: var(--prac-bd-strong);
   opacity: 0.55;
-  transition: opacity 150ms ease, background-color 150ms ease, height 150ms ease;
+  transition: opacity 150ms ease, background-color 150ms ease, height 160ms var(--ease-out);
 }
 .ins-mode-practice .ins-resizer:hover .ins-resizer-box {
   opacity: 1;
-  height: 52px;
+  height: 56px;
   background: var(--prac-accent);
 }
 
-/* Left Washi Sheet: Clean Magazine Editorial Typography */
+/* Left Reading Folio: Magazine Serif + Hand-Drawn Ochre Brush Underline */
 .ins-mode-practice .ins-passage-inner {
   max-width: none;
   margin: 0;
@@ -10648,30 +10820,37 @@ body.rp-exam-fullscreen {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 10px;
-  min-height: 20px;
+  margin-bottom: 12px;
 }
 .prac-eyebrow-meta {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--prac-accent-soft);
+  color: var(--prac-accent);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--prac-ink-3);
 }
 .prac-eyebrow-clear {
-  border: 0;
-  background: transparent;
-  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--prac-danger) 30%, transparent);
+  background: var(--prac-danger-soft);
+  padding: 2px 9px;
   border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 650;
-  color: var(--prac-ink-3);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--prac-danger);
   cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition: transform 140ms var(--ease-out), filter 150ms ease;
 }
 .prac-eyebrow-clear:hover:not(:disabled) {
-  background: rgba(184, 101, 87, 0.12);
-  color: var(--danger, #b86557);
+  filter: brightness(0.95);
+}
+.prac-eyebrow-clear:active:not(:disabled) {
+  transform: scale(0.96);
 }
 .prac-eyebrow-clear.is-empty {
   display: none;
@@ -10679,15 +10858,23 @@ body.rp-exam-fullscreen {
 
 .ins-mode-practice .ins-passage-title {
   font-family: Georgia, "Times New Roman", "Noto Serif", serif;
-  font-size: calc(var(--ins-fs, 15px) + 8px);
+  font-size: calc(var(--ins-fs, 15px) + 9px);
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.26;
+  line-height: 1.24;
   color: var(--prac-ink);
-  margin: 0 0 12px;
+  margin: 0 0 6px;
+}
+.prac-title-rule {
+  display: block;
+  width: 132px;
+  height: 9px;
+  margin: 0 0 18px;
+  color: var(--prac-streak);
+  opacity: 0.68;
 }
 .ins-mode-practice .ins-passage-sub {
-  margin: 0 0 18px;
+  margin: -6px 0 18px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--prac-bd);
   font-size: calc(var(--ins-fs, 15px) - 0.5px);
@@ -10699,32 +10886,38 @@ body.rp-exam-fullscreen {
 }
 .ins-mode-practice .ins-para-en {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  line-height: 1.82;
+  line-height: 1.84;
   color: var(--prac-ink);
 }
 .ins-mode-practice .ins-para-lbl {
   font-weight: 800;
-  color: var(--prac-ink);
+  color: var(--prac-accent);
   margin-right: 5px;
 }
 .ins-mode-practice .rp-word {
   cursor: pointer;
   border-radius: 3px;
-  transition: background-color 120ms ease;
+  transition: background-color 110ms ease;
 }
 .ins-mode-practice .rp-word:hover {
   background: var(--prac-accent-soft);
 }
 
-/* Floating 5-Color Pastel Selection Popover (Zero Fixed Bar!) */
+/* Floating 5-Color Pastel Selection Popover (Emil Scale(0.95)->1 Physics!) */
 .ins-sel-popover.is-practice {
   padding: 6px 9px;
   border-radius: 999px;
   border: 1px solid var(--prac-bd);
   background: var(--prac-sheet);
   color: var(--prac-ink);
-  box-shadow: 0 10px 28px -6px rgba(36, 34, 31, 0.22), 0 2px 6px rgba(36, 34, 31, 0.08);
+  box-shadow: 0 3px 0 var(--prac-lip-card), 0 14px 30px -6px rgba(36, 34, 31, 0.24);
   gap: 5px;
+  transform-origin: bottom center;
+  animation: pracPopIn 155ms var(--ease-out) both;
+}
+@keyframes pracPopIn {
+  from { opacity: 0; transform: scale(0.95) translateY(4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 .prac-pop-swatches {
   display: inline-flex;
@@ -10739,11 +10932,14 @@ body.rp-exam-fullscreen {
   border: 1.5px solid rgba(36, 34, 31, 0.16);
   background: var(--swatch, #fde047);
   cursor: pointer;
-  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), border-color 150ms ease, box-shadow 150ms ease;
+  transition: transform 140ms var(--ease-out), border-color 140ms ease, box-shadow 140ms ease;
 }
 .prac-pop-dot:hover {
   transform: scale(1.16);
   border-color: rgba(36, 34, 31, 0.45);
+}
+.prac-pop-dot:active {
+  transform: scale(0.92);
 }
 .prac-pop-dot.is-active {
   border-color: var(--prac-ink);
@@ -10761,62 +10957,98 @@ body.rp-exam-fullscreen {
   padding: 4px 8px;
   border-radius: 999px;
   color: var(--prac-ink);
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 11.5px;
+  font-weight: 700;
+  transition: transform 140ms var(--ease-out), background-color 140ms ease;
 }
 .ins-sel-popover.is-practice .prac-pop-act:hover {
-  background: var(--prac-sheet-sub);
+  background: var(--prac-sand);
+}
+.ins-sel-popover.is-practice .prac-pop-act:active {
+  transform: scale(0.96);
 }
 .ins-sel-popover.is-practice .prac-pop-dict,
 .ins-sel-popover.is-practice .prac-pop-clear {
   border-left: 0;
   border-radius: 999px;
-  padding: 4px 9px;
-  font-size: 12px;
+  padding: 4px 10px;
+  font-size: 11.5px;
   font-weight: 700;
+  transition: transform 140ms var(--ease-out), background-color 140ms ease;
 }
 .ins-sel-popover.is-practice .prac-pop-dict {
   color: var(--prac-accent);
   background: var(--prac-accent-soft);
 }
+.ins-sel-popover.is-practice .prac-pop-dict:active,
+.ins-sel-popover.is-practice .prac-pop-clear:active {
+  transform: scale(0.96);
+}
 .ins-sel-popover.is-practice .prac-pop-clear {
   color: var(--prac-ink-3);
 }
 .ins-sel-popover.is-practice .prac-pop-clear:hover {
-  background: rgba(184, 101, 87, 0.12);
-  color: var(--danger, #b86557);
+  background: var(--prac-danger-soft);
+  color: var(--prac-danger);
 }
 
-/* Right Washi Sheet: Clean Hairline Editorial Questions (NO Box Soup!) */
+/* =========================================================
+   3. RIGHT QUESTION FOLIO — BOTANICAL HEADER + TACTILE CONTROLS
+   ========================================================= */
 .ins-mode-practice .ins-q-group {
-  margin-bottom: 28px;
+  margin-bottom: 30px;
+}
+.ins-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.prac-group-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--prac-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--prac-accent) 24%, transparent);
+  color: var(--prac-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.prac-group-ico svg {
+  width: 15px;
+  height: 15px;
 }
 .ins-mode-practice .ins-group-title {
   font-size: calc(var(--ins-fs, 15px) + 1px);
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--prac-ink);
-  margin: 0 0 8px;
+  margin: 0;
 }
 .ins-mode-practice .ins-group-inst {
-  margin: 0 0 18px;
-  padding: 2px 0 2px 12px;
-  border-left: 2.5px solid var(--prac-accent);
-  background: transparent;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--prac-bd);
+  border-left: 3px solid var(--prac-accent);
+  background: var(--prac-sheet-sub);
   font-size: calc(var(--ins-fs, 15px) - 1.5px);
   line-height: 1.56;
   color: var(--prac-ink-2);
 }
+
 .ins-mode-practice .ins-q-items {
-  gap: 4px;
+  gap: 6px;
 }
 .ins-mode-practice .ins-q-item {
   padding: 13px 14px;
-  border-radius: 13px;
+  border-radius: 14px;
   border: 1px solid transparent;
   border-bottom-color: var(--prac-bd);
   background: transparent;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 .ins-mode-practice .ins-q-item:last-child {
   border-bottom-color: transparent;
@@ -10826,42 +11058,44 @@ body.rp-exam-fullscreen {
 }
 .ins-mode-practice .ins-q-item.is-current {
   background: var(--prac-sheet-sub);
-  border-color: color-mix(in srgb, var(--prac-accent) 32%, transparent);
+  border-color: color-mix(in srgb, var(--prac-accent) 36%, transparent);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--prac-accent) 16%, transparent);
 }
 .ins-mode-practice .ins-q-item.is-checked-ok {
-  background: color-mix(in srgb, var(--prac-accent-soft) 55%, var(--prac-sheet));
-  border-color: color-mix(in srgb, var(--prac-accent) 36%, transparent);
+  background: color-mix(in srgb, var(--prac-accent-soft) 52%, var(--prac-sheet));
+  border-color: color-mix(in srgb, var(--prac-accent) 38%, transparent);
 }
 .ins-mode-practice .ins-q-item.is-checked-bad {
-  background: rgba(184, 101, 87, 0.06);
-  border-color: rgba(184, 101, 87, 0.30);
+  background: color-mix(in srgb, var(--prac-danger-soft) 55%, var(--prac-sheet));
+  border-color: color-mix(in srgb, var(--prac-danger) 34%, transparent);
 }
 
 .ins-mode-practice .ins-q-num {
-  min-width: 24px;
-  height: 24px;
-  border-radius: 7px;
-  background: var(--prac-sheet-sub);
+  min-width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--prac-sand);
   border: 1px solid var(--prac-bd);
-  color: var(--prac-ink-2);
-  font-size: 12.5px;
-  font-weight: 750;
+  color: var(--prac-ink);
+  font-size: 12px;
+  font-weight: 800;
 }
 .ins-mode-practice .ins-q-num.is-active {
   background: var(--prac-accent);
   border-color: var(--prac-accent);
   color: var(--prac-accent-ink);
+  box-shadow: 0 1.5px 0 var(--lip-primary, rgba(38, 60, 38, 0.36));
 }
 .ins-mode-practice .ins-q-stem {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   line-height: 1.56;
 }
 
-/* Per-question Check Button: Quiet & Progressive Disclosure (Hidden Until Hover/Answered) */
+/* Per-Question Progressive-Disclosure Check Pill */
 .prac-q-inline-acts {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   flex-shrink: 0;
 }
 .prac-q-check-btn {
@@ -10876,7 +11110,7 @@ body.rp-exam-fullscreen {
   cursor: pointer;
   white-space: nowrap;
   opacity: 0;
-  transition: opacity 150ms ease, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition: opacity 150ms ease, transform 140ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 .ins-mode-practice .ins-q-item:hover .prac-q-check-btn,
 .ins-mode-practice .ins-q-item:focus-within .prac-q-check-btn,
@@ -10887,9 +11121,12 @@ body.rp-exam-fullscreen {
 }
 .prac-q-check-btn:hover,
 .prac-q-check-btn.is-ready:hover {
-  border-color: color-mix(in srgb, var(--prac-accent) 50%, transparent);
+  border-color: color-mix(in srgb, var(--prac-accent) 48%, transparent);
   background: var(--prac-accent-soft);
   color: var(--prac-accent);
+}
+.prac-q-check-btn:active {
+  transform: scale(0.95);
 }
 .prac-q-check-btn.is-ready {
   border-color: color-mix(in srgb, var(--prac-accent) 34%, transparent);
@@ -10901,55 +11138,71 @@ body.rp-exam-fullscreen {
   color: var(--prac-accent);
 }
 .prac-q-check-btn.is-bad {
-  border-color: rgba(184, 101, 87, 0.38);
-  background: rgba(184, 101, 87, 0.12);
-  color: var(--danger, #b86557);
+  border-color: color-mix(in srgb, var(--prac-danger) 42%, transparent);
+  background: var(--prac-danger-soft);
+  color: var(--prac-danger);
 }
 
-/* Tactile Totoro Answer Controls (Radio + Matching Chips + Gap Input) */
+/* Tactile Totoro Chips & Radios (scale(0.97) on press!) */
 .ins-mode-practice .ins-radio-list {
-  gap: 4px;
-  padding-left: 34px;
+  gap: 5px;
+  padding-left: 36px;
 }
 .ins-mode-practice .ins-radio-row {
-  border-radius: 10px;
-  padding: 7px 11px;
+  border-radius: 11px;
+  padding: 8px 12px;
   border: 1px solid transparent;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: transform 140ms var(--ease-out), background-color 150ms ease, border-color 150ms ease;
 }
 .ins-mode-practice .ins-radio-row:hover {
   background: var(--prac-sheet);
   border-color: var(--prac-bd);
 }
+.ins-mode-practice .ins-radio-row:active {
+  transform: scale(0.985);
+}
 .ins-mode-practice .ins-radio-row.is-selected {
   background: var(--prac-accent-soft);
-  border-color: color-mix(in srgb, var(--prac-accent) 40%, transparent);
+  border-color: color-mix(in srgb, var(--prac-accent) 44%, transparent);
 }
+.ins-mode-practice .ins-radio-row.is-key {
+  background: var(--prac-accent-soft);
+  border-color: color-mix(in srgb, var(--prac-accent) 48%, transparent);
+}
+.ins-mode-practice .ins-radio-row.is-wrong-pick {
+  background: var(--prac-danger-soft);
+  border-color: color-mix(in srgb, var(--prac-danger) 46%, transparent);
+}
+
 .ins-mode-practice .ins-select-chips {
-  gap: 6px;
-  padding-left: 34px;
-  margin-top: 8px;
+  gap: 7px;
+  padding-left: 36px;
+  margin-top: 9px;
 }
 .ins-mode-practice .ins-sel-chip {
-  min-width: 34px;
-  height: 30px;
-  border-radius: 9px;
+  min-width: 35px;
+  height: 31px;
+  border-radius: 10px;
   border: 1px solid var(--prac-bd);
   background: var(--prac-sheet);
   color: var(--prac-ink);
-  box-shadow: 0 1.5px 0 var(--prac-lip);
+  box-shadow: 0 2px 0 var(--prac-lip);
   font-size: 12.5px;
-  font-weight: 700;
+  font-weight: 750;
+  transition: transform 140ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 .ins-mode-practice .ins-sel-chip:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--prac-accent) 55%, transparent);
-  background: var(--prac-sheet-sub);
+  border-color: color-mix(in srgb, var(--prac-accent) 52%, transparent);
+  background: var(--prac-sand);
+}
+.ins-mode-practice .ins-sel-chip:active:not(:disabled) {
+  transform: scale(0.95);
 }
 .ins-mode-practice .ins-sel-chip.is-selected {
   background: var(--prac-accent);
   border-color: var(--prac-accent);
   color: var(--prac-accent-ink);
-  box-shadow: 0 1.5px 0 var(--lip-primary, rgba(38, 60, 38, 0.42));
+  box-shadow: 0 2px 0 var(--lip-primary, rgba(38, 60, 38, 0.42));
 }
 .ins-mode-practice .ins-sel-chip.is-key {
   background: var(--prac-accent-soft);
@@ -10962,109 +11215,225 @@ body.rp-exam-fullscreen {
   color: var(--prac-accent-ink);
 }
 .ins-mode-practice .ins-sel-chip.is-wrong-pick {
-  background: rgba(184, 101, 87, 0.16);
-  border-color: rgba(184, 101, 87, 0.55);
-  color: var(--danger, #b86557);
+  background: var(--prac-danger-soft);
+  border-color: color-mix(in srgb, var(--prac-danger) 55%, transparent);
+  color: var(--prac-danger);
   box-shadow: none;
 }
-.ins-mode-practice .ins-radio-row.is-key {
-  background: var(--prac-accent-soft);
-  border-color: color-mix(in srgb, var(--prac-accent) 45%, transparent);
-}
-.ins-mode-practice .ins-radio-row.is-wrong-pick {
-  background: rgba(184, 101, 87, 0.12);
-  border-color: rgba(184, 101, 87, 0.45);
-}
 .ins-mode-practice .ins-gap-input {
-  border-radius: 8px;
+  border-radius: 9px;
   border: 1px solid var(--prac-bd-strong);
   background: var(--prac-sheet);
   padding: 3px 10px;
 }
 .ins-mode-practice .ins-gap-input:focus {
   border-color: var(--prac-accent);
-  box-shadow: 0 0 0 2.5px var(--prac-accent-soft);
+  box-shadow: 0 0 0 3px var(--prac-accent-soft);
 }
 
-/* Practice Footer — Serene Totoro Bottom Bar */
+/* =========================================================
+   4. TOTORO BOTTOM NAVIGATOR DOCK (54px — Tactile Pills!)
+   ========================================================= */
 .ins-mode-practice .ins-footer {
-  height: 48px;
+  height: 54px;
   background: var(--prac-sheet);
   border-top: 1px solid var(--prac-bd);
-  padding: 0 14px;
+  padding: 0 18px;
+  gap: 12px;
+}
+.ins-mode-practice .ins-footer-parts {
+  gap: 10px;
+}
+.ins-mode-practice .ins-part-expanded {
+  gap: 8px;
+  padding: 0;
+  border: 0;
+}
+.ins-mode-practice .ins-part-lbl {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 9px;
+  background: var(--prac-accent-soft);
+  color: var(--prac-accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+.ins-mode-practice .ins-part-collapsed {
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 10px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sand);
+  color: var(--prac-ink-2);
+  font-size: 12px;
+  gap: 6px;
+  box-shadow: 0 1.5px 0 var(--prac-lip);
+  transition: transform 140ms var(--ease-out), background-color 150ms ease, color 150ms ease;
+}
+.ins-mode-practice .ins-part-collapsed:hover {
+  background: var(--prac-accent-soft);
+  color: var(--prac-accent);
+}
+.ins-mode-practice .ins-part-collapsed:active {
+  transform: scale(0.97);
+}
+.ins-mode-practice .ins-qboxes-row {
+  gap: 5px;
 }
 .ins-mode-practice .ins-qbox {
-  border-radius: 8px;
+  position: relative;
+  min-width: 29px;
+  height: 29px;
+  padding: 0;
+  border-radius: 9px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sheet-sub);
+  color: var(--prac-ink-2);
+  box-shadow: 0 1.5px 0 var(--prac-lip);
+  justify-content: center;
+  transition: transform 140ms var(--ease-out), background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
-.ins-mode-practice .prac-submit-pill {
-  width: auto !important;
-  height: 34px !important;
-  margin: auto 2px auto 10px;
-  padding: 0 16px;
-  border-radius: 10px;
-  background: var(--prac-accent);
-  color: var(--prac-accent-ink);
-  box-shadow: 0 2px 0 var(--lip-primary, rgba(38, 60, 38, 0.4));
-  font-size: 12.5px;
+.ins-mode-practice .ins-qbox:hover {
+  border-color: color-mix(in srgb, var(--prac-accent) 48%, transparent);
+  color: var(--prac-ink);
+}
+.ins-mode-practice .ins-qbox:active {
+  transform: scale(0.94);
+}
+.ins-mode-practice .ins-qbox-dash {
+  display: none;
+}
+.ins-mode-practice .ins-qbox-num {
+  font-size: 12px;
   font-weight: 750;
-  white-space: nowrap;
-  transition: transform 150ms ease, filter 150ms ease;
 }
-.ins-mode-practice .prac-submit-pill:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
+.ins-mode-practice .ins-qbox.is-attempted {
+  background: var(--prac-accent-soft);
+  border-color: color-mix(in srgb, var(--prac-accent) 40%, transparent);
+  color: var(--prac-accent);
+}
+.ins-mode-practice .ins-qbox.is-current {
+  background: var(--prac-accent);
+  border-color: var(--prac-accent);
+  color: var(--prac-accent-ink);
+  box-shadow: 0 2px 0 var(--lip-primary, rgba(38, 60, 38, 0.42));
+}
+.ins-mode-practice .ins-qbox.is-correct {
+  background: var(--prac-accent-soft);
+  border-color: var(--prac-accent);
+  color: var(--prac-accent);
+}
+.ins-mode-practice .ins-qbox.is-wrong {
+  background: var(--prac-danger-soft);
+  border-color: var(--prac-danger);
+  color: var(--prac-danger);
+}
+.ins-mode-practice .ins-qbox.is-review::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--prac-streak);
 }
 
-/* Responsive Mobile Parity */
+.ins-mode-practice .prac-submit-pill {
+  width: auto !important;
+  height: 36px !important;
+  margin: auto 0;
+  padding: 0 18px;
+  border-radius: 11px;
+  background: var(--prac-accent);
+  color: var(--prac-accent-ink);
+  box-shadow: 0 2.5px 0 var(--lip-primary, rgba(38, 60, 38, 0.42));
+  font-size: 12.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: transform 140ms var(--ease-out), filter 150ms ease;
+}
+.ins-mode-practice .prac-submit-pill:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+.ins-mode-practice .prac-submit-pill:active {
+  transform: scale(0.97);
+}
+
+/* =========================================================
+   5. RESPONSIVE MOBILE PARITY (<= 900px) + REDUCED MOTION
+   ========================================================= */
 @media (max-width: 900px) {
-  .ins-mode-practice .ins-header {
+  .ins-pane-wrap,
+  .prac-sheet-shell {
+    display: none;
+    flex: 1 1 100% !important;
+  }
+  .ins-pane-wrap.mob-active,
+  .prac-sheet-shell.mob-active {
     display: flex;
+  }
+  .ins-mode-practice .ins-header {
+    height: 52px;
     padding: 0 10px;
     gap: 6px;
   }
-  .ins-mode-practice .ins-hdr-left {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .ins-mode-practice .ins-hdr-meta {
-    gap: 6px;
-  }
-  .ins-mode-practice .ins-hdr-title {
-    font-size: 12.5px;
-  }
-  .prac-timer-row,
-  .prac-hdr-check-wrap {
+  .prac-back-btn span,
+  .prac-totoro-ico,
+  .prac-timer-pill,
+  .prac-prog-pill,
+  .prac-hdr-check-wrap,
+  .prac-hdr-btn span {
     display: none;
+  }
+  .prac-back-btn,
+  .prac-hdr-btn {
+    padding: 0 8px;
   }
   .ins-mode-practice .ins-split-body {
     padding: 8px 10px;
   }
-  .ins-mode-practice .ins-pane {
-    padding: 18px 16px 32px;
-    border-radius: 14px;
+  .prac-sheet-shell {
+    border-radius: 15px;
+  }
+  .prac-sheet-shell > .ins-pane {
+    padding: 18px 16px 36px;
   }
   .ins-mode-practice .ins-radio-list,
   .ins-mode-practice .ins-select-chips {
     padding-left: 0;
   }
-  .ins-mode-practice .prac-submit-pill {
-    padding: 0 12px;
-    font-size: 12px;
+  .ins-mode-practice .ins-footer {
+    height: 50px;
+    padding: 0 10px;
   }
-  .rp-ms-btn {
-    padding: 0 9px;
-    font-size: 11px;
+  .ins-mode-practice .prac-submit-pill {
+    padding: 0 13px;
+    font-size: 12px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .rp-btn-practice,
-  .rp-ms-btn,
   .prac-back-btn,
-  .prac-pop-dot,
+  .prac-timer-eye,
+  .prac-prog-fill,
   .prac-hdr-check-btn,
-  .prac-hdr-progress-fill,
-  .prac-submit-pill {
+  .prac-hdr-btn,
+  .prac-hdr-ico,
+  .prac-popover,
+  .prac-seg-btn,
+  .prac-pop-dot,
+  .ins-sel-popover.is-practice,
+  .prac-q-check-btn,
+  .ins-mode-practice .ins-sel-chip,
+  .ins-mode-practice .ins-radio-row,
+  .ins-mode-practice .ins-qbox,
+  .ins-mode-practice .prac-submit-pill {
     transition: none !important;
+    animation: none !important;
   }
 }
