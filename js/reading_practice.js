@@ -147,6 +147,10 @@
     _lockKey() { return `${LOCKOUT_KEY_BASE}${getUid()}`; },
 
     getLockoutInfo() {
+      if (isTeacherBypass()) {
+        try { localStorage.removeItem(this._lockKey()); } catch (_) {}
+        return null;
+      }
       try {
         const raw = localStorage.getItem(this._lockKey());
         if (!raw) return null;
@@ -162,6 +166,10 @@
     },
 
     setLockout(minutes, meta = {}) {
+      if (isTeacherBypass()) {
+        try { localStorage.removeItem(this._lockKey()); } catch (_) {}
+        return null;
+      }
       const mins = Math.max(1, Number(minutes) || ANTI_CHEAT_LOCKOUT_MINS);
       const payload = {
         until: Date.now() + mins * 60 * 1000,
@@ -294,7 +302,13 @@
 
   function isTeacherBypass() {
     try {
-      if (B()?.isTeacherMode?.() && !B()?.isTeacherPreviewing?.()) return true;
+      const bridge = B();
+      if (bridge?.isTeacherMode?.() || bridge?.isTeacherPreviewing?.()) return true;
+      const u = bridge?.getCurrentUser?.();
+      const role = String(u?.role || '').trim().toLowerCase();
+      if (role === 'teacher' || role === 'admin') return true;
+      const uid = getUid();
+      if (uid === 'giaovien' || uid === 'teacher' || uid === 'admin') return true;
     } catch (_) {}
     return false;
   }
@@ -596,7 +610,7 @@
     }
   }
 
-  const BANK_VERSION = '20261124i';
+  const BANK_VERSION = '20261125a';
   const _loadedBanks = {};
   const _bankPromises = {};
 
@@ -848,7 +862,10 @@
 
   function buildResumeBannerHtml() {
     ReadingPracticeStore.clearInProgress();
-    if (isTeacherBypass()) return '';
+    if (isTeacherBypass()) {
+      ReadingPracticeStore.clearLockout();
+      return '';
+    }
     const lock = ReadingPracticeStore.getLockoutInfo();
     if (!lock) return '';
     setTimeout(() => startAcLockCountdown(), 0);
@@ -888,7 +905,7 @@
     };
 
     const portalCoverById = {
-      cambridge: 'assets/images/reading_covers/portal_cambridge.webp?v=20261125c',
+      cambridge: 'assets/images/reading_covers/portal_cambridge.webp?v=20261125e',
       volume: 'assets/images/reading_covers/portal_volume.webp?v=20261125c',
       actual: 'assets/images/reading_covers/portal_actual.webp?v=20261125c',
       news: 'assets/images/reading_covers/portal_news.webp?v=20261125c'
@@ -1503,7 +1520,7 @@
 
     const pillLabel = isNews
       ? (item.newsSource || item.topic || 'News')
-      : (isFull ? 'FULL TEST · 3 Passages' : `Passage ${item.passageNum}`);
+      : (isFull ? 'FULL TEST' : `Passage ${item.passageNum}`);
 
     const isMastered = !!(best && (best.mastered || (best.total > 0 && best.score === best.total)));
     const scoreBadge = best
@@ -1545,7 +1562,7 @@
 
     const isActualItem = item.source === 'actual';
     const displaySeries = isActualItem
-      ? (isFull ? 'Recent Actual · 3 Passages' : '')
+      ? (isFull ? 'Recent Actual' : '')
       : (item.series || item.topic || '');
     const displayTitle = (isActualItem && isFull && item._actualFullIdx)
       ? `Full Test #${item._actualFullIdx}`
@@ -1587,7 +1604,9 @@
      ========================================================= */
   function startSession(config) {
     const isNews = config.source === 'news';
-    if (!config.openInReview && !isNews && !isTeacherBypass()) {
+    if (isTeacherBypass()) {
+      ReadingPracticeStore.clearLockout();
+    } else if (!config.openInReview && !isNews) {
       const lock = ReadingPracticeStore.getLockoutInfo();
       if (lock) {
         showAntiCheatModal({
