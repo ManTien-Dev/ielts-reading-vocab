@@ -491,20 +491,108 @@
     return map;
   }
 
+  /* ---------- ARTISAN TOTORO / GHIBLI BOOK PROFILES (Unique color, binding, motif & review per book!) ---------- */
+  const BOOK_MOTIFS = {
+    totoro: '<svg viewBox="0 0 40 40" fill="none"><path d="M12 16L9.5 7.5L15.5 12.5C18.2 11.7 21.8 11.7 24.5 12.5L30.5 7.5L28 16C31.5 19 33.5 23.5 33 29C32.5 34.5 27.5 37.5 20 37.5C12.5 37.5 7.5 34.5 7 29C6.5 23.5 8.5 19 12 16Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="15.5" cy="21" r="1.5" fill="currentColor"/><circle cx="24.5" cy="21" r="1.5" fill="currentColor"/><path d="M14 29.5L16.5 27.5L19 29.5M21 29.5L23.5 27.5L26 29.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    umbrella: '<svg viewBox="0 0 40 40" fill="none"><path d="M20 5V9M6 21C9 12 14 9 20 9C26 9 31 12 34 21C30.5 19 27 19 24 20.5C21.5 19 18.5 19 16 20.5C13 19 9.5 19 6 21Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M20 20V33C20 35 22 36 23.5 34.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    acorn: '<svg viewBox="0 0 40 40" fill="none"><path d="M20 6V11M10 18C10 13 14.5 10.5 20 10.5C25.5 10.5 30 13 30 18H10Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12.5 18C12.5 27 15.8 32.5 20 34.5C24.2 32.5 27.5 27 27.5 18" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15 12L17 17M20 11V17M25 12L23 17" stroke="currentColor" stroke-width="1.2" opacity="0.65"/></svg>',
+    soot: '<svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="21" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M20 7V11M20 31V35M6 21H10M30 21H34M10 11L13 14M27 28L30 31M30 11L27 14M13 28L10 31" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="20" r="1.6" fill="currentColor"/><circle cx="23" cy="20" r="1.6" fill="currentColor"/></svg>',
+    moon: '<svg viewBox="0 0 40 40" fill="none"><path d="M26 28.5C19.5 28.5 14.5 23.5 14.5 17C14.5 13 16.5 9.5 19.5 7.5C13 8.5 8.5 14 8.5 20.5C8.5 27.5 14.2 33 21.2 33C25.5 33 29.2 31 31.5 27.8C29.8 28.3 28 28.5 26 28.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M28 9L29 12L32 13L29 14L28 17L27 14L24 13L27 12L28 9Z" fill="currentColor"/></svg>',
+    leaf: '<svg viewBox="0 0 40 40" fill="none"><path d="M9 32C11 20 18 11 32 8C29 21 21 29 9 32Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 32L24 16M16 24L22 23M19 20L18 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    lantern: '<svg viewBox="0 0 40 40" fill="none"><path d="M20 5V9M15 9H25M15 31H25M20 31V35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="12" y="9" width="16" height="22" rx="7" stroke="currentColor" stroke-width="1.8"/><path d="M12 16H28M12 24H28" stroke="currentColor" stroke-width="1.3" opacity="0.7"/></svg>',
+    ginkgo: '<svg viewBox="0 0 40 40" fill="none"><path d="M20 35V24M20 24C12 23 7 17 8 10C13 9 17 11 20 15C23 11 27 9 32 10C33 17 28 23 20 24Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M20 24L14 14M20 24L26 14" stroke="currentColor" stroke-width="1.2" opacity="0.65"/></svg>',
+    crane: '<svg viewBox="0 0 40 40" fill="none"><path d="M7 22L20 18L33 12L24 23L29 31L18 25L9 29L15 22L7 22Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
+    fern: '<svg viewBox="0 0 40 40" fill="none"><path d="M20 35V8M20 14L13 10M20 14L27 10M20 20L11 16M20 20L29 16M20 26L12 22M20 26L28 22" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    tree: '<svg viewBox="0 0 40 40" fill="none"><path d="M20 35V23M14 35H26" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M11 23C8 22 7 18 9 15C9 11 13 8 17 9C19 6 24 6 26 9C30 9 32 12 31 16C33 18 32 22 29 23H11Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
+    wave: '<svg viewBox="0 0 40 40" fill="none"><path d="M6 25C10 20 14 20 18 25C22 30 26 30 34 23M6 17C11 12 16 12 21 17C25 21 29 21 34 16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+  };
+
+  const CAM_BOOK_PROFILES = {
+    20: { cover: '#2B5B44', spine: '#1C3F2E', ribbon: '#EBC066', bind: 'frame', motif: 'totoro', h: 124, stars: 4, diff: 'Band 7.0–8.5', review: 'Chuẩn đề 2025 mới nhất — nổi bật chủ đề sinh thái, tâm lý nhận thức & bẫy Paraphrase tinh vi ở P3.' },
+    19: { cover: '#244C6D', spine: '#17334B', ribbon: '#ECC26C', bind: 'obi', motif: 'umbrella', h: 118, stars: 4, diff: 'Band 7.0–8.5', review: 'Rất sát xu hướng thi máy 2024 — mạnh về Matching Features dài và câu hỏi YNNG ẩn ý sâu.' },
+    18: { cover: '#944A32', spine: '#6B3320', ribbon: '#F2CC7B', bind: 'arch', motif: 'acorn', h: 122, stars: 4, diff: 'Band 6.5–8.0', review: 'Cân bằng học thuật & đời sống — nhiều bài kiến trúc, tâm lý và Summary Completion nâng cao.' },
+    17: { cover: '#5A4471', spine: '#3E2D50', ribbon: '#E7BF75', bind: 'ribs', motif: 'moon', h: 115, stars: 3, diff: 'Band 6.5–7.5', review: 'Bộ kinh điển luyện tốc độ — câu hỏi TFNG trực diện, cực hợp bứt phá từ Band 6.5 lên 7.5.' },
+    16: { cover: '#25605E', spine: '#184241', ribbon: '#EDC573', bind: 'stripe', motif: 'soot', h: 121, stars: 4, diff: 'Band 7.0–8.0', review: 'Giàu từ vựng học thuật C1 — nổi bật bài lịch sử công nghệ & Matching Headings nhiều bẫy tiêu đề.' },
+    15: { cover: '#946529', spine: '#6B471A', ribbon: '#F5DA92', bind: 'obi', motif: 'ginkgo', h: 117, stars: 3, diff: 'Band 6.0–7.5', review: 'Độ khó vừa phải, mạch lập luận sáng rõ — lý tưởng để làm quen chiến thuật skim & scan.' },
+    14: { cover: '#3A434D', spine: '#252B32', ribbon: '#E2C37E', bind: 'frame', motif: 'lantern', h: 123, stars: 4, diff: 'Band 6.5–8.0', review: 'Nổi tiếng với Passage 3 trừu tượng về ngôn ngữ & tâm lý — thử thách kỹ năng suy luận sắc bén.' },
+    13: { cover: '#843A44', spine: '#5D262E', ribbon: '#F1C87F', bind: 'arch', motif: 'crane', h: 116, stars: 4, diff: 'Band 6.5–8.0', review: 'Tần suất cao dạng Matching Information & Multiple Choice — rèn khả năng lọc nhiễu cực tốt.' },
+    12: { cover: '#4B6739', spine: '#344926', ribbon: '#ECCB7C', bind: 'ribs', motif: 'fern', h: 120, stars: 3, diff: 'Band 6.0–7.5', review: 'Chủ đề khoa học tự nhiên & khảo cổ dễ tiếp cận — phù hợp xây nền tảng đọc hiểu ổn định.' },
+    11: { cover: '#734A33', spine: '#503221', ribbon: '#ECC67B', bind: 'stripe', motif: 'tree', h: 118, stars: 4, diff: 'Band 6.5–8.0', review: 'Điển hình cho cấu trúc đề Cambridge hiện đại — nhiều câu Gap-Fill biến thể từ loại khó.' },
+    10: { cover: '#2C4673', spine: '#1D3052', ribbon: '#E8BE71', bind: 'frame', motif: 'wave', h: 122, stars: 3, diff: 'Band 6.0–7.5', review: 'Cột mốc khởi đầu chuỗi đề trọng tâm — câu hỏi đa dạng, rất hợp luyện trọn Full Test 60 phút.' },
+    9:  { cover: '#3D6B59', spine: '#294B3E', ribbon: '#E8C06E', bind: 'obi', motif: 'leaf', h: 117, stars: 3, diff: 'Band 6.0–7.0', review: 'Văn phong cổ điển mạch lạc — phù hợp luyện độ chính xác tuyệt đối ở Passage 1 & 2.' },
+    8:  { cover: '#6E4C5E', spine: '#4D3341', ribbon: '#EBC67A', bind: 'arch', motif: 'moon', h: 121, stars: 4, diff: 'Band 6.5–8.0', review: 'Chứa nhiều bài khoa học kinh điển (như Chronobiology) — từ vựng học thuật giàu tính hệ thống.' },
+    7:  { cover: '#8A5638', spine: '#633C26', ribbon: '#F0CA7B', bind: 'ribs', motif: 'acorn', h: 115, stars: 3, diff: 'Band 6.0–7.0', review: 'Bố cục rõ ràng, ít bẫy lắt léo — thích hợp cho giai đoạn mới chuyển sang làm đề thật.' },
+    6:  { cover: '#2B5B66', spine: '#1C3F47', ribbon: '#E6BE72', bind: 'stripe', motif: 'wave', h: 119, stars: 3, diff: 'Band 6.0–7.5', review: 'Nổi bật dạng Diagram Labelling & Flow-chart — luyện kỹ năng bám sát chi tiết kỹ thuật.' },
+    5:  { cover: '#57503C', spine: '#3D3829', ribbon: '#E8C67D', bind: 'frame', motif: 'tree', h: 116, stars: 3, diff: 'Band 6.0–7.5', review: 'Nhiều bài lịch sử & giáo dục kinh điển — rất tốt để mở rộng vốn từ vựng Paraphrase gốc.' },
+    4:  { cover: '#475A78', spine: '#303E55', ribbon: '#E5BF73', bind: 'obi', motif: 'crane', h: 120, stars: 3, diff: 'Band 5.5–7.0', review: 'Độ dài đoạn văn vừa tầm, câu hỏi bám sát mạch bài — thích hợp luyện phản xạ đọc nhanh.' },
+    3:  { cover: '#7C4540', spine: '#572E2A', ribbon: '#EFC67D', bind: 'arch', motif: 'lantern', h: 115, stars: 3, diff: 'Band 5.5–7.0', review: 'Phong cách đề nền tảng cổ điển — giúp củng cố kỹ năng phân biệt False và Not Given.' },
+    2:  { cover: '#3A634C', spine: '#264433', ribbon: '#E8C171', bind: 'ribs', motif: 'fern', h: 118, stars: 3, diff: 'Band 5.5–6.5', review: 'Ngữ liệu ngắn gọn, câu trúc trực diện — phù hợp làm nóng trước khi bước lên Cam 10–20.' },
+    1:  { cover: '#5A4A63', spine: '#3E3245', ribbon: '#E4BC72', bind: 'stripe', motif: 'totoro', h: 116, stars: 2, diff: 'Band 5.5–6.5', review: 'Cuốn đầu tiên của bộ Cambridge — từ vựng cơ bản, lý tưởng cho người mới làm quen IELTS Reading.' }
+  };
+
+  const SERIES_BOOK_THEMES = [
+    { cover: '#2B5B44', spine: '#1C3F2E', ribbon: '#EBC066', bind: 'frame', motif: 'totoro', h: 122 },
+    { cover: '#244C6D', spine: '#17334B', ribbon: '#ECC26C', bind: 'obi', motif: 'umbrella', h: 117 },
+    { cover: '#944A32', spine: '#6B3320', ribbon: '#F2CC7B', bind: 'arch', motif: 'acorn', h: 121 },
+    { cover: '#5A4471', spine: '#3E2D50', ribbon: '#E7BF75', bind: 'ribs', motif: 'moon', h: 116 },
+    { cover: '#25605E', spine: '#184241', ribbon: '#EDC573', bind: 'stripe', motif: 'soot', h: 123 },
+    { cover: '#946529', spine: '#6B471A', ribbon: '#F5DA92', bind: 'obi', motif: 'ginkgo', h: 118 },
+    { cover: '#3A434D', spine: '#252B32', ribbon: '#E2C37E', bind: 'frame', motif: 'lantern', h: 120 },
+    { cover: '#843A44', spine: '#5D262E', ribbon: '#F1C87F', bind: 'arch', motif: 'crane', h: 115 },
+    { cover: '#4B6739', spine: '#344926', ribbon: '#ECCB7C', bind: 'ribs', motif: 'fern', h: 122 },
+    { cover: '#734A33', spine: '#503221', ribbon: '#ECC67B', bind: 'stripe', motif: 'tree', h: 117 }
+  ];
+
   function getBookVisualMeta(bk) {
-    if (!bk) return { era: 'cam-latest', brand: 'IELTS', numText: '20', kind: 'book' };
+    if (!bk) {
+      const p = CAM_BOOK_PROFILES[20];
+      return { era: 'cam-20', brand: 'CAMBRIDGE', numText: '20', kind: 'book', featured: true, ...p };
+    }
     if (bk.source === 'cambridge') {
       const n = Number(bk.num) || 1;
-      const era = n >= 16 ? 'cam-latest' : n >= 12 ? 'cam-modern' : n >= 8 ? 'cam-core' : 'cam-classic';
-      return { era, brand: 'CAMBRIDGE', numText: String(n), kind: 'book' };
+      const p = CAM_BOOK_PROFILES[n] || CAM_BOOK_PROFILES[20];
+      return {
+        era: `cam-${n}`,
+        brand: 'CAMBRIDGE',
+        numText: String(n),
+        kind: 'book',
+        featured: n >= 10,
+        ...p
+      };
     }
     if (bk.source === 'volume') {
       const v = Number(bk.num) || 1;
-      return { era: `vol-${((v - 1) % 6) + 1}`, brand: 'REAL VOL', numText: String(v).padStart(2, '0'), kind: 'volume' };
+      const th = SERIES_BOOK_THEMES[(v - 1) % SERIES_BOOK_THEMES.length];
+      return {
+        era: `vol-${v}`,
+        brand: 'REAL VOL',
+        numText: String(v).padStart(2, '0'),
+        kind: 'volume',
+        featured: v <= 5,
+        ...th,
+        stars: v >= 6 ? 5 : 4,
+        diff: v >= 6 ? 'Band 7.5–9.0' : 'Band 7.0–8.5',
+        review: `Đề thực chiến tuyển chọn Vol ${v} — mật độ Paraphrase dày & nhiều câu bẫy học thuật chuẩn phòng thi thật.`
+      };
     }
     const sNum = Number(bk.num) || 1;
-    const sIdx = (sNum - 1) % 4;
-    return { era: `act-${sIdx + 1}`, brand: 'RECENT', numText: String(sNum).padStart(2, '0'), kind: 'dossier' };
+    const th = SERIES_BOOK_THEMES[(sNum + 2) % SERIES_BOOK_THEMES.length];
+    return {
+      era: `act-${sNum}`,
+      brand: 'ACTUAL',
+      numText: String(sNum).padStart(2, '0'),
+      kind: 'dossier',
+      featured: sNum <= 5,
+      ...th,
+      stars: 4,
+      diff: 'Band 7.0–8.5',
+      review: `Tổng hợp đề thi thật gần đây (Bộ ${sNum}) — bám sát xu hướng ra đề mới, rất hợp bấm giờ thi thử 60 phút.`
+    };
+  }
+
+  function renderDifficultyStars(count) {
+    const n = Math.max(1, Math.min(5, Number(count) || 4));
+    return `${'★'.repeat(n)}${'☆'.repeat(5 - n)}`;
   }
 
   function renderBookendSvg() {
@@ -665,22 +753,22 @@
       const readyBooksCount = books.filter((b) => countReadyTestsInBook(b.id) > 0).length;
 
       const groupToggleHtml = state.source === 'cambridge' ? `
-        <div class="rp-book-group-toggle" role="group" aria-label="Phạm vi kệ sách Cambridge">
+        <div class="rp-book-group-toggle" role="group" aria-label="Cambridge IELTS range">
           <button type="button" class="rp-mini-tab ${state.camGroup === 'recent' ? 'active' : ''}"
             aria-pressed="${state.camGroup === 'recent' ? 'true' : 'false'}"
-            onclick="ReadingPracticeApp.setCamGroup('recent')">Cam 10 – 20 (Trọng tâm)</button>
+            onclick="ReadingPracticeApp.setCamGroup('recent')"><span class="rp-star-mark" aria-hidden="true">★</span> Cam 10 – 20</button>
           <button type="button" class="rp-mini-tab ${state.camGroup === 'all' ? 'active' : ''}"
             aria-pressed="${state.camGroup === 'all' ? 'true' : 'false'}"
-            onclick="ReadingPracticeApp.setCamGroup('all')">Tất cả Cam 1 – 20 (${books.length} cuốn)</button>
+            onclick="ReadingPracticeApp.setCamGroup('all')">Cam 1 – 20</button>
         </div>
       ` : (state.source === 'actual' && books.length > 10 ? `
-        <div class="rp-book-group-toggle" role="group" aria-label="Phạm vi bộ Recent Actual Tests">
+        <div class="rp-book-group-toggle" role="group" aria-label="Recent Actual Tests range">
           <button type="button" class="rp-mini-tab ${state.actualGroup === 'recent' ? 'active' : ''}"
             aria-pressed="${state.actualGroup === 'recent' ? 'true' : 'false'}"
-            onclick="ReadingPracticeApp.setActualGroup('recent')">Bộ 1 – 10 (Mới nhất)</button>
+            onclick="ReadingPracticeApp.setActualGroup('recent')"><span class="rp-star-mark" aria-hidden="true">★</span> Set 1 – 10</button>
           <button type="button" class="rp-mini-tab ${state.actualGroup === 'all' ? 'active' : ''}"
             aria-pressed="${state.actualGroup === 'all' ? 'true' : 'false'}"
-            onclick="ReadingPracticeApp.setActualGroup('all')">Tất cả (${books.length} bộ)</button>
+            onclick="ReadingPracticeApp.setActualGroup('all')">All Sets</button>
         </div>
       ` : '');
 
@@ -693,18 +781,23 @@
           const st = testStatus[t] || {};
           return `<span class="rp-bk-pip ${st.done ? 'is-done' : (st.hasData ? 'is-ready' : '')}" aria-hidden="true"></span>`;
         }).join('');
-        const statusDesc = readyTests > 0 ? `${readyTests}/${bk.testsCount} bài thi sẵn sàng` : 'Chưa nạp đề';
+        const statusDesc = readyTests > 0 ? `${readyTests}/${bk.testsCount} tests ready` : 'Coming soon';
+        const motifSvg = BOOK_MOTIFS[meta.motif] || BOOK_MOTIFS.totoro;
+        const styleVars = `--bk-cover:${meta.cover};--bk-spine:${meta.spine};--bk-ribbon:${meta.ribbon};--bk-h:${meta.h || 118}px;`;
         return `
           <button type="button"
-            class="rp-book-pill rp-bk-item is-${meta.kind} ${active ? 'active' : ''} ${readyTests > 0 ? 'has-data' : 'is-empty'}"
+            class="rp-book-pill rp-bk-item is-${meta.kind} is-bind-${esc(meta.bind || 'frame')} ${active ? 'active' : ''} ${readyTests > 0 ? 'has-data' : 'is-empty'}"
+            style="${styleVars}"
             data-rp-book="${esc(bk.id)}"
             data-era="${esc(meta.era)}"
+            data-bind="${esc(meta.bind || 'frame')}"
             aria-pressed="${active ? 'true' : 'false'}"
             aria-label="${esc(bk.title)} — ${esc(statusDesc)}"
             onkeydown="ReadingPracticeApp.onShelfKeydown(event, '${esc(bk.id)}')"
             onclick="ReadingPracticeApp.selectBook('${esc(bk.id)}')">
             <span class="rp-bk-spine" aria-hidden="true"></span>
-            ${(readyTests > 0 || active) ? '<span class="rp-bk-ribbon" aria-hidden="true"></span>' : ''}
+            ${(readyTests > 0 || active) ? `<span class="rp-bk-ribbon" aria-hidden="true">${meta.featured ? '<span class="rp-bk-star">★</span>' : ''}</span>` : ''}
+            <span class="rp-bk-motif" aria-hidden="true">${motifSvg}</span>
             <span class="rp-bk-face">
               <span class="rp-bk-brand">${esc(meta.brand)}</span>
               <span class="rp-bk-num">${esc(meta.numText)}</span>
@@ -720,8 +813,8 @@
       // Organize books onto balanced wooden oak shelf tiers (10 per tier when > 11 books)
       const shelfTiers = [];
       if (state.source === 'cambridge' && state.camGroup === 'all' && visibleBooks.length > 11) {
-        shelfTiers.push({ label: 'Kệ trên · Cam 20 – 11', items: visibleBooks.slice(0, 10), cols: 10, compact: false });
-        shelfTiers.push({ label: 'Kệ dưới · Cam 10 – 1', items: visibleBooks.slice(10), cols: 10, compact: false });
+        shelfTiers.push({ label: '★ Featured Shelf · Cam 20 – 11', items: visibleBooks.slice(0, 10), cols: 10, compact: false });
+        shelfTiers.push({ label: 'Archive Shelf · Cam 10 – 1', items: visibleBooks.slice(10), cols: 10, compact: false });
       } else if (state.source === 'actual' && visibleBooks.length > 10) {
         for (let i = 0; i < visibleBooks.length; i += 10) {
           const chunk = visibleBooks.slice(i, i + 10);
@@ -782,24 +875,26 @@
       }).join('');
 
       const shelfHeading = state.source === 'cambridge'
-        ? 'Kệ sách Cambridge IELTS'
-        : (state.source === 'volume' ? 'Kệ sách Real Reading Test (Vol 1–10)' : 'Kệ hồ sơ Recent Actual Tests');
-      const unitNoun = state.source === 'volume' ? 'tập' : (state.source === 'actual' ? 'bộ' : 'cuốn');
+        ? 'Cambridge IELTS Library'
+        : (state.source === 'volume' ? 'Real Reading Test Library' : 'Recent Actual Tests Archive');
+      const unitNoun = state.source === 'volume' ? 'volumes' : (state.source === 'actual' ? 'sets' : 'books');
+      const curMotifSvg = BOOK_MOTIFS[curMeta.motif] || BOOK_MOTIFS.totoro;
+      const curStyleVars = `--bk-cover:${curMeta.cover};--bk-spine:${curMeta.spine};--bk-ribbon:${curMeta.ribbon};`;
 
       shelfHtml = `
         <section class="rp-shelf-box rp-bookcase" aria-label="${esc(shelfHeading)}">
           <div class="rp-shelf-top">
             <div class="rp-shelf-title-wrap">
               <span class="rp-shelf-label">${esc(shelfHeading)}</span>
-              <span class="rp-shelf-stat">${readyBooksCount}/${books.length} ${unitNoun} sẵn sàng</span>
+              <span class="rp-shelf-stat">${readyBooksCount}/${books.length} ${unitNoun} ready</span>
             </div>
             <div class="rp-shelf-controls">
               ${groupToggleHtml}
-              <div class="rp-shelf-scroll-btns" aria-label="Cuộn kệ sách">
-                <button type="button" class="rp-shelf-nav-btn" aria-label="Cuộn kệ sách sang trái" onclick="ReadingPracticeApp.scrollShelf(-1)">
+              <div class="rp-shelf-scroll-btns" aria-label="Scroll bookshelf">
+                <button type="button" class="rp-shelf-nav-btn" aria-label="Scroll left" onclick="ReadingPracticeApp.scrollShelf(-1)">
                   <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3.5L5.5 8L10 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
-                <button type="button" class="rp-shelf-nav-btn" aria-label="Cuộn kệ sách sang phải" onclick="ReadingPracticeApp.scrollShelf(1)">
+                <button type="button" class="rp-shelf-nav-btn" aria-label="Scroll right" onclick="ReadingPracticeApp.scrollShelf(1)">
                   <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3.5L10.5 8L6 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
               </div>
@@ -812,19 +907,21 @@
 
           <div class="rp-book-detail-head rp-book-desk">
             <div class="rp-desk-book">
-              <div class="rp-desk-cover is-${esc(curMeta.kind)} ${curReadyCount > 0 ? 'has-data' : 'is-empty'}" data-era="${esc(curMeta.era)}" aria-hidden="true">
+              <div class="rp-desk-cover is-${esc(curMeta.kind)} is-bind-${esc(curMeta.bind || 'frame')} ${curReadyCount > 0 ? 'has-data' : 'is-empty'}" style="${curStyleVars}" data-era="${esc(curMeta.era)}" aria-hidden="true">
                 <span class="rp-desk-cover-spine"></span>
+                <span class="rp-desk-motif">${curMotifSvg}</span>
                 <span class="rp-desk-cover-brand">${esc(curMeta.brand.slice(0, 3))}</span>
                 <span class="rp-desk-cover-num">${esc(curMeta.numText)}</span>
               </div>
               <div class="rp-desk-meta">
                 <div class="rp-desk-title-row">
                   <strong class="rp-cur-book-title">${esc(curBook?.title || '')}</strong>
+                  <span class="rp-diff-pill" title="Độ khó tham khảo">${renderDifficultyStars(curMeta.stars)} · ${esc(curMeta.diff || 'Band 6.5–8.0')}</span>
                   <span class="rp-desk-badge ${curReadyCount > 0 ? 'is-ready' : 'is-empty'}">
-                    ${curReadyCount > 0 ? `${curReadyCount}/${curBook?.testsCount || 4} Tests sẵn sàng` : 'Chưa nạp đề'}
+                    ${curReadyCount > 0 ? `${curReadyCount}/${curBook?.testsCount || 4} Tests` : 'Chưa nạp đề'}
                   </span>
                 </div>
-                <span class="rp-cur-book-sub">Passage 1–3 &amp; FULL TEST · 2 chế độ: <strong>Luyện tập</strong> &amp; <strong>Thi thật</strong></span>
+                <span class="rp-cur-book-sub">${esc(curMeta.review || '')}</span>
               </div>
             </div>
             <div class="rp-test-tabs" id="rp-test-tabs" role="group" aria-label="Chọn bộ Test trong sách">${testTabsHtml}</div>
