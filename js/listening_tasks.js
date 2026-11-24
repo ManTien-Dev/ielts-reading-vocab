@@ -322,11 +322,11 @@
      DEDICATED LISTENING TASK HUB (Exact Match to Reading Clean UI)
      --------------------------------------------------------- */
   const CLEAN_SUITE_LABELS = {
-    part1: 'Part 1',
-    part2: 'Part 2 & Map',
-    part3: 'Part 3',
-    part4: 'Part 4',
-    core_found: 'Nền tảng',
+    part1: 'Giao tiếp',
+    part2: 'Bản đồ & Địa điểm',
+    part3: 'Thảo luận',
+    part4: 'Bài giảng',
+    core_found: 'Nền tảng & Cốt lõi',
   };
 
   function shortTopicTitle(t) {
@@ -597,11 +597,11 @@
 
           <article class="tot-exam-card lt-prac-card ink-brackets">
             <div class="lt-prac-card-top">
-              <span class="rp-tag">KHO ĐỀ GỐC</span>
-              <span class="rp-count-pill">282 Sections</span>
+              <span class="rp-tag">LỘ TRÌNH CHỦ ĐỀ</span>
+              <span class="rp-count-pill">139 Tasks</span>
             </div>
-            <h3 class="rp-card-title">Cambridge · Achieve · Barron's</h3>
-            <p class="rp-card-desc">282 bài nghe gốc đã tách câu hỏi, đáp án và transcript chuẩn — trong lúc chờ ghép audio gốc, hãy luyện trọn bộ 139 Task theo Topic.</p>
+            <h3 class="rp-card-title">Luyện Nghe &amp; Viết Chính Tả</h3>
+            <p class="rp-card-desc">139 bài Task phủ kín 3.864 từ cốt lõi theo từng chủ đề thực tế — nghe 1 lần 1.25×, gõ chính tả chống mất điểm số ít/số nhiều và chữ đôi.</p>
             <div class="lt-prac-card-foot">
               <button type="button" class="tot-demo-btn" onclick="window.TotoroUI?.enterSkillMode?.('Listening', 'flashcard')">Học Flashcard</button>
               <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI?.switchView?.('task', {fromUser:true})">Mở 139 Task</button>

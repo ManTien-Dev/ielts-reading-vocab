@@ -14,6 +14,14 @@
   const VALID_VIEWS = ['home', 'flashcard', 'task', 'practice'];
 
   const html = document.documentElement;
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   function getAppBasePath() {
     if (typeof window.__APP_BASE_PATH__ === 'string') return window.__APP_BASE_PATH__;
@@ -887,14 +895,15 @@
     const lv = window.APP_LISTENING_VOCAB || {};
     const lt = window.APP_LISTENING_TASKS || { tasks: [] };
     const prog = window.ListeningTasksModule?.getProgressMap?.() || {};
-    const totalTasks = (lt.tasks || []).length || 139;
+    const allTasks = lt.tasks || [];
+    const totalTasks = allTasks.length || 139;
     const doneTasks = Object.values(prog).filter((p) => p && p.completed).length;
 
     const parts = [
-      { label: 'Part 1', list: lv.part1 || [] },
-      { label: 'Part 2', list: lv.part2 || [] },
-      { label: 'Part 3', list: lv.part3 || [] },
-      { label: 'Part 4', list: lv.part4 || [] },
+      { label: 'Giao Tiếp & Dịch Vụ', list: lv.part1 || [] },
+      { label: 'Bản Đồ & Địa Điểm', list: lv.part2 || [] },
+      { label: 'Thảo Luận & Dự Án', list: lv.part3 || [] },
+      { label: 'Bài Giảng Học Thuật', list: lv.part4 || [] },
     ];
     const allVocab = [...(lv.target_all || []), ...(lv.foundation || [])];
     const masteredTotal = allVocab.filter((w) => assess[w.id] === 3).length;
@@ -911,14 +920,59 @@
         </div>`;
     }).join('');
 
-    const recentDone = (lt.tasks || []).filter((t) => prog[t.id]?.completed).slice(0, 5);
+    const recentDone = allTasks.filter((t) => prog[t.id]?.completed).slice(0, 4);
     const histHtml = recentDone.length
       ? recentDone.map((t) => {
           const r = prog[t.id];
           const sc = r.t3Total ? `${r.t3Score}/${r.t3Total}` : `${r.t1Score || 0}/${r.t1Total || 30}`;
-          return `<div class="rh-hist-item"><div class="rh-hist-title">${t.label}</div><span class="tot-hist-badge tabular">${sc}</span></div>`;
+          return `<div class="rh-hist-item"><div class="rh-hist-title">${esc(t.label)}</div><span class="tot-hist-badge tabular">${esc(sc)}</span></div>`;
         }).join('')
-      : `<div class="rh-empty">Chưa có bài Task Listening nào hoàn thành. Thử mở <strong>Part 2 · Map 01</strong> hoặc <strong>Part 1 · Task 01</strong> để làm bài ngay.</div>`;
+      : `<div class="rh-empty">Chưa có bài Listening nào hoàn thành. Chọn ngay một bài <strong>Bản đồ Map</strong> hoặc <strong>Thực chiến 3 Test</strong> bên dưới để bắt đầu.</div>`;
+
+    const featuredExams = [
+      ...allTasks.filter((t) => t.isMapTask).slice(0, 3),
+      ...allTasks.filter((t) => t.hasFullTests && !t.isMapTask).slice(0, 3),
+    ];
+    const featuredHtml = featuredExams.map((t) => {
+      const r = prog[t.id];
+      const rawTitle = String(t.topicTitle || t.theme || '').replace(/^🗺️\s*MAP\s*·\s*/i, '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
+      const shortTitle = rawTitle.includes('·') ? rawTitle.split('·').pop().trim() : rawTitle;
+      const badge = r?.t3Total
+        ? `<span class="tot-hist-badge tabular">${r.t3Score}/${r.t3Total}</span>`
+        : `<span class="lt-inline-pill ${t.isMapTask ? 'is-map' : ''}">${t.isMapTask ? 'Map' : '3 Test'}</span>`;
+      return `
+        <div class="rh-hist-item lh-click-row" onclick="window.ListeningTasksModule?.openExam?.('${esc(t.id)}', 3)">
+          <div style="min-width:0;flex:1;">
+            <div class="rh-hist-title">${esc(t.label)} · ${esc(shortTitle)}</div>
+            <div class="rh-hist-meta">${t.isMapTask ? 'Bản đồ SVG tương tác · Nghe 1 lần 1.25×' : 'Note Completion chuẩn Cambridge · Audio Neural 1.25×'}</div>
+          </div>
+          <div class="rh-hist-right">
+            ${badge}
+            <button type="button" class="tot-foot-btn" onclick="event.stopPropagation(); window.ListeningTasksModule?.openExam?.('${esc(t.id)}', 3)">Làm bài →</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    const deckCatalog = [
+      { key: 'l_foundation', name: 'Từ Vựng Nền Tảng', sub: 'Từ cơ bản bắt buộc nghe hiểu', list: lv.foundation || [] },
+      { key: 'l_all_parts', name: 'Từ Vựng Cốt Lõi', sub: 'Xuất hiện đều ở cả 4 phần thi', list: lv.all_parts || [] },
+      { key: 'l_part1', name: 'Giao Tiếp & Dịch Vụ', sub: 'Đặt phòng, du lịch, đăng ký, điền form', list: lv.part1 || [] },
+      { key: 'l_part2', name: 'Bản Đồ & Địa Điểm', sub: 'Chỉ đường, công viên, tòa nhà, sự kiện', list: lv.part2 || [] },
+      { key: 'l_part3', name: 'Thảo Luận & Dự Án', sub: 'Làm bài nhóm, trao đổi giảng viên', list: lv.part3 || [] },
+      { key: 'l_part4', name: 'Bài Giảng Học Thuật', sub: 'Khoa học, thiên nhiên, lịch sử, xã hội', list: lv.part4 || [] },
+      { key: 'l_cues_40', name: 'Từ Tín Hiệu & Bẫy Đổi Ý', sub: '40 cụm từ bẫy phổ biến khi nghe', list: lv.cues_40 || [] },
+    ];
+    const deckListHtml = deckCatalog.map((d) => {
+      const m = d.list.filter((w) => assess[w.id] === 3).length;
+      return `
+        <div class="rh-hist-item lh-click-row" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard'); window.__VOCAB_BRIDGE__?.loadMainScope?.('${d.key}');">
+          <div style="min-width:0;flex:1;">
+            <div class="rh-hist-title">${esc(d.name)}</div>
+            <div class="rh-hist-meta">${esc(d.sub)} · <strong class="tabular">${m}/${d.list.length}</strong></div>
+          </div>
+          <button type="button" class="tot-foot-btn" onclick="event.stopPropagation(); window.TotoroUI.enterSkillMode('Listening', 'flashcard'); window.__VOCAB_BRIDGE__?.loadMainScope?.('${d.key}');">Học →</button>
+        </div>`;
+    }).join('');
 
     el.innerHTML = `
       <div class="rh-layout">
@@ -938,7 +992,7 @@
               <div class="rh-hero-actions" style="margin-top:12px;">
                 <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">Vào kho đề Practice →</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Học Flashcard</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">Task bài tập</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">139 Tasks</button>
               </div>
             </div>
           </div>
@@ -956,6 +1010,30 @@
               <span class="tot-foot-meta">Bản đồ Map &amp; Note Completion</span>
               <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">Làm đề mới →</button>
             </div>
+          </div>
+        </div>
+
+        <div class="rh-bottom-asym">
+          <div class="tot-home-panel ink-brackets">
+            <div class="tot-panel-head">
+              <div>
+                <div class="tot-panel-title">Bài thi Bản đồ &amp; Thực chiến nổi bật</div>
+                <div class="tot-panel-sub">Bản đồ SVG tương tác &amp; Note Completion 1.25×</div>
+              </div>
+              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">Tất cả đề →</button>
+            </div>
+            <div class="rh-hist-list">${featuredHtml}</div>
+          </div>
+
+          <div class="tot-home-panel ink-brackets">
+            <div class="tot-panel-head">
+              <div>
+                <div class="tot-panel-title">Lộ trình Bộ từ Listening</div>
+                <div class="tot-panel-sub">7 bộ từ chia theo ngữ cảnh thực tế từ dễ đến học thuật</div>
+              </div>
+              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Flashcard →</button>
+            </div>
+            <div class="rh-hist-list lh-deck-scroll">${deckListHtml}</div>
           </div>
         </div>
       </div>
@@ -1473,7 +1551,11 @@
     });
     const scopeSel = document.getElementById('study-scope-select');
     if (scopeSel) {
-      scopeSel.addEventListener('change', syncStudyFocusWidgets);
+      scopeSel.addEventListener('change', () => {
+        syncStudyFocusWidgets();
+        syncScopeDropdown();
+      });
+      initCustomScopeDropdown(scopeSel);
     }
     const autoSpkChk = document.getElementById('chk-auto-speak');
     if (autoSpkChk) {
@@ -1546,6 +1628,114 @@
     syncChronographRing();
     syncVocabDonutRing();
     syncStudyFocusWidgets();
+    syncScopeDropdown();
+  }
+
+  /* --------------------------------------------------------------------------
+     CUSTOM TOTORO SCOPE DROPDOWN (Replaces raw native Windows <select> popup
+     while staying 100% synced with #study-scope-select for Reading & Listening)
+     -------------------------------------------------------------------------- */
+  function closeScopeDropdown() {
+    const wrap = document.querySelector('#screen-study .scope-select-wrap');
+    const trig = document.getElementById('tot-scope-trigger');
+    if (wrap) wrap.classList.remove('is-open');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+  }
+
+  function syncScopeDropdown() {
+    const sel = document.getElementById('study-scope-select');
+    const trigLbl = document.getElementById('tot-scope-trigger-label');
+    const menu = document.getElementById('tot-scope-menu');
+    if (!sel || !trigLbl || !menu) return;
+
+    const selectedOpt = sel.options[sel.selectedIndex] || Array.from(sel.options).find((o) => o.value === sel.value) || sel.options[0];
+    trigLbl.textContent = selectedOpt ? selectedOpt.textContent.trim() : 'Chọn bộ từ';
+
+    const curVal = sel.value;
+    const parts = [];
+    Array.from(sel.children).forEach((child) => {
+      if (child.tagName === 'OPTGROUP') {
+        const lbl = child.getAttribute('label') || '';
+        if (lbl) parts.push(`<div class="tot-scope-group-lbl">${esc(lbl)}</div>`);
+        Array.from(child.children).forEach((opt) => {
+          const val = opt.value;
+          const active = val === curVal;
+          parts.push(`
+            <button type="button" class="tot-scope-item ${active ? 'is-active' : ''}" role="option" aria-selected="${active ? 'true' : 'false'}" data-scope-val="${esc(val)}">
+              <span class="tot-scope-item-txt">${esc(opt.textContent.trim())}</span>
+              ${active ? '<svg class="tot-scope-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+            </button>`);
+        });
+      } else if (child.tagName === 'OPTION') {
+        const val = child.value;
+        const active = val === curVal;
+        parts.push(`
+          <button type="button" class="tot-scope-item ${active ? 'is-active' : ''}" role="option" aria-selected="${active ? 'true' : 'false'}" data-scope-val="${esc(val)}">
+            <span class="tot-scope-item-txt">${esc(child.textContent.trim())}</span>
+            ${active ? '<svg class="tot-scope-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+          </button>`);
+      }
+    });
+    menu.innerHTML = parts.join('');
+    menu.querySelectorAll('.tot-scope-item').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nextVal = btn.getAttribute('data-scope-val');
+        if (nextVal != null && sel.value !== nextVal) {
+          sel.value = nextVal;
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        closeScopeDropdown();
+        syncScopeDropdown();
+      });
+    });
+  }
+
+  function initCustomScopeDropdown(sel) {
+    const wrap = sel.closest('.scope-select-wrap');
+    if (!wrap || wrap.dataset.customInit === '1') return;
+    wrap.dataset.customInit = '1';
+    wrap.classList.add('has-custom-scope');
+    sel.classList.add('is-native-hidden');
+
+    const trig = document.createElement('button');
+    trig.type = 'button';
+    trig.id = 'tot-scope-trigger';
+    trig.className = 'tot-scope-trigger';
+    trig.setAttribute('aria-haspopup', 'listbox');
+    trig.setAttribute('aria-expanded', 'false');
+    trig.innerHTML = `
+      <span class="tot-scope-trigger-label" id="tot-scope-trigger-label">Chọn bộ từ</span>
+      <svg class="tot-scope-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+    `;
+
+    const menu = document.createElement('div');
+    menu.id = 'tot-scope-menu';
+    menu.className = 'tot-scope-menu';
+    menu.setAttribute('role', 'listbox');
+    menu.setAttribute('aria-label', 'Chọn bộ từ vựng');
+
+    wrap.appendChild(trig);
+    wrap.appendChild(menu);
+
+    trig.addEventListener('click', (e) => {
+      e.stopPropagation();
+      syncScopeDropdown();
+      const willOpen = !wrap.classList.contains('is-open');
+      closePopovers();
+      wrap.classList.toggle('is-open', willOpen);
+      trig.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) closeScopeDropdown();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeScopeDropdown();
+    });
+
+    new MutationObserver(syncScopeDropdown).observe(sel, { childList: true, subtree: true });
+    syncScopeDropdown();
   }
 
   window.TotoroUI = {
@@ -1577,6 +1767,8 @@
     renderHomeDashboard,
     renderInlineTaskHub,
     syncStudyFocusWidgets,
+    syncScopeDropdown,
+    closeScopeDropdown,
     toggleFrontContextFromWidget,
     setSessionGoalTarget,
     switchTaskSuite: (suiteKey) => { activeInlineTaskSuite = suiteKey; renderInlineTaskHub(); },

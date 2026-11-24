@@ -54,44 +54,44 @@
 
   const LISTENING_SCOPES = [
     {
+      key: 'l_foundation',
+      name: 'Từ Vựng Nền Tảng',
+      isListening: true,
+      getList: () => window.APP_LISTENING_VOCAB?.foundation || [],
+    },
+    {
+      key: 'l_all_parts',
+      name: 'Từ Vựng Cốt Lõi',
+      isListening: true,
+      getList: () => window.APP_LISTENING_VOCAB?.all_parts || [],
+    },
+    {
       key: 'l_part1',
-      name: 'Listening · Part 1',
+      name: 'Giao Tiếp & Dịch Vụ',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.part1 || [],
     },
     {
       key: 'l_part2',
-      name: 'Listening · Part 2',
+      name: 'Bản Đồ & Địa Điểm',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.part2 || [],
     },
     {
       key: 'l_part3',
-      name: 'Listening · Part 3',
+      name: 'Thảo Luận & Dự Án',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.part3 || [],
     },
     {
       key: 'l_part4',
-      name: 'Listening · Part 4',
+      name: 'Bài Giảng Học Thuật',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.part4 || [],
     },
     {
-      key: 'l_all_parts',
-      name: 'Listening · All Parts',
-      isListening: true,
-      getList: () => window.APP_LISTENING_VOCAB?.all_parts || [],
-    },
-    {
-      key: 'l_foundation',
-      name: 'Listening · Nền Tảng',
-      isListening: true,
-      getList: () => window.APP_LISTENING_VOCAB?.foundation || [],
-    },
-    {
       key: 'l_cues_40',
-      name: 'Tín Hiệu & Bẫy Đổi Ý',
+      name: 'Từ Tín Hiệu & Bẫy Đổi Ý',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.cues_40 || [],
     },
@@ -2395,6 +2395,7 @@
       } else {
         sel.value = LISTENING_SCOPES[0].key;
       }
+      window.TotoroUI?.syncScopeDropdown?.();
       return;
     }
     const isTaskActive = Boolean(
@@ -2422,6 +2423,7 @@
         `<option value="${escapeHtml(it.key)}">${escapeHtml(it.name)}</option>`
       ).join('');
       sel.value = taskOptions.some(s => s.key === currentScopeKey) ? currentScopeKey : (taskOptions[0]?.key || currentScopeKey);
+      window.TotoroUI?.syncScopeDropdown?.();
       return;
     }
     let html = SCOPES.map(it =>
@@ -2452,6 +2454,7 @@
     } else {
       sel.value = getAllScopes().some(s => s.key === currentScopeKey) ? currentScopeKey : SCOPES[0].key;
     }
+    window.TotoroUI?.syncScopeDropdown?.();
   }
 
   function applyFilterAndBuildDeck(preserveWordId = null, options = {}) {
@@ -2512,6 +2515,7 @@
     populateScopeSelect();
     const sel = document.getElementById('study-scope-select');
     if (sel) sel.value = currentScopeKey;
+    window.TotoroUI?.syncScopeDropdown?.();
     window.TasksModule?.onScopeChanged?.(currentScopeKey);
     window.RecognitionTestModule?.updateScopeListTestButton?.();
     applyFilterAndBuildDeck();
@@ -2789,7 +2793,16 @@
     if (lRevealTxt) lRevealTxt.textContent = '👁️ Hé chữ';
     const lPartBadge = document.getElementById('fc-l-part-badge');
     if (lPartBadge) {
-      lPartBadge.textContent = item.primary_part || (item.direction ? `Tín hiệu · ${item.direction}` : 'Listening');
+      const partNameMap = {
+        'Part 1': 'Giao Tiếp & Dịch Vụ',
+        'Part 2': 'Bản Đồ & Địa Điểm',
+        'Part 3': 'Thảo Luận & Dự Án',
+        'Part 4': 'Bài Giảng Học Thuật',
+        'All Parts': 'Từ Vựng Cốt Lõi',
+        'Foundation': 'Từ Vựng Nền Tảng',
+      };
+      const rawP = String(item.primary_part || '').trim();
+      lPartBadge.textContent = partNameMap[rawP] || (item.direction ? `Tín hiệu · ${item.direction}` : (rawP || 'Luyện Nghe'));
     }
     const lTrapBadge = document.getElementById('fc-l-trap-badge');
     if (lTrapBadge) {
@@ -5929,6 +5942,7 @@
     populateScopeSelect();
     const sel = document.getElementById('study-scope-select');
     if (sel) sel.value = currentScopeKey;
+    window.TotoroUI?.syncScopeDropdown?.();
     const isFlashcardOpen = window.TotoroUI?.getActiveView?.() === 'flashcard';
     applyFilterAndBuildDeck(null, { speak: isFlashcardOpen });
   });
