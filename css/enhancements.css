@@ -7847,6 +7847,16 @@ html[data-skill="listening"] .tot-skill-trigger {
    ONE-SHOT RECALL, 131-TASK HUB & 3-TEST EXAM ENGINE)
    ========================================================= */
 /* 1. Listening Front Audio Stage (shown ONLY when data-skill="listening") */
+/* Keep Listening Flashcard 100% as clean & single-screen as Reading: hide bulky top banner */
+#listening-study-banner {
+  display: none !important;
+}
+.lt-only-tool {
+  display: none !important;
+}
+html[data-skill="listening"] .lt-only-tool {
+  display: inline-flex !important;
+}
 .fc-listening-front-stage {
   display: none;
   flex-direction: column;
@@ -7860,17 +7870,94 @@ html[data-skill="listening"] .tot-skill-trigger {
 html[data-skill="listening"] .fc-listening-front-stage {
   display: flex;
 }
-html[data-skill="listening"] .fc-face-front:not(.is-listening-revealed) #fc-front-word,
-html[data-skill="listening"] .fc-face-front:not(.is-listening-revealed) .calm-hand-underline,
-html[data-skill="listening"] .fc-face-front:not(.is-listening-revealed) #fc-front-pronounce-row {
+html[data-skill="listening"][data-mode] #screen-study .fc-face-front:not(.is-listening-revealed) #fc-front-word,
+html[data-skill="listening"][data-mode] #screen-study .fc-face-front:not(.is-listening-revealed) .calm-hand-underline,
+html[data-skill="listening"][data-mode] #screen-study .fc-face-front:not(.is-listening-revealed) #fc-front-pronounce-row,
+html[data-skill="listening"] #screen-study .fc-face-front:not(.is-listening-revealed) #fc-front-word,
+html[data-skill="listening"] #screen-study .fc-face-front:not(.is-listening-revealed) .calm-hand-underline,
+html[data-skill="listening"] #screen-study .fc-face-front:not(.is-listening-revealed) #fc-front-pronounce-row {
   display: none !important;
 }
 html[data-skill="listening"] .fc-face-front.is-listening-revealed #fc-front-word {
-  margin-top: 8px;
-  font-size: clamp(26px, 4.5vw, 36px) !important;
+  margin-top: 6px;
+  font-size: clamp(26px, 4.2vw, 34px) !important;
 }
 html[data-skill="listening"] .fc-face-front.is-listening-revealed #fc-front-pronounce-row {
   margin-top: 2px;
+}
+/* Clean compact tags matching Reading's .tot-task-card */
+.tot-task-num.is-map-num {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: #1d4ed8 !important;
+}
+.lt-inline-pill {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft, rgba(78, 122, 81, 0.12));
+  color: var(--accent, #2f6b32);
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.lt-inline-pill.is-map {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+/* Listening Practice 3-column grid matching Reading Practice */
+.lt-prac-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1024px) {
+  .lt-prac-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .lt-prac-grid { grid-template-columns: 1fr; }
+}
+.lt-prac-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.lt-prac-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(100, 116, 139, 0.2));
+  background: var(--bg-soft, #f7f4ec);
+  color: var(--ink, #1f2937);
+  font-family: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+.lt-prac-row > span:first-child {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lt-prac-row:hover {
+  border-color: var(--accent, #2f6b32);
+  background: var(--surface, #ffffff);
+}
+.lt-prac-go {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--accent, #2f6b32);
+  white-space: nowrap;
 }
 .fc-l-pills {
   display: flex;

@@ -55,43 +55,43 @@
   const LISTENING_SCOPES = [
     {
       key: 'l_part1',
-      name: 'Part 1 · Đời sống (464 từ)',
+      name: 'Listening · Part 1',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.part1 || [],
     },
     {
       key: 'l_part2',
-      name: 'Part 2 · Địa điểm & Hướng dẫn (665 từ)',
+      name: 'Listening · Part 2',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.part2 || [],
     },
     {
       key: 'l_part3',
-      name: 'Part 3 · Thảo luận học thuật (388 từ)',
+      name: 'Listening · Part 3',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.part3 || [],
     },
     {
       key: 'l_part4',
-      name: 'Part 4 · Bài giảng đại học (1.559 từ)',
+      name: 'Listening · Part 4',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.part4 || [],
     },
     {
       key: 'l_all_parts',
-      name: 'All Parts · Xuyên suốt (464 từ)',
+      name: 'Listening · All Parts',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.all_parts || [],
     },
     {
       key: 'l_foundation',
-      name: 'Foundation · Nền tảng Listening (324 từ)',
+      name: 'Listening · Nền Tảng',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.foundation || [],
     },
     {
       key: 'l_cues_40',
-      name: '40 Tín hiệu Chuyển hướng & Bẫy đổi ý',
+      name: 'Tín Hiệu & Bẫy Đổi Ý',
       isListening: true,
       getList: () => window.APP_LISTENING_VOCAB?.cues_40 || [],
     },
@@ -2374,19 +2374,18 @@
     const sel = document.getElementById('study-scope-select');
     if (!sel) return;
     if (isListeningSkillActive() && window.APP_LISTENING_VOCAB) {
-      let lHtml = '';
-      if (activeListeningTaskScope) {
-        lHtml += `<optgroup label="Bộ từ Listening Task đang học"><option value="${escapeHtml(activeListeningTaskScope.key)}">${escapeHtml(activeListeningTaskScope.name)}</option></optgroup>`;
-      }
-      lHtml += `<optgroup label="Từ vựng IELTS Listening (3.864 từ + 40 Cues)">${LISTENING_SCOPES.map(it =>
+      let lHtml = LISTENING_SCOPES.map(it =>
         `<option value="${escapeHtml(it.key)}">${escapeHtml(it.name)}</option>`
-      ).join('')}</optgroup>`;
+      ).join('');
+      if (activeListeningTaskScope) {
+        lHtml = `<option value="${escapeHtml(activeListeningTaskScope.key)}">${escapeHtml(activeListeningTaskScope.name)}</option>` + lHtml;
+      }
       if (window.MyVocabStore && !isTeacherUser()) {
         const mvDecks = window.MyVocabStore.getDecks() || [];
         if (mvDecks.length > 0) {
           lHtml += `<optgroup label="Từ của tôi (Lưu trên máy)">${mvDecks.map((d) => {
             const sk = window.MyVocabStore.getScopeKey(d.id);
-            return `<option value="${escapeHtml(sk)}">${escapeHtml(d.name)} (${d.words.length} từ)</option>`;
+            return `<option value="${escapeHtml(sk)}">${escapeHtml(d.name)}</option>`;
           }).join('')}</optgroup>`;
         }
       }
@@ -2552,12 +2551,13 @@
   function formatShortPos(posRaw) {
     const p = String(posRaw || '').trim();
     if (!p) return 'Từ vựng';
-    if (/DANH TỪ/i.test(p)) return 'Danh từ';
-    if (/ĐỘNG TỪ/i.test(p)) return 'Động từ';
-    if (/TÍNH TỪ/i.test(p)) return 'Tính từ';
-    if (/TRẠNG TỪ/i.test(p)) return 'Trạng từ';
+    const low = p.toLowerCase();
+    if (low === 'n' || low === 'noun' || /DANH TỪ/i.test(p)) return 'Danh từ';
+    if (low === 'v' || low === 'verb' || /ĐỘNG TỪ/i.test(p)) return 'Động từ';
+    if (low === 'a' || low === 'adj' || low === 'adjective' || /TÍNH TỪ/i.test(p)) return 'Tính từ';
+    if (low === 'r' || low === 'adv' || low === 'adverb' || /TRẠNG TỪ/i.test(p)) return 'Trạng từ';
+    if (low === 'cue' || /SIGNAL WORD/i.test(p)) return 'Tín hiệu';
     if (/HỌ TỪ #(\d+)/i.test(p)) return p.replace(/HỌ TỪ #(\d+)/i, 'Họ từ #$1');
-    if (/SIGNAL WORD/i.test(p)) return 'Từ nối';
     return p.replace(/\s*\([^)]*\)/g, '');
   }
 
@@ -6395,7 +6395,7 @@
       const list = task.wordIds.map((id) => vMap[id]).filter(Boolean);
       activeListeningTaskScope = {
         key: `ltask_${task.id}`,
-        name: `${task.label} · ${task.theme || task.topicTitle || ''} (${list.length} từ)`,
+        name: `${task.label}`,
         isListening: true,
         isListeningTask: true,
         getList: () => list,

@@ -425,7 +425,7 @@
       window.__TOTORO_ENSURE_SKILL_MODE__();
     }
     if (activeView === 'task') renderInlineTaskHub();
-    if (activeView === 'practice') window.ReadingPracticeApp?.render?.();
+    if (activeView === 'practice') syncPracticeScreen();
     if (activeView === 'flashcard' && opts.fromUser && prevView !== 'flashcard' && B?.getCurrentUser?.() && B?.isAutoSpeakOn?.()) {
       B?.speakCurrentWord?.();
     }
@@ -866,17 +866,110 @@
     `;
   }
 
+  function syncPracticeScreen() {
+    const rpRoot = document.getElementById('rp-app-root');
+    const lpRoot = document.getElementById('lp-app-root');
+    const isListening = html.getAttribute('data-skill') === 'listening';
+    if (isListening) {
+      if (rpRoot) rpRoot.style.display = 'none';
+      if (lpRoot) lpRoot.style.display = '';
+      window.ListeningTasksModule?.renderPracticeScreen?.();
+    } else {
+      if (lpRoot) lpRoot.style.display = 'none';
+      if (rpRoot) rpRoot.style.display = '';
+      window.ReadingPracticeApp?.render?.();
+    }
+  }
+
+  function renderListeningHomePanel(el) {
+    const B = window.__VOCAB_BRIDGE__;
+    const assess = B?.getAssessmentsMap?.() || {};
+    const lv = window.APP_LISTENING_VOCAB || {};
+    const lt = window.APP_LISTENING_TASKS || { tasks: [] };
+    const prog = window.ListeningTasksModule?.getProgressMap?.() || {};
+    const totalTasks = (lt.tasks || []).length || 139;
+    const doneTasks = Object.values(prog).filter((p) => p && p.completed).length;
+
+    const parts = [
+      { label: 'Part 1', list: lv.part1 || [] },
+      { label: 'Part 2', list: lv.part2 || [] },
+      { label: 'Part 3', list: lv.part3 || [] },
+      { label: 'Part 4', list: lv.part4 || [] },
+    ];
+    const allVocab = [...(lv.target_all || []), ...(lv.foundation || [])];
+    const masteredTotal = allVocab.filter((w) => assess[w.id] === 3).length;
+    const totalVocab = allVocab.length || 3864;
+    const pctTotal = Math.round((masteredTotal / Math.max(1, totalVocab)) * 100);
+
+    const barsHtml = parts.map((p) => {
+      const m = p.list.filter((w) => assess[w.id] === 3).length;
+      const pct = Math.round((m / Math.max(1, p.list.length)) * 100);
+      return `
+        <div class="rh-deck-row">
+          <div class="rh-deck-meta"><span>${p.label}</span><strong class="tabular">${m}/${p.list.length}</strong></div>
+          <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:${pct}%"></div></div>
+        </div>`;
+    }).join('');
+
+    const recentDone = (lt.tasks || []).filter((t) => prog[t.id]?.completed).slice(0, 5);
+    const histHtml = recentDone.length
+      ? recentDone.map((t) => {
+          const r = prog[t.id];
+          const sc = r.t3Total ? `${r.t3Score}/${r.t3Total}` : `${r.t1Score || 0}/${r.t1Total || 30}`;
+          return `<div class="rh-hist-item"><div class="rh-hist-title">${t.label}</div><span class="tot-hist-badge tabular">${sc}</span></div>`;
+        }).join('')
+      : `<div class="rh-empty">Chưa có bài Task Listening nào hoàn thành. Thử mở <strong>Part 2 · Map 01</strong> hoặc <strong>Part 1 · Task 01</strong> để làm bài ngay.</div>`;
+
+    el.innerHTML = `
+      <div class="rh-layout">
+        <div class="rh-top-asym">
+          <div class="tot-hero-card ink-brackets has-stamp rh-main-hero">
+            <div class="rh-hero-copy">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+                </span>
+                <div>
+                  <h2 class="tot-shell-title" style="margin:0;">IELTS Listening</h2>
+                  <div class="tot-shell-sub tabular">${masteredTotal.toLocaleString('vi-VN')} / ${totalVocab.toLocaleString('vi-VN')} từ · ${doneTasks} / ${totalTasks} Tasks · Audio Neural 1.25×</div>
+                </div>
+              </div>
+              <div class="rh-decks-grid-4">${barsHtml}</div>
+              <div class="rh-hero-actions" style="margin-top:12px;">
+                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">Vào kho đề Practice →</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Học Flashcard</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">Task bài tập</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tot-home-panel ink-brackets rh-band-panel">
+            <div class="tot-panel-head">
+              <div>
+                <div class="tot-panel-title">Tiến độ Luyện nghe</div>
+                <div class="tot-panel-sub tabular">${doneTasks} / ${totalTasks} bài đã hoàn thành</div>
+              </div>
+              <span class="rh-band-big tabular">${pctTotal}%</span>
+            </div>
+            <div class="rh-hist-list">${histHtml}</div>
+            <div class="tot-panel-foot" style="margin-top:auto;">
+              <span class="tot-foot-meta">Bản đồ Map &amp; Note Completion</span>
+              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">Làm đề mới →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderSkillHomeStub(scope) {
     const el = document.getElementById('home-scope-skill-stub');
     if (!el) return;
+    if (scope === 'listening') {
+      renderListeningHomePanel(el);
+      return;
+    }
     const meta = {
-      listening: {
-        name: 'Listening Home',
-        badge: '3.864 từ Listening · 131 Task · 8 Flagship đủ 3 Test',
-        desc: 'Học 3.864 từ IELTS Listening trích từ 282 bài thi thật (mặt trước ẩn chữ luyện tai, Đã thuộc 1 lần nghe → nói lại Mic AI) và làm 131 Task thực chiến 3 bước: Nghe-Viết → 12 Hội thoại → Note Completion.',
-        cta: `<button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard');">Học Flashcard Listening →</button>
-              <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task');">Mở 131 Task Listening →</button>`
-      },
       writing: {
         name: 'Writing Home',
         badge: 'Đang phát triển · Sắp ra mắt',
@@ -1270,6 +1363,7 @@
         }
       }
       if (activeView === 'task') renderInlineTaskHub();
+      if (activeView === 'practice') syncPracticeScreen();
       document.dispatchEvent(new CustomEvent('totoro:skill-changed', { detail: { skill: next } }));
     }
 

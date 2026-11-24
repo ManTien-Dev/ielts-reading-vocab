@@ -319,72 +319,263 @@
   }
 
   /* ---------------------------------------------------------
-     DEDICATED LISTENING TASK HUB (Inside #screen-tasks-hub)
+     DEDICATED LISTENING TASK HUB (Exact Match to Reading Clean UI)
      --------------------------------------------------------- */
+  const CLEAN_SUITE_LABELS = {
+    part1: 'Part 1',
+    part2: 'Part 2 & Map',
+    part3: 'Part 3',
+    part4: 'Part 4',
+    core_found: 'Nền tảng',
+  };
+
+  function shortTopicTitle(t) {
+    const raw = String(t.topicTitle || t.theme || '').replace(/^🗺️\s*MAP\s*·\s*/i, '').trim();
+    // Strip parenthetical English duplicate so cards stay crisp 1-line just like Reading!
+    const noParen = raw.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+    const parts = noParen.split('·');
+    return (parts.length > 1 ? parts[parts.length - 1] : noParen).trim();
+  }
+
   function renderHub(tabsEl, gridEl) {
     const data = getTasksData();
     const suites = data.suites || [];
     const tasks = data.tasks || [];
     const progress = loadProgress();
 
-    const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
-    const subEl = document.getElementById('inline-task-sub');
-    const doneCount = Object.values(progress).filter((p) => p && p.completed).length;
-    if (titleEl) titleEl.textContent = 'IELTS Listening Tasks';
-    if (subEl) {
-      subEl.textContent = `${tasks.length} Task (${(window.APP_LISTENING_VOCAB?.meta?.total_words || 3864).toLocaleString('vi-VN')} từ Listening · 30 từ/Task) · Đã hoàn thành ${doneCount} Task · Không nút nghe lại khi Test.`;
-    }
-
     if (!suites.some((s) => s.key === activeSuiteKey) && suites.length) {
       activeSuiteKey = suites[0].key;
     }
 
+    const filtered = tasks.filter((t) => t.suite === activeSuiteKey);
+    const doneInSuite = filtered.filter((t) => progress[t.id]?.completed).length;
+    const suiteLabel = CLEAN_SUITE_LABELS[activeSuiteKey] || activeSuiteKey;
+
+    const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
+    const subEl = document.getElementById('inline-task-sub');
+    if (titleEl) titleEl.textContent = 'Task bài tập · Listening';
+    if (subEl) subEl.textContent = `${doneInSuite} / ${filtered.length} bài đã hoàn thành trong bộ ${suiteLabel}.`;
+
     if (tabsEl) {
-      tabsEl.innerHTML = suites.map((s) => `
-        <button type="button" class="tot-seg-btn ${activeSuiteKey === s.key ? 'active' : ''}" onclick="ListeningTasksModule.switchSuite('${esc(s.key)}')">${esc(s.label)}</button>
-      `).join('');
+      tabsEl.innerHTML = suites.map((s) => {
+        const cleanLbl = CLEAN_SUITE_LABELS[s.key] || String(s.label || '').replace(/\s*\(\d+\)\s*$/g, '');
+        return `<button type="button" class="tot-seg-btn ${activeSuiteKey === s.key ? 'active' : ''}" onclick="ListeningTasksModule.switchSuite('${esc(s.key)}')">${esc(cleanLbl)}</button>`;
+      }).join('');
     }
 
-    const filtered = tasks.filter((t) => t.suite === activeSuiteKey);
     if (!gridEl) return;
+    gridEl.classList.remove('is-listening-grid');
 
-    gridEl.innerHTML = filtered.map((t) => {
-      const totalW = (t.wordIds || []).length;
-      const mastered = getMasteredCount(t);
-      const pct = totalW ? Math.round((mastered / totalW) * 100) : 0;
+    gridEl.innerHTML = filtered.map((t, idx) => {
       const rec = progress[t.id] || null;
-      const hasFull3 = Boolean(t.hasFullTests);
-      const scoreBadges = rec
-        ? `<div class="lt-score-strip">
-             ${rec.t1Total ? `<span class="lt-score-chip">T1 ${rec.t1Score}/${rec.t1Total}</span>` : ''}
-             ${rec.t2Total ? `<span class="lt-score-chip">T2 ${rec.t2Score}/${rec.t2Total}</span>` : ''}
-             ${rec.t3Total ? `<span class="lt-score-chip">T3 ${rec.t3Score}/${rec.t3Total}</span>` : ''}
+      const done = Boolean(rec?.completed);
+      const numStr = String(t.num || (idx + 1)).padStart(2, '0');
+      const shortName = shortTopicTitle(t);
+      const totalW = (t.wordIds || []).length;
+      const rightTag = done
+        ? `<span class="tot-task-score tabular">${rec.t3Total ? `${rec.t3Score}/${rec.t3Total}` : `${rec.t1Score || 0}/${rec.t1Total || totalW}`}</span>`
+        : (t.isMapTask
+          ? '<span class="lt-inline-pill is-map">Map</span>'
+          : (t.hasFullTests ? '<span class="lt-inline-pill">3 Test</span>' : ''));
+
+      return `
+        <button type="button" class="tot-task-card has-stamp ${done ? 'is-done' : ''}" onclick="ListeningTasksModule.openTaskBrief('${esc(t.id)}')">
+          <span class="tot-task-num ${t.isMapTask ? 'is-map-num' : ''}">${esc(numStr)}</span>
+          <div style="min-width:0;flex:1;">
+            <div style="font-size:13px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.label)}</div>
+            <div style="font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(shortName)} · ${totalW} từ</div>
+          </div>
+          ${rightTag}
+        </button>
+      `;
+    }).join('');
+  }
+
+  /* ---------------------------------------------------------
+     CLEAN TASK BRIEF & SUMMARY MODALS (Matches Reading's modal-task-brief)
+     --------------------------------------------------------- */
+  function ensureBriefModal() {
+    let el = document.getElementById('modal-listening-brief');
+    if (el) return el;
+    el = document.createElement('div');
+    el.className = 'modal-overlay';
+    el.id = 'modal-listening-brief';
+    el.onclick = (e) => { if (e.target === el) closeTaskBrief(); };
+    el.innerHTML = `
+      <div class="modal-card" style="max-width:560px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+            <span class="tip-pill" id="lt-brief-pill" style="margin:0;">LISTENING</span>
+            <span id="lt-brief-title" style="font-weight:750;font-size:14.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+          </div>
+          <button type="button" class="btn-icon-glass" style="width:30px;height:30px;" onclick="ListeningTasksModule.closeTaskBrief()">✕</button>
+        </div>
+        <div class="modal-body" id="lt-brief-body" style="padding:18px 22px 22px;"></div>
+      </div>
+    `;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function closeTaskBrief() {
+    document.getElementById('modal-listening-brief')?.classList.remove('open');
+  }
+
+  function openTaskBrief(taskId) {
+    const task = (getTasksData().tasks || []).find((t) => t.id === taskId);
+    if (!task) return;
+    const modal = ensureBriefModal();
+    const totalW = (task.wordIds || []).length;
+    const mastered = getMasteredCount(task);
+    const rec = loadProgress()[task.id] || null;
+    const hasFull3 = Boolean(task.hasFullTests);
+
+    const pillEl = document.getElementById('lt-brief-pill');
+    const titleEl = document.getElementById('lt-brief-title');
+    const bodyEl = document.getElementById('lt-brief-body');
+    if (pillEl) pillEl.textContent = task.label;
+    if (titleEl) titleEl.textContent = shortTopicTitle(task);
+    if (bodyEl) {
+      const testDesc = hasFull3
+        ? (task.isMapTask
+          ? 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong> (tốc độ 1.25×, nghe 1 lần duy nhất): <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Bản đồ SVG Map Labelling (A–H).'
+          : 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong> (tốc độ 1.25×, nghe 1 lần duy nhất): <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Note Completion (8 chỗ trống).')
+        : `Gồm <strong>Test 1 · Nghe &amp; Viết chính tả (${totalW}/${totalW} từ)</strong> tốc độ 1.25×, nghe 1 lần duy nhất và chấm điểm ngay khi nộp.`;
+
+      const scoreRow = rec
+        ? `<div class="lt-score-strip" style="margin-bottom:14px;">
+             ${rec.t1Total ? `<span class="lt-score-chip">Test 1: ${rec.t1Score}/${rec.t1Total}</span>` : ''}
+             ${rec.t2Total ? `<span class="lt-score-chip">Test 2: ${rec.t2Score}/${rec.t2Total}</span>` : ''}
+             ${rec.t3Total ? `<span class="lt-score-chip">Test 3: ${rec.t3Score}/${rec.t3Total}</span>` : ''}
            </div>`
         : '';
 
-      return `
-        <article class="tot-task-card lt-task-card ${rec?.completed ? 'is-done' : ''} ${hasFull3 ? 'is-flagship' : ''}">
-          <div class="lt-card-top">
-            <span class="lt-part-badge">${esc(t.partLabel || 'Listening')}</span>
-            ${t.isMapTask
-              ? '<span class="lt-map-tag">🗺️ Map Labelling · 3 Test</span>'
-              : (hasFull3
-                ? '<span class="lt-flagship-tag">Đủ 3 Test Cambridge</span>'
-                : '<span class="lt-t1-tag">Test 1 (30/30)</span>')}
-          </div>
-          <div class="lt-card-title">${esc(t.label)} · ${esc(t.theme || t.topicTitle || '')}</div>
-          <div class="lt-card-sub tabular">Đã thuộc ${mastered}/${totalW} từ (${pct}%)</div>
-          <div class="lt-prog-track"><div class="lt-prog-fill" style="width:${pct}%"></div></div>
-          ${scoreBadges}
-          <div class="lt-card-actions">
-            <button type="button" class="btn-subtle lt-btn-sm" onclick="ListeningTasksModule.studyTaskWords('${esc(t.id)}')">Học ${totalW} từ</button>
-            <button type="button" class="btn btn-primary lt-btn-sm" onclick="ListeningTasksModule.openExam('${esc(t.id)}')">
-              ${hasFull3 ? 'Vào 3 Test →' : 'Làm Test 1 →'}
-            </button>
-          </div>
-        </article>
+      bodyEl.innerHTML = `
+        <div class="task-notice-box" style="margin-bottom:14px;font-size:14px;line-height:1.6;">
+          <div><strong>Chủ đề:</strong> ${esc(task.topicTitle || task.theme || '')}</div>
+          <div style="margin-top:4px;"><strong>Từ vựng đã thuộc:</strong> ${mastered} / ${totalW} từ</div>
+          <div style="margin-top:6px;">${testDesc}</div>
+        </div>
+        ${scoreRow}
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Học Flashcard (${totalW} từ)</button>
+          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}')">${hasFull3 ? 'Bắt đầu 3 Test →' : 'Làm Test 1 →'}</button>
+        </div>
       `;
-    }).join('');
+    }
+    modal.classList.add('open');
+  }
+
+  function openSummaryModal() {
+    const tasks = getTasksData().tasks || [];
+    const progress = loadProgress();
+    const doneList = tasks.filter((t) => progress[t.id]?.completed);
+    const modal = ensureBriefModal();
+    const pillEl = document.getElementById('lt-brief-pill');
+    const titleEl = document.getElementById('lt-brief-title');
+    const bodyEl = document.getElementById('lt-brief-body');
+    if (pillEl) pillEl.textContent = 'THỐNG KÊ LISTENING';
+    if (titleEl) titleEl.textContent = `${doneList.length} / ${tasks.length} Task đã hoàn thành`;
+    if (bodyEl) {
+      bodyEl.innerHTML = doneList.length
+        ? `<div class="lt-review-table-wrap"><table class="lt-review-table">
+            <thead><tr><th>Task</th><th>Test 1</th><th>Test 2</th><th>Test 3</th></tr></thead>
+            <tbody>
+              ${doneList.map((t) => {
+                const r = progress[t.id];
+                return `<tr>
+                  <td><strong>${esc(t.label)}</strong></td>
+                  <td>${r.t1Total ? `${r.t1Score}/${r.t1Total}` : '—'}</td>
+                  <td>${r.t2Total ? `${r.t2Score}/${r.t2Total}` : '—'}</td>
+                  <td>${r.t3Total ? `${r.t3Score}/${r.t3Total}` : '—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table></div>`
+        : `<div class="task-notice-box" style="margin-bottom:14px;">Bạn chưa hoàn thành Task Listening nào. Hãy chọn một Task để bắt đầu luyện nghe!</div>
+           <div style="display:flex;justify-content:flex-end;"><button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief()">Đóng</button></div>`;
+    }
+    modal.classList.add('open');
+  }
+
+  /* ---------------------------------------------------------
+     DEDICATED LISTENING PRACTICE SCREEN (#lp-app-root) — ZERO READING LEAKAGE!
+     --------------------------------------------------------- */
+  function renderPracticeScreen() {
+    const root = document.getElementById('lp-app-root');
+    if (!root) return;
+    const tasks = getTasksData().tasks || [];
+    const progress = loadProgress();
+    const mapTasks = tasks.filter((t) => t.isMapTask);
+    const noteTasks = tasks.filter((t) => t.hasFullTests && !t.isMapTask);
+
+    root.innerHTML = `
+      <div class="tot-section-shell ink-brackets has-stamp">
+        <div class="tot-shell-head">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+            </span>
+            <div>
+              <h2 class="tot-shell-title">Luyện nghe · Practice</h2>
+              <p class="tot-shell-sub">Đề luyện nghe IELTS Listening thực chiến (Audio Neural 1.25× · Không phát lại khi làm bài).</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="lt-prac-grid">
+          <article class="tot-exam-card ink-brackets">
+            <div class="rp-card-top">
+              <span class="rp-tag">MAP LABELLING · PART 2</span>
+              <span class="rp-count-pill">${mapTasks.length} bài bản đồ SVG</span>
+            </div>
+            <h3 class="rp-card-title">Bản đồ &amp; Sơ đồ mặt bằng (Map Labelling)</h3>
+            <p class="rp-card-desc">Nghe chỉ đường trên bản đồ công viên, thị trấn có bùng binh và mặt bằng tòa nhà — đối chiếu 2 cột Transcript 3 màu + Bản đồ chấm Xanh/Đỏ.</p>
+            <div class="lt-prac-list">
+              ${mapTasks.map((t) => {
+                const r = progress[t.id];
+                const sc = r?.t3Total ? `${r.t3Score}/${r.t3Total}` : 'Làm ngay →';
+                return `<button type="button" class="lt-prac-row" onclick="ListeningTasksModule.openExam('${esc(t.id)}', 3)">
+                  <span><strong>${esc(t.label)}</strong> · ${esc(shortTopicTitle(t))}</span>
+                  <span class="lt-prac-go">${esc(sc)}</span>
+                </button>`;
+              }).join('')}
+            </div>
+          </article>
+
+          <article class="tot-exam-card ink-brackets">
+            <div class="rp-card-top">
+              <span class="rp-tag">NOTE COMPLETION · PART 1–4</span>
+              <span class="rp-count-pill">${noteTasks.length} bài chuẩn Cambridge</span>
+            </div>
+            <h3 class="rp-card-title">Thực chiến Note Completion (Part 1 – Part 4)</h3>
+            <p class="rp-card-desc">10 giây đoán từ loại → nghe 1 lần duy nhất tốc độ 1.25× → chấm chính tả chuẩn Cambridge &amp; mở khóa nghe lại từng câu.</p>
+            <div class="lt-prac-list">
+              ${noteTasks.map((t) => {
+                const r = progress[t.id];
+                const sc = r?.t3Total ? `${r.t3Score}/${r.t3Total}` : 'Làm ngay →';
+                return `<button type="button" class="lt-prac-row" onclick="ListeningTasksModule.openExam('${esc(t.id)}', 3)">
+                  <span><strong>${esc(t.label)}</strong> · ${esc(shortTopicTitle(t))}</span>
+                  <span class="lt-prac-go">${esc(sc)}</span>
+                </button>`;
+              }).join('')}
+            </div>
+          </article>
+
+          <article class="tot-exam-card ink-brackets">
+            <div class="rp-card-top">
+              <span class="rp-tag">KHO ĐỀ GỐC</span>
+              <span class="rp-count-pill">282 Sections</span>
+            </div>
+            <h3 class="rp-card-title">Cambridge IELTS · Achieve · Barron's Listening</h3>
+            <p class="rp-card-desc">Kho 282 bài nghe gốc đã tách sạch câu hỏi, đáp án &amp; transcript đang được ghép audio gốc từng section để mở rộng thêm vào Practice.</p>
+            <div style="margin-top:auto;padding-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="btn btn-primary" onclick="window.TotoroUI?.switchView?.('task', {fromUser:true})">Về danh sách Task Listening →</button>
+            </div>
+          </article>
+        </div>
+      </div>
+    `;
   }
 
   /* ---------------------------------------------------------
@@ -420,7 +611,7 @@
     window.TotoroUI?.renderInlineTaskHub?.();
   }
 
-  function openExam(taskId) {
+  function openExam(taskId, startStage = 1) {
     const task = (getTasksData().tasks || []).find((t) => t.id === taskId);
     if (!task) return;
     const words = resolveTaskWords(task);
@@ -431,10 +622,11 @@
 
     stopAllAudio();
     const shuffled = words.slice().sort(() => Math.random() - 0.5);
+    const validStage = [1, 2, 3].includes(Number(startStage)) ? Number(startStage) : 1;
     examState = {
       task,
       words: shuffled,
-      stage: 1, // 1 | 2 | 3
+      stage: validStage, // 1 | 2 | 3
       // Test 1 state (100% of Task words!)
       t1Idx: 0,
       t1Results: [],
@@ -1418,6 +1610,10 @@
 
   window.ListeningTasksModule = {
     renderHub,
+    renderPracticeScreen,
+    openTaskBrief,
+    closeTaskBrief,
+    openSummaryModal,
     switchSuite: (suiteKey) => {
       activeSuiteKey = suiteKey;
       window.TotoroUI?.renderInlineTaskHub?.();

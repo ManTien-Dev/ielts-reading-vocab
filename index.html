@@ -41,7 +41,7 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261124c">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261124f">
   <link rel="stylesheet" href="css/totoro_theme.css?v=20261124m">
 </head>
 <body>
@@ -321,7 +321,7 @@
         <svg class="hdr-btn-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
         <span>Làm mới</span>
       </button>
-      <button class="btn-icon-glass btn-header-task tot-task-mascot-btn" id="btn-open-student-tasks" onclick="TasksModule.openStudentTasksModal()" style="display:none;" aria-label="Mở hộp thoại Task bài tập" title="Danh sách Task bài tập">
+      <button class="btn-icon-glass btn-header-task tot-task-mascot-btn" id="btn-open-student-tasks" onclick="document.documentElement.getAttribute('data-skill')==='listening' ? window.TotoroUI?.switchView?.('task', {fromUser:true}) : TasksModule.openStudentTasksModal()" style="display:none;" aria-label="Mở hộp thoại Task bài tập" title="Danh sách Task bài tập">
         <svg class="tot-task-mascot-svg" aria-hidden="true" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
           <!-- Totoro ears -->
           <path d="M12.2 12.6L9.4 5.2C9.1 4.4 10 3.8 10.7 4.3L15.4 8.2" fill="#637067" stroke="#2F3B34" stroke-width="1.4" stroke-linejoin="round"/>
@@ -447,6 +447,10 @@
         </div>
 
         <div class="study-top-actions">
+          <button type="button" class="btn-deck-tool tot-tool-quiet lt-only-tool" id="btn-top-voice-lab" onclick="TotoroVoiceLab.open('word')" title="Kiểm tra Micro &amp; Giọng nói AI">
+            <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            <span>Test Mic</span>
+          </button>
           <button type="button" class="btn-deck-tool tot-tool-quiet" id="btn-top-wordlist" onclick="openWordListModal()" title="Xem danh sách từ &amp; từ nối">
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg>
             <span>Từ vựng</span>
@@ -1457,7 +1461,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <div class="tot-seg" id="inline-task-suites"></div>
-            <button type="button" class="tot-demo-btn" style="height:34px;padding:0 12px;font-size:12px;" onclick="TasksModule.openTaskSummaryModal()">Bảng thống kê</button>
+            <button type="button" class="tot-demo-btn" style="height:34px;padding:0 12px;font-size:12px;" onclick="document.documentElement.getAttribute('data-skill')==='listening' ? window.ListeningTasksModule?.openSummaryModal?.() : TasksModule.openTaskSummaryModal()">Bảng thống kê</button>
           </div>
         </div>
         <div class="tot-tasks-grid" id="inline-tasks-grid"></div>
@@ -1465,10 +1469,11 @@
     </section>
 
     <!-- ==================================================================
-         TAB 4: READING PRACTICE — Cambridge · Volume · Actual Tests · News
+         TAB 4: PRACTICE — Reading (Cambridge/Vol/Actual/News) OR Listening
          ================================================================== -->
-    <section class="tot-screen" id="screen-practice" aria-label="Luyện đề IELTS Reading">
+    <section class="tot-screen" id="screen-practice" aria-label="Luyện đề IELTS">
       <div id="rp-app-root"></div>
+      <div id="lp-app-root" style="display:none;"></div>
     </section>
 
     <!-- Màn hình Làm Task theo Link Giáo viên giao -->
@@ -2144,7 +2149,7 @@
   <script src="js/recognition_test.js?v=20261123a"></script>
   <script src="js/speech_stt.js?v=20261123e"></script>
   <script src="js/voice_lab.js?v=20261123c"></script>
-  <script src="js/app.js?v=20261124a"></script>
+  <script src="js/app.js?v=20261124f"></script>
   <script src="data/v2_paraphrase.js?v=20261122e"></script>
   <script src="data/v2_foundation.js?v=20261122e"></script>
   <script src="data/v2_academic.js?v=20261122e"></script>
@@ -2152,7 +2157,7 @@
   <script src="data/reading_practice_data.js?v=20261124i"></script>
   <script src="js/reading_practice.js?v=20261124m"></script>
   <script src="js/tasks.js?v=20261122j"></script>
-  <script src="js/listening_tasks.js?v=20261124e"></script>
-  <script src="js/totoro_ui.js?v=20261124e"></script>
+  <script src="js/listening_tasks.js?v=20261124f"></script>
+  <script src="js/totoro_ui.js?v=20261124f"></script>
 </body>
 </html>
