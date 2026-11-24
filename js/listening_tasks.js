@@ -383,7 +383,7 @@
           <span class="tot-task-num ${t.isMapTask ? 'is-map-num' : ''}">${esc(numStr)}</span>
           <div style="min-width:0;flex:1;">
             <div style="font-size:13px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.label)}</div>
-            <div style="font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(shortName)} · ${totalW} từ</div>
+            <div style="font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(shortName)} · ${totalW} từ</div>
           </div>
           ${rightTag}
         </button>
@@ -785,7 +785,7 @@
                 ${examState.t1Results.map((r, i) => `
                   <tr class="${r.correct ? 'is-ok' : 'is-err'}">
                     <td>${i + 1}</td>
-                    <td><strong>${esc(r.expected)}</strong> <small style="color:var(--ink-3);">${esc(r.ipa || '')}</small></td>
+                    <td><strong>${esc(r.expected)}</strong> <small style="color:var(--ink-2);">${esc(r.ipa || '')}</small></td>
                     <td>${esc(r.typed || '—')}</td>
                     <td>${r.correct ? '<span class="lt-tag-ok">✓ Đúng</span>' : `<span class="lt-tag-err">✗ ${esc(r.note)}</span>`}</td>
                     <td><button type="button" class="lt-mini-play" onclick="ListeningTasksModule.replayAfterSubmit('${esc(r.expected)}','en-GB')">🔊</button></td>
@@ -1266,7 +1266,7 @@
           <span class="lt-leg"><mark class="lt-hl-signpost">Mốc chỉ đường (Signpost)</mark></span>
           <span class="lt-leg"><mark class="lt-hl-trap">Vị trí bẫy (Distractor)</mark></span>
           <span class="lt-leg"><mark class="lt-hl-key">Chốt vị trí A–H (Key)</mark></span>
-          <span class="lt-leg" style="color:var(--ink-3);">· Bấm 🔊 cạnh mỗi dòng để nghe lại sửa tai</span>
+          <span class="lt-leg" style="color:var(--ink-2);">· Bấm 🔊 cạnh mỗi dòng để nghe lại sửa tai</span>
         </div>
 
         <div class="lt-compare-grid">
@@ -1479,7 +1479,7 @@
           <span class="lt-leg"><mark class="lt-hl-signpost">Dẫn ý (Signpost)</mark></span>
           <span class="lt-leg"><mark class="lt-hl-trap">Bẫy đổi ý (Distractor)</mark></span>
           <span class="lt-leg"><mark class="lt-hl-key">Chốt đáp án (Key)</mark></span>
-          <span class="lt-leg" style="color:var(--ink-3);">· Bấm 🔊 cạnh mỗi dòng để nghe lại sửa tai</span>
+          <span class="lt-leg" style="color:var(--ink-2);">· Bấm 🔊 cạnh mỗi dòng để nghe lại sửa tai</span>
         </div>
 
         <div class="lt-compare-grid">
