@@ -21,6 +21,14 @@
 
   const STORAGE_KEY_BASE = 'ielts_reading_practice_v1_';
 
+  const PASTEL_PENS = [
+    { id: 'yellow', name: 'Vàng nắng',     role: 'Ý chính',    swatch: '#FDE047' },
+    { id: 'green',  name: 'Xanh bạc hà',   role: 'Dẫn chứng',  swatch: '#86EFAC' },
+    { id: 'pink',   name: 'Hồng đào',      role: 'Từ bẫy',     swatch: '#F9A8D4' },
+    { id: 'blue',   name: 'Xanh bầu trời', role: 'Số liệu',    swatch: '#7DD3FC' },
+    { id: 'purple', name: 'Tím oải hương', role: 'Từ vựng',    swatch: '#D8B4FE' }
+  ];
+
   function B() { return window.__VOCAB_BRIDGE__ || null; }
   function DATA() {
     return window.READING_PRACTICE_DATA || {
@@ -712,7 +720,7 @@
                     ${curReadyCount > 0 ? `${curReadyCount}/${curBook?.testsCount || 4} Tests sẵn sàng` : 'Chưa nạp đề'}
                   </span>
                 </div>
-                <span class="rp-cur-book-sub">Chọn từng Passage 1–3 hoặc làm trọn bộ FULL TEST chuẩn phòng thi máy Inspera</span>
+                <span class="rp-cur-book-sub">Chọn từng Passage 1–3 hoặc FULL TEST — có 2 chế độ: <strong>Luyện tập</strong> (highlight pastel, tra từ, check ngay) &amp; <strong>Thi thật</strong> (chuẩn Inspera CD-IELTS)</span>
               </div>
             </div>
             <div class="rp-test-tabs" id="rp-test-tabs" role="group" aria-label="Chọn bộ Test trong sách">${testTabsHtml}</div>
@@ -855,13 +863,35 @@
 
     const qTypes = isFull ? ['Passage 1–3', 'Full 60 phút'] : getPassageTypes(item);
 
-    const startCall = isFull
-      ? `ReadingPracticeApp.startFullTest('${esc(item.id)}')`
-      : `ReadingPracticeApp.startPassage('${esc(item.id)}')`;
+    const startExamCall = isFull
+      ? `ReadingPracticeApp.startFullTest('${esc(item.id)}', { studyMode: 'exam' })`
+      : `ReadingPracticeApp.startPassage('${esc(item.id)}', { studyMode: 'exam' })`;
+
+    const startPracticeCall = isFull
+      ? `ReadingPracticeApp.startFullTest('${esc(item.id)}', { studyMode: 'practice' })`
+      : `ReadingPracticeApp.startPassage('${esc(item.id)}', { studyMode: 'practice' })`;
 
     const reviewCall = isFull
       ? `ReadingPracticeApp.startFullTest('${esc(item.id)}', { openInReview: true })`
       : `ReadingPracticeApp.startPassage('${esc(item.id)}', { openInReview: true })`;
+
+    const footHtml = isNews
+      ? `
+        <button type="button" class="btn-subtle rp-btn-sm" onclick="${reviewCall}">Đọc song ngữ</button>
+        <button type="button" class="btn btn-primary rp-btn-sm" onclick="${startPracticeCall}">Đọc &amp; Làm bài →</button>
+      `
+      : `
+        <div class="rp-card-mode-btns">
+          ${best ? `<button type="button" class="btn-subtle rp-btn-sm rp-btn-rev" onclick="${reviewCall}" title="Xem lại đáp án &amp; lời giải">Xem giải</button>` : ''}
+          <button type="button" class="rp-btn-practice rp-btn-sm" data-rp-start-mode="practice" onclick="${startPracticeCall}" title="Luyện tập PRO: 5 màu highlight pastel, tra từ trực tiếp, kiểm tra đáp án từng câu">
+            <span class="rp-mode-dot-swatch" aria-hidden="true"></span>
+            <span>Luyện tập</span>
+          </button>
+          <button type="button" class="btn btn-primary rp-btn-sm rp-btn-exam" data-rp-start-mode="exam" onclick="${startExamCall}" title="Thi thật chuẩn phòng thi máy CD-IELTS Inspera">
+            ${isFull ? 'Thi Full Test →' : 'Thi thật →'}
+          </button>
+        </div>
+      `;
 
     return `
       <article class="rp-card ${isFull ? 'rp-card-full' : ''}" data-rp-item="${esc(item.id)}">
@@ -881,37 +911,44 @@
           <span>${item.suggestedMins || 20} phút</span>
         </div>
         <div class="rp-card-foot">
-          ${isNews
-            ? `<button type="button" class="btn-subtle rp-btn-sm" onclick="${reviewCall}">Đọc song ngữ</button>`
-            : (best ? `<button type="button" class="btn-subtle rp-btn-sm" onclick="${reviewCall}">Xem giải</button>` : '<span></span>')}
-          <button type="button" class="btn btn-primary rp-btn-sm" onclick="${startCall}">
-            ${isNews ? 'Đọc & Làm bài →' : (isFull ? 'Làm Full Test →' : 'Làm bài →')}
-          </button>
+          ${footHtml}
         </div>
       </article>
     `;
   }
 
   /* =========================================================
-     6. INSPERA 1:1 FULL-SCREEN CD-IELTS EXAM ENGINE
+     6. DUAL-MODE ENGINE: INSPERA CD-IELTS EXAM + PRACTICE PRO STUDIO
      ========================================================= */
   function startSession(config) {
     stopTimer();
     const totalSec = (config.suggestedMins || 20) * 60;
     const isNews = config.source === 'news';
+    const studyMode = config.studyMode === 'practice' || (isNews && config.studyMode !== 'exam')
+      ? 'practice'
+      : 'exam';
+    const isPractice = studyMode === 'practice';
+    const defaultContrast = config.contrast || (isPractice ? 'totoro' : 'cd');
+
     state.session = {
       itemId: config.itemId,
       title: config.title,
       source: config.source,
       isFull: !!config.isFull,
       isNews,
+      studyMode,                          // 'exam' | 'practice'
+      activePenColor: config.activePenColor || 'yellow',
+      brushAuto: !!config.brushAuto,      // Practice PRO: drag-to-highlight immediately
+      showTimer: config.showTimer !== false,
+      checkedMap: config.checkedMap ? { ...config.checkedMap } : {},
+      highlights: config.highlights ? JSON.parse(JSON.stringify(config.highlights)) : {},
       deckDefaultName: config.deckDefaultName || config.title,
       passageIds: config.passageIds,
       activePassageIdx: 0,
       mode: config.openInReview ? 'review' : 'exam',
-      // Default to official CD-IELTS Black-on-White ('cd') for exam authenticity; News defaults to Totoro Washi
-      contrast: isNews ? 'totoro' : 'cd', // 'cd' | 'totoro' | 'dark' | 'yellow'
-      textSize: 'regular',                // 'regular' | 'large' | 'xlarge'
+      // Exam defaults to CD-IELTS Black-on-White ('cd'); Practice PRO defaults to warm Totoro Washi ('totoro')
+      contrast: defaultContrast,          // 'cd' | 'totoro' | 'dark' | 'yellow'
+      textSize: config.textSize || 'regular',
       optionsOpen: false,
       showBilingual: !!config.openInReview && isNews,
       totalSec,
@@ -967,6 +1004,14 @@
       title: state.session.title,
       source: state.session.source,
       isFull: state.session.isFull,
+      studyMode: state.session.studyMode,
+      contrast: state.session.contrast,
+      textSize: state.session.textSize,
+      activePenColor: state.session.activePenColor,
+      brushAuto: state.session.brushAuto,
+      showTimer: state.session.showTimer,
+      checkedMap: state.session.checkedMap,
+      highlights: state.session.highlights,
       deckDefaultName: state.session.deckDefaultName,
       passageIds: state.session.passageIds,
       remainingSec: state.session.remainingSec,
@@ -978,6 +1023,165 @@
       notes: state.session.notes,
       updatedAt: Date.now()
     });
+  }
+
+  /* ---------- PERSISTENT TEXT-OFFSET PASTEL HIGHLIGHT ENGINE ---------- */
+  function getPassageHighlights(passageId) {
+    if (!state.session || !passageId) return [];
+    if (!state.session.highlights) state.session.highlights = {};
+    if (!Array.isArray(state.session.highlights[passageId])) {
+      state.session.highlights[passageId] = [];
+    }
+    return state.session.highlights[passageId];
+  }
+
+  function mergeOrAddHighlight(passageId, paraIdx, start, end, color) {
+    if (end <= start) return;
+    const list = getPassageHighlights(passageId);
+    const next = [];
+    for (const h of list) {
+      if (h.paraIdx !== paraIdx || h.end <= start || h.start >= end) {
+        next.push(h);
+      } else {
+        // Trim non-overlapping tails cleanly
+        if (h.start < start) next.push({ ...h, id: h.id + '_l', end: start });
+        if (h.end > end) next.push({ ...h, id: h.id + '_r', start: end });
+      }
+    }
+    next.push({
+      id: 'hl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
+      paraIdx,
+      start,
+      end,
+      color: color || 'yellow'
+    });
+    next.sort((a, b) => (a.paraIdx - b.paraIdx) || (a.start - b.start));
+    state.session.highlights[passageId] = next;
+  }
+
+  function removeHighlightRange(passageId, paraIdx, start, end) {
+    const list = getPassageHighlights(passageId);
+    const next = [];
+    for (const h of list) {
+      if (h.paraIdx !== paraIdx || h.end <= start || h.start >= end) {
+        next.push(h);
+      } else {
+        if (h.start < start) next.push({ ...h, id: h.id + '_l', end: start });
+        if (h.end > end) next.push({ ...h, id: h.id + '_r', start: end });
+      }
+    }
+    state.session.highlights[passageId] = next;
+  }
+
+  function getSelectionParaOffsets(range) {
+    const pane = document.getElementById('rp-passage-content');
+    if (!pane || !range) return [];
+    const blocks = Array.from(pane.querySelectorAll('.ins-para-block'));
+    const slices = [];
+    for (const blk of blocks) {
+      const textRoot = blk.querySelector('.rp-para-text');
+      if (!textRoot || !range.intersectsNode(textRoot)) continue;
+      const paraIdx = Number(blk.dataset.paraIdx);
+      const totalLen = (textRoot.textContent || '').length;
+      if (!totalLen) continue;
+
+      let startOff = 0;
+      let endOff = totalLen;
+      if (textRoot.contains(range.startContainer)) {
+        const pre = document.createRange();
+        pre.selectNodeContents(textRoot);
+        pre.setEnd(range.startContainer, range.startOffset);
+        startOff = pre.toString().length;
+      }
+      if (textRoot.contains(range.endContainer)) {
+        const preEnd = document.createRange();
+        preEnd.selectNodeContents(textRoot);
+        preEnd.setEnd(range.endContainer, range.endOffset);
+        endOff = preEnd.toString().length;
+      }
+      startOff = Math.max(0, Math.min(totalLen, startOff));
+      endOff = Math.max(0, Math.min(totalLen, endOff));
+      if (endOff > startOff) slices.push({ paraIdx, start: startOff, end: endOff });
+    }
+    return slices;
+  }
+
+  function applyStoredHighlightsToPassage(passageId) {
+    const pane = document.getElementById('rp-passage-content');
+    if (!pane) return;
+    // Unwrap existing marks first so function is idempotent
+    pane.querySelectorAll('mark.rp-hl-mark').forEach((m) => {
+      const parent = m.parentNode;
+      if (!parent) return;
+      while (m.firstChild) parent.insertBefore(m.firstChild, m);
+      parent.removeChild(m);
+      parent.normalize();
+    });
+
+    const list = getPassageHighlights(passageId);
+    if (!list.length) return;
+
+    const byPara = new Map();
+    for (const h of list) {
+      if (!byPara.has(h.paraIdx)) byPara.set(h.paraIdx, []);
+      byPara.get(h.paraIdx).push(h);
+    }
+
+    byPara.forEach((hlItems, paraIdx) => {
+      const blk = pane.querySelector(`.ins-para-block[data-para-idx="${paraIdx}"]`);
+      const textRoot = blk?.querySelector('.rp-para-text');
+      if (!textRoot) return;
+
+      const walker = document.createTreeWalker(textRoot, NodeFilter.SHOW_TEXT, null);
+      const textNodes = [];
+      let cursor = 0;
+      let node;
+      while ((node = walker.nextNode())) {
+        const len = node.nodeValue ? node.nodeValue.length : 0;
+        if (len > 0) {
+          textNodes.push({ node, start: cursor, end: cursor + len });
+          cursor += len;
+        }
+      }
+
+      // Wrap intersecting text nodes from back to front so offsets stay exact
+      for (let i = textNodes.length - 1; i >= 0; i--) {
+        const tn = textNodes[i];
+        const hits = hlItems.filter((h) => h.end > tn.start && h.start < tn.end);
+        if (!hits.length) continue;
+
+        const str = tn.node.nodeValue;
+        const frag = document.createDocumentFragment();
+        let pos = 0;
+        const sortedHits = hits.slice().sort((a, b) => a.start - b.start);
+        for (const h of sortedHits) {
+          const sLocal = Math.max(0, h.start - tn.start);
+          const eLocal = Math.min(str.length, h.end - tn.start);
+          if (sLocal > pos) frag.appendChild(document.createTextNode(str.slice(pos, sLocal)));
+          if (eLocal > sLocal) {
+            const mark = document.createElement('mark');
+            const isStart = (tn.start + sLocal) <= h.start;
+            const isEnd = (tn.start + eLocal) >= h.end;
+            const capCls = isStart && isEnd ? ' hl-cap-both' : (isStart ? ' hl-cap-start' : (isEnd ? ' hl-cap-end' : ''));
+            mark.className = `rp-hl-mark hl-${h.color || 'yellow'}${capCls}`;
+            mark.dataset.hlId = h.id;
+            mark.textContent = str.slice(sLocal, eLocal);
+            frag.appendChild(mark);
+            pos = eLocal;
+          }
+        }
+        if (pos < str.length) frag.appendChild(document.createTextNode(str.slice(pos)));
+        tn.node.parentNode?.replaceChild(frag, tn.node);
+      }
+    });
+  }
+
+  function updatePracticeHighlightBadge(passageId) {
+    const cnt = getPassageHighlights(passageId).length;
+    const badge = document.getElementById('prac-hl-count');
+    if (badge) badge.textContent = String(cnt);
+    const clearBtn = document.getElementById('prac-hl-clear-all');
+    if (clearBtn) clearBtn.disabled = cnt === 0;
   }
 
   function computeReviewResult() {
@@ -1007,8 +1211,9 @@
     return null;
   }
 
-  function renderPassageParagraphHtml(para, passage, enableDictClick, isReview) {
+  function renderPassageParagraphHtml(para, paraIdx, passage, enableDictClick, isReview) {
     const s = state.session;
+    const isPractice = s?.studyMode === 'practice';
     const savedSet = (window.MyVocabStore && typeof window.MyVocabStore.getSavedWordSet === 'function')
       ? window.MyVocabStore.getSavedWordSet()
       : new Set();
@@ -1045,8 +1250,9 @@
       const qid = `${passage.id}__q${mh.q.num}`;
       const pickedKey = String(s.answers[qid] || '');
       const pickedObj = (mh.group.headings || []).find((h) => h.key === pickedKey);
-      const isOk = isReview && isAnswerCorrect(mh.q, pickedKey);
-      const cls = `ins-dropzone${pickedObj ? ' is-filled' : ''}${state.selectedHeadingKey && !isReview ? ' is-awaiting' : ''}${isReview ? (isOk ? ' is-ok' : ' is-bad') : ''}`;
+      const isChecked = isReview || (isPractice && !!s.checkedMap?.[qid]);
+      const isOk = isChecked && isAnswerCorrect(mh.q, pickedKey);
+      const cls = `ins-dropzone${pickedObj ? ' is-filled' : ''}${state.selectedHeadingKey && !isReview ? ' is-awaiting' : ''}${isChecked ? (isOk ? ' is-ok' : ' is-bad') : ''}`;
       dropZoneHtml = `
         <div class="${cls}" data-mh-qid="${esc(qid)}"
           ondragover="event.preventDefault(); this.classList.add('is-over');"
@@ -1065,7 +1271,7 @@
       : '';
 
     return `
-      <div class="ins-para-block" data-para-label="${esc(para.label || '')}">
+      <div class="ins-para-block" data-para-idx="${paraIdx}" data-para-label="${esc(para.label || '')}">
         ${dropZoneHtml}
         <p class="ins-para-en">
           ${para.label ? `<strong class="ins-para-lbl">${esc(para.label)}</strong> ` : ''}
@@ -1076,7 +1282,7 @@
     `;
   }
 
-  /* ---------- RENDER FULL-SCREEN INSPERA WORKSPACE ---------- */
+  /* ---------- RENDER FULL-SCREEN WORKSPACE (EXAM 1:1 OR PRACTICE PRO STUDIO) ---------- */
   function renderExamWorkspace() {
     const root = getRoot();
     if (!root || !state.session) return;
@@ -1085,8 +1291,15 @@
     const curPassage = passages[s.activePassageIdx] || passages[0];
     if (!curPassage) return;
 
+    // Preserve pane scroll positions across re-renders
+    const prevPassageScroll = document.getElementById('rp-passage-pane')?.scrollTop ?? 0;
+    const prevQuestScroll = document.getElementById('rp-questions-pane')?.scrollTop ?? 0;
+    const prevPassageId = document.getElementById('rp-workspace')?.dataset?.passageId || '';
+    const samePassage = prevPassageId === curPassage.id;
+
     const isReview = s.mode === 'review';
-    const enableDict = isReview || s.isNews;
+    const isPractice = s.studyMode === 'practice';
+    const enableDict = isReview || s.isNews || isPractice;
     const allQ = getAllSessionQuestions();
     if (!s.activeQid && allQ.length) {
       const firstInP = allQ.find((q) => q._pIdx === s.activePassageIdx) || allQ[0];
@@ -1098,9 +1311,18 @@
     const qMax = curQs.length ? curQs[curQs.length - 1].num : curQs.length;
     const curGlobalIdx = allQ.findIndex((q) => q._qid === s.activeQid);
 
-    const contrastCls = `ins-contrast-${s.contrast || 'cd'}`;
+    const totalAnswered = allQ.filter((x) => String(s.answers[x._qid] || '').trim()).length;
+    const progressPct = allQ.length ? Math.round((totalAnswered / allQ.length) * 100) : 0;
+
+    const curAnsweredCount = curQs.filter((q) => String(s.answers[q._qid] || '').trim()).length;
+    const curCheckedQs = curQs.filter((q) => !!s.checkedMap?.[q._qid]);
+    const curCheckedCorrect = curCheckedQs.filter((q) => isAnswerCorrect(q, s.answers[q._qid])).length;
+    const curHlCount = getPassageHighlights(curPassage.id).length;
+
+    const contrastCls = `ins-contrast-${s.contrast || (isPractice ? 'totoro' : 'cd')}`;
     const sizeCls = `ins-size-${s.textSize || 'regular'}`;
-    const timerUrgency = s.remainingSec <= 300 ? ' is-critical' : (s.remainingSec <= 600 ? ' is-warn' : '');
+    const modeCls = isPractice ? 'ins-mode-practice' : 'ins-mode-exam';
+    const timerUrgency = !isPractice && s.remainingSec <= 300 ? ' is-critical' : (!isPractice && s.remainingSec <= 600 ? ' is-warn' : '');
 
     // Review Summary Strip (only visible AFTER submitting)
     const reviewStripHtml = isReview && s.reviewResult ? `
@@ -1131,15 +1353,78 @@
       </div>
     ` : '';
 
-    // Inspera Part Sub-Banner (full-width light gray card right under header!)
+    // Part Sub-Banner (Exam 1:1 Inspera banner; Practice PRO shows sleek studio meta bar)
     const partLabel = s.isNews ? (curPassage.newsSource || 'Academic News') : `Part ${curPassage.passageNum || (s.activePassageIdx + 1)}`;
     const partSubText = s.isNews
       ? `Bấm vào bất kỳ từ nào để tra nghĩa & lưu vào "Từ của tôi" · ${curQs.length} câu kiểm tra nhanh.`
-      : `Read the text and answer questions ${qMin}–${qMax}.`;
+      : (isPractice
+        ? `Questions ${qMin}–${qMax} · Bôi đen để tô màu pastel, bấm trực tiếp vào từ để tra nghĩa & lưu vào "Từ của tôi".`
+        : `Read the text and answer questions ${qMin}–${qMax}.`);
 
     const groupsHtml = (curPassage.groups || []).map((g) => renderQuestionGroup(g, curPassage, isReview)).join('');
 
-    // Inspera Bottom Navigator Bar: Active Part expands [1][2]...[13] with green top dash; inactive Parts collapse "Part 2  0 of 13"
+    // Practice PRO Pastel Highlighter Studio Bar (top of Passage pane)
+    const practicePenBarHtml = isPractice ? `
+      <div class="prac-pen-bar" id="prac-pen-bar" role="toolbar" aria-label="Bộ bút highlight pastel">
+        <div class="prac-pen-swatches">
+          <span class="prac-pen-lead" title="Chọn màu bút chủ đạo">Bút pastel:</span>
+          ${PASTEL_PENS.map((pen) => `
+            <button type="button"
+              class="prac-pen-chip is-pen-${pen.id} ${s.activePenColor === pen.id ? 'active' : ''}"
+              data-pen-color="${pen.id}"
+              aria-pressed="${s.activePenColor === pen.id ? 'true' : 'false'}"
+              title="${esc(pen.name)} — ${esc(pen.role)}"
+              onclick="ReadingPracticeApp.setPenColor('${pen.id}')">
+              <span class="prac-pen-dot" style="background:${pen.swatch};" aria-hidden="true"></span>
+              <span class="prac-pen-role">${esc(pen.role)}</span>
+            </button>
+          `).join('')}
+        </div>
+        <div class="prac-pen-tools">
+          <button type="button"
+            class="prac-tool-pill ${s.brushAuto ? 'is-on' : ''}"
+            id="prac-btn-brush-auto"
+            aria-pressed="${s.brushAuto ? 'true' : 'false'}"
+            title="Bật để bôi đen là tô màu ngay bằng bút đang chọn"
+            onclick="ReadingPracticeApp.toggleBrushAuto()">
+            <span class="prac-tool-dot" aria-hidden="true"></span>
+            <span>Tô nhanh</span>
+          </button>
+          <button type="button"
+            class="prac-tool-pill prac-clear-hl-btn"
+            id="prac-hl-clear-all"
+            ${curHlCount === 0 ? 'disabled' : ''}
+            title="Xóa toàn bộ highlight trong bài đọc hiện tại"
+            onclick="ReadingPracticeApp.clearAllPassageHighlights()">
+            <span>Xóa màu</span>
+            <span class="prac-hl-cnt tabular" id="prac-hl-count">${curHlCount}</span>
+          </button>
+        </div>
+      </div>
+    ` : '';
+
+    // Practice PRO Questions Studio Toolbar (top of Questions pane)
+    const practiceQBarHtml = (isPractice && !isReview) ? `
+      <div class="prac-q-toolbar" id="prac-q-toolbar">
+        <div class="prac-q-stats">
+          <span class="prac-q-stat-pill tabular">Đã làm <strong>${curAnsweredCount}/${curQs.length}</strong></span>
+          ${curCheckedQs.length ? `<span class="prac-q-stat-pill is-checked tabular">Đã check: <strong>${curCheckedCorrect}/${curCheckedQs.length}</strong> đúng</span>` : ''}
+        </div>
+        <div class="prac-q-actions">
+          <button type="button" class="prac-check-all-btn" id="prac-btn-check-answered"
+            ${curAnsweredCount === 0 ? 'disabled' : ''}
+            onclick="ReadingPracticeApp.checkAnsweredQuestions()"
+            title="Kiểm tra đáp án ngay cho các câu bạn đã điền mà chưa cần nộp bài">
+            ✓ Kiểm tra câu đã làm
+          </button>
+          ${curCheckedQs.length ? `
+            <button type="button" class="prac-reset-check-btn" onclick="ReadingPracticeApp.clearCheckedQuestions()" title="Ẩn kết quả check để tự làm lại">Ẩn đáp án</button>
+          ` : ''}
+        </div>
+      </div>
+    ` : '';
+
+    // Bottom Navigator Bar
     const bottomPartsHtml = passages.map((p, pIdx) => {
       const pQs = allQ.filter((q) => q._pIdx === pIdx);
       const pDone = pQs.filter((q) => String(s.answers[q._qid] || '').trim()).length;
@@ -1157,9 +1442,10 @@
         const val = String(s.answers[q._qid] || '').trim();
         const isFlg = !!s.flagged[q._qid];
         const isCur = s.activeQid === q._qid;
+        const isQChecked = isReview || (isPractice && !!s.checkedMap?.[q._qid]);
         let cls = 'ins-qbox';
         if (isCur) cls += ' is-current';
-        if (isReview) {
+        if (isQChecked) {
           cls += isAnswerCorrect(q, val) ? ' is-correct' : ' is-wrong';
         } else {
           if (val) cls += ' is-attempted';
@@ -1212,7 +1498,7 @@
       </aside>
     `;
 
-    // Inspera Official Options Overlay (like step_32.png!)
+    // Options Overlay (with Study Mode switcher + 4 Contrast Presets + 3 Text Sizes)
     const optionsOverlayHtml = `
       <div class="ins-options-overlay ${s.optionsOpen ? 'open' : ''}" id="ins-options-overlay">
         <div class="ins-options-head">
@@ -1227,17 +1513,31 @@
             </button>
           ` : ''}
 
+          ${!s.isNews ? `
+            <div class="ins-opt-card">
+              <div class="ins-opt-sec-title">Chế độ học (Study Mode)</div>
+              <div class="ins-opt-choices">
+                <button type="button" class="ins-opt-row ${isPractice ? 'active' : ''}" onclick="ReadingPracticeApp.setStudyMode('practice')">
+                  <span>Luyện tập PRO <small>(5 màu pastel · Tra từ · Check từng câu)</small></span><span>${isPractice ? '✓' : ''}</span>
+                </button>
+                <button type="button" class="ins-opt-row ${!isPractice ? 'active' : ''}" onclick="ReadingPracticeApp.setStudyMode('exam')">
+                  <span>Thi thật CD-IELTS <small>(Chuẩn phòng thi máy Inspera 1:1)</small></span><span>${!isPractice ? '✓' : ''}</span>
+                </button>
+              </div>
+            </div>
+          ` : ''}
+
           <div class="ins-opt-card">
-            <div class="ins-opt-sec-title">Contrast (Màu nền phòng thi)</div>
+            <div class="ins-opt-sec-title">Contrast (Màu nền đọc bài)</div>
             <div class="ins-opt-choices">
+              <button type="button" class="ins-opt-row ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('totoro')">
+                <span>Totoro Washi <small>(Giấy ấm dịu mắt · Luyện tập)</small></span><span>${s.contrast === 'totoro' ? '✓' : ''}</span>
+              </button>
               <button type="button" class="ins-opt-row ${s.contrast === 'cd' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('cd')">
                 <span>Black on white <small>(Chuẩn thi máy CD-IELTS)</small></span><span>${s.contrast === 'cd' ? '✓' : ''}</span>
               </button>
-              <button type="button" class="ins-opt-row ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('totoro')">
-                <span>Totoro Washi <small>(Giấy ấm dịu mắt)</small></span><span>${s.contrast === 'totoro' ? '✓' : ''}</span>
-              </button>
               <button type="button" class="ins-opt-row ${s.contrast === 'dark' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('dark')">
-                <span>White on black <small>(Nền tối chuẩn Inspera)</small></span><span>${s.contrast === 'dark' ? '✓' : ''}</span>
+                <span>White on black <small>(Nền tối dịu mắt)</small></span><span>${s.contrast === 'dark' ? '✓' : ''}</span>
               </button>
               <button type="button" class="ins-opt-row ${s.contrast === 'yellow' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('yellow')">
                 <span>Yellow on black <small>(Tương phản cao)</small></span><span>${s.contrast === 'yellow' ? '✓' : ''}</span>
@@ -1265,36 +1565,116 @@
       </div>
     `;
 
+    // Header Brand + Timer Block
+    const brandBlockHtml = isPractice
+      ? `
+        <div class="prac-brand-badge">
+          <span class="prac-brand-leaf" aria-hidden="true"></span>
+          <span class="prac-brand-txt">PRACTICE</span>
+          <span class="prac-brand-pro">PRO</span>
+        </div>
+      `
+      : `<span class="ins-brand-mark">IELTS</span>`;
+
+    const timerBlockHtml = !isReview
+      ? (isPractice
+        ? `
+          <div class="prac-timer-row">
+            ${s.showTimer ? `
+              <button type="button" class="ins-hdr-timer" onclick="ReadingPracticeApp.togglePauseTimer()" title="Bấm để tạm dừng / tiếp tục đồng hồ">
+                <span id="rp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
+                <span class="ins-timer-exact tabular" id="rp-timer-exact">(${formatDuration(s.remainingSec)})</span>
+                ${s.paused ? '<span class="ins-paused-tag">PAUSED</span>' : ''}
+              </button>
+            ` : `<span class="prac-timer-hidden-lbl">Đồng hồ đang ẩn · Luyện tập tự do</span>`}
+            <button type="button" class="prac-timer-eye" onclick="ReadingPracticeApp.toggleTimerVisibility()" title="${s.showTimer ? 'Ẩn đồng hồ cho đỡ áp lực' : 'Hiện lại đồng hồ'}">
+              ${s.showTimer ? 'Ẩn giờ' : 'Hiện giờ'}
+            </button>
+          </div>
+        `
+        : `
+          <button type="button" class="ins-hdr-timer${timerUrgency}" onclick="ReadingPracticeApp.togglePauseTimer()" title="Bấm để tạm dừng / tiếp tục đồng hồ">
+            <span id="rp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
+            <span class="ins-timer-exact tabular" id="rp-timer-exact">(${formatDuration(s.remainingSec)})</span>
+            ${s.paused ? '<span class="ins-paused-tag">PAUSED</span>' : ''}
+          </button>
+        `)
+      : `<div class="ins-hdr-review-lbl">Review Mode · Paraphrase &amp; Dictionary Unlocked</div>`;
+
+    // Header Mode Switcher (Luyện tập <-> Thi thật)
+    const modeSwitcherHtml = !s.isNews ? `
+      <div class="rp-mode-switch" role="group" aria-label="Chuyển chế độ học">
+        <button type="button" class="rp-ms-btn ${isPractice ? 'active' : ''}" data-rp-mode-btn="practice"
+          onclick="ReadingPracticeApp.setStudyMode('practice')">Luyện tập</button>
+        <button type="button" class="rp-ms-btn ${!isPractice ? 'active' : ''}" data-rp-mode-btn="exam"
+          onclick="ReadingPracticeApp.setStudyMode('exam')">Thi thật</button>
+      </div>
+    ` : '';
+
+    // Selection Popover: Practice PRO shows all 5 pastel swatches + Note + Tra từ + Xóa; Exam keeps 1:1 Inspera
+    const selPopoverHtml = isPractice ? `
+      <div class="ins-sel-popover is-practice hidden" id="rp-hl-toolbar" role="toolbar" aria-label="Highlight màu pastel">
+        <div class="prac-pop-swatches">
+          ${PASTEL_PENS.map((pen) => `
+            <button type="button"
+              class="prac-pop-dot ${s.activePenColor === pen.id ? 'is-active' : ''}"
+              style="--swatch:${pen.swatch};"
+              data-pop-color="${pen.id}"
+              title="${esc(pen.name)} (${esc(pen.role)})"
+              aria-label="Highlight ${esc(pen.name)}"
+              onclick="ReadingPracticeApp.applyHighlight('${pen.id}')"></button>
+          `).join('')}
+        </div>
+        <div class="prac-pop-divider" aria-hidden="true"></div>
+        <button type="button" class="ins-sel-act prac-pop-act" onclick="ReadingPracticeApp.addNoteFromSelection()" title="Tạo ghi chú">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Note</span>
+        </button>
+        <button type="button" class="ins-sel-dict prac-pop-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra từ</button>
+        <button type="button" class="ins-sel-clear prac-pop-clear" onclick="ReadingPracticeApp.clearSelectionHighlight()" title="Xóa màu đoạn chọn">Xóa</button>
+      </div>
+    ` : `
+      <div class="ins-sel-popover hidden" id="rp-hl-toolbar">
+        <button type="button" class="ins-sel-act" onclick="ReadingPracticeApp.addNoteFromSelection()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Note</span>
+        </button>
+        <button type="button" class="ins-sel-act" onclick="ReadingPracticeApp.applyHighlight('yellow')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+          <span>Highlight</span>
+        </button>
+        <button type="button" class="ins-sel-clear" onclick="ReadingPracticeApp.clearSelectionHighlight()" title="Xóa highlight">Clear</button>
+        ${enableDict ? '<button type="button" class="ins-sel-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra từ</button>' : ''}
+      </div>
+    `;
+
     root.innerHTML = `
-      <div class="rp-workspace ins-shell ${contrastCls} ${sizeCls}" id="rp-workspace">
+      <div class="rp-workspace ins-shell ${modeCls} ${contrastCls} ${sizeCls}" id="rp-workspace" data-study-mode="${esc(s.studyMode)}" data-passage-id="${esc(curPassage.id)}">
         <div class="ins-main-col">
-          <!-- 56px Official Inspera Header -->
+          <!-- Workspace Header -->
           <header class="ins-header">
             <div class="ins-hdr-left">
-              <span class="ins-brand-mark">IELTS</span>
+              ${brandBlockHtml}
               <div class="ins-hdr-meta">
                 <div class="ins-hdr-title">${esc(s.title)}</div>
-                ${!isReview ? `
-                  <button type="button" class="ins-hdr-timer${timerUrgency}" onclick="ReadingPracticeApp.togglePauseTimer()" title="Bấm để tạm dừng / tiếp tục đồng hồ">
-                    <span id="rp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
-                    <span class="ins-timer-exact tabular" id="rp-timer-exact">(${formatDuration(s.remainingSec)})</span>
-                    ${s.paused ? '<span class="ins-paused-tag">PAUSED</span>' : ''}
-                  </button>
-                ` : `<div class="ins-hdr-review-lbl">Review Mode · Paraphrase &amp; Dictionary Unlocked</div>`}
+                ${timerBlockHtml}
               </div>
             </div>
 
             <div class="ins-hdr-right">
+              ${modeSwitcherHtml}
               ${s.isNews && !isReview ? `
                 <button type="button" class="ins-hdr-pill ${s.showBilingual ? 'active' : ''}" id="rp-btn-bilingual" onclick="ReadingPracticeApp.toggleBilingual()">
                   ${s.showBilingual ? '✓ Song ngữ' : 'Song ngữ'}
                 </button>
               ` : ''}
-              <button type="button" class="ins-hdr-ico" title="Kết nối cục bộ (Offline safe)" aria-label="Status">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/></svg>
-              </button>
+              ${!isPractice ? `
+                <button type="button" class="ins-hdr-ico" title="Kết nối cục bộ (Offline safe)" aria-label="Status">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/></svg>
+                </button>
+              ` : ''}
               <button type="button" class="ins-hdr-ico ${s.optionsOpen ? 'active' : ''}" id="ins-btn-options"
-                onclick="ReadingPracticeApp.toggleOptionsOverlay()" title="Options (Contrast · Text size · Submit)" aria-label="Options">
+                onclick="ReadingPracticeApp.toggleOptionsOverlay()" title="Options (Chế độ · Màu nền · Cỡ chữ)" aria-label="Options">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
               </button>
               <button type="button" class="ins-hdr-ico ${s.notesOpen ? 'active' : ''}" id="rp-btn-notes"
@@ -1304,14 +1684,22 @@
               </button>
               <button type="button" class="ins-hdr-exit" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề">Thoát</button>
             </div>
+            ${isPractice && !isReview ? `
+              <div class="prac-hdr-progress" aria-hidden="true">
+                <div class="prac-hdr-progress-fill" style="width:${progressPct}%;"></div>
+              </div>
+            ` : ''}
           </header>
 
           ${reviewStripHtml}
 
-          <!-- Full-width Official Inspera Part Sub-Banner -->
+          <!-- Part Sub-Banner -->
           <div class="ins-part-banner">
-            <strong>${esc(partLabel)}</strong>
-            <span>${esc(partSubText)}</span>
+            <div class="ins-part-banner-main">
+              <strong>${esc(partLabel)}</strong>
+              <span>${esc(partSubText)}</span>
+            </div>
+            ${isPractice && !isReview ? `<span class="prac-dict-pill">✨ Bấm từ để tra &amp; lưu</span>` : ''}
           </div>
 
           <!-- Mobile Pane Toggle -->
@@ -1319,7 +1707,7 @@
             <button type="button" class="rp-mob-tab ${state.mobilePane === 'passage' ? 'active' : ''}"
               onclick="ReadingPracticeApp.setMobilePane('passage')">Passage</button>
             <button type="button" class="rp-mob-tab ${state.mobilePane === 'questions' ? 'active' : ''}"
-              onclick="ReadingPracticeApp.setMobilePane('questions')">Questions (${allQ.filter((x) => String(s.answers[x._qid] || '').trim()).length}/${allQ.length})</button>
+              onclick="ReadingPracticeApp.setMobilePane('questions')">Questions (${totalAnswered}/${allQ.length})</button>
           </div>
 
           <!-- 50/50 Split Workspace -->
@@ -1329,11 +1717,12 @@
               onmouseup="ReadingPracticeApp.handlePassageSelection(event)"
               oncontextmenu="ReadingPracticeApp.handlePassageContextMenu(event)"
               onclick="ReadingPracticeApp.handlePassageWordClick(event)">
+              ${practicePenBarHtml}
               <div class="ins-passage-inner">
                 <h1 class="ins-passage-title">${esc(curPassage.title)}</h1>
                 ${(curPassage.subtitle && !(curPassage.paragraphs?.[0]?.en || '').startsWith(curPassage.subtitle.replace(/…$/, '').slice(0, 40))) ? `<p class="ins-passage-sub">${esc(curPassage.subtitle)}</p>` : ''}
                 <div class="rp-passage-content" id="rp-passage-content">
-                  ${(curPassage.paragraphs || []).map((para) => renderPassageParagraphHtml(para, curPassage, enableDict, isReview)).join('')}
+                  ${(curPassage.paragraphs || []).map((para, pIdx) => renderPassageParagraphHtml(para, pIdx, curPassage, enableDict, isReview)).join('')}
                 </div>
               </div>
             </section>
@@ -1344,12 +1733,13 @@
             </div>
 
             <section class="ins-pane ins-pane-right ${state.mobilePane === 'questions' ? 'mob-active' : ''}" id="rp-questions-pane">
+              ${practiceQBarHtml}
               <div class="ins-questions-inner">
                 ${groupsHtml}
               </div>
             </section>
 
-            <!-- Official Floating 40x40px Prev / Next Square Arrows -->
+            <!-- Floating 40x40px Prev / Next Square Arrows -->
             <div class="ins-float-arrows">
               <button type="button" class="ins-arrow-btn ${curGlobalIdx <= 0 ? 'is-disabled' : ''}"
                 onclick="ReadingPracticeApp.stepQuestion(-1)" title="Previous question" ${curGlobalIdx <= 0 ? 'disabled' : ''}>←</button>
@@ -1358,13 +1748,18 @@
             </div>
           </div>
 
-          <!-- Fixed 48px Official Inspera Bottom Navigator Bar -->
+          <!-- Fixed Bottom Navigator Bar -->
           <footer class="ins-footer">
             <div class="ins-footer-parts">${bottomPartsHtml}</div>
-            ${!isReview ? `
+            ${!isReview ? (isPractice ? `
+              <button type="button" class="ins-submit-check-btn prac-submit-pill" id="rp-btn-open-submit"
+                onclick="ReadingPracticeApp.openPreSubmitModal()" title="Nộp bài và chấm điểm Band" aria-label="Nộp và Chấm Band">
+                <span>Nộp &amp; Chấm Band →</span>
+              </button>
+            ` : `
               <button type="button" class="ins-submit-check-btn" id="rp-btn-open-submit"
                 onclick="ReadingPracticeApp.openPreSubmitModal()" title="Review &amp; Submit your answers" aria-label="Review and Submit">✓</button>
-            ` : `
+            `) : `
               <button type="button" class="ins-submit-check-btn is-done" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề">←</button>
             `}
           </footer>
@@ -1373,28 +1768,17 @@
         ${notesDrawerHtml}
         ${optionsOverlayHtml}
 
-        <!-- Official Inspera Compact Selection / Right-Click Popover (Note + Highlight) -->
-        <div class="ins-sel-popover hidden" id="rp-hl-toolbar">
-          <button type="button" class="ins-sel-act" onclick="ReadingPracticeApp.addNoteFromSelection()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span>Note</span>
-          </button>
-          <button type="button" class="ins-sel-act" onclick="ReadingPracticeApp.applyHighlight('yellow')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
-            <span>Highlight</span>
-          </button>
-          <button type="button" class="ins-sel-clear" onclick="ReadingPracticeApp.clearSelectionHighlight()" title="Xóa highlight">Clear</button>
-          ${enableDict ? '<button type="button" class="ins-sel-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra từ</button>' : ''}
-        </div>
+        <!-- Selection / Right-Click Highlight Popover -->
+        ${selPopoverHtml}
 
-        <!-- Click-to-Dictionary Popover (Review & News mode) -->
+        <!-- Click-to-Dictionary Popover (Practice PRO, Review & News mode) -->
         <div class="rp-dict-popover hidden" id="rp-dict-popover" onclick="event.stopPropagation()"></div>
 
         <!-- Pre-Submit Review Check Modal -->
         <div class="modal-overlay" id="rp-presubmit-modal" onclick="ReadingPracticeApp.closePreSubmitModal(event)">
           <div class="modal-card rp-presubmit-card" onclick="event.stopPropagation()">
             <div class="modal-header">
-              <div class="modal-title">Review your answers before submitting</div>
+              <div class="modal-title">${isPractice ? 'Tổng kết trước khi chấm Band' : 'Review your answers before submitting'}</div>
               <button type="button" class="btn-icon-glass" style="width:30px;height:30px;" onclick="ReadingPracticeApp.closePreSubmitModal()">✕</button>
             </div>
             <div class="modal-body" id="rp-presubmit-body"></div>
@@ -1402,11 +1786,21 @@
         </div>
       </div>
     `;
+
+    // Re-apply persistent pastel highlights & restore pane scroll positions
+    applyStoredHighlightsToPassage(curPassage.id);
+    if (samePassage) {
+      const pEl = document.getElementById('rp-passage-pane');
+      const qEl = document.getElementById('rp-questions-pane');
+      if (pEl) pEl.scrollTop = prevPassageScroll;
+      if (qEl) qEl.scrollTop = prevQuestScroll;
+    }
   }
 
-  /* ---------- FLAT INSPERA QUESTION GROUP & ITEM RENDERER ---------- */
+  /* ---------- FLAT INSPERA / PRACTICE PRO QUESTION GROUP & ITEM RENDERER ---------- */
   function renderQuestionGroup(group, passage, isReview) {
     const s = state.session;
+    const isPractice = s?.studyMode === 'practice';
     if (group.type === 'matching_headings') {
       const usedKeys = new Set();
       (group.questions || []).forEach((q) => {
@@ -1428,12 +1822,14 @@
         `;
       }).join('');
 
-      const reviewRowsHtml = isReview ? (group.questions || []).map((q) => {
+      const reviewRowsHtml = (group.questions || []).map((q) => {
         const qid = `${passage.id}__q${q.num}`;
+        const showCheck = isReview || (isPractice && !!s.checkedMap?.[qid]);
+        if (!showCheck) return '';
         const ok = isAnswerCorrect(q, s.answers[qid]);
         const keyObj = (group.headings || []).find((h) => h.key === q.answer);
         return renderReviewBlock(q, ok, keyObj ? `${keyObj.key}. ${keyObj.text}` : q.answer);
-      }).join('') : '';
+      }).join('');
 
       return `
         <div class="ins-q-group">
@@ -1489,11 +1885,14 @@
 
   function renderFlatQuestionItem(q, passage, isReview) {
     const s = state.session;
+    const isPractice = s?.studyMode === 'practice';
     const qid = `${passage.id}__q${q.num}`;
     const userVal = String(s.answers[qid] ?? '');
+    const hasVal = userVal.trim().length > 0;
     const flagged = !!s.flagged[qid];
     const isCur = s.activeQid === qid;
-    const ok = isReview ? isAnswerCorrect(q, userVal) : false;
+    const isChecked = isReview || (isPractice && !!s.checkedMap?.[qid]);
+    const ok = isChecked ? isAnswerCorrect(q, userVal) : false;
 
     const bookmarkBtn = !isReview ? `
       <button type="button" class="ins-bookmark-btn ${flagged ? 'active' : ''}"
@@ -1502,18 +1901,30 @@
       </button>
     ` : '';
 
+    const checkBtn = (isPractice && !isReview) ? `
+      <button type="button"
+        class="prac-q-check-btn ${isChecked ? (ok ? 'is-ok' : 'is-bad') : (hasVal ? 'is-ready' : '')}"
+        data-prac-check="${esc(qid)}"
+        onclick="event.stopPropagation(); ReadingPracticeApp.checkSingleQuestion('${esc(qid)}')"
+        title="${isChecked ? 'Ẩn kết quả câu này' : 'Kiểm tra đáp án câu này ngay'}">
+        ${isChecked ? (ok ? '✓ Đúng' : '✕ Xem đáp án') : 'Kiểm tra'}
+      </button>
+    ` : '';
+
+    const cardStateCls = `${isCur && !isReview ? 'is-current' : ''}${isChecked ? (ok ? ' is-checked-ok' : ' is-checked-bad') : ''}`;
+
     if (q.type === 'gap') {
-      const inlineBox = `<input type="text" class="ins-gap-input ${isReview ? (ok ? 'is-ok' : 'is-bad') : ''}" value="${esc(userVal)}" ${isReview ? 'readonly' : ''} placeholder="${q.num}" aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off">`;
+      const inlineBox = `<input type="text" class="ins-gap-input ${isChecked ? (ok ? 'is-ok' : 'is-bad') : ''}" value="${esc(userVal)}" ${isReview ? 'readonly' : ''} placeholder="${q.num}" aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off">`;
       const stem = /_{3,}/.test(q.prompt) ? esc(q.prompt).replace(/_{3,}/, inlineBox) : `${esc(q.prompt)} ${inlineBox}`;
       const correctDisplay = Array.isArray(q.answer) ? q.answer[0] : q.answer;
       return `
-        <div class="ins-q-item ins-q-gap ${isCur && !isReview ? 'is-current' : ''}" id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
+        <div class="ins-q-item ins-q-gap ${cardStateCls}" id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
           <div class="ins-gap-bullet">
             <span class="ins-bullet-dot">•</span>
             <div class="ins-gap-line">${stem}</div>
-            ${bookmarkBtn}
+            <div class="prac-q-inline-acts">${checkBtn}${bookmarkBtn}</div>
           </div>
-          ${isReview ? renderReviewBlock(q, ok, correctDisplay) : ''}
+          ${isChecked ? renderReviewBlock(q, ok, correctDisplay) : ''}
         </div>
       `;
     }
@@ -1526,8 +1937,8 @@
           ${opts.map((opt) => {
             const active = userVal.toUpperCase() === opt;
             let cls = `ins-radio-row${active ? ' is-selected' : ''}`;
-            if (isReview && opt === String(q.answer).toUpperCase()) cls += ' is-key';
-            if (isReview && active && !ok) cls += ' is-wrong-pick';
+            if (isChecked && opt === String(q.answer).toUpperCase()) cls += ' is-key';
+            if (isChecked && active && !ok) cls += ' is-wrong-pick';
             return `
               <label class="${cls}">
                 <input type="radio" name="${esc(qid)}" value="${opt}" ${active ? 'checked' : ''} ${isReview ? 'disabled' : ''}
@@ -1546,8 +1957,8 @@
             const strikeKey = `${qid}__${opt.key}`;
             const isStruck = !!s.struck[strikeKey];
             let cls = `ins-radio-row${active ? ' is-selected' : ''}${isStruck ? ' is-struck' : ''}`;
-            if (isReview && opt.key === String(q.answer).toUpperCase()) cls += ' is-key';
-            if (isReview && active && !ok) cls += ' is-wrong-pick';
+            if (isChecked && opt.key === String(q.answer).toUpperCase()) cls += ' is-key';
+            if (isChecked && active && !ok) cls += ' is-wrong-pick';
             return `
               <div class="${cls}">
                 <label class="ins-radio-lbl">
@@ -1574,8 +1985,8 @@
             const val = String(opt).trim();
             const active = userVal.toUpperCase() === val.toUpperCase();
             let cls = `ins-sel-chip${active ? ' is-selected' : ''}`;
-            if (isReview && ansArr.includes(val.toUpperCase())) cls += ' is-key';
-            if (isReview && active && !ok) cls += ' is-wrong-pick';
+            if (isChecked && ansArr.includes(val.toUpperCase())) cls += ' is-key';
+            if (isChecked && active && !ok) cls += ' is-wrong-pick';
             return `
               <button type="button" class="${cls}" ${isReview ? 'disabled' : ''}
                 aria-pressed="${active ? 'true' : 'false'}"
@@ -1588,14 +1999,14 @@
 
     const correctDisplay = Array.isArray(q.answer) ? q.answer.join(' / ') : q.answer;
     return `
-      <div class="ins-q-item ${isCur && !isReview ? 'is-current' : ''}" id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
+      <div class="ins-q-item ${cardStateCls}" id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
         <div class="ins-q-stem-row">
           <span class="ins-q-num ${isCur && !isReview ? 'is-active' : ''}">${q.num}</span>
           <div class="ins-q-stem">${esc(q.prompt)}</div>
-          ${bookmarkBtn}
+          <div class="prac-q-inline-acts">${checkBtn}${bookmarkBtn}</div>
         </div>
         ${optionsHtml}
-        ${isReview ? renderReviewBlock(q, ok, correctDisplay) : ''}
+        ${isChecked ? renderReviewBlock(q, ok, correctDisplay) : ''}
       </div>
     `;
   }
@@ -1810,6 +2221,7 @@
       if (!p) return;
       startSession({
         itemId: p.id, title: p.title, source: p.source, isFull: false,
+        studyMode: opts.studyMode || (p.source === 'news' ? 'practice' : 'exam'),
         suggestedMins: p.suggestedMins || 20, deckDefaultName: p.deckDefaultName || p.title,
         passageIds: [p.id], openInReview: !!opts.openInReview
       });
@@ -1820,6 +2232,7 @@
       if (!ft) return;
       startSession({
         itemId: ft.id, title: ft.title, source: ft.source, isFull: true,
+        studyMode: opts.studyMode || 'exam',
         suggestedMins: ft.suggestedMins || 60, deckDefaultName: ft.deckDefaultName || ft.title,
         passageIds: ft.passageIds.slice(), openInReview: !!opts.openInReview
       });
@@ -1830,6 +2243,12 @@
       if (!d || !Array.isArray(d.passageIds) || !d.passageIds.length) return;
       startSession({
         itemId: d.itemId, title: d.title, source: d.source, isFull: !!d.isFull,
+        studyMode: d.studyMode || (d.source === 'news' ? 'practice' : 'exam'),
+        contrast: d.contrast, textSize: d.textSize,
+        activePenColor: d.activePenColor, brushAuto: !!d.brushAuto,
+        showTimer: d.showTimer !== false,
+        checkedMap: d.checkedMap || {},
+        highlights: d.highlights || {},
         suggestedMins: Math.max(1, Math.ceil((d.remainingSec || 1200) / 60)),
         remainingSec: d.remainingSec, elapsedSec: d.elapsedSec,
         deckDefaultName: d.deckDefaultName, passageIds: d.passageIds,
@@ -1868,15 +2287,122 @@
       renderExamWorkspace();
     },
 
+    setStudyMode(mode) {
+      if (!state.session) return;
+      const target = mode === 'practice' ? 'practice' : 'exam';
+      if (state.session.studyMode === target) return;
+      state.session.studyMode = target;
+      // Switch between warm Totoro Washi and crisp CD-IELTS automatically if still on the default surface
+      if (target === 'practice' && state.session.contrast === 'cd') {
+        state.session.contrast = 'totoro';
+      } else if (target === 'exam' && state.session.contrast === 'totoro') {
+        state.session.contrast = 'cd';
+      }
+      if (target === 'exam') {
+        state.session.showTimer = true;
+        this.closeDictPopover();
+      }
+      persistDraft();
+      renderExamWorkspace();
+      toast(target === 'practice'
+        ? 'Đã chuyển sang Luyện tập PRO (5 màu pastel · Tra từ · Check đáp án)'
+        : 'Đã chuyển sang Thi thật CD-IELTS Inspera');
+    },
+
+    setPenColor(color) {
+      if (!state.session) return;
+      const valid = PASTEL_PENS.some((p) => p.id === color);
+      state.session.activePenColor = valid ? color : 'yellow';
+      persistDraft();
+      // Update swatch bar active class surgically without losing scroll or selection
+      document.querySelectorAll('#prac-pen-bar .prac-pen-chip').forEach((btn) => {
+        const isAct = btn.dataset.penColor === state.session.activePenColor;
+        btn.classList.toggle('active', isAct);
+        btn.setAttribute('aria-pressed', isAct ? 'true' : 'false');
+      });
+      document.querySelectorAll('#rp-hl-toolbar .prac-pop-dot').forEach((dot) => {
+        dot.classList.toggle('is-active', dot.dataset.popColor === state.session.activePenColor);
+      });
+    },
+
+    toggleBrushAuto() {
+      if (!state.session) return;
+      state.session.brushAuto = !state.session.brushAuto;
+      persistDraft();
+      const btn = document.getElementById('prac-btn-brush-auto');
+      if (btn) {
+        btn.classList.toggle('is-on', state.session.brushAuto);
+        btn.setAttribute('aria-pressed', state.session.brushAuto ? 'true' : 'false');
+      }
+      toast(state.session.brushAuto
+        ? 'Bật Tô nhanh: Bôi đen văn bản để tô màu pastel ngay lập tức!'
+        : 'Đã tắt Tô nhanh: Bôi đen để mở bảng chọn 5 màu & tra từ.');
+    },
+
+    toggleTimerVisibility() {
+      if (!state.session) return;
+      state.session.showTimer = !state.session.showTimer;
+      persistDraft();
+      renderExamWorkspace();
+    },
+
+    checkSingleQuestion(qid) {
+      if (!state.session || state.session.mode !== 'exam' || state.session.studyMode !== 'practice') return;
+      if (!state.session.checkedMap) state.session.checkedMap = {};
+      if (state.session.checkedMap[qid]) {
+        delete state.session.checkedMap[qid];
+      } else {
+        state.session.checkedMap[qid] = true;
+      }
+      state.session.activeQid = qid;
+      persistDraft();
+      renderExamWorkspace();
+    },
+
+    checkAnsweredQuestions() {
+      if (!state.session || state.session.mode !== 'exam' || state.session.studyMode !== 'practice') return;
+      if (!state.session.checkedMap) state.session.checkedMap = {};
+      const curQs = getAllSessionQuestions().filter((q) => q._pIdx === state.session.activePassageIdx);
+      let checkedCnt = 0;
+      let okCnt = 0;
+      curQs.forEach((q) => {
+        const val = String(state.session.answers[q._qid] || '').trim();
+        if (val) {
+          state.session.checkedMap[q._qid] = true;
+          checkedCnt += 1;
+          if (isAnswerCorrect(q, val)) okCnt += 1;
+        }
+      });
+      if (!checkedCnt) {
+        toast('Bạn hãy điền ít nhất 1 câu trả lời trước khi kiểm tra nhé.');
+        return;
+      }
+      persistDraft();
+      renderExamWorkspace();
+      toast(`Đã kiểm tra ${checkedCnt} câu đã làm: đúng ${okCnt}/${checkedCnt}!`);
+    },
+
+    clearCheckedQuestions() {
+      if (!state.session) return;
+      const curQs = getAllSessionQuestions().filter((q) => q._pIdx === state.session.activePassageIdx);
+      if (state.session.checkedMap) {
+        curQs.forEach((q) => delete state.session.checkedMap[q._qid]);
+      }
+      persistDraft();
+      renderExamWorkspace();
+    },
+
     setContrast(mode) {
       if (!state.session) return;
       state.session.contrast = ['cd', 'totoro', 'dark', 'yellow'].includes(mode) ? mode : 'cd';
+      persistDraft();
       renderExamWorkspace();
     },
 
     setTextSize(sz) {
       if (!state.session) return;
       state.session.textSize = ['regular', 'large', 'xlarge'].includes(sz) ? sz : 'regular';
+      persistDraft();
       renderExamWorkspace();
     },
 
@@ -1930,12 +2456,29 @@
       if (!state.session || state.session.mode !== 'exam') return;
       state.session.answers[qid] = value;
       state.session.activeQid = qid;
+      const hadCheck = !!(state.session.checkedMap && state.session.checkedMap[qid]);
+      if (hadCheck) delete state.session.checkedMap[qid];
       persistDraft();
-      if (skipFullRerender) {
+      if (skipFullRerender && !hadCheck) {
         const pQs = getAllSessionQuestions().filter((q) => q._pIdx === state.session.activePassageIdx);
         const idx = pQs.findIndex((q) => q._qid === qid);
         const boxes = document.querySelectorAll('.ins-qbox');
         if (boxes[idx]) boxes[idx].classList.toggle('is-attempted', String(value || '').trim().length > 0);
+        // Keep Practice PRO check buttons responsive during inline typing
+        if (state.session.studyMode === 'practice') {
+          const hasVal = String(value || '').trim().length > 0;
+          const qBtn = document.querySelector(`[data-prac-check="${qid}"]`);
+          if (qBtn) qBtn.classList.toggle('is-ready', hasVal);
+          const allBtn = document.getElementById('prac-btn-check-answered');
+          if (allBtn) {
+            const anyAns = pQs.some((q) => String(state.session.answers[q._qid] || '').trim().length > 0);
+            allBtn.disabled = !anyAns;
+          }
+          const allQ = getAllSessionQuestions();
+          const doneCnt = allQ.filter((q) => String(state.session.answers[q._qid] || '').trim()).length;
+          const fill = document.querySelector('.prac-hdr-progress-fill');
+          if (fill && allQ.length) fill.style.width = `${Math.round((doneCnt / allQ.length) * 100)}%`;
+        }
         return;
       }
       renderExamWorkspace();
@@ -2005,7 +2548,10 @@
       if (!state.session) return;
       const sel = window.getSelection();
       const quote = (sel ? sel.toString() : '').trim().slice(0, 180);
-      if (quote) this.applyHighlight('yellow');
+      if (quote) {
+        const pen = state.session.studyMode === 'practice' ? (state.session.activePenColor || 'yellow') : 'yellow';
+        this.applyHighlight(pen);
+      }
       this.hideHighlightToolbar();
       state.session.notesOpen = true;
       if (quote) {
@@ -2093,8 +2639,9 @@
 
     retryCurrent() {
       if (!state.session) return;
-      if (state.session.isFull) this.startFullTest(state.session.itemId);
-      else this.startPassage(state.session.itemId);
+      const opts = { studyMode: state.session.studyMode || 'exam' };
+      if (state.session.isFull) this.startFullTest(state.session.itemId, opts);
+      else this.startPassage(state.session.itemId, opts);
     },
 
     toggleBilingual() {
@@ -2113,12 +2660,17 @@
       }, 40);
     },
 
-    /* ---------- SELECTION & RIGHT-CLICK HIGHLIGHT POPOVER ---------- */
+    /* ---------- SELECTION & RIGHT-CLICK PASTEL HIGHLIGHT POPOVER ---------- */
     _positionSelectionPopover(rect) {
       const bar = document.getElementById('rp-hl-toolbar');
       if (!bar || !rect) return;
-      bar.style.left = `${Math.max(12, Math.min(window.innerWidth - 230, rect.left + rect.width / 2 - 90))}px`;
-      bar.style.top = `${Math.max(62, rect.bottom + 8)}px`;
+      const isPrac = state.session?.studyMode === 'practice';
+      const estW = isPrac ? 320 : 230;
+      const left = Math.max(12, Math.min(window.innerWidth - estW - 12, rect.left + rect.width / 2 - estW / 2));
+      const preferTop = rect.top - 52;
+      const top = preferTop >= 62 ? preferTop : Math.max(62, rect.bottom + 8);
+      bar.style.left = `${left}px`;
+      bar.style.top = `${top}px`;
       bar.classList.remove('hidden');
     },
 
@@ -2134,6 +2686,11 @@
       const pane = document.getElementById('rp-passage-content');
       if (!pane || !pane.contains(range.commonAncestorContainer)) {
         bar.classList.add('hidden');
+        return;
+      }
+      // Practice PRO "Tô nhanh" auto-brush mode: highlight immediately on drag-release
+      if (state.session?.studyMode === 'practice' && state.session?.brushAuto) {
+        this.applyHighlight(state.session.activePenColor || 'yellow');
         return;
       }
       this._positionSelectionPopover(range.getBoundingClientRect());
@@ -2152,32 +2709,73 @@
     },
 
     applyHighlight(color) {
+      const s = state.session;
       const sel = window.getSelection();
-      if (!sel || sel.isCollapsed) return;
-      try {
-        const range = sel.getRangeAt(0);
-        const mark = document.createElement('mark');
-        mark.className = `rp-hl-mark hl-${color || 'yellow'}`;
-        mark.appendChild(range.extractContents());
-        range.insertNode(mark);
-        sel.removeAllRanges();
-      } catch (_) {
-        toast('Hãy bôi đen trong cùng một đoạn văn để highlight.');
+      if (!s || !sel || sel.isCollapsed) return;
+      const passages = getSessionPassages();
+      const curPassage = passages[s.activePassageIdx] || passages[0];
+      if (!curPassage) return;
+
+      const penColor = color || (s.studyMode === 'practice' ? s.activePenColor : 'yellow') || 'yellow';
+      if (s.studyMode === 'practice' && PASTEL_PENS.some((p) => p.id === penColor)) {
+        s.activePenColor = penColor;
+        document.querySelectorAll('#prac-pen-bar .prac-pen-chip').forEach((btn) => {
+          const isAct = btn.dataset.penColor === penColor;
+          btn.classList.toggle('active', isAct);
+          btn.setAttribute('aria-pressed', isAct ? 'true' : 'false');
+        });
+        document.querySelectorAll('#rp-hl-toolbar .prac-pop-dot').forEach((dot) => {
+          dot.classList.toggle('is-active', dot.dataset.popColor === penColor);
+        });
       }
+
+      const range = sel.getRangeAt(0);
+      const slices = getSelectionParaOffsets(range);
+      if (!slices.length) {
+        toast('Hãy bôi đen trực tiếp trên đoạn văn để highlight.');
+        this.hideHighlightToolbar();
+        return;
+      }
+      slices.forEach((sl) => mergeOrAddHighlight(curPassage.id, sl.paraIdx, sl.start, sl.end, penColor));
+      applyStoredHighlightsToPassage(curPassage.id);
+      updatePracticeHighlightBadge(curPassage.id);
+      persistDraft();
+      sel.removeAllRanges();
       this.hideHighlightToolbar();
     },
 
     clearSelectionHighlight() {
-      const pane = document.getElementById('rp-passage-content');
-      if (pane) {
-        pane.querySelectorAll('mark.rp-hl-mark').forEach((m) => {
-          const parent = m.parentNode;
-          while (m.firstChild) parent.insertBefore(m.firstChild, m);
-          parent.removeChild(m);
-        });
+      const s = state.session;
+      if (!s) return;
+      const passages = getSessionPassages();
+      const curPassage = passages[s.activePassageIdx] || passages[0];
+      if (!curPassage) return;
+      const sel = window.getSelection();
+      const slices = (sel && !sel.isCollapsed) ? getSelectionParaOffsets(sel.getRangeAt(0)) : [];
+      if (slices.length) {
+        slices.forEach((sl) => removeHighlightRange(curPassage.id, sl.paraIdx, sl.start, sl.end));
+      } else {
+        s.highlights[curPassage.id] = [];
       }
-      window.getSelection()?.removeAllRanges();
+      applyStoredHighlightsToPassage(curPassage.id);
+      updatePracticeHighlightBadge(curPassage.id);
+      persistDraft();
+      sel?.removeAllRanges();
       this.hideHighlightToolbar();
+    },
+
+    clearAllPassageHighlights() {
+      const s = state.session;
+      if (!s) return;
+      const passages = getSessionPassages();
+      const curPassage = passages[s.activePassageIdx] || passages[0];
+      if (!curPassage) return;
+      if (s.highlights) s.highlights[curPassage.id] = [];
+      applyStoredHighlightsToPassage(curPassage.id);
+      updatePracticeHighlightBadge(curPassage.id);
+      persistDraft();
+      this.hideHighlightToolbar();
+      toast('Đã xóa toàn bộ highlight trong bài đọc hiện tại.');
     },
 
     lookupSelectedPhrase() {
@@ -2194,7 +2792,7 @@
 
     handlePassageWordClick(ev) {
       const s = state.session;
-      if (!s || !(s.mode === 'review' || s.isNews)) return;
+      if (!s || !(s.mode === 'review' || s.isNews || s.studyMode === 'practice')) return;
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) return;
       const wordEl = ev.target.closest('.rp-word');

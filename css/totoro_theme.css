@@ -6927,13 +6927,72 @@ html[data-theme="dark"] .thw-remind-btn.is-copied {
   padding: 1px 2px;
 }
 mark.rp-hl-mark {
-  border-radius: 3px;
-  padding: 0 2px;
+  border-radius: 0;
+  padding: 1px 0;
   color: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
-mark.rp-hl-mark.hl-yellow { background: rgba(250, 204, 21, 0.42); }
-mark.rp-hl-mark.hl-green  { background: rgba(74, 222, 128, 0.34); }
-mark.rp-hl-mark.hl-pink   { background: rgba(244, 114, 182, 0.32); }
+mark.rp-hl-mark.hl-cap-start {
+  border-top-left-radius: 3.5px;
+  border-bottom-left-radius: 3.5px;
+  padding-left: 2px;
+}
+mark.rp-hl-mark.hl-cap-end {
+  border-top-right-radius: 3.5px;
+  border-bottom-right-radius: 3.5px;
+  padding-right: 2px;
+}
+mark.rp-hl-mark.hl-cap-both {
+  border-radius: 3.5px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+mark.rp-hl-mark.hl-yellow {
+  background: rgba(254, 240, 138, 0.80);
+  box-shadow: inset 0 -1.5px 0 rgba(202, 138, 4, 0.34);
+}
+mark.rp-hl-mark.hl-green {
+  background: rgba(187, 247, 208, 0.82);
+  box-shadow: inset 0 -1.5px 0 rgba(22, 163, 74, 0.30);
+}
+mark.rp-hl-mark.hl-pink {
+  background: rgba(251, 207, 232, 0.82);
+  box-shadow: inset 0 -1.5px 0 rgba(219, 39, 119, 0.28);
+}
+mark.rp-hl-mark.hl-blue {
+  background: rgba(186, 230, 253, 0.84);
+  box-shadow: inset 0 -1.5px 0 rgba(2, 132, 199, 0.28);
+}
+mark.rp-hl-mark.hl-purple {
+  background: rgba(233, 213, 255, 0.84);
+  box-shadow: inset 0 -1.5px 0 rgba(147, 51, 234, 0.28);
+}
+.ins-contrast-dark mark.rp-hl-mark.hl-yellow,
+.ins-contrast-yellow mark.rp-hl-mark.hl-yellow {
+  background: rgba(250, 204, 21, 0.34);
+  box-shadow: inset 0 -1.5px 0 rgba(250, 204, 21, 0.55);
+}
+.ins-contrast-dark mark.rp-hl-mark.hl-green,
+.ins-contrast-yellow mark.rp-hl-mark.hl-green {
+  background: rgba(74, 222, 128, 0.30);
+  box-shadow: inset 0 -1.5px 0 rgba(74, 222, 128, 0.52);
+}
+.ins-contrast-dark mark.rp-hl-mark.hl-pink,
+.ins-contrast-yellow mark.rp-hl-mark.hl-pink {
+  background: rgba(244, 114, 182, 0.32);
+  box-shadow: inset 0 -1.5px 0 rgba(244, 114, 182, 0.55);
+}
+.ins-contrast-dark mark.rp-hl-mark.hl-blue,
+.ins-contrast-yellow mark.rp-hl-mark.hl-blue {
+  background: rgba(56, 189, 248, 0.30);
+  box-shadow: inset 0 -1.5px 0 rgba(56, 189, 248, 0.55);
+}
+.ins-contrast-dark mark.rp-hl-mark.hl-purple,
+.ins-contrast-yellow mark.rp-hl-mark.hl-purple {
+  background: rgba(192, 132, 252, 0.32);
+  box-shadow: inset 0 -1.5px 0 rgba(192, 132, 252, 0.55);
+}
 
 /* ---------- QUESTIONS PANE ---------- */
 .rp-q-group {
@@ -10167,5 +10226,867 @@ body.rp-exam-fullscreen {
   .ins-rev-box {
     padding-left: 0;
     margin-left: 0;
+  }
+}
+
+/* =========================================================
+   DUAL-MODE STUDIO: LUYỆN TẬP PRO (TOTORO WASHI) & THI THẬT
+   ========================================================= */
+
+/* Bookshelf Card Dual-Mode Action Footer */
+.rp-card-mode-btns {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+.rp-card-mode-btns .rp-btn-rev {
+  margin-right: auto;
+}
+.rp-btn-practice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(63, 109, 82, 0.30);
+  background: linear-gradient(180deg, #f3f8f4 0%, #e7f2ea 100%);
+  color: #265038;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), background-color 150ms cubic-bezier(0.22, 1, 0.36, 1), border-color 150ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rp-btn-practice:hover {
+  background: linear-gradient(180deg, #ebf5ee 0%, #dcece1 100%);
+  border-color: rgba(63, 109, 82, 0.55);
+  box-shadow: 0 3px 10px rgba(46, 98, 66, 0.12);
+  transform: translateY(-1px);
+}
+.rp-btn-practice:active {
+  transform: translateY(0);
+}
+.rp-mode-dot-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: conic-gradient(#fde047 0deg 90deg, #86efac 90deg 180deg, #f9a8d4 180deg 270deg, #7dd3fc 270deg 360deg);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+[data-theme="dark"] .rp-btn-practice {
+  background: rgba(114, 175, 132, 0.16);
+  border-color: rgba(138, 198, 152, 0.34);
+  color: #cbead3;
+}
+[data-theme="dark"] .rp-btn-practice:hover {
+  background: rgba(114, 175, 132, 0.25);
+  border-color: rgba(138, 198, 152, 0.58);
+}
+
+/* Segmented Mode Switcher in Workspace Header (Luyện tập <-> Thi thật) */
+.rp-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 2.5px;
+  border-radius: 9px;
+  border: 1px solid var(--ins-border);
+  background: var(--ins-banner);
+  gap: 2px;
+  margin-right: 4px;
+}
+.rp-ms-btn {
+  border: 0;
+  background: transparent;
+  color: var(--ins-muted);
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6.5px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms cubic-bezier(0.22, 1, 0.36, 1), color 150ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rp-ms-btn:hover:not(.active) {
+  color: var(--ins-ink);
+}
+.rp-ms-btn.active {
+  background: var(--ins-bg);
+  color: var(--ins-ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10);
+}
+.ins-mode-practice .rp-ms-btn[data-rp-mode-btn="practice"].active {
+  background: #3d6d50;
+  color: #ffffff;
+  box-shadow: 0 1px 5px rgba(45, 92, 63, 0.28);
+}
+.ins-mode-exam .rp-ms-btn[data-rp-mode-btn="exam"].active {
+  background: #1f2937;
+  color: #ffffff;
+}
+.ins-contrast-dark .ins-mode-exam .rp-ms-btn[data-rp-mode-btn="exam"].active {
+  background: #e5e7eb;
+  color: #111827;
+}
+.ins-contrast-yellow .rp-ms-btn.active {
+  background: #ffee32 !important;
+  color: #000000 !important;
+}
+
+/* Practice PRO Studio Tokens & Editorial Shell */
+.ins-mode-practice {
+  --prac-accent: #3d6d50;
+  --prac-accent-soft: rgba(61, 109, 80, 0.11);
+  --prac-card: #fffdf8;
+  --prac-card-bd: rgba(154, 141, 118, 0.28);
+  --prac-bar-bg: rgba(248, 244, 234, 0.94);
+  --prac-shadow: 0 3px 14px rgba(44, 38, 28, 0.05);
+  font-family: "Inter", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.ins-mode-practice.ins-contrast-cd {
+  --prac-card: #ffffff;
+  --prac-card-bd: #e2e5ea;
+  --prac-bar-bg: rgba(249, 250, 251, 0.95);
+  --prac-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+.ins-mode-practice.ins-contrast-dark {
+  --prac-accent: #7ec495;
+  --prac-accent-soft: rgba(126, 196, 149, 0.15);
+  --prac-card: #1b1d1c;
+  --prac-card-bd: rgba(255, 255, 255, 0.11);
+  --prac-bar-bg: rgba(24, 26, 25, 0.94);
+  --prac-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+}
+.ins-mode-practice.ins-contrast-yellow {
+  --prac-accent: #ffee32;
+  --prac-accent-soft: rgba(255, 238, 50, 0.16);
+  --prac-card: #0c0c00;
+  --prac-card-bd: #666600;
+  --prac-bar-bg: rgba(14, 14, 0, 0.96);
+  --prac-shadow: none;
+}
+
+/* Header Enhancements in Practice PRO */
+.ins-mode-practice .ins-header {
+  position: relative;
+  height: 58px;
+  padding: 0 20px;
+  box-shadow: 0 1px 0 var(--ins-border), 0 4px 14px rgba(44, 38, 28, 0.03);
+}
+.prac-hdr-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: transparent;
+  overflow: hidden;
+  pointer-events: none;
+}
+.prac-hdr-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4b825e 0%, #76b881 100%);
+  transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ins-contrast-yellow .prac-hdr-progress-fill {
+  background: #ffee32;
+}
+.prac-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 9px;
+  border-radius: 10px;
+  background: var(--prac-accent-soft);
+  border: 1px solid rgba(61, 109, 80, 0.22);
+  user-select: none;
+  flex-shrink: 0;
+}
+.prac-brand-leaf {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px 9px 2px 9px;
+  background: var(--prac-accent);
+  transform: rotate(-10deg);
+}
+.prac-brand-txt {
+  font-size: 12.5px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  color: var(--prac-accent);
+}
+.prac-brand-pro {
+  font-size: 10px;
+  font-weight: 850;
+  padding: 1.5px 5px;
+  border-radius: 5px;
+  background: var(--prac-accent);
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+.ins-contrast-dark .prac-brand-pro,
+.ins-contrast-yellow .prac-brand-pro {
+  color: #101612;
+}
+
+.prac-timer-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.prac-timer-hidden-lbl {
+  font-size: 12px;
+  color: var(--ins-muted);
+  font-weight: 600;
+}
+.prac-timer-eye {
+  border: 1px solid var(--ins-border);
+  background: transparent;
+  color: var(--ins-muted);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease;
+}
+.prac-timer-eye:hover {
+  color: var(--ins-ink);
+  border-color: var(--prac-accent);
+  background: var(--prac-accent-soft);
+}
+
+/* Practice Part Sub-Banner */
+.ins-part-banner-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ins-mode-practice .ins-part-banner {
+  margin: 8px 20px 6px;
+  padding: 9px 15px;
+  border-radius: 12px;
+  border-color: var(--prac-card-bd);
+  background: var(--prac-card);
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ins-mode-practice .ins-part-banner strong {
+  color: var(--prac-accent);
+  font-size: 13.5px;
+}
+.ins-mode-practice .ins-part-banner span {
+  font-size: 12.5px;
+  color: var(--ins-muted);
+}
+.prac-dict-pill {
+  flex-shrink: 0;
+  font-size: 11.5px !important;
+  font-weight: 750;
+  color: var(--prac-accent) !important;
+  background: var(--prac-accent-soft);
+  border: 1px solid rgba(61, 109, 80, 0.22);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Sticky 5-Color Pastel Highlighter Studio Bar (Left Passage Pane) */
+.ins-mode-practice .ins-pane {
+  padding: 0 22px 90px;
+}
+.prac-pen-bar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  margin: 0 -22px 14px;
+  padding: 9px 22px;
+  background: var(--prac-bar-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--prac-card-bd);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.prac-pen-swatches {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.prac-pen-lead {
+  font-size: 11.5px;
+  font-weight: 750;
+  color: var(--ins-muted);
+  margin-right: 2px;
+}
+.prac-pen-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 9px 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--prac-card-bd);
+  background: var(--prac-card);
+  color: var(--ins-ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+.prac-pen-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--ins-muted);
+}
+.prac-pen-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+}
+.prac-pen-chip.active {
+  border-color: var(--ins-ink);
+  box-shadow: 0 0 0 2px var(--prac-accent-soft);
+}
+.prac-pen-chip.active.is-pen-yellow { background: rgba(254, 240, 138, 0.48); border-color: #ca8a04; }
+.prac-pen-chip.active.is-pen-green  { background: rgba(187, 247, 208, 0.50); border-color: #16a34a; }
+.prac-pen-chip.active.is-pen-pink   { background: rgba(251, 207, 232, 0.52); border-color: #db2777; }
+.prac-pen-chip.active.is-pen-blue   { background: rgba(186, 230, 253, 0.54); border-color: #0284c7; }
+.prac-pen-chip.active.is-pen-purple { background: rgba(233, 213, 255, 0.54); border-color: #9333ea; }
+
+.ins-contrast-dark .prac-pen-chip.active.is-pen-yellow { background: rgba(250, 204, 21, 0.24); }
+.ins-contrast-dark .prac-pen-chip.active.is-pen-green  { background: rgba(74, 222, 128, 0.22); }
+.ins-contrast-dark .prac-pen-chip.active.is-pen-pink   { background: rgba(244, 114, 182, 0.24); }
+.ins-contrast-dark .prac-pen-chip.active.is-pen-blue   { background: rgba(56, 189, 248, 0.22); }
+.ins-contrast-dark .prac-pen-chip.active.is-pen-purple { background: rgba(192, 132, 252, 0.24); }
+
+.prac-pen-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.prac-tool-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--prac-card-bd);
+  background: var(--prac-card);
+  color: var(--ins-ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.prac-tool-pill:hover:not(:disabled) {
+  border-color: var(--prac-accent);
+}
+.prac-tool-pill:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.prac-tool-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--ins-muted);
+  opacity: 0.45;
+}
+.prac-tool-pill.is-on {
+  background: var(--prac-accent);
+  border-color: var(--prac-accent);
+  color: #ffffff;
+}
+.ins-contrast-dark .prac-tool-pill.is-on,
+.ins-contrast-yellow .prac-tool-pill.is-on {
+  color: #101612;
+}
+.prac-tool-pill.is-on .prac-tool-dot {
+  background: #fde047;
+  opacity: 1;
+}
+.prac-hl-cnt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--prac-accent-soft);
+  color: var(--prac-accent);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+/* Editorial Reading Sheet inside Practice PRO */
+.ins-mode-practice .ins-passage-inner {
+  max-width: 72ch;
+  margin: 4px auto 0;
+  padding: 26px 30px 32px;
+  border-radius: 16px;
+  border: 1px solid var(--prac-card-bd);
+  background: var(--prac-card);
+  box-shadow: var(--prac-shadow);
+}
+.ins-mode-practice .ins-passage-title {
+  font-family: Georgia, "Times New Roman", "Noto Serif", serif;
+  font-size: calc(var(--ins-fs, 15px) + 7px);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.28;
+  margin-bottom: 10px;
+}
+.ins-mode-practice .ins-passage-sub {
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--prac-card-bd);
+  line-height: 1.55;
+}
+.ins-mode-practice .ins-para-en {
+  line-height: 1.82;
+}
+.ins-mode-practice .ins-para-lbl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  margin-right: 7px;
+  border-radius: 6px;
+  background: var(--prac-accent-soft);
+  color: var(--prac-accent);
+  font-size: 12.5px;
+  vertical-align: 1px;
+}
+.ins-mode-practice .rp-word {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 120ms ease;
+}
+.ins-mode-practice .rp-word:hover {
+  background: var(--prac-accent-soft);
+  text-decoration: underline dotted var(--prac-accent);
+  text-underline-offset: 3px;
+}
+
+/* Upgraded 5-Color Pastel Selection Popover */
+.ins-sel-popover.is-practice {
+  padding: 6px 8px;
+  border-radius: 14px;
+  border: 1px solid var(--prac-card-bd);
+  background: var(--prac-card);
+  color: var(--ins-ink);
+  box-shadow: 0 12px 30px rgba(24, 28, 22, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+  gap: 4px;
+}
+.prac-pop-swatches {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+.prac-pop-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 2px solid rgba(0, 0, 0, 0.12);
+  background: var(--swatch, #fde047);
+  cursor: pointer;
+  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 150ms ease, border-color 150ms ease;
+}
+.prac-pop-dot:hover {
+  transform: scale(1.14);
+  border-color: rgba(0, 0, 0, 0.38);
+}
+.prac-pop-dot.is-active {
+  border-color: var(--ins-ink);
+  box-shadow: 0 0 0 2.5px var(--prac-accent-soft);
+}
+.prac-pop-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--ins-border);
+  margin: 0 2px;
+}
+.ins-sel-popover.is-practice .prac-pop-act {
+  flex-direction: row;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  color: var(--ins-ink);
+  font-size: 12px;
+}
+.ins-sel-popover.is-practice .prac-pop-act:hover {
+  background: var(--prac-accent-soft);
+}
+.ins-sel-popover.is-practice .prac-pop-dict,
+.ins-sel-popover.is-practice .prac-pop-clear {
+  border-left: 0;
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.ins-sel-popover.is-practice .prac-pop-dict {
+  color: var(--prac-accent);
+  background: var(--prac-accent-soft);
+}
+.ins-sel-popover.is-practice .prac-pop-dict:hover {
+  filter: brightness(0.95);
+}
+.ins-sel-popover.is-practice .prac-pop-clear {
+  color: var(--ins-muted);
+}
+.ins-sel-popover.is-practice .prac-pop-clear:hover {
+  background: rgba(220, 38, 38, 0.10);
+  color: #dc2626;
+}
+
+/* Practice PRO Right Pane Toolbar & Elevated Editorial Question Cards */
+.prac-q-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  margin: 0 -22px 16px;
+  padding: 9px 22px;
+  background: var(--prac-bar-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--prac-card-bd);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.prac-q-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.prac-q-stat-pill {
+  font-size: 12px;
+  color: var(--ins-muted);
+  background: var(--prac-card);
+  border: 1px solid var(--prac-card-bd);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.prac-q-stat-pill strong {
+  color: var(--ins-ink);
+}
+.prac-q-stat-pill.is-checked {
+  background: var(--prac-accent-soft);
+  border-color: rgba(61, 109, 80, 0.28);
+  color: var(--prac-accent);
+}
+.prac-q-stat-pill.is-checked strong {
+  color: var(--prac-accent);
+}
+.prac-q-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.prac-check-all-btn {
+  height: 29px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--prac-accent);
+  background: var(--prac-accent);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), opacity 150ms ease, filter 150ms ease;
+}
+.ins-contrast-dark .prac-check-all-btn,
+.ins-contrast-yellow .prac-check-all-btn {
+  color: #101612;
+}
+.prac-check-all-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+.prac-check-all-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.prac-reset-check-btn {
+  height: 29px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--prac-card-bd);
+  background: var(--prac-card);
+  color: var(--ins-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.prac-reset-check-btn:hover {
+  color: var(--ins-ink);
+  border-color: var(--ins-muted);
+}
+
+.ins-mode-practice .ins-q-group {
+  margin-bottom: 24px;
+}
+.ins-mode-practice .ins-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(var(--ins-fs, 15px) + 0.5px);
+  color: var(--prac-accent);
+  margin-bottom: 6px;
+}
+.ins-mode-practice .ins-group-title::before {
+  content: "";
+  width: 4px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--prac-accent);
+  flex-shrink: 0;
+}
+.ins-mode-practice .ins-group-inst {
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: var(--prac-accent-soft);
+  color: var(--ins-ink);
+  font-size: calc(var(--ins-fs, 15px) - 1px);
+  margin-bottom: 14px;
+}
+.ins-mode-practice .ins-q-items {
+  gap: 12px;
+}
+.ins-mode-practice .ins-q-item {
+  padding: 13px 15px;
+  border-radius: 14px;
+  border: 1px solid var(--prac-card-bd);
+  background: var(--prac-card);
+  box-shadow: var(--prac-shadow);
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+.ins-mode-practice .ins-q-item.is-current {
+  border-color: var(--prac-accent);
+  box-shadow: 0 0 0 2px var(--prac-accent-soft), var(--prac-shadow);
+}
+.ins-mode-practice .ins-q-item.is-checked-ok {
+  border-color: rgba(22, 163, 74, 0.45);
+}
+.ins-mode-practice .ins-q-item.is-checked-bad {
+  border-color: rgba(220, 38, 38, 0.42);
+}
+.ins-mode-practice .ins-q-num {
+  min-width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--prac-accent-soft);
+  color: var(--prac-accent);
+  border-color: transparent;
+  font-size: 13px;
+}
+.ins-mode-practice .ins-q-num.is-active {
+  background: var(--prac-accent);
+  color: #ffffff;
+}
+.ins-contrast-dark .ins-mode-practice .ins-q-num.is-active,
+.ins-contrast-yellow .ins-mode-practice .ins-q-num.is-active {
+  color: #101612;
+}
+.ins-mode-practice .ins-radio-list {
+  gap: 5px;
+  padding-left: 36px;
+}
+.ins-mode-practice .ins-radio-row {
+  border-radius: 9px;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.ins-mode-practice .ins-radio-row.is-selected {
+  border-color: rgba(61, 109, 80, 0.34);
+}
+.ins-mode-practice .ins-gap-input {
+  border-radius: 8px;
+  padding: 3px 10px;
+}
+.ins-mode-practice .ins-sel-chip {
+  border-radius: 8px;
+}
+
+/* Per-question Check Button inside Practice PRO Cards */
+.prac-q-inline-acts {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.prac-q-check-btn {
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--prac-card-bd);
+  background: transparent;
+  color: var(--ins-muted);
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.prac-q-check-btn:hover {
+  border-color: var(--prac-accent);
+  color: var(--prac-accent);
+  background: var(--prac-accent-soft);
+}
+.prac-q-check-btn.is-ready {
+  border-color: rgba(61, 109, 80, 0.45);
+  color: var(--prac-accent);
+  background: var(--prac-accent-soft);
+}
+.prac-q-check-btn.is-ok {
+  border-color: rgba(22, 163, 74, 0.45);
+  background: rgba(22, 163, 74, 0.14);
+  color: #15803d;
+}
+.ins-contrast-dark .prac-q-check-btn.is-ok {
+  color: #86efac;
+}
+.prac-q-check-btn.is-bad {
+  border-color: rgba(220, 38, 38, 0.42);
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
+.ins-contrast-dark .prac-q-check-btn.is-bad {
+  color: #fca5a5;
+}
+
+/* Practice PRO Footer Submit Pill */
+.ins-mode-practice .ins-resizer-box {
+  border-radius: 999px;
+  border-color: var(--prac-card-bd);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.ins-mode-practice .prac-submit-pill {
+  width: auto !important;
+  min-width: 146px;
+  height: 36px !important;
+  margin: auto 10px auto 6px;
+  padding: 0 15px;
+  border-radius: 10px;
+  background: var(--prac-accent);
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.ins-contrast-dark .ins-mode-practice .prac-submit-pill,
+.ins-contrast-yellow .ins-mode-practice .prac-submit-pill {
+  color: #101612;
+}
+.ins-mode-practice .prac-submit-pill:hover {
+  filter: brightness(1.06);
+}
+
+/* Responsive Mobile Parity for Dual-Mode Studio */
+@media (max-width: 900px) {
+  .ins-mode-practice .ins-header,
+  .ins-mode-exam .ins-header {
+    padding: 0 10px;
+    gap: 6px;
+  }
+  .ins-mode-practice .ins-hdr-left,
+  .ins-mode-exam .ins-hdr-left {
+    gap: 8px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .prac-brand-badge {
+    display: none;
+  }
+  .ins-hdr-title {
+    font-size: 13px;
+  }
+  .prac-timer-eye,
+  .ins-timer-exact {
+    display: none;
+  }
+  .ins-hdr-ico {
+    width: 32px;
+    height: 32px;
+  }
+  .ins-hdr-exit {
+    padding: 0 8px;
+    font-size: 11.5px;
+  }
+  .rp-mode-switch {
+    margin-right: 0;
+  }
+  .rp-ms-btn {
+    padding: 0 7px;
+    font-size: 11px;
+  }
+  .ins-mode-practice .ins-part-banner {
+    margin: 6px 10px;
+    padding: 8px 11px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .prac-dict-pill {
+    display: none;
+  }
+  .ins-mode-practice .ins-pane {
+    padding: 0 12px 76px;
+  }
+  .prac-pen-bar,
+  .prac-q-toolbar {
+    margin: 0 -12px 12px;
+    padding: 8px 12px;
+  }
+  .prac-pen-lead {
+    display: none;
+  }
+  .prac-pen-role {
+    display: none;
+  }
+  .prac-pen-chip {
+    padding: 0 7px;
+  }
+  .ins-mode-practice .ins-passage-inner {
+    padding: 16px 16px 22px;
+    border-radius: 12px;
+  }
+  .ins-mode-practice .ins-radio-list {
+    padding-left: 0;
+  }
+  .ins-mode-practice .prac-submit-pill {
+    min-width: auto;
+    padding: 0 11px;
+    font-size: 11.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-btn-practice,
+  .rp-ms-btn,
+  .prac-pen-chip,
+  .prac-pop-dot,
+  .prac-check-all-btn,
+  .prac-hdr-progress-fill {
+    transition: none !important;
   }
 }
