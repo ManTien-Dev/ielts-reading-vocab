@@ -13,13 +13,24 @@
   'use strict';
 
   const PROGRESS_KEY_BASE = 'totoro_listening_task_progress_v1_';
+  // Gắn link Cloudflare R2 Public URL vào đây sau khi tạo bucket (ví dụ: 'https://pub-xxxx.r2.dev')
+  const DEFAULT_AUDIO_BASE_URL = '';
 
   let activeSuiteKey = 'part1';
   let examState = null;
   let audioSeqId = 0;
+  let activeHtmlAudio = null;
+  let activeHtmlAudioTimer = null;
   let preReadTimer = null;
   let t1CountdownTimer = null;
   let t1DeadlineAt = 0;
+
+  function getAudioBaseUrl() {
+    let saved = '';
+    try { saved = localStorage.getItem('totoro_listening_audio_base') || ''; } catch (_) {}
+    const raw = window.TOTORO_LISTENING_AUDIO_BASE || saved || DEFAULT_AUDIO_BASE_URL;
+    return String(raw || '').trim().replace(/\/+$/, '');
+  }
 
   function esc(s) {
     return String(s || '')
@@ -78,8 +89,98 @@
     audioSeqId += 1;
     if (preReadTimer) { clearInterval(preReadTimer); preReadTimer = null; }
     if (t1CountdownTimer) { clearInterval(t1CountdownTimer); t1CountdownTimer = null; }
+    if (activeHtmlAudioTimer) { clearTimeout(activeHtmlAudioTimer); activeHtmlAudioTimer = null; }
+    if (activeHtmlAudio) {
+      try { activeHtmlAudio.pause(); activeHtmlAudio.src = ''; } catch (_) {}
+      activeHtmlAudio = null;
+    }
     try { window.AppCore?.audio?.stop?.(); } catch (_) {}
     try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (_) {}
+  }
+
+  function playStudioMp3(relFile, opts = {}) {
+    const base = getAudioBaseUrl();
+    if (!base || !relFile) return Promise.resolve(false);
+    stopAllAudio();
+    const mySeq = audioSeqId;
+    const url = `${base}/${String(relFile).replace(/^\/+/, '')}`;
+
+    return new Promise((resolve) => {
+      try {
+        const audio = new Audio(url);
+        audio.preload = 'auto';
+        activeHtmlAudio = audio;
+        let settled = false;
+        let lastTurnIdx = -1;
+        const turns = opts.turns || [];
+        const timestamps = opts.timestamps || [];
+        const startSec = typeof opts.startSec === 'number' ? Math.max(0, opts.startSec) : null;
+        const endSec = typeof opts.endSec === 'number' ? opts.endSec : null;
+
+        const finish = (ok) => {
+          if (settled) return;
+          settled = true;
+          if (activeHtmlAudioTimer) { clearTimeout(activeHtmlAudioTimer); activeHtmlAudioTimer = null; }
+          if (activeHtmlAudio === audio) {
+            try { audio.pause(); } catch (_) {}
+            activeHtmlAudio = null;
+          }
+          if (ok && mySeq === audioSeqId) opts.onDone?.();
+          resolve(ok && mySeq === audioSeqId);
+        };
+
+        audio.addEventListener('timeupdate', () => {
+          if (mySeq !== audioSeqId || settled) return;
+          const cur = audio.currentTime;
+          if (endSec != null && cur >= endSec) {
+            finish(true);
+            return;
+          }
+          if (timestamps.length && typeof opts.onTurn === 'function') {
+            for (let i = 0; i < timestamps.length; i++) {
+              if (cur >= timestamps[i][0] - 0.08 && cur <= timestamps[i][1] + 0.15) {
+                if (i !== lastTurnIdx) {
+                  lastTurnIdx = i;
+                  opts.onTurn(i, turns[i] || {});
+                }
+                break;
+              }
+            }
+          }
+        });
+
+        audio.addEventListener('ended', () => finish(true));
+        audio.addEventListener('error', () => finish(false));
+
+        const startPlay = () => {
+          if (mySeq !== audioSeqId) return finish(false);
+          if (startSec != null) {
+            try { audio.currentTime = startSec; } catch (_) {}
+          }
+          if (timestamps.length && typeof opts.onTurn === 'function' && lastTurnIdx < 0) {
+            lastTurnIdx = 0;
+            opts.onTurn(0, turns[0] || {});
+          }
+          const p = audio.play();
+          if (p && typeof p.catch === 'function') {
+            p.catch(() => finish(false));
+          }
+          if (endSec != null && startSec != null) {
+            const clipMs = Math.max(400, (endSec - startSec) * 1000 + 250);
+            activeHtmlAudioTimer = setTimeout(() => finish(true), clipMs);
+          }
+        };
+
+        if (startSec != null) {
+          audio.addEventListener('loadedmetadata', startPlay, { once: true });
+          audio.load();
+        } else {
+          startPlay();
+        }
+      } catch (_) {
+        resolve(false);
+      }
+    });
   }
 
   function pickSpeechVoice(accent, speakerName) {
@@ -630,21 +731,32 @@
         if (strip) strip.classList.add('is-playing');
         if (pill) pill.textContent = 'Đang phát (1/1)';
 
-        playTurnsOneShot(c.turns || [], {
-          rate: 0.96,
-          gapMs: 320,
-          onTurn: (ti, turn) => {
-            const txt = document.getElementById('lt-t2-audio-text');
-            if (txt) txt.textContent = `🎙️ ${turn.speaker} (${turn.accent || 'en-GB'}) đang nói… (Lượt ${ti + 1}/${c.turns.length})`;
-          },
-          onDone: () => {
-            const st = document.getElementById('lt-t2-audio-strip');
-            const txt = document.getElementById('lt-t2-audio-text');
-            const pl = document.getElementById('lt-t2-status-pill');
-            if (st) st.classList.remove('is-playing');
-            if (txt) txt.textContent = '✓ Hội thoại đã phát xong (1/1) — Hãy chọn đáp án A, B hoặc C!';
-            if (pl) pl.textContent = 'Chọn đáp án';
-          },
+        const onT2Turn = (ti, turn) => {
+          const txt = document.getElementById('lt-t2-audio-text');
+          if (txt) txt.textContent = `🎙️ ${turn.speaker || 'Speaker'} (${turn.accent || 'en-GB'}) đang nói… (Lượt ${ti + 1}/${(c.turns || []).length})`;
+        };
+        const onT2Done = () => {
+          const st = document.getElementById('lt-t2-audio-strip');
+          const txt = document.getElementById('lt-t2-audio-text');
+          const pl = document.getElementById('lt-t2-status-pill');
+          if (st) st.classList.remove('is-playing');
+          if (txt) txt.textContent = '✓ Hội thoại đã phát xong (1/1) — Hãy chọn đáp án A, B hoặc C!';
+          if (pl) pl.textContent = 'Chọn đáp án';
+        };
+        playStudioMp3(c.audioFile, {
+          turns: c.turns || [],
+          timestamps: c.turnTimestamps || [],
+          onTurn: onT2Turn,
+          onDone: onT2Done,
+        }).then((usedMp3) => {
+          if (!usedMp3 && examState && examState.stage === 2 && examState.t2Idx === idx) {
+            playTurnsOneShot(c.turns || [], {
+              rate: 0.96,
+              gapMs: 320,
+              onTurn: onT2Turn,
+              onDone: onT2Done,
+            });
+          }
         });
       }
     }, 1000);
@@ -840,21 +952,32 @@
         if (pill) pill.textContent = 'Đang phát băng (1/1)';
 
         const segs = nc.transcriptSegments || [];
-        playTurnsOneShot(segs, {
-          rate: 0.94,
-          gapMs: 420,
-          onTurn: (si, seg) => {
-            const txt = document.getElementById('lt-t3-audio-text');
-            if (txt) txt.textContent = `🎙️ ${seg.speaker || 'Speaker'} đang nói… (Đoạn ${si + 1}/${segs.length} · Không phát lại)`;
-          },
-          onDone: () => {
-            const st = document.getElementById('lt-t3-audio-strip');
-            const txt = document.getElementById('lt-t3-audio-text');
-            const pl = document.getElementById('lt-t3-status-pill');
-            if (st) st.classList.remove('is-playing');
-            if (txt) txt.textContent = '✓ Băng đã phát xong (1/1) — Kiểm tra lại chính tả rồi bấm Nộp bài!';
-            if (pl) pl.textContent = 'Sẵn sàng nộp';
-          },
+        const onT3Turn = (si, seg) => {
+          const txt = document.getElementById('lt-t3-audio-text');
+          if (txt) txt.textContent = `🎙️ ${seg.speaker || 'Speaker'} đang nói… (Đoạn ${si + 1}/${segs.length} · Không phát lại)`;
+        };
+        const onT3Done = () => {
+          const st = document.getElementById('lt-t3-audio-strip');
+          const txt = document.getElementById('lt-t3-audio-text');
+          const pl = document.getElementById('lt-t3-status-pill');
+          if (st) st.classList.remove('is-playing');
+          if (txt) txt.textContent = '✓ Băng đã phát xong (1/1) — Kiểm tra lại chính tả rồi bấm Nộp bài!';
+          if (pl) pl.textContent = 'Sẵn sàng nộp';
+        };
+        playStudioMp3(nc.audioFile, {
+          turns: segs,
+          timestamps: nc.segmentTimestamps || [],
+          onTurn: onT3Turn,
+          onDone: onT3Done,
+        }).then((usedMp3) => {
+          if (!usedMp3 && examState && examState.stage === 3 && examState.t3Phase !== 'submitted') {
+            playTurnsOneShot(segs, {
+              rate: 0.94,
+              gapMs: 420,
+              onTurn: onT3Turn,
+              onDone: onT3Done,
+            });
+          }
         });
       }
     }, 1000);
@@ -886,8 +1009,16 @@
 
   function replayT3Segment(idx) {
     if (!examState || examState.t3Phase !== 'submitted') return;
-    const seg = examState.task.test3NoteCompletion?.transcriptSegments?.[idx];
+    const nc = examState.task.test3NoteCompletion;
+    const seg = nc?.transcriptSegments?.[idx];
     if (!seg) return;
+    const ts = nc?.segmentTimestamps?.[idx];
+    if (nc?.audioFile && Array.isArray(ts) && ts.length === 2 && getAudioBaseUrl()) {
+      playStudioMp3(nc.audioFile, { startSec: ts[0], endSec: ts[1] }).then((ok) => {
+        if (!ok) playTurnsOneShot([seg], { rate: 0.92 });
+      });
+      return;
+    }
     playTurnsOneShot([seg], { rate: 0.92 });
   }
 
