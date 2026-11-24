@@ -3,8 +3,8 @@
    Provides copy/paste guards & 2-strike tab-leave tracking for ALL skills.
    ========================================================= */
 (function () {
-  const SOFT_BLUR_GRACE_MS = 3000;
-  const MAX_GRACE_RECOVERIES_PER_WINDOW = 2;
+  const SOFT_BLUR_GRACE_MS = 5000;
+  const MAX_GRACE_RECOVERIES_PER_WINDOW = 3;
   const GRACE_WINDOW_MS = 3 * 60 * 1000;
 
   let lastEditableInteractionAt = 0;
@@ -100,11 +100,23 @@
     });
   }
 
+  function isMicActivelyListening() {
+    try {
+      if (window.__TOTORO_MIC_ACTIVE__) return true;
+      return Boolean(document.querySelector('.rl-mic-btn.is-listening, .rl-mic-btn.is-recording, .vlab-mic-btn.is-recording'));
+    } catch (_) {
+      return false;
+    }
+  }
+
   function handleSafeWindowBlur(onRealBlur) {
     if (typeof onRealBlur !== 'function') return;
     if (document.hidden) return;
 
     const now = Date.now();
+    // 0. Active Mic speech / Chrome Live Caption overlay while staying on the exam tab:
+    //    Never penalize immediately when Live Caption pops up during speaking; still give 5s grace if focus stays away.
+    const micActive = isMicActivelyListening();
     const isTouch = isTouchMobileOrTablet();
     const hadEditableFocus = editableCurrentlyFocused || isEditableElement(document.activeElement);
     const recentKeyboardActivity = isTouch && (
@@ -138,22 +150,23 @@
     }
 
     // 2. Light window.blur while tab stays visible (!document.hidden):
-    //    Allow up to 2 quick (<3s) recoveries per 3-minute window (e.g. dismissing OS notification
-    //    or adjusting taskbar/Control Center volume). Beyond 2 recoveries or >= 3s away -> penalize.
+    //    Allow up to 3 quick (<5s) recoveries per 3-minute window (e.g. closing Google Live Caption,
+    //    dismissing OS notification, or adjusting volume). While Mic is active, do not burn grace cap.
     pruneGraceHistory(now);
-    if (graceRecoveryTimestamps.length >= MAX_GRACE_RECOVERIES_PER_WINDOW) {
+    if (!micActive && graceRecoveryTimestamps.length >= MAX_GRACE_RECOVERIES_PER_WINDOW) {
       cancelPendingBlur(false);
       onRealBlur();
       return;
     }
 
     cancelPendingBlur(false);
-    pendingBlurIsTouchKb = false;
+    pendingBlurIsTouchKb = micActive;
     pendingBlurTimer = setTimeout(() => {
       pendingBlurTimer = null;
       pendingBlurIsTouchKb = false;
       if (document.hidden) return; // visibilitychange already handled genuine tab/app switch
       const after = Date.now();
+      if (isMicActivelyListening()) return;
       if (isTouch && ((after - lastEditableInteractionAt < 2500) || (after - lastViewportResizeAt < 2500))) {
         return;
       }

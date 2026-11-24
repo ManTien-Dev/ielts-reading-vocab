@@ -2632,8 +2632,14 @@
     return getNonTrivialForms(item?.word_forms, item?.lemma);
   }
 
+  function hasListeningTip(item) {
+    if (!item || !isListeningSkillActive()) return false;
+    return Boolean(item.homophone_trap || item.spelling_trap || item.strategy);
+  }
+
   function hasReadingTip(item) {
     if (!item) return false;
+    if (isListeningSkillActive()) return hasListeningTip(item);
     const qa = item.qa_example;
     if (qa && qa.question && qa.passage && qa.q_term && qa.p_term) {
       return qa.q_term.toLowerCase() !== qa.p_term.toLowerCase();
@@ -2841,7 +2847,10 @@
     document.getElementById('fc-back-meaning').textContent = coreMeaning;
 
     const tipBtn = document.getElementById('btn-reading-tip');
-    if (tipBtn) tipBtn.style.display = hasReadingTip(item) ? 'inline-flex' : 'none';
+    if (tipBtn) {
+      tipBtn.textContent = isListeningSkillActive() ? 'LISTENING TIP' : 'READING TIP';
+      tipBtn.style.display = hasReadingTip(item) ? 'inline-flex' : 'none';
+    }
 
     const pairsGrid = document.getElementById('fc-back-pairs');
     const pairCards = [];
@@ -2884,17 +2893,6 @@
           <div class="fc-pair-card">
             <div class="fc-pair-label">Word Family</div>
             <div class="fc-chip-wrap">${formChips.map(w => `<span class="fc-chip">${escapeHtml(w)}</span>`).join('')}</div>
-          </div>
-        `);
-      }
-      if (item.spelling_trap || item.homophone_trap) {
-        const trapItems = [];
-        if (item.spelling_trap) trapItems.push(item.spelling_trap);
-        if (item.homophone_trap) trapItems.push(`Đồng âm: ${item.homophone_trap}`);
-        pairCards.push(`
-          <div class="fc-pair-card trap">
-            <div class="fc-pair-label">⚠️ Bẫy Listening</div>
-            <div class="fc-chip-wrap">${trapItems.map(t => `<span class="fc-chip">${escapeHtml(t)}</span>`).join('')}</div>
           </div>
         `);
       }
@@ -3138,11 +3136,170 @@
     return { leftParts, rightParts };
   }
 
-  function renderReadingTipModalContent(item) {
-    const pillEl = document.getElementById('tip-modal-pill');
-    if (pillEl) pillEl.textContent = 'READING TIP';
+  function highlightWordTrapParts(word, trapStr) {
+    const raw = String(word || '').trim();
+    if (!raw) return '';
+    const t = String(trapStr || '');
+    const patterns = [];
 
-    const { leftParts, rightParts } = buildReadingTipParts(item);
+    // 1. Exact double letters (e.g. cc, mm, ss, ll, rr, pp, tt, nn, ff, gg, dd, oo, ee)
+    if (/chữ đôi/i.test(t)) {
+      const m = raw.match(/([a-z])\1/gi);
+      if (m) m.forEach((p) => patterns.push(p));
+    }
+    // 2. Tricky vowel clusters (au, ei, ie, eu, ou, ue, ai, oa, ea, ui, eo, ia)
+    if (/nguyên âm/i.test(t)) {
+      const m = raw.match(/(au|ei|ie|eu|ue|eo|ui|ou|oa|ai|ea|ia)/i);
+      if (m) patterns.push(m[0]);
+    }
+    // 3. Silent / tricky consonant clusters
+    if (/âm câm|ghép/i.test(t)) {
+      const m = raw.match(/(igh|eigh|ough|tch|sch|ght|kn|wr|gn|mn|mb|bt|pt|ps|rh|sc|ph|ch|wh|sl|stle|dn)/i);
+      if (m) patterns.push(m[0]);
+    }
+    // 4. Confusable endings
+    if (/đuôi/i.test(t)) {
+      const m = raw.match(/(tion|sion|cian|ance|ence|able|ible|ary|ery|ory|eous|ious|ous|ise|ize|ment|ness|ship|ture|sure|or|er|ar)$/i);
+      if (m) patterns.push(m[0]);
+    }
+
+    const uniq = Array.from(new Set(patterns.filter(Boolean))).sort((a, b) => b.length - a.length);
+    if (!uniq.length) return `<span>${escapeHtml(raw)}</span>`;
+    const re = new RegExp(`(${uniq.map((u) => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+    const marked = escapeHtml(raw).replace(re, '<mark class="ltip-hl">$1</mark>');
+    return { html: marked, clusters: uniq };
+  }
+
+  function buildListeningTipParts(item) {
+    const lemma = String(item.lemma || '').trim();
+    const ipa = getIPA(item);
+    const meaning = getCleanMeaning(item);
+    const trapStr = String(item.spelling_trap || '').trim();
+    const homoStr = String(item.homophone_trap || '').trim();
+
+    const leftParts = [];
+    leftParts.push('<div class="tip-col-heading">NHẬN DIỆN ÂM &amp; CHÍNH TẢ</div>');
+
+    const anat = highlightWordTrapParts(lemma, trapStr);
+    const wordHtml = typeof anat === 'object' ? anat.html : anat;
+    const clusters = typeof anat === 'object' ? anat.clusters : [];
+
+    leftParts.push(`
+      <div class="ltip-word-anatomy">
+        <div class="ltip-word-big">${wordHtml}</div>
+        <div class="ltip-word-meta">
+          <span class="fc-ipa-badge">${escapeHtml(ipa)}</span>
+          <button type="button" class="btn-voice-speak" onclick="speakCurrentWord(null, event)">🔊 Nghe lại</button>
+        </div>
+        ${meaning ? `<div class="ltip-word-vi">${escapeHtml(meaning)}</div>` : ''}
+      </div>
+    `);
+
+    const cit = (item.exam_citations || []).find((c) => c && c.sentence);
+    const sent = cit?.sentence || item.example || '';
+    if (sent) {
+      leftParts.push(`
+        <div class="tip-qa-block passage">
+          <div class="tip-qa-label">Câu mẫu trong bài nghe IELTS</div>
+          <div class="tip-qa-en">${formatSentenceHighlight(sent, lemma)}</div>
+        </div>
+      `);
+    }
+
+    const rightParts = [];
+    rightParts.push('<div class="tip-col-heading">MẸO NGHE &amp; TRÁNH MẤT ĐIỂM</div>');
+
+    if (homoStr) {
+      rightParts.push(`
+        <div class="tip-kw-box">
+          <div class="tip-qa-label" style="margin-bottom:0;">Cặp từ đồng âm rất dễ viết nhầm</div>
+          <div class="tip-kw-grid">
+            <div class="tip-kw-col">
+              <div class="tip-kw-col-head">Từ đang học</div>
+              <div class="tip-kw-main">${escapeHtml(lemma)}</div>
+            </div>
+            <div class="tip-kw-arrow">⇄</div>
+            <div class="tip-kw-col">
+              <div class="tip-kw-col-head">Dễ nghe nhầm thành</div>
+              <div class="tip-kw-main">${escapeHtml(homoStr)}</div>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    const bullets = [];
+    if (homoStr) {
+      bullets.push(
+        `Hai từ <code>${escapeHtml(lemma)}</code> và <code>${escapeHtml(homoStr)}</code> phát âm giống hệt (hoặc gần giống) nhau. Khi điền bài nghe, luôn nhìn <strong>từ loại</strong> và <strong>ngữ cảnh câu</strong> xung quanh chỗ trống để chốt đúng chữ.`
+      );
+    }
+
+    if (trapStr) {
+      if (/chữ đôi/i.test(trapStr)) {
+        const dbl = (lemma.match(/([a-z])\1/gi) || []).map((x) => `<code>${escapeHtml(x)}</code>`).join(', ');
+        bullets.push(
+          `<strong>Bẫy chữ đôi ${dbl || ''}:</strong> Thí sinh rất hay gõ thiếu còn 1 chữ cái. Trong IELTS Listening sai dù chỉ 1 chữ là 0 điểm cả câu — hãy nhớ chỗ tô đậm trong <code>${escapeHtml(lemma)}</code>.`
+        );
+      }
+      if (/nguyên âm/i.test(trapStr)) {
+        const vw = (lemma.match(/(au|ei|ie|eu|ue|eo|ui|ou|oa|ai|ea|ia)/i) || [])[0];
+        bullets.push(
+          vw
+            ? `<strong>Bẫy cụm nguyên âm <code>${escapeHtml(vw)}</code>:</strong> Khi đọc nhanh tốc độ phòng thi, cụm <code>${escapeHtml(vw)}</code> hay bị lướt nhẹ nên rất dễ viết ngược thứ tự hoặc viết thiếu chữ.`
+            : `<strong>Bẫy nguyên âm:</strong> Các nguyên âm giữa hay bị đọc lướt nhẹ — kiểm tra kỹ thứ tự từng nguyên âm trong <code>${escapeHtml(lemma)}</code> trước khi nộp bài.`
+        );
+      }
+      if (/âm câm|ghép/i.test(trapStr)) {
+        const cl = (lemma.match(/(igh|eigh|ough|tch|sch|ght|kn|wr|gn|mn|mb|bt|pt|ps|rh|sc|ph|ch|wh|sl|stle|dn)/i) || [])[0];
+        bullets.push(
+          cl
+            ? `<strong>Bẫy âm câm / cụm ghép <code>${escapeHtml(cl)}</code>:</strong> Tai nghe gần như không nghe thấy đủ mặt chữ của cụm <code>${escapeHtml(cl)}</code>, bắt buộc phải nhớ mặt chữ chuẩn để không viết theo phiên âm.`
+            : `<strong>Bẫy âm câm:</strong> Cách đọc khác cách viết — đừng đánh vần theo tai mà cần thuộc chắc mặt chữ <code>${escapeHtml(lemma)}</code>.`
+        );
+      }
+      if (/đuôi/i.test(trapStr)) {
+        const suf = (lemma.match(/(tion|sion|cian|ance|ence|able|ible|ary|ery|ory|eous|ious|ous|ise|ize|ment|ness|ship|ture|sure|or|er|ar)$/i) || [])[0];
+        bullets.push(
+          suf
+            ? `<strong>Bẫy đuôi <code>-${escapeHtml(suf)}</code>:</strong> Rất dễ nhầm sang các đuôi đọc gần giống (như <code>-ance/-ence</code>, <code>-able/-ible</code>, <code>-er/-or</code>). Nhớ kỹ từ này kết thúc bằng <code>-${escapeHtml(suf)}</code>.`
+            : `<strong>Bẫy đuôi từ:</strong> Chú ý viết chuẩn phần đuôi của <code>${escapeHtml(lemma)}</code> khi chép đáp án.`
+        );
+      }
+      if (/số nhiều/i.test(trapStr)) {
+        bullets.push(
+          `<strong>Bẫy số ít / số nhiều (<code>-s/-es</code>):</strong> Âm <code>/s/</code> cuối câu trong băng hay bị nuốt hoặc nối âm. Trước khi băng chạy, nhìn nhanh xem trước chỗ trống có <code>a / an</code> hay không để chốt số ít hay thêm <code>-s</code>.`
+        );
+      }
+      if (/ngày\/tháng|viết hoa/i.test(trapStr)) {
+        bullets.push(
+          `<strong>Bẫy Thứ / Tháng:</strong> Các từ chỉ ngày tháng rất hay xuất hiện ở Part 1 (điền form) và dễ bị sai chính tả âm câm (như <code>Wednesday</code>, <code>February</code>). Nên viết hoa chữ cái đầu.`
+        );
+      }
+    }
+
+    if (item.strategy) {
+      bullets.push(escapeHtml(item.strategy));
+    }
+
+    if (bullets.length > 0) {
+      rightParts.push(`
+        <div class="tip-section trap">
+          <div class="tip-section-title">Điểm cần chú ý khi đi thi Listening</div>
+          <ul class="tip-bullets">${bullets.map((b) => `<li>${b}</li>`).join('')}</ul>
+        </div>
+      `);
+    }
+
+    return { leftParts, rightParts };
+  }
+
+  function renderReadingTipModalContent(item) {
+    const isL = isListeningSkillActive();
+    const pillEl = document.getElementById('tip-modal-pill');
+    if (pillEl) pillEl.textContent = isL ? 'LISTENING TIP' : 'READING TIP';
+
+    const { leftParts, rightParts } = isL ? buildListeningTipParts(item) : buildReadingTipParts(item);
     const bodyEl = document.getElementById('tip-modal-body');
     if (bodyEl) {
       bodyEl.innerHTML = `
@@ -4426,10 +4583,6 @@
       const posEl = document.getElementById('rl-cue-pos');
       const meanEl = document.getElementById('rl-cue-meaning');
       const heardBox = document.getElementById('rl-heard-box');
-      const oneShotStrip = document.getElementById('rl-oneshot-strip');
-      const oneShotText = document.getElementById('rl-oneshot-text');
-      if (oneShotStrip) oneShotStrip.classList.add('is-playing');
-      if (oneShotText) oneShotText.textContent = 'Đang phát…';
       if (posEl) posEl.textContent = getCleanPos(item) || 'vocab';
       if (meanEl) meanEl.textContent = item.clean_meaning || item.meaning || item.vi || item.definition || '';
       if (heardBox) {
@@ -4444,14 +4597,6 @@
       listeningAutoPlayTimer = setTimeout(() => {
         if (recallTargetItem && recallTargetItem.id === item.id && recallMode === 'listening_shadow' && !recallSubmitted) {
           playListeningRecallAudio('en-GB', 0.92);
-          setTimeout(() => {
-            if (recallTargetItem && recallTargetItem.id === item.id && recallMode === 'listening_shadow' && !recallSubmitted) {
-              const st = document.getElementById('rl-oneshot-strip');
-              const tx = document.getElementById('rl-oneshot-text');
-              if (st) st.classList.remove('is-playing');
-              if (tx) tx.textContent = '✓ Đã phát xong';
-            }
-          }, 1150);
         }
       }, 220);
     } else if (useQuickVi) {
