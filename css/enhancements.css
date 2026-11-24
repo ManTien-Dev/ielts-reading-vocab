@@ -9591,16 +9591,24 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 #modal-listening-exam .lt-t2-rev-note {
   font-size: 14px;
 }
+#modal-listening-exam .lt-note-paper {
+  padding: 13px 20px;
+  gap: 10px;
+}
+#modal-listening-exam .lt-note-head {
+  padding-bottom: 8px;
+}
 #modal-listening-exam .lt-note-title {
   font-size: 19px;
 }
 #modal-listening-exam .lt-note-sec-title {
   font-size: 15.5px;
+  margin-bottom: 5px;
 }
 #modal-listening-exam .lt-note-list {
   font-size: 16.5px;
-  line-height: 1.72;
-  gap: 10px;
+  line-height: 1.54;
+  gap: 6px;
 }
 #modal-listening-exam .lt-blank-num {
   width: 23px;
@@ -9636,6 +9644,385 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 .fc-l-hint-line,
 .lt-hint-quiet {
   font-weight: 500 !important;
+}
+
+/* =========================================================
+   TOTORO LISTENING AUDIO DIRECTOR BAR (Test 2 & Test 3)
+   4 semantic states: is-prep (amber), is-playing (sage),
+   is-gap (teal 5s rest), is-done (sage confirmation).
+   Zero interactive student audio controls; tabular numerals;
+   GPU-only transforms & linear countdown progress drain.
+   ========================================================= */
+.lt-stage-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bg-soft, #f3f0e7);
+  border: 1px solid var(--border, rgba(36, 34, 31, 0.14));
+  color: var(--ink-2, #524D45);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.lt-t3-scenario {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2, #524D45);
+  line-height: 1.35;
+  padding: 0 2px;
+}
+.lt-t2-stage .lt-dir-copy {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+.lt-t2-stage .lt-dir-sep {
+  display: none !important;
+}
+.lt-t2-stage .lt-dir-sub {
+  font-size: 13.5px;
+}
+.lt-director-bar {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 9px 13px 11px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong, rgba(36, 34, 31, 0.16));
+  background: var(--bg-soft, #f5f2ea);
+  color: var(--ink, #24221F);
+  transition: background-color 200ms var(--lt-ease-out), border-color 200ms var(--lt-ease-out);
+}
+.lt-dir-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.lt-dir-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(36, 34, 31, 0.06);
+  color: var(--ink-2, #524D45);
+  transition: background-color 200ms var(--lt-ease-out), color 200ms var(--lt-ease-out);
+}
+.lt-dir-copy {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  line-height: 1.35;
+}
+.lt-dir-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink, #1f2937);
+  white-space: nowrap;
+}
+.lt-dir-sep {
+  color: var(--ink-3, #8a8376);
+  font-weight: 700;
+}
+.lt-dir-sub {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2, #524D45);
+}
+.lt-dir-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.lt-dir-passes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(36, 34, 31, 0.055);
+  border: 1px solid rgba(36, 34, 31, 0.08);
+}
+[data-theme="dark"] .lt-dir-passes {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.lt-pass-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2, #6b655c);
+  white-space: nowrap;
+  transition: background-color 180ms var(--lt-ease-out), color 180ms var(--lt-ease-out);
+}
+.lt-pass-chip.is-live {
+  background: var(--accent, #4E724D);
+  color: var(--accent-ink, #ffffff) !important;
+}
+.lt-pass-chip.is-complete {
+  background: #e5efe4;
+  color: #2c4d2b;
+}
+[data-theme="dark"] .lt-pass-chip.is-complete {
+  background: rgba(143, 191, 141, 0.2);
+  color: #cde8cb;
+}
+.lt-dir-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition: background-color 180ms var(--lt-ease-out), color 180ms var(--lt-ease-out), border-color 180ms var(--lt-ease-out);
+}
+.lt-dir-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(36, 34, 31, 0.07);
+}
+[data-theme="dark"] .lt-dir-track {
+  background: rgba(255, 255, 255, 0.08);
+}
+.lt-dir-fill {
+  width: 100%;
+  height: 100%;
+  transform-origin: left center;
+  background: var(--accent, #4E724D);
+  transition: transform 950ms linear, background-color 200ms var(--lt-ease-out);
+}
+
+/* 5-bar live equalizer inside icon well */
+.lt-dir-eq {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5px;
+  height: 15px;
+}
+.lt-dir-eq > span {
+  width: 2.5px;
+  height: 100%;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: center;
+  animation: ltDirEq 560ms ease-in-out infinite alternate;
+}
+.lt-dir-eq > span:nth-child(1) { animation-delay: 0.02s; }
+.lt-dir-eq > span:nth-child(2) { animation-delay: 0.16s; }
+.lt-dir-eq > span:nth-child(3) { animation-delay: 0.28s; }
+.lt-dir-eq > span:nth-child(4) { animation-delay: 0.11s; }
+.lt-dir-eq > span:nth-child(5) { animation-delay: 0.22s; }
+@keyframes ltDirEq {
+  0%   { transform: scaleY(0.28); opacity: 0.65; }
+  100% { transform: scaleY(1);    opacity: 1; }
+}
+
+/* STATE 1: Preparation Countdown (Warm Amber) */
+.lt-director-bar.is-prep {
+  background: #fdf6e9;
+  border-color: rgba(194, 118, 18, 0.34);
+}
+.lt-director-bar.is-prep .lt-dir-icon {
+  background: rgba(217, 119, 6, 0.15);
+  color: #b45309;
+}
+.lt-director-bar.is-prep .lt-dir-title {
+  color: #7c3a06;
+}
+.lt-director-bar.is-prep .lt-dir-sub {
+  color: #9a4a0a;
+}
+.lt-director-bar.is-prep .lt-dir-badge {
+  background: #b45309;
+  color: #ffffff;
+  border-color: transparent;
+}
+.lt-director-bar.is-prep .lt-dir-fill {
+  background: #d97706;
+}
+[data-theme="dark"] .lt-director-bar.is-prep {
+  background: rgba(217, 119, 6, 0.14);
+  border-color: rgba(251, 191, 36, 0.34);
+}
+[data-theme="dark"] .lt-director-bar.is-prep .lt-dir-icon {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fcd34d;
+}
+[data-theme="dark"] .lt-director-bar.is-prep .lt-dir-title {
+  color: #fef3c7;
+}
+[data-theme="dark"] .lt-director-bar.is-prep .lt-dir-sub {
+  color: #fde68a;
+}
+[data-theme="dark"] .lt-director-bar.is-prep .lt-dir-badge {
+  background: #f59e0b;
+  color: #1c1917;
+}
+
+/* STATE 2: Playing Pass 1 / 2 (Totoro Forest Sage) */
+.lt-director-bar.is-playing {
+  background: color-mix(in srgb, var(--accent, #4E724D) 9%, var(--surface, #fdfbf6));
+  border-color: color-mix(in srgb, var(--accent, #4E724D) 36%, transparent);
+}
+.lt-director-bar.is-playing .lt-dir-icon {
+  background: var(--accent, #4E724D);
+  color: var(--accent-ink, #ffffff);
+}
+.lt-director-bar.is-playing .lt-dir-title {
+  color: var(--accent, #355434);
+}
+[data-theme="dark"] .lt-director-bar.is-playing {
+  background: rgba(111, 160, 110, 0.14);
+  border-color: rgba(143, 191, 141, 0.36);
+}
+[data-theme="dark"] .lt-director-bar.is-playing .lt-dir-title {
+  color: #cde8cb;
+}
+[data-theme="dark"] .lt-director-bar.is-playing .lt-dir-sub {
+  color: #a9caa7;
+}
+
+/* STATE 3: 5s Rest Countdown before Pass 2 (Calm Slate-Teal) */
+.lt-director-bar.is-gap {
+  background: #eef7f9;
+  border-color: rgba(14, 116, 144, 0.32);
+}
+.lt-director-bar.is-gap .lt-dir-icon {
+  background: rgba(14, 116, 144, 0.14);
+  color: #0e7490;
+}
+.lt-director-bar.is-gap .lt-dir-title {
+  color: #155e75;
+}
+.lt-director-bar.is-gap .lt-dir-sub {
+  color: #0e7490;
+}
+.lt-director-bar.is-gap .lt-dir-badge {
+  background: #0e7490;
+  color: #ffffff;
+}
+.lt-director-bar.is-gap .lt-dir-fill {
+  background: #0891b2;
+}
+[data-theme="dark"] .lt-director-bar.is-gap {
+  background: rgba(14, 116, 144, 0.16);
+  border-color: rgba(56, 189, 248, 0.34);
+}
+[data-theme="dark"] .lt-director-bar.is-gap .lt-dir-icon {
+  background: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+}
+[data-theme="dark"] .lt-director-bar.is-gap .lt-dir-title {
+  color: #e0f2fe;
+}
+[data-theme="dark"] .lt-director-bar.is-gap .lt-dir-sub {
+  color: #bae6fd;
+}
+[data-theme="dark"] .lt-director-bar.is-gap .lt-dir-badge {
+  background: #38bdf8;
+  color: #082f49;
+}
+
+/* STATE 4: Finished Both Passes (Serene Sage Confirmation) */
+.lt-director-bar.is-done {
+  background: #f2f7f1;
+  border-color: rgba(78, 114, 77, 0.3);
+}
+.lt-director-bar.is-done .lt-dir-icon {
+  background: #dfecdd;
+  color: #2c4d2b;
+}
+.lt-director-bar.is-done .lt-dir-title {
+  color: #1f331e;
+}
+.lt-director-bar.is-done .lt-dir-badge {
+  background: var(--accent, #4E724D);
+  color: var(--accent-ink, #ffffff) !important;
+  border-color: transparent;
+  padding: 5px 13px;
+}
+.lt-director-bar.is-done .lt-dir-track {
+  opacity: 0;
+}
+[data-theme="dark"] .lt-director-bar.is-done {
+  background: rgba(111, 160, 110, 0.11);
+  border-color: rgba(143, 191, 141, 0.28);
+}
+[data-theme="dark"] .lt-director-bar.is-done .lt-dir-icon {
+  background: rgba(143, 191, 141, 0.2);
+  color: #cde8cb;
+}
+[data-theme="dark"] .lt-director-bar.is-done .lt-dir-title {
+  color: #e7f3e6;
+}
+
+/* Polish Test 1 compact audio strip + timer pill to match the same design language */
+#modal-listening-exam .lt-oneshot-strip {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border, rgba(36, 34, 31, 0.14));
+  background: var(--bg-soft, #f5f2ea);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2, #524D45);
+}
+#modal-listening-exam .lt-oneshot-strip.is-playing {
+  background: color-mix(in srgb, var(--accent, #4E724D) 12%, var(--surface, #ffffff));
+  border-color: color-mix(in srgb, var(--accent, #4E724D) 34%, transparent);
+  color: var(--accent, #355434);
+}
+#modal-listening-exam .lt-oneshot-strip.is-done {
+  background: color-mix(in srgb, var(--accent, #4E724D) 8%, var(--surface, #ffffff));
+  border-color: color-mix(in srgb, var(--accent, #4E724D) 26%, transparent);
+  color: var(--accent, #355434);
+}
+#modal-listening-exam .lt-oneshot-strip.is-done .lt-wave-dots {
+  display: none;
+}
+#modal-listening-exam .lt-oneshot-strip #lt-t1-audio-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+#modal-listening-exam .lt-timer-pill {
+  padding: 5px 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: 1px solid var(--border-strong, rgba(36, 34, 31, 0.18));
+  background: var(--surface, #ffffff);
+}
+@media (max-width: 680px) {
+  .lt-director-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 9px 11px 11px;
+  }
+  .lt-dir-right {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 

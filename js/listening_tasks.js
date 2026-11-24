@@ -27,6 +27,200 @@
   let t1CountdownTimer = null;
   let t1DeadlineAt = 0;
 
+  const DIRECTOR_SVG = {
+    clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>',
+    pause: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="14" y1="9" x2="14" y2="15"/></svg>',
+    check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12.5 11 15 16 9.5"/></svg>',
+    wave: '<span class="lt-dir-eq" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>',
+  };
+
+  function renderDirectorBarHtml(id, prepTitle, prepSeconds) {
+    return `
+      <div class="lt-director-bar is-prep" id="${id}" role="status" aria-live="polite">
+        <div class="lt-dir-main">
+          <div class="lt-dir-icon" id="${id}-icon">${DIRECTOR_SVG.clock}</div>
+          <div class="lt-dir-copy">
+            <span class="lt-dir-title" id="${id}-title">${esc(prepTitle)}</span>
+            <span class="lt-dir-sep" aria-hidden="true">·</span>
+            <span class="lt-dir-sub tabular" id="${id}-sub">Tự động phát lượt 1 sau ${prepSeconds}s</span>
+          </div>
+        </div>
+        <div class="lt-dir-right">
+          <div class="lt-dir-passes" id="${id}-passes">
+            <span class="lt-pass-chip" data-pass="1">Lượt 1</span>
+            <span class="lt-pass-chip" data-pass="2">Lượt 2</span>
+          </div>
+          <span class="lt-dir-badge tabular" id="${id}-badge">${prepSeconds}s</span>
+        </div>
+        <div class="lt-dir-track" aria-hidden="true"><div class="lt-dir-fill" id="${id}-fill" style="transform:scaleX(1)"></div></div>
+      </div>
+    `;
+  }
+
+  function setDirectorState(id, cfg) {
+    const bar = document.getElementById(id);
+    if (!bar) return;
+    bar.classList.remove('is-prep', 'is-playing', 'is-gap', 'is-done');
+    if (cfg.state) bar.classList.add(cfg.state);
+
+    const iconEl = document.getElementById(`${id}-icon`);
+    const titleEl = document.getElementById(`${id}-title`);
+    const subEl = document.getElementById(`${id}-sub`);
+    const badgeEl = document.getElementById(`${id}-badge`);
+    const passesEl = document.getElementById(`${id}-passes`);
+    const fillEl = document.getElementById(`${id}-fill`);
+
+    if (iconEl && cfg.icon !== undefined) iconEl.innerHTML = cfg.icon;
+    if (titleEl && cfg.title !== undefined) titleEl.textContent = cfg.title;
+    if (subEl && cfg.sub !== undefined) {
+      subEl.textContent = cfg.sub;
+      const sep = bar.querySelector('.lt-dir-sep');
+      if (sep) sep.style.display = cfg.sub ? '' : 'none';
+    }
+    if (badgeEl && cfg.badge !== undefined) {
+      badgeEl.textContent = cfg.badge;
+      badgeEl.style.display = cfg.badge ? '' : 'none';
+    }
+    if (passesEl && cfg.passes) {
+      const p1 = passesEl.querySelector('[data-pass="1"]');
+      const p2 = passesEl.querySelector('[data-pass="2"]');
+      if (p1) {
+        p1.className = `lt-pass-chip ${cfg.passes[0] || ''}`.trim();
+        p1.textContent = cfg.passes[0] === 'is-complete' ? '✓ Lượt 1' : 'Lượt 1';
+      }
+      if (p2) {
+        p2.className = `lt-pass-chip ${cfg.passes[1] || ''}`.trim();
+        p2.textContent = cfg.passes[1] === 'is-complete' ? '✓ Lượt 2' : 'Lượt 2';
+      }
+    }
+    if (fillEl && cfg.progress !== undefined) {
+      const clamped = Math.max(0, Math.min(1, Number(cfg.progress)));
+      fillEl.style.transform = `scaleX(${clamped})`;
+    }
+  }
+
+  function runTwoPassAudioSequence(opts) {
+    const {
+      directorId,
+      prepSeconds = 5,
+      gapSeconds = 5,
+      prepTitle = 'Chuẩn bị đọc đề',
+      doneActionText = 'Chọn đáp án',
+      audioFile = '',
+      turns = [],
+      timestamps = [],
+      gapMs = 260,
+      defaultSpeaker = 'Speaker',
+      isStillActive,
+      onStartPlaying,
+    } = opts;
+
+    const startCountdown = (seconds, onTick, onFinish) => {
+      let rem = seconds;
+      onTick(rem, seconds);
+      preReadTimer = setInterval(() => {
+        rem -= 1;
+        if (!isStillActive()) {
+          clearInterval(preReadTimer);
+          preReadTimer = null;
+          return;
+        }
+        if (rem > 0) {
+          onTick(rem, seconds);
+        } else {
+          clearInterval(preReadTimer);
+          preReadTimer = null;
+          onFinish();
+        }
+      }, 1000);
+    };
+
+    const playPass = (passNum) => {
+      if (!isStillActive()) return;
+      if (typeof onStartPlaying === 'function') onStartPlaying(passNum);
+
+      setDirectorState(directorId, {
+        state: 'is-playing',
+        icon: DIRECTOR_SVG.wave,
+        title: `Đang phát lượt ${passNum} / 2`,
+        sub: turns.length ? `${turns[0]?.speaker || defaultSpeaker} · 1/${turns.length}` : 'Audio tự động',
+        badge: '',
+        passes: passNum === 1 ? ['is-live', ''] : ['is-complete', 'is-live'],
+        progress: passNum === 1 ? 0.5 : 1,
+      });
+
+      const onTurn = (ti, turn) => {
+        if (!isStillActive()) return;
+        const subEl = document.getElementById(`${directorId}-sub`);
+        if (subEl) subEl.textContent = `${turn.speaker || defaultSpeaker} · ${ti + 1}/${turns.length}`;
+      };
+
+      const onPassDone = () => {
+        if (!isStillActive()) return;
+        if (passNum === 1) {
+          startCountdown(
+            gapSeconds,
+            (rem, total) => {
+              setDirectorState(directorId, {
+                state: 'is-gap',
+                icon: DIRECTOR_SVG.pause,
+                title: 'Hết lượt 1 · Chờ làm bài',
+                sub: `Tự động phát lượt 2 sau ${rem}s`,
+                badge: `${rem}s`,
+                passes: ['is-complete', ''],
+                progress: rem / Math.max(1, total),
+              });
+            },
+            () => playPass(2)
+          );
+        } else {
+          setDirectorState(directorId, {
+            state: 'is-done',
+            icon: DIRECTOR_SVG.check,
+            title: 'Đã phát xong 2 lượt',
+            sub: '',
+            badge: doneActionText,
+            passes: ['is-complete', 'is-complete'],
+            progress: 1,
+          });
+        }
+      };
+
+      playStudioMp3(audioFile, {
+        turns,
+        timestamps,
+        rate: EXAM_PLAYBACK_RATE,
+        onTurn,
+        onDone: onPassDone,
+      }).then((usedMp3) => {
+        if (!usedMp3 && isStillActive()) {
+          playTurnsOneShot(turns, {
+            rate: EXAM_PLAYBACK_RATE,
+            gapMs,
+            onTurn,
+            onDone: onPassDone,
+          });
+        }
+      });
+    };
+
+    startCountdown(
+      prepSeconds,
+      (rem, total) => {
+        setDirectorState(directorId, {
+          state: 'is-prep',
+          icon: DIRECTOR_SVG.clock,
+          title: prepTitle,
+          sub: `Tự động phát lượt 1 sau ${rem}s`,
+          badge: `${rem}s`,
+          passes: ['', ''],
+          progress: rem / Math.max(1, total),
+        });
+      },
+      () => playPass(1)
+    );
+  }
+
   function getAudioBaseUrl() {
     let saved = '';
     try { saved = localStorage.getItem('totoro_listening_audio_base') || ''; } catch (_) {}
@@ -446,9 +640,9 @@
     if (bodyEl) {
       const testDesc = hasFull3
         ? (task.isMapTask
-          ? 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong> (nghe 1 lần duy nhất): <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Bản đồ SVG Map Labelling (A–H).'
-          : 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong> (nghe 1 lần duy nhất): <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Note Completion (8 chỗ trống).')
-        : `Gồm <strong>Test 1 · Nghe &amp; Viết chính tả (${totalW}/${totalW} từ)</strong>, nghe 1 lần duy nhất và chấm điểm ngay khi nộp.`;
+          ? 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong>: <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C (2 lượt tự động) → <strong>Test 3</strong> Bản đồ SVG Map Labelling A–H (2 lượt tự động).'
+          : 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong>: <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C (2 lượt tự động) → <strong>Test 3</strong> Note Completion 8 chỗ trống (2 lượt tự động).')
+        : `Gồm <strong>Test 1 · Nghe &amp; Viết chính tả (${totalW}/${totalW} từ)</strong>, tự động phát và chấm điểm ngay khi nộp.`;
 
       const scoreRow = rec
         ? `<div class="lt-score-strip" style="margin-bottom:14px;">
@@ -591,7 +785,7 @@
               <span class="rp-count-pill">${mapTasks.length} bài bản đồ</span>
             </div>
             <h3 class="rp-card-title">Bản đồ &amp; Sơ đồ · Part 2</h3>
-            <p class="rp-card-desc">Bản đồ công viên, thị trấn có bùng binh và mặt bằng tòa nhà — nghe 1 lần, đối chiếu Transcript 3 màu và Map chấm trực tiếp.</p>
+            <p class="rp-card-desc">Bản đồ công viên, thị trấn có bùng binh và mặt bằng tòa nhà — tự động phát 2 lượt (nghỉ 5s), đối chiếu Transcript 3 màu và Map chấm trực tiếp.</p>
             <div class="lt-prac-card-foot">
               <button type="button" class="tot-demo-btn" onclick="ListeningTasksModule.openPracticePicker('map')">Chọn bài Map</button>
               <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstMapId)}', 3)">Làm Map 01</button>
@@ -604,7 +798,7 @@
               <span class="rp-count-pill">${noteTasks.length} bài Part 1–4</span>
             </div>
             <h3 class="rp-card-title">Thực chiến · Note Completion</h3>
-            <p class="rp-card-desc">10 giây đoán từ loại trước khi nghe, băng Neural không phát lại, chấm chính tả chuẩn Cambridge và mở khóa nghe lại từng câu.</p>
+            <p class="rp-card-desc">10 giây chuẩn bị đọc đề, băng Neural tự động phát 2 lượt (nghỉ 5s), chấm chính tả chuẩn Cambridge và mở khóa nghe lại từng câu.</p>
             <div class="lt-prac-card-foot">
               <button type="button" class="tot-demo-btn" onclick="ListeningTasksModule.openPracticePicker('note')">Chọn bài nghe</button>
               <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstNoteId)}', 3)">Làm Part 1</button>
@@ -949,9 +1143,12 @@
       const strip = document.getElementById('lt-t1-audio-strip');
       const hero = document.getElementById('lt-t1-hero');
       const txt = document.getElementById('lt-t1-audio-text');
-      if (strip) strip.classList.remove('is-playing');
+      if (strip) {
+        strip.classList.remove('is-playing');
+        strip.classList.add('is-done');
+      }
       if (hero) hero.classList.remove('is-playing');
-      if (txt) txt.textContent = '✓ Đã phát';
+      if (txt) txt.innerHTML = `${DIRECTOR_SVG.check}<span>Đã phát xong</span>`;
       t1DeadlineAt = Date.now() + 15000;
       t1CountdownTimer = setInterval(() => {
         const rem = Math.max(0, Math.ceil((t1DeadlineAt - Date.now()) / 1000));
@@ -1077,15 +1274,11 @@
       <div class="lt-t2-stage">
         <div class="lt-progress-row">
           <span class="tabular"><strong>Hội thoại ${idx + 1} / ${convs.length}</strong></span>
-          <div class="lt-row-right">
-            <div class="lt-oneshot-strip" id="lt-t2-audio-strip">
-              <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-              <span id="lt-t2-audio-text">Chuẩn bị…</span>
-            </div>
-            <span class="lt-timer-pill tabular" id="lt-t2-status-pill">5s</span>
-          </div>
+          <span class="lt-stage-meta-pill tabular">${Math.round(((idx + 1) / convs.length) * 100)}%</span>
         </div>
         <div class="lt-prog-track"><div class="lt-prog-fill" style="width:${Math.round((idx / convs.length) * 100)}%"></div></div>
+
+        ${renderDirectorBarHtml('lt-t2-director', 'Chuẩn bị đọc câu hỏi', 5)}
 
         <div class="lt-t2-question">${esc(c.question)}</div>
         <div class="lt-t2-options" id="lt-t2-options">
@@ -1105,51 +1298,20 @@
       </div>
     `;
 
-    // 5s pre-read countdown -> auto-play conversation ONCE (no replay!)
-    let preSec = 5;
-    preReadTimer = setInterval(() => {
-      preSec -= 1;
-      const pill = document.getElementById('lt-t2-status-pill');
-      if (preSec > 0) {
-        if (pill) pill.textContent = `${preSec}s`;
-      } else {
-        clearInterval(preReadTimer);
-        preReadTimer = null;
-        if (!examState || examState.stage !== 2 || examState.t2Idx !== idx) return;
-        const strip = document.getElementById('lt-t2-audio-strip');
-        if (strip) strip.classList.add('is-playing');
-        if (pill) pill.textContent = 'Đang phát';
-
-        const onT2Turn = (ti, turn) => {
-          const txt = document.getElementById('lt-t2-audio-text');
-          if (txt) txt.textContent = `${turn.speaker || 'Speaker'} (${ti + 1}/${(c.turns || []).length})`;
-        };
-        const onT2Done = () => {
-          const st = document.getElementById('lt-t2-audio-strip');
-          const txt = document.getElementById('lt-t2-audio-text');
-          const pl = document.getElementById('lt-t2-status-pill');
-          if (st) st.classList.remove('is-playing');
-          if (txt) txt.textContent = '✓ Đã phát';
-          if (pl) pl.textContent = 'Chọn đáp án';
-        };
-        playStudioMp3(c.audioFile, {
-          turns: c.turns || [],
-          timestamps: c.turnTimestamps || [],
-          rate: EXAM_PLAYBACK_RATE,
-          onTurn: onT2Turn,
-          onDone: onT2Done,
-        }).then((usedMp3) => {
-          if (!usedMp3 && examState && examState.stage === 2 && examState.t2Idx === idx) {
-            playTurnsOneShot(c.turns || [], {
-              rate: EXAM_PLAYBACK_RATE,
-              gapMs: 240,
-              onTurn: onT2Turn,
-              onDone: onT2Done,
-            });
-          }
-        });
-      }
-    }, 1000);
+    // 5s prep countdown -> Auto-play Pass 1 -> 5s rest -> Auto-play Pass 2 (ZERO manual controls!)
+    runTwoPassAudioSequence({
+      directorId: 'lt-t2-director',
+      prepSeconds: 5,
+      gapSeconds: 5,
+      prepTitle: 'Chuẩn bị đọc câu hỏi',
+      doneActionText: 'Chọn đáp án',
+      audioFile: c.audioFile,
+      turns: c.turns || [],
+      timestamps: c.turnTimestamps || [],
+      gapMs: 240,
+      defaultSpeaker: 'Speaker',
+      isStillActive: () => Boolean(examState && examState.stage === 2 && !examState.t2Done && examState.t2Idx === idx),
+    });
   }
 
   function pickT2Option(optIdx) {
@@ -1431,20 +1593,11 @@
       return;
     }
 
-    // Active Test 3 Map Labelling: 10s Orientation -> 1-Shot Continuous Audio (NO replay!)
+    // Active Test 3 Map Labelling: 10s Orientation -> Auto-play Pass 1 -> 5s Rest -> Auto-play Pass 2 (ZERO manual controls!)
     const activeQ = examState.t3MapActiveQ || 1;
     body.innerHTML = `
       <div class="lt-t3-stage">
-        <div class="lt-progress-row">
-          <span><strong>${esc(ml.title || 'Map Labelling')}</strong></span>
-          <div class="lt-row-right">
-            <div class="lt-oneshot-strip" id="lt-t3-audio-strip">
-              <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-              <span id="lt-t3-audio-text">Đọc bản đồ…</span>
-            </div>
-            <span class="lt-timer-pill tabular" id="lt-t3-status-pill">10s</span>
-          </div>
-        </div>
+        ${renderDirectorBarHtml('lt-t3-director', 'Chuẩn bị xem bản đồ', 10)}
 
         <div class="lt-map-workspace">
           <div class="lt-map-canvas-col" id="lt-map-canvas-col">
@@ -1475,52 +1628,20 @@
       </div>
     `;
 
-    let preSec = 10;
-    preReadTimer = setInterval(() => {
-      preSec -= 1;
-      const pill = document.getElementById('lt-t3-status-pill');
-      if (preSec > 0) {
-        if (pill) pill.textContent = `${preSec}s`;
-      } else {
-        clearInterval(preReadTimer);
-        preReadTimer = null;
-        if (!examState || examState.stage !== 3 || examState.t3Phase === 'submitted') return;
-        examState.t3Phase = 'playing';
-        const strip = document.getElementById('lt-t3-audio-strip');
-        if (strip) strip.classList.add('is-playing');
-        if (pill) pill.textContent = 'Đang phát';
-
-        const segs = ml.transcriptSegments || [];
-        const onT3Turn = (si, seg) => {
-          const txt = document.getElementById('lt-t3-audio-text');
-          if (txt) txt.textContent = `${seg.speaker || 'Guide'} (${si + 1}/${segs.length})`;
-        };
-        const onT3Done = () => {
-          const st = document.getElementById('lt-t3-audio-strip');
-          const txt = document.getElementById('lt-t3-audio-text');
-          const pl = document.getElementById('lt-t3-status-pill');
-          if (st) st.classList.remove('is-playing');
-          if (txt) txt.textContent = '✓ Đã phát';
-          if (pl) pl.textContent = 'Sẵn sàng nộp';
-        };
-        playStudioMp3(ml.audioFile, {
-          turns: segs,
-          timestamps: ml.segmentTimestamps || [],
-          rate: EXAM_PLAYBACK_RATE,
-          onTurn: onT3Turn,
-          onDone: onT3Done,
-        }).then((usedMp3) => {
-          if (!usedMp3 && examState && examState.stage === 3 && examState.t3Phase !== 'submitted') {
-            playTurnsOneShot(segs, {
-              rate: EXAM_PLAYBACK_RATE,
-              gapMs: 300,
-              onTurn: onT3Turn,
-              onDone: onT3Done,
-            });
-          }
-        });
-      }
-    }, 1000);
+    runTwoPassAudioSequence({
+      directorId: 'lt-t3-director',
+      prepSeconds: 10,
+      gapSeconds: 5,
+      prepTitle: 'Chuẩn bị xem bản đồ',
+      doneActionText: 'Kiểm tra & Nộp bài',
+      audioFile: ml.audioFile,
+      turns: ml.transcriptSegments || [],
+      timestamps: ml.segmentTimestamps || [],
+      gapMs: 300,
+      defaultSpeaker: 'Guide',
+      isStillActive: () => Boolean(examState && examState.stage === 3 && examState.t3Phase !== 'submitted'),
+      onStartPlaying: () => { if (examState) examState.t3Phase = 'playing'; },
+    });
   }
 
   function refreshActiveMapUiOnly() {
@@ -1638,19 +1759,11 @@
       return;
     }
 
-    // Active Test 3: 10s Prediction -> 1-Shot Continuous Audio (NO replay, NO rewind)
+    // Active Test 3 Note Completion: 10s Prediction -> Auto-play Pass 1 -> 5s Rest -> Auto-play Pass 2 (ZERO manual controls!)
     body.innerHTML = `
       <div class="lt-t3-stage">
-        <div class="lt-progress-row">
-          <span><strong>${esc(nc.scenarioIntro || 'Note Completion')}</strong></span>
-          <div class="lt-row-right">
-            <div class="lt-oneshot-strip" id="lt-t3-audio-strip">
-              <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-              <span id="lt-t3-audio-text">Đọc đề…</span>
-            </div>
-            <span class="lt-timer-pill tabular" id="lt-t3-status-pill">10s</span>
-          </div>
-        </div>
+        ${renderDirectorBarHtml('lt-t3-director', 'Chuẩn bị đọc đề', 10)}
+        ${nc.scenarioIntro ? `<div class="lt-t3-scenario">${esc(nc.scenarioIntro)}</div>` : ''}
 
         ${renderNoteSheetHtml(nc, false)}
 
@@ -1660,52 +1773,20 @@
       </div>
     `;
 
-    let preSec = 10;
-    preReadTimer = setInterval(() => {
-      preSec -= 1;
-      const pill = document.getElementById('lt-t3-status-pill');
-      if (preSec > 0) {
-        if (pill) pill.textContent = `${preSec}s`;
-      } else {
-        clearInterval(preReadTimer);
-        preReadTimer = null;
-        if (!examState || examState.stage !== 3 || examState.t3Phase === 'submitted') return;
-        examState.t3Phase = 'playing';
-        const strip = document.getElementById('lt-t3-audio-strip');
-        if (strip) strip.classList.add('is-playing');
-        if (pill) pill.textContent = 'Đang phát';
-
-        const segs = nc.transcriptSegments || [];
-        const onT3Turn = (si, seg) => {
-          const txt = document.getElementById('lt-t3-audio-text');
-          if (txt) txt.textContent = `${seg.speaker || 'Speaker'} (${si + 1}/${segs.length})`;
-        };
-        const onT3Done = () => {
-          const st = document.getElementById('lt-t3-audio-strip');
-          const txt = document.getElementById('lt-t3-audio-text');
-          const pl = document.getElementById('lt-t3-status-pill');
-          if (st) st.classList.remove('is-playing');
-          if (txt) txt.textContent = '✓ Đã phát';
-          if (pl) pl.textContent = 'Sẵn sàng nộp';
-        };
-        playStudioMp3(nc.audioFile, {
-          turns: segs,
-          timestamps: nc.segmentTimestamps || [],
-          rate: EXAM_PLAYBACK_RATE,
-          onTurn: onT3Turn,
-          onDone: onT3Done,
-        }).then((usedMp3) => {
-          if (!usedMp3 && examState && examState.stage === 3 && examState.t3Phase !== 'submitted') {
-            playTurnsOneShot(segs, {
-              rate: EXAM_PLAYBACK_RATE,
-              gapMs: 300,
-              onTurn: onT3Turn,
-              onDone: onT3Done,
-            });
-          }
-        });
-      }
-    }, 1000);
+    runTwoPassAudioSequence({
+      directorId: 'lt-t3-director',
+      prepSeconds: 10,
+      gapSeconds: 5,
+      prepTitle: 'Chuẩn bị đọc đề',
+      doneActionText: 'Kiểm tra & Nộp bài',
+      audioFile: nc.audioFile,
+      turns: nc.transcriptSegments || [],
+      timestamps: nc.segmentTimestamps || [],
+      gapMs: 300,
+      defaultSpeaker: 'Speaker',
+      isStillActive: () => Boolean(examState && examState.stage === 3 && examState.t3Phase !== 'submitted'),
+      onStartPlaying: () => { if (examState) examState.t3Phase = 'playing'; },
+    });
   }
 
   function onT3Input(num, val) {
