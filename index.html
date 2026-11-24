@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
   <link rel="stylesheet" href="css/enhancements.css?v=20261124m">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261124v">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261124w">
 </head>
 <body>
 
@@ -197,6 +197,22 @@
         </svg>
         <span class="brand-name-txt">Totoro IELTS Master</span>
       </button>
+
+      <div class="tot-pop-wrap tot-skill-wrap">
+        <button type="button" class="tot-skill-trigger" id="btn-skill-trigger" title="Chuyển nhanh giữa Home chung và các kỹ năng IELTS">
+          <span class="tot-skill-dot"></span>
+          <span id="header-mode-chip-text">Reading</span>
+          <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="tot-popover" id="skill-popover">
+          <button type="button" class="tot-skill-opt active" data-tot-skill="Overview"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">Home chung</div><div class="tot-skill-opt-sub">Tổng quan · Mục tiêu · Kế hoạch</div></div><span class="tot-tag">Đang mở</span></button>
+          <div class="tot-pop-divider" style="margin:6px 0;"></div>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Reading"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">IELTS Reading</div><div class="tot-skill-opt-sub">4.489 họ từ · 110 Tasks · Practice</div></div><span class="tot-tag">Sẵn sàng</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Listening"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">IELTS Listening</div><div class="tot-skill-opt-sub">Nghe → Nói lại từ · Shadowing</div></div><span class="tot-tag">Sẵn sàng</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Writing"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">IELTS Writing</div><div class="tot-skill-opt-sub">Flow Ideas · Task 1 &amp; 2</div></div><span class="tot-tag soon">Sắp mở</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Speaking"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">IELTS Speaking</div><div class="tot-skill-opt-sub">Spoken Chunks · Part 1–3</div></div><span class="tot-tag soon">Sắp mở</span></button>
+        </div>
+      </div>
     </div>
 
     <nav class="tot-nav-tabs tot-global-skill-nav" id="nav-global-skills" aria-label="Chọn không gian kỹ năng IELTS">
@@ -208,6 +224,25 @@
       <button type="button" class="tot-nav-tab" data-global-tab="Listening" onclick="window.TotoroUI?.enterSkillMode('Listening', 'home')">Listening</button>
       <button type="button" class="tot-nav-tab is-muted" data-global-tab="Writing" onclick="window.TotoroUI?.notifySkillSoon('IELTS Writing')">Writing</button>
       <button type="button" class="tot-nav-tab is-muted" data-global-tab="Speaking" onclick="window.TotoroUI?.notifySkillSoon('IELTS Speaking')">Speaking</button>
+    </nav>
+
+    <nav class="tot-nav-tabs" id="nav-skill-tabs" aria-label="Điều hướng kỹ năng">
+      <button type="button" class="tot-nav-tab active" data-tot-view="home">
+        <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M5 10.5L12 4l7 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-3v6H6a1 1 0 0 1-1-1v-9.5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/></svg>
+        <span id="nav-home-tab-label">Tổng quan</span>
+      </button>
+      <button type="button" class="tot-nav-tab" data-tot-view="flashcard">
+        <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" fill="currentColor" fill-opacity=".15" stroke="currentColor" stroke-width="1.95"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.95"/></svg>
+        Flashcard
+      </button>
+      <button type="button" class="tot-nav-tab" data-tot-view="task">
+        <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.95"/><path d="M8.5 12.2l2.3 2.3 4.8-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Task
+      </button>
+      <button type="button" class="tot-nav-tab" data-tot-view="practice">
+        <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3z" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/><path d="M9 12h6M9 16h4" stroke="currentColor" stroke-width="1.95" stroke-linecap="round"/></svg>
+        Practice
+      </button>
     </nav>
 
     <div class="task-study-bar" id="task-study-bar" style="display:none;">
@@ -359,34 +394,6 @@
       </div>
     </div>
   </header>
-
-  <!-- Contextual Slim Skill Sub-Bar (Vercel/Linear style: appears smoothly inside Reading / Listening while Top Bar stays fixed!) -->
-  <div class="tot-skill-subbar" id="skill-subbar" aria-label="Thanh điều hướng trong kỹ năng">
-    <div class="tot-skill-subbar-inner">
-      <div class="tot-subbar-context">
-        <span class="tot-skill-dot" aria-hidden="true"></span>
-        <span id="header-mode-chip-text">IELTS Reading</span>
-      </div>
-      <nav class="tot-subbar-tabs" id="nav-skill-tabs" aria-label="Điều hướng kỹ năng">
-        <button type="button" class="tot-subbar-tab active" data-tot-view="home">
-          <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M5 10.5L12 4l7 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-3v6H6a1 1 0 0 1-1-1v-9.5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/></svg>
-          <span id="nav-home-tab-label">Tổng quan</span>
-        </button>
-        <button type="button" class="tot-subbar-tab" data-tot-view="flashcard">
-          <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" fill="currentColor" fill-opacity=".15" stroke="currentColor" stroke-width="1.95"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.95"/></svg>
-          Flashcard
-        </button>
-        <button type="button" class="tot-subbar-tab" data-tot-view="task">
-          <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.95"/><path d="M8.5 12.2l2.3 2.3 4.8-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Task
-        </button>
-        <button type="button" class="tot-subbar-tab" data-tot-view="practice">
-          <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3z" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/><path d="M9 12h6M9 16h4" stroke="currentColor" stroke-width="1.95" stroke-linecap="round"/></svg>
-          Practice
-        </button>
-      </nav>
-    </div>
-  </div>
 
   <!-- Main Container: Chỉ giữ duy nhất màn hình Flashcard Từ vựng -->
   <main class="app-main">
@@ -2207,6 +2214,6 @@
   <script src="js/reading_practice.js?v=20261124s"></script>
   <script src="js/tasks.js?v=20261122j"></script>
   <script src="js/listening_tasks.js?v=20261124n"></script>
-  <script src="js/totoro_ui.js?v=20261124k"></script>
+  <script src="js/totoro_ui.js?v=20261124l"></script>
 </body>
 </html>

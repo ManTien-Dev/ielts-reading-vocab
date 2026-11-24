@@ -728,7 +728,7 @@
     const modeChip = document.getElementById('header-mode-chip-text');
     if (modeChip && !document.body.classList.contains('is-teacher-mode')) {
       const curMode = typeof window.__TOTORO_GET_MODE__ === 'function' ? window.__TOTORO_GET_MODE__() : 'Overview';
-      modeChip.textContent = curMode === 'Overview' ? 'Home chung' : `IELTS ${curMode}`;
+      modeChip.textContent = curMode === 'Overview' ? 'Home chung' : curMode;
     }
     const snap = getRealStudentSnapshot();
     const plan = getStudyPlan(snap.uid);
@@ -1596,7 +1596,7 @@
       document.body.classList.toggle('is-global-home', isGlobal);
 
       const chipTxt = document.getElementById('header-mode-chip-text');
-      if (chipTxt) chipTxt.textContent = isGlobal ? 'Home chung' : `IELTS ${modeVal}`;
+      if (chipTxt) chipTxt.textContent = isGlobal ? 'Home chung' : modeVal;
 
       const homeTabLbl = document.getElementById('nav-home-tab-label');
       if (homeTabLbl) homeTabLbl.textContent = 'Tổng quan';
