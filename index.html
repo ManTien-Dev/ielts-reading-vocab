@@ -41,7 +41,7 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261124j">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261124k">
   <link rel="stylesheet" href="css/totoro_theme.css?v=20261124t">
 </head>
 <body>
@@ -774,20 +774,32 @@
               </div>
 
               <div class="fc-center-front">
-                <!-- Dedicated Listening Front Audio Stage (Ultra-Simple: 1 Play Button + 1 Accent Capsule + Hé chữ) -->
+                <!-- Dedicated Listening Front Audio Stage (Pro Minimal: Live Symmetrical Waveform + Play Orb + Letter Slots) -->
                 <div class="fc-listening-front-stage" id="fc-listening-front-stage" onclick="event.stopPropagation()">
-                  <button type="button" class="fc-l-play-orb" id="btn-fc-l-uk" onclick="speakCurrentWord('en-GB', event)" aria-label="Nghe phát âm UK" title="Nghe UK">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-                  </button>
-                  <div class="fc-l-accent-capsule">
-                    <button type="button" class="fc-l-cap-btn is-active" onclick="speakCurrentWord('en-GB', event)" title="Anh - Anh (UK)">UK</button>
-                    <button type="button" class="fc-l-cap-btn" id="btn-fc-l-us" onclick="speakCurrentWord('en-US', event)" title="Anh - Mỹ (US)">US</button>
-                    <button type="button" class="fc-l-cap-btn" id="btn-fc-l-slow" onclick="window.__VOCAB_BRIDGE__?.speakSlowCurrentWord?.(event)" title="Nghe chậm 0.7×">0.7×</button>
+                  <div class="fc-l-wave-stage" onclick="speakCurrentWord(null, event)" role="button" tabindex="0" aria-label="Nghe lại từ vựng" title="Bấm để nghe lại">
+                    <div class="fc-l-wave-bars is-left" aria-hidden="true">
+                      <span style="--h:14px;--d:0.05s"></span>
+                      <span style="--h:24px;--d:0.18s"></span>
+                      <span style="--h:36px;--d:0.32s"></span>
+                      <span style="--h:20px;--d:0.12s"></span>
+                      <span style="--h:44px;--d:0.26s"></span>
+                      <span style="--h:30px;--d:0.40s"></span>
+                      <span style="--h:18px;--d:0.15s"></span>
+                    </div>
+                    <button type="button" class="fc-l-play-orb" id="btn-fc-l-uk" onclick="speakCurrentWord(null, event)" aria-label="Nghe phát âm">
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                    </button>
+                    <div class="fc-l-wave-bars is-right" aria-hidden="true">
+                      <span style="--h:18px;--d:0.15s"></span>
+                      <span style="--h:30px;--d:0.40s"></span>
+                      <span style="--h:44px;--d:0.26s"></span>
+                      <span style="--h:20px;--d:0.12s"></span>
+                      <span style="--h:36px;--d:0.32s"></span>
+                      <span style="--h:24px;--d:0.18s"></span>
+                      <span style="--h:14px;--d:0.05s"></span>
+                    </div>
                   </div>
-                  <button type="button" class="fc-l-reveal-btn" id="btn-fc-listening-reveal" onclick="toggleListeningFrontReveal(event)">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <span id="fc-l-reveal-txt">Hé chữ</span>
-                  </button>
+                  <div class="fc-l-letter-slots" id="fc-l-letter-slots" aria-label="Độ dài chữ cái của từ"></div>
                 </div>
 
                 <div class="fc-word" id="fc-front-word">loading...</div>
@@ -2119,13 +2131,13 @@
   <script src="data/vocab_data.js?v=20261119t"></script>
   <script src="data/listening_vocab_data.js?v=20261124a"></script>
   <script src="data/tasks_data.js?v=20261119t"></script>
-  <script src="data/listening_tasks_data.js?v=20261124g"></script></script>
+  <script src="data/listening_tasks_data.js?v=20261124g"></script>
   <script src="data/reading_tasks_exam_data.js?v=20261121c"></script>
   <script src="data/ipa_dict.js?v=20261119t"></script>
   <script src="js/motion.js?v=20261121c"></script>
   <script src="js/core/EventBus.js?v=20261119t"></script>
   <script src="js/core/LazyDataLoader.js?v=20261119t"></script>
-  <script src="js/core/AudioEngine.js?v=20261123a"></script>
+  <script src="js/core/AudioEngine.js?v=20261124k"></script>
   <script src="js/core/MyVocabStore.js?v=20261123c"></script>
   <script src="js/core/AntiCheatGuard.js?v=20261121b"></script>
   <script src="js/core/BaseSkillMode.js?v=20261119t"></script>
@@ -2135,7 +2147,7 @@
   <script src="js/recognition_test.js?v=20261123a"></script>
   <script src="js/speech_stt.js?v=20261123e"></script>
   <script src="js/voice_lab.js?v=20261123c"></script>
-  <script src="js/app.js?v=20261124j"></script>
+  <script src="js/app.js?v=20261124k"></script>
   <script src="data/v2_paraphrase.js?v=20261122e"></script>
   <script src="data/v2_foundation.js?v=20261122e"></script>
   <script src="data/v2_academic.js?v=20261122e"></script>

@@ -2790,34 +2790,24 @@
     const frontFaceEl = document.querySelector('#fc-card .fc-face-front');
     if (frontFaceEl) frontFaceEl.classList.remove('is-listening-revealed');
     document.getElementById('fc-scene')?.classList.remove('is-3d-flipping');
-    const lRevealTxt = document.getElementById('fc-l-reveal-txt');
-    if (lRevealTxt) lRevealTxt.textContent = 'Hé chữ';
-    const lPartBadge = document.getElementById('fc-l-part-badge');
-    if (lPartBadge) {
-      const partNameMap = {
-        'Part 1': 'Giao Tiếp & Dịch Vụ',
-        'Part 2': 'Bản Đồ & Địa Điểm',
-        'Part 3': 'Thảo Luận & Dự Án',
-        'Part 4': 'Bài Giảng Học Thuật',
-        'All Parts': 'Từ Vựng Cốt Lõi',
-        'Foundation': 'Từ Vựng Nền Tảng',
-      };
-      const rawP = String(item.primary_part || '').trim();
-      lPartBadge.textContent = partNameMap[rawP] || (item.direction ? `Tín hiệu · ${item.direction}` : (rawP || 'Luyện Nghe'));
+    const lSlotsEl = document.getElementById('fc-l-letter-slots');
+    if (lSlotsEl) {
+      const rawLemma = String(item.lemma || '').trim().split(/\s*\/\s*/)[0].trim();
+      const letterCount = rawLemma.replace(/[^a-zA-Z0-9]/g, '').length;
+      lSlotsEl.classList.toggle('is-compact', letterCount >= 11);
+      lSlotsEl.classList.toggle('is-ultra-compact', letterCount >= 16);
+      const words = rawLemma.split(/\s+/).filter(Boolean);
+      lSlotsEl.innerHTML = words.map((w) => {
+        const chars = Array.from(w).map((ch) => {
+          if (/[a-zA-Z0-9]/.test(ch)) return '<span class="fc-l-slot"></span>';
+          if (ch === '-' || ch === "'") return `<span class="fc-l-slot-punct">${escapeHtml(ch)}</span>`;
+          return '';
+        }).join('');
+        return `<span class="fc-l-slot-word">${chars}</span>`;
+      }).join('');
     }
-    const lTrapBadge = document.getElementById('fc-l-trap-badge');
-    if (lTrapBadge) {
-      const traps = [];
-      if (item.spelling_trap) traps.push(item.spelling_trap);
-      if (item.homophone_trap) traps.push(`Đồng âm: ${item.homophone_trap}`);
-      if (traps.length > 0) {
-        lTrapBadge.textContent = `⚠️ ${traps.join(' · ')}`;
-        lTrapBadge.style.display = 'inline-flex';
-      } else {
-        lTrapBadge.style.display = 'none';
-        lTrapBadge.textContent = '';
-      }
-    }
+    const lStageEl = document.getElementById('fc-listening-front-stage');
+    if (lStageEl) lStageEl.classList.remove('is-speaking');
 
     document.getElementById('fc-front-pos').textContent = posLabel;
     const frontWordEl = document.getElementById('fc-front-word');
@@ -5111,11 +5101,20 @@
     } catch (_) {}
   }
 
+  window.addEventListener('app:audio-start', () => {
+    document.getElementById('fc-listening-front-stage')?.classList.add('is-speaking');
+  });
+  window.addEventListener('app:audio-end', () => {
+    document.getElementById('fc-listening-front-stage')?.classList.remove('is-speaking');
+  });
+
   function speakCurrentWord(accent, event, engineOverride) {
     if (event && typeof event.stopPropagation === 'function') {
       event.stopPropagation();
     }
-    const defaultSideAccent = isCardFlipped ? 'en-GB' : 'en-US';
+    const defaultSideAccent = isListeningSkillActive()
+      ? (preferredAccent === 'en-US' ? 'en-US' : 'en-GB')
+      : (isCardFlipped ? 'en-GB' : 'en-US');
     const targetAccent = (accent === 'en-GB' || accent === 'en-US') ? accent : defaultSideAccent;
     const item = currentScopeList[currentCardIndex];
     if (!item || !currentUser) return;

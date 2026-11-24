@@ -187,6 +187,24 @@
       }
     }
 
+    _emitPlaybackState(playing) {
+      try {
+        window.dispatchEvent(new CustomEvent(playing ? 'app:audio-start' : 'app:audio-end'));
+      } catch (_) {}
+    }
+
+    _hasDesktopBrowserVoice(accent = 'en-US') {
+      try {
+        if (this._isMobileOrWebKit()) return false;
+        if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') return false;
+        if (!this._voices.length) this.refreshVoices();
+        if (!this._voices.length) return true; // desktop voices hydrate asynchronously on first load
+        return Boolean(this.pickBestVoice(accent, true));
+      } catch (_) {
+        return false;
+      }
+    }
+
     stop() {
       this._speakSeq++;
       this._clearWatchdogs();
@@ -205,6 +223,7 @@
           window.speechSynthesis.cancel();
         }
       } catch (_) {}
+      this._emitPlaybackState(false);
     }
 
     canUseYoudaoAudio(clean) {
@@ -254,6 +273,10 @@
             clearTimeout(this._watchdog);
             this._watchdog = null;
           }
+          if (this._speakSeq === seq) this._emitPlaybackState(true);
+        };
+        audio.onended = () => {
+          if (this._speakSeq === seq) this._emitPlaybackState(false);
         };
         audio.onerror = () => fallbackToBrowser();
 
@@ -313,6 +336,8 @@
             const utt = new SpeechSynthesisUtterance(clean);
             utt.lang = bestVoice?.lang || accent;
             utt.rate = Math.max(0.65, Math.min(1.5, Number(rate) || 0.92));
+            utt.volume = 1.0;
+            utt.pitch = 1.0;
             if (bestVoice) utt.voice = bestVoice;
             this._activeUtterance = utt;
 
@@ -323,6 +348,7 @@
                 clearTimeout(this._synthWatchdog);
                 this._synthWatchdog = null;
               }
+              if (this._speakSeq === seq) this._emitPlaybackState(true);
             };
             utt.onend = () => {
               started = true;
@@ -331,6 +357,7 @@
                 this._synthWatchdog = null;
               }
               if (this._activeUtterance === utt) this._activeUtterance = null;
+              if (this._speakSeq === seq) this._emitPlaybackState(false);
             };
             utt.onerror = (ev) => {
               started = true;
@@ -339,6 +366,7 @@
                 this._synthWatchdog = null;
               }
               if (this._activeUtterance === utt) this._activeUtterance = null;
+              if (this._speakSeq === seq) this._emitPlaybackState(false);
               const code = String(ev?.error || '');
               if (code === 'interrupted' || code === 'canceled') return;
               if (allowFallbackToYoudao && this._speakSeq === seq) {
@@ -401,11 +429,12 @@
         }
       } catch (_) {}
 
-      // If user explicitly pinned a custom browser voice in Settings (and respectCustom !== false), honor it first
+      // Desktop: prefer locked browser neural voice FIRST for 100% consistent loudness across all 3,864 words
+      // (avoids Youdao MP3 per-word loudness jumps & fallback volume spikes). Mobile/WebKit keeps studio-first.
       const hasPinnedBrowserVoice = Boolean(respectCustom && this._preferredVoiceName);
-      const preferStudio = (engine === 'youdao') || (engine === 'auto' && !hasPinnedBrowserVoice);
+      const useConsistentBrowser = (engine === 'browser') || hasPinnedBrowserVoice || (engine === 'auto' && this._hasDesktopBrowserVoice(accent));
 
-      if (preferStudio) {
+      if (!useConsistentBrowser) {
         if (this.playYoudaoAudio(clean, accent, rate, seq, true)) {
           return true;
         }
