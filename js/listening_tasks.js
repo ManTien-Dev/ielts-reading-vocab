@@ -13,8 +13,8 @@
   'use strict';
 
   const PROGRESS_KEY_BASE = 'totoro_listening_task_progress_v1_';
-  // Gắn link Cloudflare R2 Public URL vào đây sau khi tạo bucket (ví dụ: 'https://pub-xxxx.r2.dev')
-  const DEFAULT_AUDIO_BASE_URL = '';
+  // Nguồn phát 143 file .mp3 giọng Neural AI (có thể đổi sang Cloudflare R2 URL khi mở rộng hàng nghìn file)
+  const DEFAULT_AUDIO_BASE_URL = 'audio';
   // Tốc độ phát chuẩn phòng thi (1.25x ép tai quen nói nhanh & nối âm/nuốt âm)
   const EXAM_PLAYBACK_RATE = 1.25;
 
@@ -31,7 +31,13 @@
     let saved = '';
     try { saved = localStorage.getItem('totoro_listening_audio_base') || ''; } catch (_) {}
     const raw = window.TOTORO_LISTENING_AUDIO_BASE || saved || DEFAULT_AUDIO_BASE_URL;
-    return String(raw || '').trim().replace(/\/+$/, '');
+    const clean = String(raw || '').trim().replace(/\/+$/, '');
+    if (!clean) return '';
+    if (/^https?:\/\//i.test(clean) || clean.startsWith('/')) return clean;
+    if (window.location.protocol !== 'file:' && typeof window.__APP_BASE_PATH__ === 'string') {
+      return `${window.__APP_BASE_PATH__.replace(/\/+$/, '')}/${clean}`;
+    }
+    return clean;
   }
 
   function esc(s) {
