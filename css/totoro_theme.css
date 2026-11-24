@@ -11437,3 +11437,209 @@ body.rp-exam-fullscreen {
     animation: none !important;
   }
 }
+
+/* =========================================================
+   6. ANTI-CHEAT SHIELD, SELECTION PREVIEW & 100% MASTERY RETRY GATE
+   ========================================================= */
+
+/* Lightweight temporary selection preview (allows clearing native browser selection to suppress Edge Mini Menu!) */
+mark.rp-hl-preview {
+  background: rgba(59, 130, 246, 0.24);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0.5px 0;
+}
+.ins-contrast-dark mark.rp-hl-preview {
+  background: rgba(96, 165, 250, 0.34);
+}
+
+/* Anti-Cheat Shield Badge in Header */
+.rp-ac-shield {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent, #4e724d) 28%, transparent);
+  background: var(--accent-soft, #e4ede0);
+  color: var(--accent, #4e724d);
+  font-size: 11.5px;
+  font-weight: 750;
+  white-space: nowrap;
+  user-select: none;
+}
+.rp-ac-shield svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+.rp-ac-shield.is-warn {
+  border-color: rgba(217, 119, 6, 0.45);
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+.ins-mode-exam .rp-ac-shield {
+  height: 28px;
+  border-color: #d1d5db;
+  background: #f3f4f6;
+  color: #374151;
+}
+.ins-mode-exam .rp-ac-shield.is-warn {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Anti-Cheat Alert Banner */
+.rp-ac-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 18px;
+  background: #fef3c7;
+  border-bottom: 1px solid #f59e0b;
+  color: #78350f;
+  font-size: 12.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ins-contrast-dark .rp-ac-banner {
+  background: rgba(245, 158, 11, 0.18);
+  border-bottom-color: rgba(245, 158, 11, 0.45);
+  color: #fde68a;
+}
+.rp-ac-dismiss {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.rp-ac-dismiss:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* 100% Mastery Retry Gate Banner (Zero Answer Spoilers!) */
+.rp-retry-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 18px;
+  background: var(--prac-danger-soft, #f5e5e0);
+  border-bottom: 1px solid color-mix(in srgb, var(--prac-danger, #b86557) 35%, transparent);
+  color: var(--prac-ink, #24221f);
+  font-size: 12.5px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.ins-mode-exam .rp-retry-banner {
+  background: #fef2f2;
+  border-bottom-color: #fecaca;
+  color: #7f1d1d;
+}
+.rp-retry-copy {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.rp-retry-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--prac-danger, #b86557);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+}
+.ins-mode-exam .rp-retry-pill {
+  background: #dc2626;
+}
+.rp-retry-jump-btn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--prac-danger, #b86557) 45%, transparent);
+  background: var(--ins-bg, #ffffff);
+  color: var(--prac-danger, #b86557);
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 140ms var(--ease-out), background-color 140ms ease;
+}
+.rp-retry-jump-btn:hover {
+  background: var(--prac-danger, #b86557);
+  color: #ffffff;
+}
+.rp-retry-jump-btn:active {
+  transform: scale(0.97);
+}
+.ins-mode-exam .rp-retry-jump-btn {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+.ins-mode-exam .rp-retry-jump-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* Per-question Retry Gate Status Badges (✓ Đúng / ✕ Chưa đúng · Làm lại / ↻ Đã sửa) */
+.rp-q-status {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.rp-q-status.is-ok {
+  background: var(--prac-accent-soft, #dcfce7);
+  color: var(--prac-accent, #15803d);
+  border: 1px solid color-mix(in srgb, var(--prac-accent, #16a34a) 36%, transparent);
+}
+.rp-q-status.is-bad {
+  background: var(--prac-danger-soft, #fee2e2);
+  color: var(--prac-danger, #b91c1c);
+  border: 1px solid color-mix(in srgb, var(--prac-danger, #dc2626) 38%, transparent);
+}
+.rp-q-status.is-edited {
+  background: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.38);
+}
+.ins-contrast-dark .rp-q-status.is-edited {
+  color: #fcd34d;
+}
+.ins-q-item.is-locked-ok {
+  opacity: 0.86;
+}
+.rp-type-chip.is-unlocked {
+  background: var(--accent-soft, #dcfce7);
+  color: var(--accent, #15803d);
+  border-color: color-mix(in srgb, var(--accent, #16a34a) 35%, transparent);
+  font-weight: 750;
+}
+
+@media (max-width: 900px) {
+  .rp-ac-shield span {
+    display: none;
+  }
+  .rp-ac-shield {
+    padding: 0 7px;
+  }
+  .rp-retry-banner {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}

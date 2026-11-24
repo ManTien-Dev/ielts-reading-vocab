@@ -238,8 +238,126 @@
     dictTarget: null,
     splitRatio: 50,
     mobilePane: 'passage',
-    selectedHeadingKey: null // for tap-to-assign Matching Headings on touch/click
+    selectedHeadingKey: null, // for tap-to-assign Matching Headings on touch/click
+    pendingSelection: null    // cached selection ranges so native selection clears before Edge Mini Menu pops
   };
+
+  let _acGuard = null;
+  let _acTabSession = null;
+  let _acDomBound = false;
+
+  function isReadingAntiCheatActive() {
+    const s = state.session;
+    if (state.view !== 'exam' || !s || s.mode !== 'exam' || s.isNews) return false;
+    try {
+      if (B()?.isTeacherMode?.() && !B()?.isTeacherPreviewing?.()) return false;
+    } catch (_) {}
+    return true;
+  }
+
+  function handleReadingAntiCheatStrike(strikeNum, reason) {
+    const s = state.session;
+    if (!s || !isReadingAntiCheatActive()) return;
+    s.antiCheatStrikes = strikeNum;
+    if (strikeNum === 1) {
+      s.antiCheatNotice = `Cảnh báo chống gian lận (1/2): ${reason}. Nếu rời tab/cửa sổ thêm 1 lần nữa, toàn bộ bài làm sẽ bị xóa để làm lại từ đầu!`;
+      persistDraft();
+      renderExamWorkspace();
+      toast('⚠ Cảnh báo chống gian lận (1/2): Không chuyển tab khi đang làm bài!');
+    } else {
+      // Strike 2: Wipe all answers & retry progress to enforce discipline
+      s.answers = {};
+      s.lockedCorrect = {};
+      s.wrongSet = {};
+      s.attemptCount = 0;
+      s.firstAttemptResult = null;
+      s.antiCheatStrikes = 0;
+      s.antiCheatNotice = `Vi phạm chống gian lận (2/2 — ${reason}): Toàn bộ đáp án đã bị đặt lại. Vui lòng tự làm lại nghiêm túc!`;
+      persistDraft();
+      // Restart strike counter for fresh attempt
+      stopReadingAntiCheat();
+      startReadingAntiCheat();
+      renderExamWorkspace();
+      toast('✕ Vi phạm 2/2: Đã xóa toàn bộ đáp án — vui lòng làm lại từ đầu!');
+    }
+  }
+
+  function bindGlobalReadingAntiCheatDom() {
+    if (_acDomBound || typeof document === 'undefined') return;
+    _acDomBound = true;
+
+    document.addEventListener('copy', (e) => {
+      if (!isReadingAntiCheatActive()) return;
+      const ws = document.getElementById('rp-workspace');
+      if (ws && ws.contains(e.target)) {
+        e.preventDefault();
+        toast('Chống gian lận: Không được sao chép nội dung khi đang làm bài!');
+      }
+    }, true);
+
+    document.addEventListener('cut', (e) => {
+      if (!isReadingAntiCheatActive()) return;
+      const ws = document.getElementById('rp-workspace');
+      if (ws && ws.contains(e.target)) {
+        e.preventDefault();
+        toast('Chống gian lận: Không được cắt nội dung khi đang làm bài!');
+      }
+    }, true);
+
+    document.addEventListener('paste', (e) => {
+      if (!isReadingAntiCheatActive()) return;
+      if (e.target && e.target.closest && e.target.closest('.ins-gap-input')) {
+        e.preventDefault();
+        toast('Hãy tự gõ đáp án vào ô trống — không được dán chữ!');
+      }
+    }, true);
+
+    document.addEventListener('keydown', (e) => {
+      if (!isReadingAntiCheatActive()) return;
+      const k = (e.key || '').toLowerCase();
+      const ctrl = e.ctrlKey || e.metaKey;
+      const inGap = !!(e.target && e.target.closest && e.target.closest('.ins-gap-input, #rp-note-input'));
+      if (e.key === 'F12' || (ctrl && e.shiftKey && ['i', 'j', 'c'].includes(k)) || (ctrl && ['u', 'p'].includes(k))) {
+        e.preventDefault();
+        toast('Chống gian lận: Phím tắt này bị khóa trong lúc làm bài.');
+        return;
+      }
+      if (ctrl && ['c', 'x', 'v'].includes(k) && !inGap) {
+        e.preventDefault();
+        toast('Chống gian lận: Không được sao chép/dán nội dung bài đọc.');
+      }
+    }, true);
+  }
+
+  function startReadingAntiCheat() {
+    bindGlobalReadingAntiCheatDom();
+    stopReadingAntiCheat();
+    if (!isReadingAntiCheatActive()) return;
+    if (typeof window.CoreAntiCheatGuard === 'function') {
+      if (!_acGuard) {
+        _acGuard = new window.CoreAntiCheatGuard({
+          isBypassed: () => !isReadingAntiCheatActive(),
+          showToast: (m) => toast(m)
+        });
+      }
+      if (window.CoreAntiCheatGuard.resetSoftBlurBudget) {
+        window.CoreAntiCheatGuard.resetSoftBlurBudget();
+      }
+      _acTabSession = _acGuard.createTabLeaveSession({
+        maxStrikes: 2,
+        onStrike1: (n, reason) => handleReadingAntiCheatStrike(n, reason),
+        onStrike2: (n, reason) => handleReadingAntiCheatStrike(n, reason)
+      });
+      _acTabSession.start();
+    }
+  }
+
+  function stopReadingAntiCheat() {
+    if (_acTabSession) {
+      try { _acTabSession.stop(); } catch (_) {}
+      _acTabSession = null;
+    }
+  }
 
   const BANK_VERSION = '20261124i';
   const _loadedBanks = {};
@@ -857,8 +975,9 @@
       ? (item.newsSource || item.topic || 'News')
       : (isFull ? 'FULL TEST · 3 Passages' : `Passage ${item.passageNum}`);
 
+    const isMastered = !!(best && (best.mastered || (best.total > 0 && best.score === best.total)));
     const scoreBadge = best
-      ? `<span class="rp-done-badge">✓ Band ${best.band.toFixed(1)} · ${best.score}/${best.total}</span>`
+      ? `<span class="rp-done-badge">${isMastered ? '✓ 100% · ' : ''}Band ${best.band.toFixed(1)} · ${best.score}/${best.total}</span>`
       : `<span class="rp-meta-pill">${esc(item.targetBand || 'IELTS')}</span>`;
 
     const qTypes = isFull ? ['Passage 1–3', 'Full 60 phút'] : getPassageTypes(item);
@@ -882,8 +1001,8 @@
       `
       : `
         <div class="rp-card-mode-btns">
-          ${best ? `<button type="button" class="btn-subtle rp-btn-sm rp-btn-rev" onclick="${reviewCall}" title="Xem lại đáp án &amp; lời giải">Xem giải</button>` : ''}
-          <button type="button" class="rp-btn-practice rp-btn-sm" data-rp-start-mode="practice" onclick="${startPracticeCall}" title="Luyện tập PRO: 5 màu highlight pastel, tra từ trực tiếp, kiểm tra đáp án từng câu">
+          ${isMastered ? `<button type="button" class="btn-subtle rp-btn-sm rp-btn-rev" onclick="${reviewCall}" title="Đã hoàn thành 100% — Xem lại đáp án &amp; lời giải">Xem giải</button>` : ''}
+          <button type="button" class="rp-btn-practice rp-btn-sm" data-rp-start-mode="practice" onclick="${startPracticeCall}" title="Luyện tập Totoro Washi: 5 màu highlight pastel, tùy chỉnh nền &amp; cỡ chữ, chống gian lận &amp; mở khóa Solution khi đúng 100%">
             <span class="rp-mode-dot-swatch" aria-hidden="true"></span>
             <span>Luyện tập</span>
           </button>
@@ -939,9 +1058,14 @@
       isNews,
       studyMode,                          // 'exam' | 'practice'
       activePenColor: config.activePenColor || 'yellow',
-      brushAuto: !!config.brushAuto,      // Practice PRO: drag-to-highlight immediately
+      brushAuto: false,
       showTimer: config.showTimer !== false,
-      checkedMap: config.checkedMap ? { ...config.checkedMap } : {},
+      attemptCount: Number(config.attemptCount) || 0,
+      firstAttemptResult: config.firstAttemptResult || null,
+      lockedCorrect: config.lockedCorrect ? { ...config.lockedCorrect } : {},
+      wrongSet: config.wrongSet ? { ...config.wrongSet } : {},
+      antiCheatStrikes: Number(config.antiCheatStrikes) || 0,
+      antiCheatNotice: '',
       highlights: config.highlights ? JSON.parse(JSON.stringify(config.highlights)) : {},
       deckDefaultName: config.deckDefaultName || config.title,
       passageIds: config.passageIds,
@@ -970,11 +1094,14 @@
     state.mobilePane = 'passage';
     state.dictTarget = null;
     state.selectedHeadingKey = null;
+    state.pendingSelection = null;
     document.body.classList.add('rp-exam-fullscreen');
 
     if (state.session.mode === 'exam') {
       startTimer();
+      startReadingAntiCheat();
     } else if (config.openInReview) {
+      stopReadingAntiCheat();
       state.session.reviewResult = computeReviewResult();
     }
     renderExamWorkspace();
@@ -1011,9 +1138,13 @@
       practiceContrast: state.session.practiceContrast,
       textSize: state.session.textSize,
       activePenColor: state.session.activePenColor,
-      brushAuto: state.session.brushAuto,
+      brushAuto: false,
       showTimer: state.session.showTimer,
-      checkedMap: state.session.checkedMap,
+      attemptCount: state.session.attemptCount || 0,
+      firstAttemptResult: state.session.firstAttemptResult || null,
+      lockedCorrect: state.session.lockedCorrect || {},
+      wrongSet: state.session.wrongSet || {},
+      antiCheatStrikes: state.session.antiCheatStrikes || 0,
       highlights: state.session.highlights,
       deckDefaultName: state.session.deckDefaultName,
       passageIds: state.session.passageIds,
@@ -1179,6 +1310,57 @@
     });
   }
 
+  function clearSelectionPreview() {
+    const pane = document.getElementById('rp-passage-content');
+    if (!pane) return;
+    pane.querySelectorAll('mark.rp-hl-preview').forEach((m) => {
+      const parent = m.parentNode;
+      if (!parent) return;
+      while (m.firstChild) parent.insertBefore(m.firstChild, m);
+      parent.removeChild(m);
+      parent.normalize();
+    });
+  }
+
+  function renderSelectionPreview(slices) {
+    clearSelectionPreview();
+    const pane = document.getElementById('rp-passage-content');
+    if (!pane || !Array.isArray(slices) || !slices.length) return;
+    for (const sl of slices) {
+      const blk = pane.querySelector(`.ins-para-block[data-para-idx="${sl.paraIdx}"]`);
+      const textRoot = blk?.querySelector('.rp-para-text');
+      if (!textRoot) continue;
+      const walker = document.createTreeWalker(textRoot, NodeFilter.SHOW_TEXT, null);
+      const textNodes = [];
+      let cursor = 0;
+      let node;
+      while ((node = walker.nextNode())) {
+        const len = node.nodeValue ? node.nodeValue.length : 0;
+        if (len > 0) {
+          textNodes.push({ node, start: cursor, end: cursor + len });
+          cursor += len;
+        }
+      }
+      for (let i = textNodes.length - 1; i >= 0; i--) {
+        const tn = textNodes[i];
+        if (sl.end <= tn.start || sl.start >= tn.end) continue;
+        const str = tn.node.nodeValue;
+        const sLocal = Math.max(0, sl.start - tn.start);
+        const eLocal = Math.min(str.length, sl.end - tn.start);
+        const frag = document.createDocumentFragment();
+        if (sLocal > 0) frag.appendChild(document.createTextNode(str.slice(0, sLocal)));
+        if (eLocal > sLocal) {
+          const mark = document.createElement('mark');
+          mark.className = 'rp-hl-preview';
+          mark.textContent = str.slice(sLocal, eLocal);
+          frag.appendChild(mark);
+        }
+        if (eLocal < str.length) frag.appendChild(document.createTextNode(str.slice(eLocal)));
+        tn.node.parentNode?.replaceChild(frag, tn.node);
+      }
+    }
+  }
+
   function updatePracticeHighlightBadge(passageId) {
     const cnt = getPassageHighlights(passageId).length;
     const badge = document.getElementById('prac-hl-count');
@@ -1256,17 +1438,18 @@
       const qid = `${passage.id}__q${mh.q.num}`;
       const pickedKey = String(s.answers[qid] || '');
       const pickedObj = (mh.group.headings || []).find((h) => h.key === pickedKey);
-      const isChecked = isReview || (isPractice && !!s.checkedMap?.[qid]);
-      const isOk = isChecked && isAnswerCorrect(mh.q, pickedKey);
-      const cls = `ins-dropzone${pickedObj ? ' is-filled' : ''}${state.selectedHeadingKey && !isReview ? ' is-awaiting' : ''}${isChecked ? (isOk ? ' is-ok' : ' is-bad') : ''}`;
+      const isLockedOk = !isReview && !!s.lockedCorrect?.[qid];
+      const isWrongRetry = !isReview && !!s.wrongSet?.[qid];
+      const isOk = isReview ? isAnswerCorrect(mh.q, pickedKey) : isLockedOk;
+      const cls = `ins-dropzone${pickedObj ? ' is-filled' : ''}${state.selectedHeadingKey && !isReview && !isLockedOk ? ' is-awaiting' : ''}${(isReview || isLockedOk) ? (isOk ? ' is-ok' : ' is-bad') : (isWrongRetry ? ' is-bad' : '')}`;
       dropZoneHtml = `
         <div class="${cls}" data-mh-qid="${esc(qid)}"
-          ondragover="event.preventDefault(); this.classList.add('is-over');"
+          ondragover="${isReview || isLockedOk ? '' : 'event.preventDefault(); this.classList.add(\'is-over\');'}"
           ondragleave="this.classList.remove('is-over');"
-          ondrop="ReadingPracticeApp.onDropHeading(event, '${esc(qid)}')"
-          onclick="ReadingPracticeApp.onClickDropZone('${esc(qid)}')">
+          ondrop="${isReview || isLockedOk ? '' : `ReadingPracticeApp.onDropHeading(event, '${esc(qid)}')`}"
+          onclick="${isReview || isLockedOk ? '' : `ReadingPracticeApp.onClickDropZone('${esc(qid)}')`}">
           ${pickedObj
-            ? `<span class="ins-dz-num">${mh.q.num}</span><span class="ins-dz-text">${esc(pickedObj.text)}</span>${!isReview ? `<button type="button" class="ins-dz-clear" onclick="event.stopPropagation(); ReadingPracticeApp.clearHeading('${esc(qid)}')" title="Gỡ tiêu đề">✕</button>` : ''}`
+            ? `<span class="ins-dz-num">${mh.q.num}</span><span class="ins-dz-text">${esc(pickedObj.text)}</span>${!isReview && !isLockedOk ? `<button type="button" class="ins-dz-clear" onclick="event.stopPropagation(); ReadingPracticeApp.clearHeading('${esc(qid)}')" title="Gỡ tiêu đề">✕</button>` : ''}`
             : `<span class="ins-dz-placeholder">${mh.q.num}</span>`}
         </div>
       `;
@@ -1305,7 +1488,8 @@
 
     const isReview = s.mode === 'review';
     const isPractice = s.studyMode === 'practice';
-    const enableDict = isReview || s.isNews || isPractice;
+    // STRICT RULE: Dictionary is LOCKED during active Practice & Exam — ONLY unlocked after 100% completion (Review) or News!
+    const enableDict = isReview || s.isNews;
     const allQ = getAllSessionQuestions();
     if (!s.activeQid && allQ.length) {
       const firstInP = allQ.find((q) => q._pIdx === s.activePassageIdx) || allQ[0];
@@ -1320,9 +1504,10 @@
     const totalAnswered = allQ.filter((x) => String(s.answers[x._qid] || '').trim()).length;
     const progressPct = allQ.length ? Math.round((totalAnswered / allQ.length) * 100) : 0;
 
-    const curAnsweredCount = curQs.filter((q) => String(s.answers[q._qid] || '').trim()).length;
-    const curCheckedQs = curQs.filter((q) => !!s.checkedMap?.[q._qid]);
-    const curCheckedCorrect = curCheckedQs.filter((q) => isAnswerCorrect(q, s.answers[q._qid])).length;
+    const lockedCount = Object.keys(s.lockedCorrect || {}).length;
+    const wrongQids = allQ.filter((q) => !!s.wrongSet?.[q._qid]).map((q) => q._qid);
+    const wrongCount = wrongQids.length;
+    const isRetryPhase = !isReview && s.attemptCount > 0 && wrongCount > 0;
     const curHlCount = getPassageHighlights(curPassage.id).length;
 
     const effectiveContrast = isPractice ? (s.contrast || 'totoro') : 'cd';
@@ -1331,23 +1516,24 @@
     const modeCls = isPractice ? 'ins-mode-practice' : 'ins-mode-exam';
     const timerUrgency = !isPractice && s.remainingSec <= 300 ? ' is-critical' : (!isPractice && s.remainingSec <= 600 ? ' is-warn' : '');
 
-    // Review Summary Strip (only visible AFTER submitting)
+    // Review Summary Strip (ONLY visible AFTER 100% mastery unlocks Solution & Dictionary!)
+    const firstTry = s.firstAttemptResult || s.reviewResult;
     const reviewStripHtml = isReview && s.reviewResult ? `
       <div class="ins-review-strip">
         <div class="rp-rev-metric is-band">
-          <span>Band dự kiến</span>
-          <strong class="tabular">${s.reviewResult.band.toFixed(1)}</strong>
+          <span>Band lần đầu</span>
+          <strong class="tabular">${(firstTry?.band ?? s.reviewResult.band).toFixed(1)}</strong>
         </div>
         <div class="rp-rev-metric">
-          <span>Đúng</span>
-          <strong class="tabular">${s.reviewResult.score} / ${s.reviewResult.total}</strong>
+          <span>Lần đầu</span>
+          <strong class="tabular">${firstTry?.score ?? s.reviewResult.score} / ${s.reviewResult.total}</strong>
         </div>
         <div class="rp-rev-metric">
-          <span>Thời gian</span>
-          <strong class="tabular">${formatDuration(s.reviewResult.elapsedSec)}</strong>
+          <span>Hoàn thành 100%</span>
+          <strong class="tabular">${Math.max(1, s.attemptCount || 1)} lần nộp · ${formatDuration(s.reviewResult.elapsedSec)}</strong>
         </div>
         <div class="rp-rev-types">
-          ${s.reviewResult.byType.map((t) => `<span class="rp-type-chip">${esc(t.label)}: <strong>${t.correct}/${t.total}</strong></span>`).join('')}
+          <span class="rp-type-chip is-unlocked">✓ Solution &amp; Từ điển đã mở khóa</span>
         </div>
         <div class="rp-rev-actions">
           <button type="button" class="btn-subtle rp-btn-sm ${s.showBilingual ? 'is-on' : ''}" id="rp-btn-bilingual"
@@ -1357,6 +1543,25 @@
           <button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.retryCurrent()">Làm lại</button>
           <button type="button" class="btn btn-primary rp-btn-sm" onclick="ReadingPracticeApp.exitToHub()">← Về kho đề</button>
         </div>
+      </div>
+    ` : '';
+
+    // Retry Mastery Gate Banner (shown after submitting with wrong answers — NO answer key revealed!)
+    const retryBannerHtml = isRetryPhase ? `
+      <div class="rp-retry-banner" id="rp-retry-banner" role="status">
+        <div class="rp-retry-copy">
+          <span class="rp-retry-pill tabular">Lần nộp #${s.attemptCount}</span>
+          <span>Đã đúng <strong>${lockedCount}/${allQ.length}</strong> câu · Còn <strong>${wrongCount} câu chưa đúng</strong> — hãy làm lại các câu báo đỏ cho tới khi đúng 100% để mở khóa Solution &amp; Từ điển.</span>
+        </div>
+        <button type="button" class="rp-retry-jump-btn" onclick="ReadingPracticeApp.jumpToNextWrong()">Câu sai tiếp theo →</button>
+      </div>
+    ` : '';
+
+    // Anti-Cheat Warning Banner (visible when strike occurred)
+    const antiCheatBannerHtml = (!isReview && s.antiCheatNotice) ? `
+      <div class="rp-ac-banner" id="rp-ac-banner" role="alert">
+        <span>⚠ ${esc(s.antiCheatNotice)}</span>
+        <button type="button" class="rp-ac-dismiss" onclick="ReadingPracticeApp.dismissAntiCheatNotice()" aria-label="Đóng thông báo">✕</button>
       </div>
     ` : '';
 
@@ -1401,11 +1606,16 @@
         const val = String(s.answers[q._qid] || '').trim();
         const isFlg = !!s.flagged[q._qid];
         const isCur = s.activeQid === q._qid;
-        const isQChecked = isReview || (isPractice && !!s.checkedMap?.[q._qid]);
+        const isLockedOk = !isReview && !!s.lockedCorrect?.[q._qid];
+        const isWrongRetry = !isReview && !!s.wrongSet?.[q._qid];
         let cls = 'ins-qbox';
         if (isCur) cls += ' is-current';
-        if (isQChecked) {
+        if (isReview) {
           cls += isAnswerCorrect(q, val) ? ' is-correct' : ' is-wrong';
+        } else if (isLockedOk) {
+          cls += ' is-correct';
+        } else if (isWrongRetry) {
+          cls += s.wrongSet[q._qid] === 'edited' ? ' is-attempted is-retry-edited' : ' is-wrong';
         } else {
           if (val) cls += ' is-attempted';
           if (isFlg) cls += ' is-review';
@@ -1582,20 +1792,13 @@
       </div>
     ` : '';
 
-    // Single compact Check button in Practice Header
-    const practiceHeaderCheckHtml = (isPractice && !isReview) ? `
-      <div class="prac-hdr-check-wrap">
-        <button type="button"
-          class="prac-hdr-check-btn ${curCheckedQs.length ? 'has-checked' : ''}"
-          id="prac-btn-check-answered"
-          ${curAnsweredCount === 0 && !curCheckedQs.length ? 'disabled' : ''}
-          onclick="${curCheckedQs.length && curCheckedQs.length >= curAnsweredCount ? 'ReadingPracticeApp.clearCheckedQuestions()' : 'ReadingPracticeApp.checkAnsweredQuestions()'}"
-          title="${curCheckedQs.length && curCheckedQs.length >= curAnsweredCount ? 'Ẩn kết quả kiểm tra' : 'Kiểm tra ngay các câu đã điền'}">
-          ${curCheckedQs.length
-            ? `<span class="tabular">✓ ${curCheckedCorrect}/${curCheckedQs.length} đúng</span>`
-            : `<span>Kiểm tra</span>${curAnsweredCount ? `<span class="prac-hdr-check-cnt tabular">${curAnsweredCount}</span>` : ''}`}
-        </button>
-      </div>
+    // Anti-Cheat Shield Status Pill (active in BOTH Practice & Exam until 100% completion!)
+    const antiCheatPillHtml = (!isReview && !s.isNews) ? `
+      <span class="rp-ac-shield ${s.antiCheatStrikes > 0 ? 'is-warn' : ''}" id="rp-ac-shield"
+        title="Chống gian lận đang bật: khóa sao chép, khóa từ điển và cảnh báo chuyển tab (tối đa 2 lần)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>${s.antiCheatStrikes > 0 ? `Cảnh báo ${s.antiCheatStrikes}/2` : 'Anti-Cheat'}</span>
+      </span>
     ` : '';
 
     // Subtle Totoro stationery watermark SVG for Practice Reading Folio
@@ -1615,9 +1818,9 @@
       </svg>
     ` : '';
 
-    // Selection Popover: Practice shows 5 silky pastel dots + Note + Tra từ + Xóa right beside cursor
+    // Selection Popover: Practice shows 5 silky pastel dots + Ghi chú + Xóa (Tra từ STRICTLY unlocked only in Review/News!)
     const selPopoverHtml = isPractice ? `
-      <div class="ins-sel-popover is-practice hidden" id="rp-hl-toolbar" role="toolbar" aria-label="Highlight màu pastel">
+      <div class="ins-sel-popover is-practice hidden" id="rp-hl-toolbar" role="toolbar" aria-label="Highlight màu pastel" onmousedown="event.stopPropagation()">
         <div class="prac-pop-swatches">
           ${PASTEL_PENS.map((pen) => `
             <button type="button"
@@ -1634,11 +1837,11 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span>Ghi chú</span>
         </button>
-        <button type="button" class="ins-sel-dict prac-pop-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra từ</button>
+        ${enableDict ? '<button type="button" class="ins-sel-dict prac-pop-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra từ</button>' : ''}
         <button type="button" class="ins-sel-clear prac-pop-clear" onclick="ReadingPracticeApp.clearSelectionHighlight()" title="Xóa màu đoạn chọn">Xóa</button>
       </div>
     ` : `
-      <div class="ins-sel-popover hidden" id="rp-hl-toolbar">
+      <div class="ins-sel-popover hidden" id="rp-hl-toolbar" onmousedown="event.stopPropagation()">
         <button type="button" class="ins-sel-act" onclick="ReadingPracticeApp.addNoteFromSelection()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span>Note</span>
@@ -1667,9 +1870,9 @@
             </div>
 
             <div class="ins-hdr-right">
+              ${antiCheatPillHtml}
               ${isPractice ? timerBlockHtml : ''}
               ${practiceProgPillHtml}
-              ${practiceHeaderCheckHtml}
               ${s.isNews && !isReview ? `
                 <button type="button" class="ins-hdr-pill ${s.showBilingual ? 'active' : ''}" id="rp-btn-bilingual" onclick="ReadingPracticeApp.toggleBilingual()">
                   ${s.showBilingual ? '✓ Song ngữ' : 'Song ngữ'}
@@ -1695,6 +1898,8 @@
             </div>
           </header>
 
+          ${antiCheatBannerHtml}
+          ${retryBannerHtml}
           ${reviewStripHtml}
 
           ${!isPractice ? `
@@ -1721,6 +1926,7 @@
               id="rp-passage-shell" style="flex: 0 0 ${state.splitRatio}%;">
               <section class="ins-pane ins-pane-left ${state.mobilePane === 'passage' ? 'mob-active' : ''}"
                 id="rp-passage-pane"
+                onmousedown="ReadingPracticeApp.onPassageMouseDown(event)"
                 onmouseup="ReadingPracticeApp.handlePassageSelection(event)"
                 oncontextmenu="ReadingPracticeApp.handlePassageContextMenu(event)"
                 onclick="ReadingPracticeApp.handlePassageWordClick(event)">
@@ -1766,12 +1972,12 @@
             <div class="ins-footer-parts">${bottomPartsHtml}</div>
             ${!isReview ? (isPractice ? `
               <button type="button" class="ins-submit-check-btn prac-submit-pill" id="rp-btn-open-submit"
-                onclick="ReadingPracticeApp.openPreSubmitModal()" title="Nộp bài và chấm điểm Band" aria-label="Nộp bài">
-                <span>Nộp bài →</span>
+                onclick="ReadingPracticeApp.openPreSubmitModal()" title="${isRetryPhase ? 'Nộp lại các câu đã sửa' : 'Nộp bài kiểm tra kết quả'}" aria-label="Nộp bài">
+                <span>${isRetryPhase ? `Nộp lại (${wrongCount} câu) →` : 'Nộp bài →'}</span>
               </button>
             ` : `
               <button type="button" class="ins-submit-check-btn" id="rp-btn-open-submit"
-                onclick="ReadingPracticeApp.openPreSubmitModal()" title="Review &amp; Submit your answers" aria-label="Review and Submit">✓</button>
+                onclick="ReadingPracticeApp.openPreSubmitModal()" title="${isRetryPhase ? `Nộp lại (${wrongCount} câu sai)` : 'Review &amp; Submit your answers'}" aria-label="Review and Submit">✓</button>
             `) : `
               <button type="button" class="ins-submit-check-btn is-done" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề">←</button>
             `}
@@ -1835,14 +2041,12 @@
         `;
       }).join('');
 
-      const reviewRowsHtml = (group.questions || []).map((q) => {
+      const reviewRowsHtml = isReview ? (group.questions || []).map((q) => {
         const qid = `${passage.id}__q${q.num}`;
-        const showCheck = isReview || (isPractice && !!s.checkedMap?.[qid]);
-        if (!showCheck) return '';
         const ok = isAnswerCorrect(q, s.answers[qid]);
         const keyObj = (group.headings || []).find((h) => h.key === q.answer);
         return renderReviewBlock(q, ok, keyObj ? `${keyObj.key}. ${keyObj.text}` : q.answer);
-      }).join('');
+      }).join('') : '';
 
       return `
         <div class="ins-q-group">
@@ -1905,36 +2109,35 @@
 
   function renderFlatQuestionItem(q, passage, isReview) {
     const s = state.session;
-    const isPractice = s?.studyMode === 'practice';
     const qid = `${passage.id}__q${q.num}`;
     const userVal = String(s.answers[qid] ?? '');
-    const hasVal = userVal.trim().length > 0;
     const flagged = !!s.flagged[qid];
     const isCur = s.activeQid === qid;
-    const isChecked = isReview || (isPractice && !!s.checkedMap?.[qid]);
-    const ok = isChecked ? isAnswerCorrect(q, userVal) : false;
+    const isLockedOk = !isReview && !!s.lockedCorrect?.[qid];
+    const wrongState = !isReview ? s.wrongSet?.[qid] : null;
+    const isWrongRetry = !!wrongState;
+    const isReadOnly = isReview || isLockedOk;
+    const ok = isReview ? isAnswerCorrect(q, userVal) : isLockedOk;
 
-    const bookmarkBtn = !isReview ? `
+    const bookmarkBtn = !isReadOnly ? `
       <button type="button" class="ins-bookmark-btn ${flagged ? 'active' : ''}"
         onclick="event.stopPropagation(); ReadingPracticeApp.toggleFlag('${esc(qid)}')" title="Đánh dấu xem lại (Bookmark)">
         <svg viewBox="0 0 24 24" fill="${flagged ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
       </button>
     ` : '';
 
-    const checkBtn = (isPractice && !isReview) ? `
-      <button type="button"
-        class="prac-q-check-btn ${isChecked ? (ok ? 'is-ok' : 'is-bad') : (hasVal ? 'is-ready' : '')}"
-        data-prac-check="${esc(qid)}"
-        onclick="event.stopPropagation(); ReadingPracticeApp.checkSingleQuestion('${esc(qid)}')"
-        title="${isChecked ? 'Ẩn kết quả câu này' : 'Kiểm tra đáp án câu này ngay'}">
-        ${isChecked ? (ok ? '✓ Đúng' : '✕ Xem đáp án') : 'Kiểm tra'}
-      </button>
-    ` : '';
+    // Status pill during Retry Gate (NO answer key revealed!)
+    const retryStatusPill = isLockedOk
+      ? `<span class="rp-q-status is-ok" title="Câu này bạn đã làm đúng">✓ Đúng</span>`
+      : (isWrongRetry
+        ? `<span class="rp-q-status ${wrongState === 'edited' ? 'is-edited' : 'is-bad'}">${wrongState === 'edited' ? '↻ Đã sửa' : '✕ Chưa đúng · Làm lại'}</span>`
+        : '');
 
-    const cardStateCls = `${isCur && !isReview ? 'is-current' : ''}${isChecked ? (ok ? ' is-checked-ok' : ' is-checked-bad') : ''}`;
+    const cardStateCls = `${isCur && !isReview ? 'is-current' : ''}${isLockedOk ? ' is-checked-ok is-locked-ok' : (isWrongRetry ? (wrongState === 'edited' ? ' is-retry-edited' : ' is-checked-bad') : '')}`;
 
     if (q.type === 'gap') {
-      const inlineBox = `<input type="text" class="ins-gap-input ${isChecked ? (ok ? 'is-ok' : 'is-bad') : ''}" value="${esc(userVal)}" ${isReview ? 'readonly' : ''} placeholder="${q.num}" aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off">`;
+      const gapCls = isReview ? (ok ? 'is-ok' : 'is-bad') : (isLockedOk ? 'is-ok' : (isWrongRetry && wrongState !== 'edited' ? 'is-bad' : ''));
+      const inlineBox = `<input type="text" class="ins-gap-input ${gapCls}" value="${esc(userVal)}" ${isReadOnly ? 'readonly' : ''} placeholder="${q.num}" aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off">`;
       const stem = /_{3,}/.test(q.prompt) ? esc(q.prompt).replace(/_{3,}/, inlineBox) : `${esc(q.prompt)} ${inlineBox}`;
       const correctDisplay = Array.isArray(q.answer) ? q.answer[0] : q.answer;
       return `
@@ -1942,9 +2145,9 @@
           <div class="ins-gap-bullet">
             <span class="ins-bullet-dot">•</span>
             <div class="ins-gap-line">${stem}</div>
-            <div class="prac-q-inline-acts">${checkBtn}${bookmarkBtn}</div>
+            <div class="prac-q-inline-acts">${retryStatusPill}${bookmarkBtn}</div>
           </div>
-          ${isChecked ? renderReviewBlock(q, ok, correctDisplay) : ''}
+          ${isReview ? renderReviewBlock(q, ok, correctDisplay) : ''}
         </div>
       `;
     }
@@ -1957,11 +2160,12 @@
           ${opts.map((opt) => {
             const active = userVal.toUpperCase() === opt;
             let cls = `ins-radio-row${active ? ' is-selected' : ''}`;
-            if (isChecked && opt === String(q.answer).toUpperCase()) cls += ' is-key';
-            if (isChecked && active && !ok) cls += ' is-wrong-pick';
+            if (isReview && opt === String(q.answer).toUpperCase()) cls += ' is-key';
+            if (isLockedOk && active) cls += ' is-key';
+            if ((isReview || (isWrongRetry && wrongState !== 'edited')) && active && !ok) cls += ' is-wrong-pick';
             return `
               <label class="${cls}">
-                <input type="radio" name="${esc(qid)}" value="${opt}" ${active ? 'checked' : ''} ${isReview ? 'disabled' : ''}
+                <input type="radio" name="${esc(qid)}" value="${opt}" ${active ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}
                   onchange="ReadingPracticeApp.setAnswer('${esc(qid)}', '${opt}')">
                 <span>${opt}</span>
               </label>
@@ -1977,17 +2181,18 @@
             const strikeKey = `${qid}__${opt.key}`;
             const isStruck = !!s.struck[strikeKey];
             let cls = `ins-radio-row${active ? ' is-selected' : ''}${isStruck ? ' is-struck' : ''}`;
-            if (isChecked && opt.key === String(q.answer).toUpperCase()) cls += ' is-key';
-            if (isChecked && active && !ok) cls += ' is-wrong-pick';
+            if (isReview && opt.key === String(q.answer).toUpperCase()) cls += ' is-key';
+            if (isLockedOk && active) cls += ' is-key';
+            if ((isReview || (isWrongRetry && wrongState !== 'edited')) && active && !ok) cls += ' is-wrong-pick';
             return `
               <div class="${cls}">
                 <label class="ins-radio-lbl">
-                  <input type="radio" name="${esc(qid)}" value="${esc(opt.key)}" ${active ? 'checked' : ''} ${isReview ? 'disabled' : ''}
+                  <input type="radio" name="${esc(qid)}" value="${esc(opt.key)}" ${active ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}
                     onchange="ReadingPracticeApp.setAnswer('${esc(qid)}', '${esc(opt.key)}')">
                   <strong>${esc(opt.key)}</strong>
                   <span class="ins-mcq-txt">${esc(opt.text)}</span>
                 </label>
-                ${!isReview ? `
+                ${!isReadOnly ? `
                   <button type="button" class="ins-strike-btn ${isStruck ? 'active' : ''}"
                     onclick="ReadingPracticeApp.toggleStrike('${esc(strikeKey)}', event)" title="Loại trừ phương án này">S̶</button>
                 ` : ''}
@@ -2005,10 +2210,11 @@
             const val = String(opt).trim();
             const active = userVal.toUpperCase() === val.toUpperCase();
             let cls = `ins-sel-chip${active ? ' is-selected' : ''}`;
-            if (isChecked && ansArr.includes(val.toUpperCase())) cls += ' is-key';
-            if (isChecked && active && !ok) cls += ' is-wrong-pick';
+            if (isReview && ansArr.includes(val.toUpperCase())) cls += ' is-key';
+            if (isLockedOk && active) cls += ' is-key';
+            if ((isReview || (isWrongRetry && wrongState !== 'edited')) && active && !ok) cls += ' is-wrong-pick';
             return `
-              <button type="button" class="${cls}" ${isReview ? 'disabled' : ''}
+              <button type="button" class="${cls}" ${isReadOnly ? 'disabled' : ''}
                 aria-pressed="${active ? 'true' : 'false'}"
                 onclick="ReadingPracticeApp.setAnswer('${esc(qid)}', '${esc(val)}')">${esc(val)}</button>
             `;
@@ -2023,10 +2229,10 @@
         <div class="ins-q-stem-row">
           <span class="ins-q-num ${isCur && !isReview ? 'is-active' : ''}">${q.num}</span>
           <div class="ins-q-stem">${esc(q.prompt)}</div>
-          <div class="prac-q-inline-acts">${checkBtn}${bookmarkBtn}</div>
+          <div class="prac-q-inline-acts">${retryStatusPill}${bookmarkBtn}</div>
         </div>
         ${optionsHtml}
-        ${isChecked ? renderReviewBlock(q, ok, correctDisplay) : ''}
+        ${isReview ? renderReviewBlock(q, ok, correctDisplay) : ''}
       </div>
     `;
   }
@@ -2265,9 +2471,13 @@
         itemId: d.itemId, title: d.title, source: d.source, isFull: !!d.isFull,
         studyMode: d.studyMode || (d.source === 'news' ? 'practice' : 'exam'),
         contrast: d.contrast, practiceContrast: d.practiceContrast, textSize: d.textSize,
-        activePenColor: d.activePenColor, brushAuto: !!d.brushAuto,
+        activePenColor: d.activePenColor,
         showTimer: d.showTimer !== false,
-        checkedMap: d.checkedMap || {},
+        attemptCount: d.attemptCount || 0,
+        firstAttemptResult: d.firstAttemptResult || null,
+        lockedCorrect: d.lockedCorrect || {},
+        wrongSet: d.wrongSet || {},
+        antiCheatStrikes: d.antiCheatStrikes || 0,
         highlights: d.highlights || {},
         suggestedMins: Math.max(1, Math.ceil((d.remainingSec || 1200) / 60)),
         remainingSec: d.remainingSec, elapsedSec: d.elapsedSec,
@@ -2285,6 +2495,8 @@
     exitToHub() {
       if (state.session && state.session.mode === 'exam') persistDraft();
       stopTimer();
+      stopReadingAntiCheat();
+      state.pendingSelection = null;
       document.body.classList.remove('rp-exam-fullscreen');
       state.view = 'source';
       state.session = null;
@@ -2481,31 +2693,30 @@
 
     setAnswer(qid, value, skipFullRerender = false) {
       if (!state.session || state.session.mode !== 'exam') return;
+      // Do not allow changing already-locked correct answers during Retry phase
+      if (state.session.lockedCorrect && state.session.lockedCorrect[qid]) return;
       state.session.answers[qid] = value;
       state.session.activeQid = qid;
-      const hadCheck = !!(state.session.checkedMap && state.session.checkedMap[qid]);
-      if (hadCheck) delete state.session.checkedMap[qid];
+      const wasWrong = !!(state.session.wrongSet && state.session.wrongSet[qid]);
+      if (wasWrong) state.session.wrongSet[qid] = 'edited';
       persistDraft();
-      if (skipFullRerender && !hadCheck) {
+      if (skipFullRerender) {
         const pQs = getAllSessionQuestions().filter((q) => q._pIdx === state.session.activePassageIdx);
         const idx = pQs.findIndex((q) => q._qid === qid);
         const boxes = document.querySelectorAll('.ins-qbox');
-        if (boxes[idx]) boxes[idx].classList.toggle('is-attempted', String(value || '').trim().length > 0);
-        // Keep Practice PRO check buttons responsive during inline typing
-        if (state.session.studyMode === 'practice') {
-          const hasVal = String(value || '').trim().length > 0;
-          const qBtn = document.querySelector(`[data-prac-check="${qid}"]`);
-          if (qBtn) qBtn.classList.toggle('is-ready', hasVal);
-          const allBtn = document.getElementById('prac-btn-check-answered');
-          if (allBtn) {
-            const anyAns = pQs.some((q) => String(state.session.answers[q._qid] || '').trim().length > 0);
-            allBtn.disabled = !anyAns;
+        if (boxes[idx]) {
+          boxes[idx].classList.toggle('is-attempted', String(value || '').trim().length > 0);
+          if (wasWrong) {
+            boxes[idx].classList.remove('is-wrong');
+            boxes[idx].classList.add('is-retry-edited');
           }
-          const allQ = getAllSessionQuestions();
-          const doneCnt = allQ.filter((q) => String(state.session.answers[q._qid] || '').trim()).length;
-          const fill = document.querySelector('.prac-hdr-progress-fill');
-          if (fill && allQ.length) fill.style.width = `${Math.round((doneCnt / allQ.length) * 100)}%`;
         }
+        const allQ = getAllSessionQuestions();
+        const doneCnt = allQ.filter((q) => String(state.session.answers[q._qid] || '').trim()).length;
+        const fill = document.querySelector('.prac-prog-fill');
+        if (fill && allQ.length) fill.style.width = `${Math.round((doneCnt / allQ.length) * 100)}%`;
+        const progStrong = document.querySelector('.prac-prog-pill strong');
+        if (progStrong) progStrong.textContent = String(doneCnt);
         return;
       }
       renderExamWorkspace();
@@ -2573,8 +2784,9 @@
 
     addNoteFromSelection() {
       if (!state.session) return;
+      const pending = state.pendingSelection;
       const sel = window.getSelection();
-      const quote = (sel ? sel.toString() : '').trim().slice(0, 180);
+      const quote = ((pending && pending.text) || (sel ? sel.toString() : '')).trim().slice(0, 180);
       if (quote) {
         const pen = state.session.studyMode === 'practice' ? (state.session.activePenColor || 'yellow') : 'yellow';
         this.applyHighlight(pen);
@@ -2648,20 +2860,100 @@
 
     confirmSubmit() {
       if (!state.session) return;
-      stopTimer();
+      const s = state.session;
       this.closePreSubmitModal();
+      const allQ = getAllSessionQuestions();
       const res = computeReviewResult();
-      state.session.mode = 'review';
-      state.session.reviewResult = res;
+      s.attemptCount = (Number(s.attemptCount) || 0) + 1;
 
+      if (!s.firstAttemptResult) {
+        s.firstAttemptResult = {
+          score: res.score,
+          total: res.total,
+          band: res.band,
+          elapsedSec: res.elapsedSec
+        };
+      }
+
+      // News articles do not gate on 100%; IELTS Practice & Exam BOTH enforce 100% Mastery Gate!
+      const mustAchieve100 = !s.isNews && res.score < res.total;
+      if (mustAchieve100) {
+        const nextLocked = { ...(s.lockedCorrect || {}) };
+        const nextWrong = {};
+        let firstWrong = null;
+        allQ.forEach((q) => {
+          const ok = isAnswerCorrect(q, s.answers[q._qid]);
+          if (ok) {
+            nextLocked[q._qid] = true;
+          } else {
+            nextWrong[q._qid] = true;
+            if (!firstWrong) firstWrong = q;
+          }
+        });
+        s.lockedCorrect = nextLocked;
+        s.wrongSet = nextWrong;
+
+        // Record first-attempt score in history (NOT yet mastered — cannot peek Solution!)
+        if (s.attemptCount === 1) {
+          ReadingPracticeStore.recordAttempt({
+            itemId: s.itemId, title: s.title, source: s.source,
+            isFull: s.isFull, score: res.score, total: res.total,
+            band: res.band, elapsedSec: res.elapsedSec,
+            mastered: false, completedAt: Date.now()
+          });
+        }
+
+        if (firstWrong) {
+          s.activePassageIdx = firstWrong._pIdx;
+          s.activeQid = firstWrong._qid;
+        }
+        persistDraft();
+        renderExamWorkspace();
+        if (firstWrong) {
+          setTimeout(() => {
+            const el = document.getElementById(`rp-qcard-${firstWrong._qid}`) || document.querySelector(`[data-mh-qid="${firstWrong._qid}"]`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 50);
+        }
+        const rem = res.total - res.score;
+        toast(`Lần nộp #${s.attemptCount}: Đúng ${res.score}/${res.total} · Còn ${rem} câu sai — làm lại đúng 100% để mở khóa Solution & Từ điển!`);
+        return;
+      }
+
+      // 100% MASTERED -> Unlock Full Solution, Paraphrase Mapping & Click-to-Dictionary!
+      stopTimer();
+      stopReadingAntiCheat();
+      s.mode = 'review';
+      s.wrongSet = {};
+      allQ.forEach((q) => { s.lockedCorrect[q._qid] = true; });
+      s.reviewResult = res;
+
+      const first = s.firstAttemptResult || res;
       ReadingPracticeStore.recordAttempt({
-        itemId: state.session.itemId, title: state.session.title, source: state.session.source,
-        isFull: state.session.isFull, score: res.score, total: res.total,
-        band: res.band, elapsedSec: res.elapsedSec, completedAt: Date.now()
+        itemId: s.itemId, title: s.title, source: s.source,
+        isFull: s.isFull, score: first.score, total: res.total,
+        band: first.band, elapsedSec: res.elapsedSec,
+        mastered: true, attempts: s.attemptCount, completedAt: Date.now()
       });
 
       renderExamWorkspace();
-      toast(`Hoàn thành! Đúng ${res.score}/${res.total} · Band dự kiến ${res.band.toFixed(1)}`);
+      toast(`Xuất sắc! Đúng 100% (${s.attemptCount} lần nộp · Band lần đầu ${first.band.toFixed(1)}) — Solution & Từ điển đã mở khóa!`);
+    },
+
+    jumpToNextWrong() {
+      if (!state.session) return;
+      const allQ = getAllSessionQuestions();
+      const wrongList = allQ.filter((q) => !!state.session.wrongSet?.[q._qid]);
+      if (!wrongList.length) return;
+      const curIdx = wrongList.findIndex((q) => q._qid === state.session.activeQid);
+      const target = wrongList[(curIdx + 1) % wrongList.length];
+      if (target) this.jumpToQuestion(target._pIdx, target._qid);
+    },
+
+    dismissAntiCheatNotice() {
+      if (!state.session) return;
+      state.session.antiCheatNotice = '';
+      renderExamWorkspace();
     },
 
     retryCurrent() {
@@ -2687,12 +2979,12 @@
       }, 40);
     },
 
-    /* ---------- SELECTION & RIGHT-CLICK PASTEL HIGHLIGHT POPOVER ---------- */
+    /* ---------- SELECTION & PASTEL HIGHLIGHT POPOVER (Suppresses Edge Mini Menu!) ---------- */
     _positionSelectionPopover(rect) {
       const bar = document.getElementById('rp-hl-toolbar');
       if (!bar || !rect) return;
       const isPrac = state.session?.studyMode === 'practice';
-      const estW = isPrac ? 320 : 230;
+      const estW = isPrac ? 290 : 220;
       const left = Math.max(12, Math.min(window.innerWidth - estW - 12, rect.left + rect.width / 2 - estW / 2));
       const preferTop = rect.top - 52;
       const top = preferTop >= 62 ? preferTop : Math.max(62, rect.bottom + 8);
@@ -2701,73 +2993,111 @@
       bar.classList.remove('hidden');
     },
 
+    onPassageMouseDown(ev) {
+      if (ev.target && ev.target.closest && ev.target.closest('#rp-hl-toolbar')) return;
+      state.pendingSelection = null;
+      clearSelectionPreview();
+      this.hideHighlightToolbar();
+    },
+
     handlePassageSelection() {
+      const s = state.session;
       const sel = window.getSelection();
       const bar = document.getElementById('rp-hl-toolbar');
-      if (!bar) return;
+      if (!s || !bar) return;
       if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-        bar.classList.add('hidden');
+        if (!state.pendingSelection) bar.classList.add('hidden');
         return;
       }
       const range = sel.getRangeAt(0);
       const pane = document.getElementById('rp-passage-content');
       if (!pane || !pane.contains(range.commonAncestorContainer)) {
+        state.pendingSelection = null;
+        clearSelectionPreview();
         bar.classList.add('hidden');
         return;
       }
-      // Practice PRO "Tô nhanh" auto-brush mode: highlight immediately on drag-release
-      if (state.session?.studyMode === 'practice' && state.session?.brushAuto) {
-        this.applyHighlight(state.session.activePenColor || 'yellow');
+
+      const passages = getSessionPassages();
+      const curPassage = passages[s.activePassageIdx] || passages[0];
+      if (!curPassage) return;
+
+      const text = sel.toString().trim();
+      const rect = range.getBoundingClientRect();
+      const slices = getSelectionParaOffsets(range);
+      const parentEl = range.commonAncestorContainer.nodeType === 1
+        ? range.commonAncestorContainer
+        : range.commonAncestorContainer.parentElement;
+      const context = extractSentenceForNode(parentEl);
+
+      if (!slices.length) {
+        bar.classList.add('hidden');
         return;
       }
-      this._positionSelectionPopover(range.getBoundingClientRect());
+
+      // Cache selection & IMMEDIATELY collapse native browser selection so Microsoft Edge's Mini Menu NEVER pops up!
+      state.pendingSelection = { passageId: curPassage.id, slices, text, rect, context };
+      try { sel.removeAllRanges(); } catch (_) {}
+      renderSelectionPreview(slices);
+      this._positionSelectionPopover(rect);
     },
 
     handlePassageContextMenu(ev) {
+      // Block browser right-click menu ("Search with Bing / Translate / Copilot") during active sessions!
+      if (isReadingAntiCheatActive()) {
+        ev.preventDefault();
+        if (state.pendingSelection?.rect) {
+          this._positionSelectionPopover(state.pendingSelection.rect);
+        }
+        return;
+      }
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed && sel.toString().trim()) {
         ev.preventDefault();
-        this._positionSelectionPopover(sel.getRangeAt(0).getBoundingClientRect());
+        this.handlePassageSelection();
       }
     },
 
     hideHighlightToolbar() {
       document.getElementById('rp-hl-toolbar')?.classList.add('hidden');
+      state.pendingSelection = null;
+      clearSelectionPreview();
     },
 
     applyHighlight(color) {
       const s = state.session;
-      const sel = window.getSelection();
-      if (!s || !sel || sel.isCollapsed) return;
+      if (!s) return;
       const passages = getSessionPassages();
       const curPassage = passages[s.activePassageIdx] || passages[0];
       if (!curPassage) return;
 
-      const penColor = color || (s.studyMode === 'practice' ? s.activePenColor : 'yellow') || 'yellow';
-      if (s.studyMode === 'practice' && PASTEL_PENS.some((p) => p.id === penColor)) {
-        s.activePenColor = penColor;
-        document.querySelectorAll('#prac-pen-bar .prac-pen-chip').forEach((btn) => {
-          const isAct = btn.dataset.penColor === penColor;
-          btn.classList.toggle('active', isAct);
-          btn.setAttribute('aria-pressed', isAct ? 'true' : 'false');
-        });
-        document.querySelectorAll('#rp-hl-toolbar .prac-pop-dot').forEach((dot) => {
-          dot.classList.toggle('is-active', dot.dataset.popColor === penColor);
-        });
+      let slices = (state.pendingSelection && state.pendingSelection.passageId === curPassage.id)
+        ? state.pendingSelection.slices
+        : [];
+      if (!slices.length) {
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed) slices = getSelectionParaOffsets(sel.getRangeAt(0));
       }
-
-      const range = sel.getRangeAt(0);
-      const slices = getSelectionParaOffsets(range);
       if (!slices.length) {
         toast('Hãy bôi đen trực tiếp trên đoạn văn để highlight.');
         this.hideHighlightToolbar();
         return;
       }
+
+      const penColor = color || (s.studyMode === 'practice' ? s.activePenColor : 'yellow') || 'yellow';
+      if (s.studyMode === 'practice' && PASTEL_PENS.some((p) => p.id === penColor)) {
+        s.activePenColor = penColor;
+        document.querySelectorAll('#rp-hl-toolbar .prac-pop-dot').forEach((dot) => {
+          dot.classList.toggle('is-active', dot.dataset.popColor === penColor);
+        });
+      }
+
+      clearSelectionPreview();
       slices.forEach((sl) => mergeOrAddHighlight(curPassage.id, sl.paraIdx, sl.start, sl.end, penColor));
       applyStoredHighlightsToPassage(curPassage.id);
       updatePracticeHighlightBadge(curPassage.id);
       persistDraft();
-      sel.removeAllRanges();
+      window.getSelection()?.removeAllRanges();
       this.hideHighlightToolbar();
     },
 
@@ -2777,8 +3107,14 @@
       const passages = getSessionPassages();
       const curPassage = passages[s.activePassageIdx] || passages[0];
       if (!curPassage) return;
-      const sel = window.getSelection();
-      const slices = (sel && !sel.isCollapsed) ? getSelectionParaOffsets(sel.getRangeAt(0)) : [];
+      let slices = (state.pendingSelection && state.pendingSelection.passageId === curPassage.id)
+        ? state.pendingSelection.slices
+        : [];
+      if (!slices.length) {
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed) slices = getSelectionParaOffsets(sel.getRangeAt(0));
+      }
+      clearSelectionPreview();
       if (slices.length) {
         slices.forEach((sl) => removeHighlightRange(curPassage.id, sl.paraIdx, sl.start, sl.end));
       } else {
@@ -2787,7 +3123,7 @@
       applyStoredHighlightsToPassage(curPassage.id);
       updatePracticeHighlightBadge(curPassage.id);
       persistDraft();
-      sel?.removeAllRanges();
+      window.getSelection()?.removeAllRanges();
       this.hideHighlightToolbar();
     },
 
@@ -2798,6 +3134,7 @@
       const curPassage = passages[s.activePassageIdx] || passages[0];
       if (!curPassage) return;
       if (s.highlights) s.highlights[curPassage.id] = [];
+      clearSelectionPreview();
       applyStoredHighlightsToPassage(curPassage.id);
       updatePracticeHighlightBadge(curPassage.id);
       persistDraft();
@@ -2806,20 +3143,28 @@
     },
 
     lookupSelectedPhrase() {
+      const s = state.session;
+      // STRICT RULE: Dictionary strictly locked until 100% completion (Review) or News!
+      if (!s || !(s.mode === 'review' || s.isNews)) {
+        toast('Từ điển bị khóa trong lúc làm bài — hoàn thành 100% để mở khóa!');
+        this.hideHighlightToolbar();
+        return;
+      }
+      const pending = state.pendingSelection;
       const sel = window.getSelection();
-      if (!sel || sel.isCollapsed) return;
-      const text = sel.toString().trim();
+      const text = ((pending && pending.text) || (sel ? sel.toString() : '')).trim();
       if (!text) return;
-      const range = sel.getRangeAt(0);
-      const parentEl = range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
-      const ctx = extractSentenceForNode(parentEl);
+      const rect = pending?.rect || (sel && !sel.isCollapsed ? sel.getRangeAt(0).getBoundingClientRect() : null);
+      const ctx = pending?.context || '';
       this.hideHighlightToolbar();
-      showDictPopover(text, ctx, range.getBoundingClientRect());
+      showDictPopover(text, ctx, rect);
     },
 
     handlePassageWordClick(ev) {
       const s = state.session;
-      if (!s || !(s.mode === 'review' || s.isNews || s.studyMode === 'practice')) return;
+      // STRICT RULE: Click-to-Dictionary ONLY unlocked in Review (after 100% mastery) or News!
+      if (!s || !(s.mode === 'review' || s.isNews)) return;
+      if (state.pendingSelection) return;
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) return;
       const wordEl = ev.target.closest('.rp-word');
