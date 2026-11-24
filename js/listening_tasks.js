@@ -1,0 +1,934 @@
+/* =========================================================
+   TOTORO IELTS MASTER — IELTS LISTENING 3-TEST TASK ENGINE
+   ---------------------------------------------------------
+   Locked-in Rules (listening_spec.md):
+   - NO replay button during ANY test (Test 1, Test 2, Test 3).
+   - Test 1: 100% of Task words (e.g., 30/30) One-Shot Audio Dictation.
+   - Test 2: 12 Short Conversations MCQ (2 speakers, roundabout distractors + paraphrase).
+   - Test 3: Real Cambridge Note Completion (10s prediction -> 1-shot audio ->
+             2-Column Compare: LEFT = 3-Color Transcript + Replay, RIGHT = Marked Note Sheet).
+   - NO blocking pass-gates: finishing each test scores & saves immediately ("làm được nhiêu ghi nhận bấy nhiêu").
+   ========================================================= */
+(function () {
+  'use strict';
+
+  const PROGRESS_KEY_BASE = 'totoro_listening_task_progress_v1_';
+
+  let activeSuiteKey = 'part1';
+  let examState = null;
+  let audioSeqId = 0;
+  let preReadTimer = null;
+  let t1CountdownTimer = null;
+  let t1DeadlineAt = 0;
+
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function getUid() {
+    return window.__VOCAB_BRIDGE__?.getScopedUid?.() || 'guest';
+  }
+
+  function loadProgress() {
+    try {
+      return JSON.parse(localStorage.getItem(PROGRESS_KEY_BASE + getUid()) || '{}') || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function saveProgress(map) {
+    try {
+      localStorage.setItem(PROGRESS_KEY_BASE + getUid(), JSON.stringify(map || {}));
+    } catch (_) {}
+  }
+
+  function getTasksData() {
+    return window.APP_LISTENING_TASKS || { suites: [], tasks: [] };
+  }
+
+  function getVocabMap() {
+    const v = window.APP_LISTENING_VOCAB || {};
+    const map = {};
+    [...(v.target_all || []), ...(v.foundation || []), ...(v.cues_40 || [])].forEach((w) => {
+      if (w && w.id) map[w.id] = w;
+    });
+    return map;
+  }
+
+  function resolveTaskWords(task) {
+    if (!task) return [];
+    const map = getVocabMap();
+    return (task.wordIds || []).map((id) => map[id]).filter(Boolean);
+  }
+
+  function getMasteredCount(task) {
+    const assess = window.__VOCAB_BRIDGE__?.getAssessments?.() || {};
+    return (task.wordIds || []).filter((id) => assess[id] === 3).length;
+  }
+
+  /* ---------------------------------------------------------
+     MULTI-SPEAKER ONE-SHOT AUDIO ENGINE (UK / AU / US · M/F)
+     --------------------------------------------------------- */
+  function stopAllAudio() {
+    audioSeqId += 1;
+    if (preReadTimer) { clearInterval(preReadTimer); preReadTimer = null; }
+    if (t1CountdownTimer) { clearInterval(t1CountdownTimer); t1CountdownTimer = null; }
+    try { window.AppCore?.audio?.stop?.(); } catch (_) {}
+    try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (_) {}
+  }
+
+  function pickSpeechVoice(accent, speakerName) {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (!voices.length) return null;
+    const langPref = String(accent || 'en-GB').toLowerCase();
+    const isMale = /\b(man|male|tom|john|david|mark|alex|ben|ryan|lecturer|tutor|professor|guide)\b/i.test(String(speakerName || ''));
+    const maleRe = /\b(daniel|ryan|george|david|mark|guy|james|william|alex|andrew|brian|oliver|arthur|male)\b/i;
+    const femaleRe = /\b(sonia|libby|serena|martha|karen|natasha|samantha|jenny|aria|zira|hazel|susan|kate|female)\b/i;
+
+    const langMatches = voices.filter((v) => String(v.lang || '').toLowerCase().startsWith(langPref.slice(0, 5)))
+      || voices.filter((v) => String(v.lang || '').toLowerCase().startsWith('en'));
+    const pool = langMatches.length ? langMatches : voices.filter((v) => /^en/i.test(v.lang || ''));
+    if (!pool.length) return null;
+
+    const genderMatch = pool.find((v) => (isMale ? maleRe : femaleRe).test(v.name || ''));
+    return genderMatch || pool[0];
+  }
+
+  function speakUtteranceAsync(text, accent, speakerName, rate, mySeq) {
+    return new Promise((resolve) => {
+      if (mySeq !== audioSeqId) return resolve(false);
+      const clean = String(text || '').trim();
+      if (!clean) return resolve(true);
+
+      if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+        if (window.AppCore?.audio) {
+          window.AppCore.audio.speak(clean, { accent: accent || 'en-GB', rate: rate || 0.96, respectCustom: false });
+        }
+        setTimeout(() => resolve(mySeq === audioSeqId), Math.max(900, clean.split(/\s+/).length * 420));
+        return;
+      }
+
+      try {
+        window.speechSynthesis.cancel();
+        const utt = new SpeechSynthesisUtterance(clean);
+        utt.lang = accent || 'en-GB';
+        utt.rate = rate || 0.96;
+        const v = pickSpeechVoice(accent, speakerName);
+        if (v) utt.voice = v;
+        let settled = false;
+        const done = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(watchdog);
+          resolve(mySeq === audioSeqId);
+        };
+        const estMs = Math.max(2500, clean.split(/\s+/).length * 520 + 2500);
+        const watchdog = setTimeout(done, estMs);
+        utt.onend = done;
+        utt.onerror = done;
+        window.speechSynthesis.speak(utt);
+      } catch (_) {
+        resolve(mySeq === audioSeqId);
+      }
+    });
+  }
+
+  async function playTurnsOneShot(turns, opts = {}) {
+    stopAllAudio();
+    const mySeq = audioSeqId;
+    const rate = opts.rate || 0.96;
+    for (let i = 0; i < turns.length; i++) {
+      if (mySeq !== audioSeqId) return false;
+      const t = turns[i];
+      opts.onTurn?.(i, t);
+      const ok = await speakUtteranceAsync(t.text, t.accent || 'en-GB', t.speaker || '', rate, mySeq);
+      if (!ok || mySeq !== audioSeqId) return false;
+      if (i < turns.length - 1) {
+        await new Promise((r) => setTimeout(r, opts.gapMs || 320));
+      }
+    }
+    if (mySeq === audioSeqId) opts.onDone?.();
+    return mySeq === audioSeqId;
+  }
+
+  function speakSingleWordOneShot(word, accent, onDone) {
+    stopAllAudio();
+    const mySeq = audioSeqId;
+    const chosenAccent = accent || (Math.random() < 0.65 ? 'en-GB' : 'en-US');
+    if (window.AppCore?.audio && !navigator.webdriver) {
+      window.AppCore.audio.speak(word, { accent: chosenAccent, rate: 0.93, engine: 'auto', respectCustom: false });
+      setTimeout(() => { if (mySeq === audioSeqId) onDone?.(); }, 1050);
+      return;
+    }
+    speakUtteranceAsync(word, chosenAccent, 'Woman', 0.92, mySeq).then(() => {
+      if (mySeq === audioSeqId) onDone?.();
+    });
+  }
+
+  /* ---------------------------------------------------------
+     SPELLING DIAGNOSTIC ENGINE (100% EXACT CAMBRIDGE CHECK)
+     --------------------------------------------------------- */
+  function normalizeSpelling(raw) {
+    return String(raw || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  }
+
+  function diagnoseSpellingError(typedRaw, expectedRaw, acceptedList) {
+    const typed = normalizeSpelling(typedRaw);
+    const expected = normalizeSpelling(expectedRaw);
+    const allOk = [expected, ...(acceptedList || []).map(normalizeSpelling)].filter(Boolean);
+    if (allOk.includes(typed)) {
+      return { correct: true, note: '' };
+    }
+    if (!typed) {
+      return { correct: false, note: 'Bỏ trống' };
+    }
+    // Check missing or extra plural -s/-es
+    if (typed + 's' === expected || typed + 'es' === expected) {
+      return { correct: false, note: 'Thiếu đuôi số nhiều (-s/-es)' };
+    }
+    if (expected + 's' === typed || expected + 'es' === typed) {
+      return { correct: false, note: 'Thừa đuôi số nhiều (-s/-es)' };
+    }
+    // Check UK/US spelling tolerance (colour/color, centre/center, programme/program)
+    const ukUsNorm = (s) => s.replace(/our$/g, 'or').replace(/ise$/g, 'ize').replace(/re$/g, 'er').replace(/ll$/g, 'l');
+    if (ukUsNorm(typed) === ukUsNorm(expected)) {
+      return { correct: true, note: 'Chấp nhận chính tả UK/US' };
+    }
+    // Check double letter slip (e.g. acommodation vs accommodation)
+    if (typed.replace(/([a-z])\1+/g, '$1') === expected.replace(/([a-z])\1+/g, '$1')) {
+      return { correct: false, note: 'Lỗi chữ đôi (double letter)' };
+    }
+    return { correct: false, note: 'Sai chính tả' };
+  }
+
+  /* ---------------------------------------------------------
+     DEDICATED LISTENING TASK HUB (Inside #screen-tasks-hub)
+     --------------------------------------------------------- */
+  function renderHub(tabsEl, gridEl) {
+    const data = getTasksData();
+    const suites = data.suites || [];
+    const tasks = data.tasks || [];
+    const progress = loadProgress();
+
+    const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
+    const subEl = document.getElementById('inline-task-sub');
+    const doneCount = Object.values(progress).filter((p) => p && p.completed).length;
+    if (titleEl) titleEl.textContent = 'IELTS Listening Tasks';
+    if (subEl) {
+      subEl.textContent = `${tasks.length} Task (${(window.APP_LISTENING_VOCAB?.meta?.total_words || 3864).toLocaleString('vi-VN')} từ Listening · 30 từ/Task) · Đã hoàn thành ${doneCount} Task · Không nút nghe lại khi Test.`;
+    }
+
+    if (!suites.some((s) => s.key === activeSuiteKey) && suites.length) {
+      activeSuiteKey = suites[0].key;
+    }
+
+    if (tabsEl) {
+      tabsEl.innerHTML = suites.map((s) => `
+        <button type="button" class="tot-seg-btn ${activeSuiteKey === s.key ? 'active' : ''}" onclick="ListeningTasksModule.switchSuite('${esc(s.key)}')">${esc(s.label)}</button>
+      `).join('');
+    }
+
+    const filtered = tasks.filter((t) => t.suite === activeSuiteKey);
+    if (!gridEl) return;
+
+    gridEl.innerHTML = filtered.map((t) => {
+      const totalW = (t.wordIds || []).length;
+      const mastered = getMasteredCount(t);
+      const pct = totalW ? Math.round((mastered / totalW) * 100) : 0;
+      const rec = progress[t.id] || null;
+      const hasFull3 = Boolean(t.hasFullTests);
+      const scoreBadges = rec
+        ? `<div class="lt-score-strip">
+             ${rec.t1Total ? `<span class="lt-score-chip">T1 ${rec.t1Score}/${rec.t1Total}</span>` : ''}
+             ${rec.t2Total ? `<span class="lt-score-chip">T2 ${rec.t2Score}/${rec.t2Total}</span>` : ''}
+             ${rec.t3Total ? `<span class="lt-score-chip">T3 ${rec.t3Score}/${rec.t3Total}</span>` : ''}
+           </div>`
+        : '';
+
+      return `
+        <article class="tot-task-card lt-task-card ${rec?.completed ? 'is-done' : ''} ${hasFull3 ? 'is-flagship' : ''}">
+          <div class="lt-card-top">
+            <span class="lt-part-badge">${esc(t.partLabel || 'Listening')}</span>
+            ${hasFull3
+              ? '<span class="lt-flagship-tag">Đủ 3 Test Cambridge</span>'
+              : '<span class="lt-t1-tag">Test 1 (30/30)</span>'}
+          </div>
+          <div class="lt-card-title">${esc(t.label)} · ${esc(t.theme || t.topicTitle || '')}</div>
+          <div class="lt-card-sub tabular">Đã thuộc ${mastered}/${totalW} từ (${pct}%)</div>
+          <div class="lt-prog-track"><div class="lt-prog-fill" style="width:${pct}%"></div></div>
+          ${scoreBadges}
+          <div class="lt-card-actions">
+            <button type="button" class="btn-subtle lt-btn-sm" onclick="ListeningTasksModule.studyTaskWords('${esc(t.id)}')">Học ${totalW} từ</button>
+            <button type="button" class="btn btn-primary lt-btn-sm" onclick="ListeningTasksModule.openExam('${esc(t.id)}')">
+              ${hasFull3 ? 'Vào 3 Test →' : 'Làm Test 1 →'}
+            </button>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  /* ---------------------------------------------------------
+     MODAL SHELL FOR LISTENING 3-TEST EXAM
+     --------------------------------------------------------- */
+  function ensureExamModal() {
+    let el = document.getElementById('modal-listening-exam');
+    if (el) return el;
+    el = document.createElement('div');
+    el.className = 'modal-overlay task-exam-overlay';
+    el.id = 'modal-listening-exam';
+    el.setAttribute('aria-label', 'Bài Test IELTS Listening');
+    el.innerHTML = `
+      <div class="modal-card lt-exam-card" onclick="event.stopPropagation()">
+        <div class="modal-header lt-exam-header">
+          <div style="display:flex; align-items:center; gap:10px; min-width:0; flex-wrap:wrap;">
+            <span class="tip-pill" id="lt-exam-stage-pill" style="margin:0;">TEST 1 · NGHE &amp; VIẾT</span>
+            <div class="modal-title" id="lt-exam-title" style="font-size:16.5px;">Listening Task</div>
+          </div>
+          <button type="button" class="btn-icon-glass" style="width:34px; height:34px;" onclick="ListeningTasksModule.closeExam()" title="Đóng">✕</button>
+        </div>
+        <div class="modal-body lt-exam-body" id="lt-exam-body"></div>
+      </div>
+    `;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function closeExam() {
+    stopAllAudio();
+    document.getElementById('modal-listening-exam')?.classList.remove('open');
+    examState = null;
+    window.TotoroUI?.renderInlineTaskHub?.();
+  }
+
+  function openExam(taskId) {
+    const task = (getTasksData().tasks || []).find((t) => t.id === taskId);
+    if (!task) return;
+    const words = resolveTaskWords(task);
+    if (!words.length) {
+      window.__VOCAB_BRIDGE__?.showToast?.('Chưa nạp được danh sách từ của Task này.');
+      return;
+    }
+
+    stopAllAudio();
+    const shuffled = words.slice().sort(() => Math.random() - 0.5);
+    examState = {
+      task,
+      words: shuffled,
+      stage: 1, // 1 | 2 | 3
+      // Test 1 state (100% of Task words!)
+      t1Idx: 0,
+      t1Results: [],
+      t1Done: false,
+      t1Playing: false,
+      // Test 2 state (12 Short Conversations MCQ)
+      t2Idx: 0,
+      t2Answers: {},
+      t2Done: false,
+      t2Phase: 'preread', // 'preread' | 'playing' | 'answer'
+      // Test 3 state (Note Completion + 2-Column Compare)
+      t3Phase: 'preread', // 'preread' | 'playing' | 'submitted'
+      t3Inputs: {},
+      t3Score: 0,
+      t3Details: [],
+    };
+
+    const modal = ensureExamModal();
+    modal.classList.add('open');
+    renderExamStage();
+  }
+
+  function saveTaskStageScore(completedAll = false) {
+    if (!examState) return;
+    const map = loadProgress();
+    const tid = examState.task.id;
+    const prev = map[tid] || {};
+    const t1Score = examState.t1Results.filter((r) => r.correct).length;
+    const t1Total = examState.words.length;
+    const t2Convs = examState.task.test2Conversations || [];
+    const t2Score = t2Convs.reduce((acc, c, i) => acc + (examState.t2Answers[i] === c.answerIndex ? 1 : 0), 0);
+    const t2Total = t2Convs.length;
+    const t3Blanks = examState.task.test3NoteCompletion?.blanks || [];
+
+    map[tid] = {
+      ...prev,
+      t1Score: examState.t1Done ? t1Score : prev.t1Score,
+      t1Total: examState.t1Done ? t1Total : prev.t1Total,
+      t2Score: examState.t2Done ? t2Score : prev.t2Score,
+      t2Total: examState.t2Done ? t2Total : prev.t2Total,
+      t3Score: examState.t3Phase === 'submitted' ? examState.t3Score : prev.t3Score,
+      t3Total: examState.t3Phase === 'submitted' ? t3Blanks.length : prev.t3Total,
+      completed: Boolean(prev.completed || completedAll),
+      updatedAt: Date.now(),
+    };
+    saveProgress(map);
+  }
+
+  function renderExamStage() {
+    if (!examState) return;
+    const pill = document.getElementById('lt-exam-stage-pill');
+    const title = document.getElementById('lt-exam-title');
+    if (title) title.textContent = `${examState.task.label} · ${examState.task.theme || examState.task.topicTitle || ''}`;
+
+    if (examState.stage === 1) {
+      if (pill) pill.textContent = `TEST 1 · NGHE & VIẾT (${examState.words.length}/${examState.words.length} TỪ)`;
+      renderTest1();
+    } else if (examState.stage === 2) {
+      if (pill) pill.textContent = 'TEST 2 · SHORT CONVERSATIONS MCQ (12 CÂU)';
+      renderTest2();
+    } else {
+      if (pill) pill.textContent = 'TEST 3 · THỰC CHIẾN NOTE COMPLETION';
+      renderTest3();
+    }
+  }
+
+  /* ---------------------------------------------------------
+     TEST 1: 100% TASK WORDS ONE-SHOT DICTATION (NO REPLAY!)
+     --------------------------------------------------------- */
+  function renderTest1() {
+    const body = document.getElementById('lt-exam-body');
+    if (!body || !examState) return;
+    stopAllAudio();
+
+    if (examState.t1Done) {
+      const score = examState.t1Results.filter((r) => r.correct).length;
+      const total = examState.words.length;
+      const pct = Math.round((score / Math.max(1, total)) * 100);
+      const hasT2 = Boolean(examState.task.test2Conversations?.length);
+
+      body.innerHTML = `
+        <div class="lt-summary-card">
+          <div class="lt-sum-top">
+            <div>
+              <div class="lt-sum-kicker">HOÀN THÀNH TEST 1 — ĐÃ CHẤM &amp; LƯU ĐIỂM</div>
+              <div class="lt-sum-score tabular">${score} / ${total} từ đúng (${pct}%)</div>
+            </div>
+            <div class="lt-sum-actions">
+              ${hasT2
+                ? `<button type="button" class="btn btn-primary" onclick="ListeningTasksModule.goToStage(2)">Sang Test 2 (12 Hội Thoại) →</button>`
+                : `<button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeExam()">Hoàn tất &amp; Quay lại</button>`}
+            </div>
+          </div>
+          <div class="lt-review-table-wrap">
+            <table class="lt-review-table">
+              <thead><tr><th>#</th><th>Từ chuẩn</th><th>Bạn viết</th><th>Kết quả</th><th>Nghe lại</th></tr></thead>
+              <tbody>
+                ${examState.t1Results.map((r, i) => `
+                  <tr class="${r.correct ? 'is-ok' : 'is-err'}">
+                    <td>${i + 1}</td>
+                    <td><strong>${esc(r.expected)}</strong> <small style="color:var(--ink-3);">${esc(r.ipa || '')}</small></td>
+                    <td>${esc(r.typed || '—')}</td>
+                    <td>${r.correct ? '<span class="lt-tag-ok">✓ Đúng</span>' : `<span class="lt-tag-err">✗ ${esc(r.note)}</span>`}</td>
+                    <td><button type="button" class="lt-mini-play" onclick="ListeningTasksModule.replayAfterSubmit('${esc(r.expected)}','en-GB')">🔊</button></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const idx = examState.t1Idx;
+    const total = examState.words.length;
+    const item = examState.words[idx];
+    const pct = Math.round((idx / Math.max(1, total)) * 100);
+
+    body.innerHTML = `
+      <div class="lt-t1-stage">
+        <div class="lt-progress-row">
+          <span class="tabular"><strong>Câu ${idx + 1} / ${total}</strong> (Nghe đủ 100% từ của Task)</span>
+          <span class="lt-timer-pill tabular" id="lt-t1-timer">10s</span>
+        </div>
+        <div class="lt-prog-track"><div class="lt-prog-fill" style="width:${pct}%"></div></div>
+
+        <div class="lt-oneshot-strip is-playing" id="lt-t1-audio-strip">
+          <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          <span id="lt-t1-audio-text">🔊 Đang phát âm (1 lần duy nhất — không phát lại)…</span>
+        </div>
+
+        <div class="lt-t1-cue">
+          <span class="rl-cue-pos">${esc(item.pos || 'vocab')}</span>
+          <span class="lt-t1-meaning">${esc(item.clean_meaning || item.meaning || '')}</span>
+          ${item.spelling_trap ? `<span class="lt-trap-pill">⚠️ ${esc(item.spelling_trap)}</span>` : ''}
+        </div>
+
+        <form class="lt-t1-form" onsubmit="ListeningTasksModule.submitT1Word(event)">
+          <input type="text" class="recall-word-input lt-t1-input" id="lt-t1-input" placeholder="Gõ chính tả từ vừa nghe..." autocomplete="off" autocapitalize="none" spellcheck="false" />
+          <div class="lt-t1-footer">
+            <span class="lt-hint-quiet">Gõ xong bấm <strong>Enter</strong> · Không phát lại âm thanh</span>
+            <button type="submit" class="btn btn-primary">Xác nhận &amp; Câu tiếp →</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    const inp = document.getElementById('lt-t1-input');
+    setTimeout(() => inp?.focus(), 40);
+
+    // Play word ONCE (no replay button!), start 10s timer right after audio finishes
+    const accent = idx % 3 === 0 ? 'en-AU' : (idx % 2 === 0 ? 'en-GB' : 'en-US');
+    speakSingleWordOneShot(item.lemma, accent, () => {
+      if (!examState || examState.stage !== 1 || examState.t1Idx !== idx) return;
+      const strip = document.getElementById('lt-t1-audio-strip');
+      const txt = document.getElementById('lt-t1-audio-text');
+      if (strip) strip.classList.remove('is-playing');
+      if (txt) txt.textContent = '✓ Đã phát xong (1/1) — Hãy gõ chính tả ngay!';
+      t1DeadlineAt = Date.now() + 10000;
+      t1CountdownTimer = setInterval(() => {
+        const rem = Math.max(0, Math.ceil((t1DeadlineAt - Date.now()) / 1000));
+        const el = document.getElementById('lt-t1-timer');
+        if (el) {
+          el.textContent = `${rem}s`;
+          el.classList.toggle('is-urgent', rem <= 3);
+        }
+        if (rem <= 0) {
+          submitT1Word(null, true);
+        }
+      }, 200);
+    });
+  }
+
+  function submitT1Word(event, isTimeout = false) {
+    if (event) event.preventDefault();
+    if (!examState || examState.stage !== 1 || examState.t1Done) return;
+    stopAllAudio();
+
+    const item = examState.words[examState.t1Idx];
+    const inp = document.getElementById('lt-t1-input');
+    const typed = String(inp?.value || '').trim();
+    const diag = diagnoseSpellingError(typed, item.lemma, item.clean_forms ? [] : []);
+    examState.t1Results.push({
+      expected: item.lemma,
+      ipa: item.ipa || '',
+      typed,
+      correct: diag.correct,
+      note: isTimeout && !typed ? 'Hết 10 giây' : diag.note,
+    });
+
+    if (examState.t1Idx + 1 >= examState.words.length) {
+      examState.t1Done = true;
+      const hasT2 = Boolean(examState.task.test2Conversations?.length);
+      saveTaskStageScore(!hasT2);
+    } else {
+      examState.t1Idx += 1;
+    }
+    renderTest1();
+  }
+
+  /* ---------------------------------------------------------
+     TEST 2: 12 SHORT CONVERSATIONS MCQ (ROUNDABOUT + PARAPHRASE)
+     --------------------------------------------------------- */
+  function renderTest2() {
+    const body = document.getElementById('lt-exam-body');
+    if (!body || !examState) return;
+    stopAllAudio();
+
+    const convs = examState.task.test2Conversations || [];
+    if (!convs.length) {
+      goToStage(3);
+      return;
+    }
+
+    if (examState.t2Done) {
+      const score = convs.reduce((acc, c, i) => acc + (examState.t2Answers[i] === c.answerIndex ? 1 : 0), 0);
+      const pct = Math.round((score / Math.max(1, convs.length)) * 100);
+      const hasT3 = Boolean(examState.task.test3NoteCompletion);
+
+      body.innerHTML = `
+        <div class="lt-summary-card">
+          <div class="lt-sum-top">
+            <div>
+              <div class="lt-sum-kicker">HOÀN THÀNH TEST 2 — ĐÃ CHẤM &amp; LƯU ĐIỂM</div>
+              <div class="lt-sum-score tabular">${score} / ${convs.length} câu đúng (${pct}%)</div>
+            </div>
+            <div class="lt-sum-actions">
+              ${hasT3
+                ? `<button type="button" class="btn btn-primary" onclick="ListeningTasksModule.goToStage(3)">Sang Test 3 (Note Completion) →</button>`
+                : `<button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeExam()">Hoàn tất &amp; Quay lại</button>`}
+            </div>
+          </div>
+          <div class="lt-t2-review-list">
+            ${convs.map((c, i) => {
+              const picked = examState.t2Answers[i];
+              const ok = picked === c.answerIndex;
+              const letters = ['A', 'B', 'C'];
+              return `
+                <div class="lt-t2-rev-item ${ok ? 'is-ok' : 'is-err'}">
+                  <div class="lt-t2-rev-head">
+                    <strong>Câu ${i + 1} (${esc(c.level || 'Part 1')})</strong>
+                    <span>${ok ? '✓ Đúng' : `✗ Chọn ${picked != null ? letters[picked] : '—'} · Đúng: ${letters[c.answerIndex]}`}</span>
+                  </div>
+                  <div class="lt-t2-rev-q">${esc(c.question)}</div>
+                  <div class="lt-t2-rev-ans">Đáp án chuẩn: <strong>${letters[c.answerIndex]}. ${esc(c.options[c.answerIndex])}</strong></div>
+                  <div class="lt-t2-rev-note">💡 ${esc(c.paraphraseNote || '')}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const idx = examState.t2Idx;
+    const c = convs[idx];
+    const letters = ['A', 'B', 'C'];
+    const picked = examState.t2Answers[idx];
+
+    body.innerHTML = `
+      <div class="lt-t2-stage">
+        <div class="lt-progress-row">
+          <span class="tabular"><strong>Hội thoại ${idx + 1} / ${convs.length}</strong> · <span class="lt-part-badge">${esc(c.level || 'Part 1')}</span></span>
+          <span class="lt-timer-pill" id="lt-t2-status-pill">Đọc đề: 5s</span>
+        </div>
+        <div class="lt-prog-track"><div class="lt-prog-fill" style="width:${Math.round((idx / convs.length) * 100)}%"></div></div>
+
+        <div class="lt-oneshot-strip" id="lt-t2-audio-strip">
+          <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          <span id="lt-t2-audio-text">Đọc nhanh câu hỏi &amp; 3 phương án trước khi hội thoại tự phát (1 lần duy nhất)…</span>
+        </div>
+
+        <div class="lt-t2-question">${esc(c.question)}</div>
+        <div class="lt-t2-options" id="lt-t2-options">
+          ${(c.options || []).map((opt, oi) => `
+            <button type="button" class="lt-mcq-opt ${picked === oi ? 'is-selected' : ''}" onclick="ListeningTasksModule.pickT2Option(${oi})">
+              <span class="lt-mcq-key">${letters[oi]}</span>
+              <span class="lt-mcq-txt">${esc(opt)}</span>
+            </button>
+          `).join('')}
+        </div>
+
+        <div class="lt-t2-footer">
+          <span class="lt-hint-quiet">Hội thoại 2 người chỉ phát 1 lần · Chọn A, B hoặc C rồi bấm Tiếp tục</span>
+          <button type="button" class="btn btn-primary" id="btn-lt-t2-next" onclick="ListeningTasksModule.nextT2Question()" ${picked == null ? 'disabled' : ''}>
+            ${idx + 1 === convs.length ? 'Nộp & Chấm Test 2 →' : 'Câu tiếp theo →'}
+          </button>
+        </div>
+      </div>
+    `;
+
+    // 5s pre-read countdown -> auto-play conversation ONCE (no replay!)
+    let preSec = 5;
+    preReadTimer = setInterval(() => {
+      preSec -= 1;
+      const pill = document.getElementById('lt-t2-status-pill');
+      if (preSec > 0) {
+        if (pill) pill.textContent = `Đọc đề: ${preSec}s`;
+      } else {
+        clearInterval(preReadTimer);
+        preReadTimer = null;
+        if (!examState || examState.stage !== 2 || examState.t2Idx !== idx) return;
+        const strip = document.getElementById('lt-t2-audio-strip');
+        if (strip) strip.classList.add('is-playing');
+        if (pill) pill.textContent = 'Đang phát (1/1)';
+
+        playTurnsOneShot(c.turns || [], {
+          rate: 0.96,
+          gapMs: 320,
+          onTurn: (ti, turn) => {
+            const txt = document.getElementById('lt-t2-audio-text');
+            if (txt) txt.textContent = `🎙️ ${turn.speaker} (${turn.accent || 'en-GB'}) đang nói… (Lượt ${ti + 1}/${c.turns.length})`;
+          },
+          onDone: () => {
+            const st = document.getElementById('lt-t2-audio-strip');
+            const txt = document.getElementById('lt-t2-audio-text');
+            const pl = document.getElementById('lt-t2-status-pill');
+            if (st) st.classList.remove('is-playing');
+            if (txt) txt.textContent = '✓ Hội thoại đã phát xong (1/1) — Hãy chọn đáp án A, B hoặc C!';
+            if (pl) pl.textContent = 'Chọn đáp án';
+          },
+        });
+      }
+    }, 1000);
+  }
+
+  function pickT2Option(optIdx) {
+    if (!examState || examState.stage !== 2 || examState.t2Done) return;
+    examState.t2Answers[examState.t2Idx] = optIdx;
+    document.querySelectorAll('#lt-t2-options .lt-mcq-opt').forEach((btn, i) => {
+      btn.classList.toggle('is-selected', i === optIdx);
+    });
+    const nextBtn = document.getElementById('btn-lt-t2-next');
+    if (nextBtn) nextBtn.disabled = false;
+  }
+
+  function nextT2Question() {
+    if (!examState || examState.stage !== 2 || examState.t2Done) return;
+    stopAllAudio();
+    const convs = examState.task.test2Conversations || [];
+    if (examState.t2Idx + 1 >= convs.length) {
+      examState.t2Done = true;
+      const hasT3 = Boolean(examState.task.test3NoteCompletion);
+      saveTaskStageScore(!hasT3);
+    } else {
+      examState.t2Idx += 1;
+    }
+    renderTest2();
+  }
+
+  /* ---------------------------------------------------------
+     TEST 3: REAL NOTE COMPLETION + 2-COLUMN COMPARE
+     (LEFT = 3-Color Transcript + Replay | RIGHT = Marked Note Sheet)
+     --------------------------------------------------------- */
+  function highlightTranscriptSegment(seg) {
+    let html = esc(seg.text || '');
+    const hls = Array.isArray(seg.highlights) ? seg.highlights : [];
+    // Sort longer phrases first to avoid nested partial replacements
+    const sorted = hls.slice().sort((a, b) => String(b.phrase || '').length - String(a.phrase || '').length);
+    for (const h of sorted) {
+      const ph = String(h.phrase || '').trim();
+      if (!ph) continue;
+      const safePh = esc(ph).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const cls = h.type === 'signpost' ? 'lt-hl-signpost' : (h.type === 'trap' ? 'lt-hl-trap' : 'lt-hl-key');
+      const badge = h.qNum ? `<sup class="lt-hl-qnum">${h.qNum}</sup>` : '';
+      html = html.replace(new RegExp(`(${safePh})`, 'i'), `<mark class="${cls}">$1${badge}</mark>`);
+    }
+    return html;
+  }
+
+  function renderNoteSheetHtml(nc, isSubmitted) {
+    const detailsByNum = {};
+    (examState.t3Details || []).forEach((d) => { detailsByNum[d.num] = d; });
+
+    return `
+      <div class="lt-note-paper">
+        <div class="lt-note-head">
+          <div class="lt-note-title">${esc(nc.title || 'Notes')}</div>
+          <div class="lt-note-limit">${esc(nc.wordLimit || 'ONE WORD AND/OR A NUMBER')}</div>
+        </div>
+        ${(nc.sections || []).map((sec) => `
+          <div class="lt-note-sec">
+            <div class="lt-note-sec-title">${esc(sec.heading || '')}</div>
+            <ul class="lt-note-list">
+              ${(sec.bullets || []).map((b) => {
+                const rendered = esc(b).replace(/\[(\d+)\]/g, (_, numStr) => {
+                  const n = parseInt(numStr, 10);
+                  const val = examState.t3Inputs[n] || '';
+                  if (!isSubmitted) {
+                    return `<span class="lt-blank-wrap"><span class="lt-blank-num">${n}</span><input type="text" class="lt-blank-input" data-blank-num="${n}" value="${esc(val)}" placeholder="......" oninput="ListeningTasksModule.onT3Input(${n}, this.value)" autocomplete="off" spellcheck="false" /></span>`;
+                  }
+                  const det = detailsByNum[n] || { correct: false, expected: '', note: '' };
+                  if (det.correct) {
+                    return `<span class="lt-blank-res is-ok"><strong>(${n}) ✓ ${esc(val || det.expected)}</strong></span>`;
+                  }
+                  return `<span class="lt-blank-res is-err"><strong>(${n}) ✗ ${esc(val || 'trống')}</strong> → <span class="lt-blank-fix">${esc(det.expected)}</span> <small>(${esc(det.note)})</small></span>`;
+                });
+                return `<li>${rendered}</li>`;
+              }).join('')}
+            </ul>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderTest3() {
+    const body = document.getElementById('lt-exam-body');
+    if (!body || !examState) return;
+    stopAllAudio();
+
+    const nc = examState.task.test3NoteCompletion;
+    if (!nc) {
+      closeExam();
+      return;
+    }
+
+    if (examState.t3Phase === 'submitted') {
+      const total = (nc.blanks || []).length;
+      const pct = Math.round((examState.t3Score / Math.max(1, total)) * 100);
+      const t1Score = examState.t1Results.filter((r) => r.correct).length;
+      const t1Tot = examState.words.length;
+      const t2Convs = examState.task.test2Conversations || [];
+      const t2Score = t2Convs.reduce((a, c, i) => a + (examState.t2Answers[i] === c.answerIndex ? 1 : 0), 0);
+
+      // STRICT 2-COLUMN COMPARE RULE:
+      // LEFT COLUMN = Full Transcript (3-color Signpost / Trap / Key + per-line Replay button)
+      // RIGHT COLUMN = Marked Note Completion Sheet + Trap Notes
+      body.innerHTML = `
+        <div class="lt-t3-compare-banner">
+          <div>
+            <div class="lt-sum-kicker">ĐÃ NỘP &amp; HOÀN THÀNH TASK LISTENING</div>
+            <div class="lt-sum-score tabular">
+              Test 3: ${examState.t3Score}/${total} (${pct}%)
+              <span class="lt-sum-sub-chips">· T1: ${t1Score}/${t1Tot} · T2: ${t2Score}/${t2Convs.length}</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeExam()">Hoàn tất &amp; Về danh sách Task</button>
+        </div>
+
+        <div class="lt-legend-row">
+          <span class="lt-leg"><mark class="lt-hl-signpost">Dẫn ý (Signpost)</mark></span>
+          <span class="lt-leg"><mark class="lt-hl-trap">Bẫy đổi ý (Distractor)</mark></span>
+          <span class="lt-leg"><mark class="lt-hl-key">Chốt đáp án (Key)</mark></span>
+          <span class="lt-leg" style="color:var(--ink-3);">· Bấm 🔊 cạnh mỗi dòng để nghe lại sửa tai</span>
+        </div>
+
+        <div class="lt-compare-grid">
+          <div class="lt-compare-left">
+            <div class="lt-col-head">CỘT TRÁI · FULL TRANSCRIPT (3 MÀU DẪN CHỨNG)</div>
+            <div class="lt-transcript-box">
+              ${(nc.transcriptSegments || []).map((seg, si) => `
+                <div class="lt-tr-line">
+                  <button type="button" class="lt-mini-play" onclick="ListeningTasksModule.replayT3Segment(${si})" title="Nghe lại câu này">🔊</button>
+                  <div class="lt-tr-text">
+                    <strong class="lt-tr-spk">${esc(seg.speaker || 'Speaker')}:</strong>
+                    ${highlightTranscriptSegment(seg)}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="lt-compare-right">
+            <div class="lt-col-head">CỘT PHẢI · BÀI LÀM NOTE COMPLETION</div>
+            ${renderNoteSheetHtml(nc, true)}
+            <div class="lt-trap-notes-box">
+              <div class="lt-trap-notes-title">Ghi chú bẫy &amp; chính tả từng ô:</div>
+              ${(nc.blanks || []).map((b) => `
+                <div class="lt-trap-note-row"><strong>(${b.num}) ${esc(b.answer)}:</strong> ${esc(b.trapNote || '')}</div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // Active Test 3: 10s Prediction -> 1-Shot Continuous Audio (NO replay, NO rewind)
+    body.innerHTML = `
+      <div class="lt-t3-stage">
+        <div class="lt-progress-row">
+          <span><strong>${esc(nc.scenarioIntro || 'Nghe 1 lần duy nhất và điền vào tờ Ghi chú bên dưới.')}</strong></span>
+          <span class="lt-timer-pill" id="lt-t3-status-pill">Đọc trước: 10s</span>
+        </div>
+
+        <div class="lt-oneshot-strip" id="lt-t3-audio-strip">
+          <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          <span id="lt-t3-audio-text">Đọc lướt tờ Note để đoán từ loại (Prediction) — Băng sẽ tự phát 1 lần duy nhất…</span>
+        </div>
+
+        ${renderNoteSheetHtml(nc, false)}
+
+        <div class="lt-t3-footer">
+          <span class="lt-hint-quiet">Điền trực tiếp trong khi nghe · Làm xong bấm Nộp để chấm &amp; đối chiếu Transcript 3 màu</span>
+          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.submitTest3()">Nộp bài &amp; Chấm điểm →</button>
+        </div>
+      </div>
+    `;
+
+    let preSec = 10;
+    preReadTimer = setInterval(() => {
+      preSec -= 1;
+      const pill = document.getElementById('lt-t3-status-pill');
+      if (preSec > 0) {
+        if (pill) pill.textContent = `Đọc trước: ${preSec}s`;
+      } else {
+        clearInterval(preReadTimer);
+        preReadTimer = null;
+        if (!examState || examState.stage !== 3 || examState.t3Phase === 'submitted') return;
+        examState.t3Phase = 'playing';
+        const strip = document.getElementById('lt-t3-audio-strip');
+        if (strip) strip.classList.add('is-playing');
+        if (pill) pill.textContent = 'Đang phát băng (1/1)';
+
+        const segs = nc.transcriptSegments || [];
+        playTurnsOneShot(segs, {
+          rate: 0.94,
+          gapMs: 420,
+          onTurn: (si, seg) => {
+            const txt = document.getElementById('lt-t3-audio-text');
+            if (txt) txt.textContent = `🎙️ ${seg.speaker || 'Speaker'} đang nói… (Đoạn ${si + 1}/${segs.length} · Không phát lại)`;
+          },
+          onDone: () => {
+            const st = document.getElementById('lt-t3-audio-strip');
+            const txt = document.getElementById('lt-t3-audio-text');
+            const pl = document.getElementById('lt-t3-status-pill');
+            if (st) st.classList.remove('is-playing');
+            if (txt) txt.textContent = '✓ Băng đã phát xong (1/1) — Kiểm tra lại chính tả rồi bấm Nộp bài!';
+            if (pl) pl.textContent = 'Sẵn sàng nộp';
+          },
+        });
+      }
+    }, 1000);
+  }
+
+  function onT3Input(num, val) {
+    if (!examState) return;
+    examState.t3Inputs[num] = val;
+  }
+
+  function submitTest3() {
+    if (!examState || examState.stage !== 3 || examState.t3Phase === 'submitted') return;
+    stopAllAudio();
+    const nc = examState.task.test3NoteCompletion;
+    const blanks = nc?.blanks || [];
+    let right = 0;
+    const details = blanks.map((b) => {
+      const typed = examState.t3Inputs[b.num] || '';
+      const diag = diagnoseSpellingError(typed, b.answer, b.accepted || []);
+      if (diag.correct) right += 1;
+      return { num: b.num, expected: b.answer, typed, correct: diag.correct, note: diag.note };
+    });
+    examState.t3Score = right;
+    examState.t3Details = details;
+    examState.t3Phase = 'submitted';
+    saveTaskStageScore(true);
+    renderTest3();
+  }
+
+  function replayT3Segment(idx) {
+    if (!examState || examState.t3Phase !== 'submitted') return;
+    const seg = examState.task.test3NoteCompletion?.transcriptSegments?.[idx];
+    if (!seg) return;
+    playTurnsOneShot([seg], { rate: 0.92 });
+  }
+
+  function replayAfterSubmit(text, accent) {
+    speakSingleWordOneShot(text, accent || 'en-GB');
+  }
+
+  function goToStage(stageNum) {
+    if (!examState) return;
+    stopAllAudio();
+    examState.stage = stageNum;
+    renderExamStage();
+  }
+
+  function studyTaskWords(taskId) {
+    const task = (getTasksData().tasks || []).find((t) => t.id === taskId);
+    if (!task) return;
+    if (window.TotoroUI?.getActiveSkill?.() !== 'Listening') {
+      window.TotoroUI?.setActiveSkill?.('Listening', { silent: true });
+    }
+    window.__VOCAB_BRIDGE__?.openListeningTaskScope?.(task);
+    window.TotoroUI?.switchView?.('flashcard', { fromUser: true });
+  }
+
+  window.ListeningTasksModule = {
+    renderHub,
+    switchSuite: (suiteKey) => {
+      activeSuiteKey = suiteKey;
+      window.TotoroUI?.renderInlineTaskHub?.();
+    },
+    studyTaskWords,
+    openExam,
+    closeExam,
+    goToStage,
+    submitT1Word,
+    pickT2Option,
+    nextT2Question,
+    onT3Input,
+    submitTest3,
+    replayT3Segment,
+    replayAfterSubmit,
+    getProgressMap: loadProgress,
+  };
+})();

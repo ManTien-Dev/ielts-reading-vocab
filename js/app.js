@@ -52,6 +52,68 @@
     },
   ];
 
+  const LISTENING_SCOPES = [
+    {
+      key: 'l_part1',
+      name: 'Part 1 · Đời sống (464 từ)',
+      isListening: true,
+      getList: () => window.APP_LISTENING_VOCAB?.part1 || [],
+    },
+    {
+      key: 'l_part2',
+      name: 'Part 2 · Địa điểm & Hướng dẫn (665 từ)',
+      isListening: true,
+      getList: () => window.APP_LISTENING_VOCAB?.part2 || [],
+    },
+    {
+      key: 'l_part3',
+      name: 'Part 3 · Thảo luận học thuật (388 từ)',
+      isListening: true,
+      getList: () => window.APP_LISTENING_VOCAB?.part3 || [],
+    },
+    {
+      key: 'l_part4',
+      name: 'Part 4 · Bài giảng đại học (1.559 từ)',
+      isListening: true,
+      getList: () => window.APP_LISTENING_VOCAB?.part4 || [],
+    },
+    {
+      key: 'l_all_parts',
+      name: 'All Parts · Xuyên suốt (464 từ)',
+      isListening: true,
+      getList: () => window.APP_LISTENING_VOCAB?.all_parts || [],
+    },
+    {
+      key: 'l_foundation',
+      name: 'Foundation · Nền tảng Listening (324 từ)',
+      isListening: true,
+      getList: () => window.APP_LISTENING_VOCAB?.foundation || [],
+    },
+    {
+      key: 'l_cues_40',
+      name: '40 Tín hiệu Chuyển hướng & Bẫy đổi ý',
+      isListening: true,
+      getList: () => window.APP_LISTENING_VOCAB?.cues_40 || [],
+    },
+  ];
+
+  let activeListeningTaskScope = null;
+  let lastReadingScopeKey = 'paraphrase';
+  let lastListeningScopeKey = 'l_part1';
+
+  function isListeningScopeKey(key) {
+    return Boolean(key && /^(l_|ltask_)/i.test(String(key)));
+  }
+
+  function getListeningVocabMap() {
+    const v = window.APP_LISTENING_VOCAB || {};
+    const map = {};
+    [...(v.target_all || []), ...(v.foundation || []), ...(v.cues_40 || [])].forEach((w) => {
+      if (w && w.id) map[w.id] = w;
+    });
+    return map;
+  }
+
   function isTaskScopeKey(key) {
     return Boolean(key && /^(task|fnd|acd|adv)_/i.test(String(key)));
   }
@@ -191,7 +253,12 @@
   }
 
   function getAllScopes() {
-    return [...SCOPES, ...dynamicTaskScopes];
+    return [
+      ...SCOPES,
+      ...LISTENING_SCOPES,
+      ...(activeListeningTaskScope ? [activeListeningTaskScope] : []),
+      ...dynamicTaskScopes,
+    ];
   }
 
   function setDynamicTaskScopes(tasksList) {
@@ -275,6 +342,9 @@
           getList: () => resolveTaskItems(t),
         };
       }
+    }
+    if (isListeningSkillActive() && window.APP_LISTENING_VOCAB) {
+      return LISTENING_SCOPES[0];
     }
     return SCOPES.find(s => s.key === 'paraphrase') || SCOPES[0];
   }
@@ -2303,6 +2373,31 @@
   function populateScopeSelect() {
     const sel = document.getElementById('study-scope-select');
     if (!sel) return;
+    if (isListeningSkillActive() && window.APP_LISTENING_VOCAB) {
+      let lHtml = '';
+      if (activeListeningTaskScope) {
+        lHtml += `<optgroup label="Bộ từ Listening Task đang học"><option value="${escapeHtml(activeListeningTaskScope.key)}">${escapeHtml(activeListeningTaskScope.name)}</option></optgroup>`;
+      }
+      lHtml += `<optgroup label="Từ vựng IELTS Listening (3.864 từ + 40 Cues)">${LISTENING_SCOPES.map(it =>
+        `<option value="${escapeHtml(it.key)}">${escapeHtml(it.name)}</option>`
+      ).join('')}</optgroup>`;
+      if (window.MyVocabStore && !isTeacherUser()) {
+        const mvDecks = window.MyVocabStore.getDecks() || [];
+        if (mvDecks.length > 0) {
+          lHtml += `<optgroup label="Từ của tôi (Lưu trên máy)">${mvDecks.map((d) => {
+            const sk = window.MyVocabStore.getScopeKey(d.id);
+            return `<option value="${escapeHtml(sk)}">${escapeHtml(d.name)} (${d.words.length} từ)</option>`;
+          }).join('')}</optgroup>`;
+        }
+      }
+      sel.innerHTML = lHtml;
+      if (Array.from(sel.options).some((o) => o.value === currentScopeKey)) {
+        sel.value = currentScopeKey;
+      } else {
+        sel.value = LISTENING_SCOPES[0].key;
+      }
+      return;
+    }
     const isTaskActive = Boolean(
       isTaskScopeKey(currentScopeKey) ||
       (window.TasksModule?.getActiveTask?.()) ||
@@ -2410,6 +2505,11 @@
     }
     cancelPendingAdvance();
     currentScopeKey = nextDef.key;
+    if (isListeningScopeKey(currentScopeKey)) {
+      lastListeningScopeKey = currentScopeKey;
+    } else if (!isTaskScopeKey(currentScopeKey) && !isMyVocabScopeKey(currentScopeKey) && currentScopeKey !== REVIEW_OLD_SCOPE_KEY) {
+      lastReadingScopeKey = currentScopeKey;
+    }
     populateScopeSelect();
     const sel = document.getElementById('study-scope-select');
     if (sel) sel.value = currentScopeKey;
@@ -2602,6 +2702,15 @@
     document.getElementById('fc-scene')?.classList.remove('assess-out-1', 'assess-out-2', 'assess-out-3');
   }
 
+  function toggleListeningFrontReveal(event) {
+    if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+    const frontFace = document.querySelector('#fc-card .fc-face-front');
+    if (!frontFace) return;
+    const revealed = frontFace.classList.toggle('is-listening-revealed');
+    const txtEl = document.getElementById('fc-l-reveal-txt');
+    if (txtEl) txtEl.textContent = revealed ? '🙈 Ẩn chữ' : '👁️ Hé chữ';
+  }
+
   function renderCurrentCard(direction = 0, options = {}) {
     cancelPendingAdvance();
     if (cardStepOutTimer) {
@@ -2673,7 +2782,29 @@
     const ipaText = getIPA(item);
     const posLabel = getCleanPos(item);
 
-    // Mặt trước (Tối giản: chỉ POS + Từ + IPA + UK/US)
+    // Mặt trước (Tối giản: chỉ POS + Từ + IPA + UK/US; riêng Listening ẩn chữ mặc định + hiện audio stage & cảnh báo bẫy)
+    const frontFaceEl = document.querySelector('#fc-card .fc-face-front');
+    if (frontFaceEl) frontFaceEl.classList.remove('is-listening-revealed');
+    const lRevealTxt = document.getElementById('fc-l-reveal-txt');
+    if (lRevealTxt) lRevealTxt.textContent = '👁️ Hé chữ';
+    const lPartBadge = document.getElementById('fc-l-part-badge');
+    if (lPartBadge) {
+      lPartBadge.textContent = item.primary_part || (item.direction ? `Tín hiệu · ${item.direction}` : 'Listening');
+    }
+    const lTrapBadge = document.getElementById('fc-l-trap-badge');
+    if (lTrapBadge) {
+      const traps = [];
+      if (item.spelling_trap) traps.push(item.spelling_trap);
+      if (item.homophone_trap) traps.push(`Đồng âm: ${item.homophone_trap}`);
+      if (traps.length > 0) {
+        lTrapBadge.textContent = `⚠️ ${traps.join(' · ')}`;
+        lTrapBadge.style.display = 'inline-flex';
+      } else {
+        lTrapBadge.style.display = 'none';
+        lTrapBadge.textContent = '';
+      }
+    }
+
     document.getElementById('fc-front-pos').textContent = posLabel;
     const frontWordEl = document.getElementById('fc-front-word');
     if (frontWordEl) {
@@ -2749,6 +2880,17 @@
           <div class="fc-pair-card">
             <div class="fc-pair-label">Word Family</div>
             <div class="fc-chip-wrap">${formChips.map(w => `<span class="fc-chip">${escapeHtml(w)}</span>`).join('')}</div>
+          </div>
+        `);
+      }
+      if (item.spelling_trap || item.homophone_trap) {
+        const trapItems = [];
+        if (item.spelling_trap) trapItems.push(item.spelling_trap);
+        if (item.homophone_trap) trapItems.push(`Đồng âm: ${item.homophone_trap}`);
+        pairCards.push(`
+          <div class="fc-pair-card trap">
+            <div class="fc-pair-label">⚠️ Bẫy Listening</div>
+            <div class="fc-chip-wrap">${trapItems.map(t => `<span class="fc-chip">${escapeHtml(t)}</span>`).join('')}</div>
           </div>
         `);
       }
@@ -4099,7 +4241,7 @@
         const boostBadge = res.boosted ? ` · +Gain ${res.gainApplied}×` : '';
 
         if (check.isNoise) {
-          setListeningMicUI('idle', `Không mất lượt thử · hãy bấm nghe mẫu rồi nói rõ hơn (còn <strong>${recallAttemptsLeft}</strong> lần).`);
+          setListeningMicUI('idle', `Không mất lượt thử · bấm nút hoặc <strong>Space</strong> để nói rõ lại (còn <strong>${recallAttemptsLeft}</strong> lần).`);
           if (heardBox) {
             heardBox.style.display = 'block';
             heardBox.className = 'rl-heard-box is-warn';
@@ -4110,7 +4252,7 @@
 
         if (check.matched) {
           stopRecallInputTimer();
-          setListeningMicUI('passed', 'Chuẩn phát âm! Đang chuyển sang bước tiếp theo…');
+          setListeningMicUI('passed', '✓ Chuẩn phát âm! Đang chấm Đã thuộc ngay…');
           if (heardBox) {
             heardBox.style.display = 'block';
             heardBox.className = 'rl-heard-box is-pass';
@@ -4118,8 +4260,8 @@
           }
           setTimeout(() => {
             if (!recallTargetItem || recallTargetItem.id !== item.id || recallSubmitted) return;
-            advanceFromListeningStage1Pass(item);
-          }, 560);
+            finalizeRecallMastery(item);
+          }, 520);
           return;
         }
 
@@ -4131,11 +4273,11 @@
         }
 
         if (recallAttemptsLeft > 0) {
-          setListeningMicUI('idle', `Còn <strong>${recallAttemptsLeft}</strong> lần thử · bấm <strong>Nghe mẫu</strong> hoặc phím <strong>R</strong> để nghe kỹ lại!`);
+          setListeningMicUI('idle', `Còn <strong>${recallAttemptsLeft}</strong> lần thử · bấm nút hoặc nhấn <strong>Space</strong> nói rõ lại (không phát lại audio)!`);
           if (fb) {
             fb.style.display = 'block';
             fb.className = 'recall-feedback err';
-            fb.textContent = `Chưa khớp từ mẫu! Hãy nghe lại trọng âm & âm cuối rồi nói lại (còn ${recallAttemptsLeft} lần thử).`;
+            fb.textContent = `Chưa khớp từ mẫu! Hãy nhớ lại trọng âm & âm cuối rồi nói lại (còn ${recallAttemptsLeft} lần thử).`;
           }
           return;
         }
@@ -4266,7 +4408,7 @@
 
     if (useListeningShadow) {
       resetRecallSpeedBarUI(false);
-      if (stageBadge) stageBadge.textContent = 'Test 1 · Nghe & Nói';
+      if (stageBadge) stageBadge.textContent = '1-Shot Nghe & Nói';
       if (timerBadge) {
         timerBadge.textContent = `${limitSec}s`;
         timerBadge.classList.remove('is-urgent', 'is-speed-pulse');
@@ -4280,8 +4422,12 @@
       const posEl = document.getElementById('rl-cue-pos');
       const meanEl = document.getElementById('rl-cue-meaning');
       const heardBox = document.getElementById('rl-heard-box');
+      const oneShotStrip = document.getElementById('rl-oneshot-strip');
+      const oneShotText = document.getElementById('rl-oneshot-text');
+      if (oneShotStrip) oneShotStrip.classList.add('is-playing');
+      if (oneShotText) oneShotText.textContent = '🔊 Đang phát âm (1 lần duy nhất — không phát lại)…';
       if (posEl) posEl.textContent = getCleanPos(item) || 'vocab';
-      if (meanEl) meanEl.textContent = item.clean_meaning || item.meaning || item.vi || item.definition || 'Nghe phát âm mẫu rồi nói lại từ này';
+      if (meanEl) meanEl.textContent = item.clean_meaning || item.meaning || item.vi || item.definition || 'Nghe 1 lần duy nhất rồi nói lại từ này';
       if (heardBox) {
         heardBox.style.display = 'none';
         heardBox.className = 'rl-heard-box';
@@ -4289,11 +4435,19 @@
       }
       setListeningMicUI(
         'idle',
-        `Nghe phát âm mẫu rồi nói lại từ (còn <strong>${recallAttemptsLeft}</strong> lần) · <strong>Space</strong> nói · <strong>R</strong> nghe lại`
+        `Nghe 1 lần duy nhất · nhấn <strong>Space</strong> hoặc bấm nút để nói lại từ (còn <strong>${recallAttemptsLeft}</strong> lần)`
       );
       listeningAutoPlayTimer = setTimeout(() => {
         if (recallTargetItem && recallTargetItem.id === item.id && recallMode === 'listening_shadow' && !recallSubmitted) {
           playListeningRecallAudio('en-GB', 0.92);
+          setTimeout(() => {
+            if (recallTargetItem && recallTargetItem.id === item.id && recallMode === 'listening_shadow' && !recallSubmitted) {
+              const st = document.getElementById('rl-oneshot-strip');
+              const tx = document.getElementById('rl-oneshot-text');
+              if (st) st.classList.remove('is-playing');
+              if (tx) tx.textContent = '✓ Đã phát xong (1/1) — Bấm Mic nói lại từ ngay!';
+            }
+          }, 1150);
         }
       }, 220);
     } else if (useQuickVi) {
@@ -5502,6 +5656,13 @@
         populateScopeSelect();
       }
       window.TotoroUI?.onUserEntered?.(account);
+      if (isListeningSkillActive() && window.APP_LISTENING_VOCAB && !isListeningScopeKey(currentScopeKey) && !isMyVocabScopeKey(currentScopeKey)) {
+        currentScopeKey = lastListeningScopeKey || 'l_part1';
+        populateScopeSelect();
+      } else if (!isListeningSkillActive() && isListeningScopeKey(currentScopeKey)) {
+        currentScopeKey = lastReadingScopeKey || 'paraphrase';
+        populateScopeSelect();
+      }
       const onFlashcardView = !window.TotoroUI?.getActiveView || window.TotoroUI.getActiveView() === 'flashcard';
       const autoSpeakOnEnter = !!options.autoSpeakOnEnter && onFlashcardView;
       pendingInitialSpeak = !autoSpeakOnEnter && autoSpeak;
@@ -5701,9 +5862,9 @@
         toggleListeningRecallMic();
         return;
       }
+      // Locked rule: NO replay shortcut (R) during One-Shot Listening Recall!
       if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
-        playListeningRecallAudio('en-GB', 0.92);
         return;
       }
     }
@@ -5745,6 +5906,31 @@
     switchLeaderboardTab, switchStreakChartTab,
     handleLoginSubmit, togglePasswordVisibility, logoutCurrentAccount,
     playListeningRecallAudio, toggleListeningRecallMic, runQuickListeningMicTest,
+    toggleListeningFrontReveal,
+  });
+
+  // Sync Flashcard scope automatically when switching Reading <-> Listening
+  document.addEventListener('totoro:skill-changed', (ev) => {
+    const nextSkill = String(ev?.detail?.skill || '').toLowerCase();
+    if (!window.APP_LISTENING_VOCAB) return;
+    if (nextSkill === 'listening') {
+      if (!isListeningScopeKey(currentScopeKey) && !isMyVocabScopeKey(currentScopeKey)) {
+        if (!isTaskScopeKey(currentScopeKey) && currentScopeKey !== REVIEW_OLD_SCOPE_KEY) {
+          lastReadingScopeKey = currentScopeKey;
+        }
+        currentScopeKey = lastListeningScopeKey || 'l_part1';
+      }
+    } else if (nextSkill === 'reading') {
+      if (isListeningScopeKey(currentScopeKey)) {
+        lastListeningScopeKey = currentScopeKey;
+        currentScopeKey = lastReadingScopeKey || 'paraphrase';
+      }
+    }
+    populateScopeSelect();
+    const sel = document.getElementById('study-scope-select');
+    if (sel) sel.value = currentScopeKey;
+    const isFlashcardOpen = window.TotoroUI?.getActiveView?.() === 'flashcard';
+    applyFilterAndBuildDeck(null, { speak: isFlashcardOpen });
   });
 
   function openCheatWarningModal(msg, onDismiss, warnNum = 1, maxStrikes = 3) {
@@ -6202,6 +6388,22 @@
       loadScope(sk);
     },
     getAssessmentsMap: () => assessments,
+    getAssessments: () => assessments,
+    openListeningTaskScope: (task) => {
+      if (!task || !Array.isArray(task.wordIds)) return;
+      const vMap = getListeningVocabMap();
+      const list = task.wordIds.map((id) => vMap[id]).filter(Boolean);
+      activeListeningTaskScope = {
+        key: `ltask_${task.id}`,
+        name: `${task.label} · ${task.theme || task.topicTitle || ''} (${list.length} từ)`,
+        isListening: true,
+        isListeningTask: true,
+        getList: () => list,
+      };
+      onlyUnmastered = false;
+      onlyDueReview = false;
+      loadScope(activeListeningTaskScope.key);
+    },
     getSrsMap: () => srsData,
     isWordDueNow,
     startOldVocabReview,

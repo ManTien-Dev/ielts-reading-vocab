@@ -41,7 +41,7 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261123c">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261124a">
   <link rel="stylesheet" href="css/totoro_theme.css?v=20261124d">
 </head>
 <body>
@@ -409,17 +409,17 @@
       </div>
 
       <!-- Banner chế độ Listening (chỉ hiện khi chọn kỹ năng IELTS Listening) -->
-      <div class="listening-study-banner" id="listening-study-banner" role="region" aria-label="Chế độ IELTS Listening Shadowing">
+      <div class="listening-study-banner" id="listening-study-banner" role="region" aria-label="Chế độ IELTS Listening">
         <div class="lsb-left">
           <span class="lsb-badge">🎧 IELTS LISTENING</span>
-          <span class="lsb-text">Khi bấm <strong>Đã thuộc</strong>, Test 1 sẽ chuyển thành <strong>Nghe mẫu → Nói lại từ bằng Mic AI</strong> (tự khuếch đại giọng nhỏ).</span>
+          <span class="lsb-text">Mặt trước <strong>ẩn chữ luyện tai</strong> (bấm <em>Hé chữ</em> khi cần) · Bấm <strong>Đã thuộc</strong> để <strong>Nghe 1 lần duy nhất → Nói lại bằng Mic AI</strong>.</span>
         </div>
         <div class="lsb-actions">
           <button type="button" class="lsb-mic-test-btn" id="btn-listening-voice-lab" onclick="TotoroVoiceLab.open('word')">
             <span class="lsb-mic-dot" aria-hidden="true"></span>
-            <span>Phòng Test Giọng (Từ đơn &amp; Câu dài)</span>
+            <span>Phòng Test Giọng</span>
           </button>
-          <button type="button" class="lsb-switch-btn" onclick="window.TotoroUI?.setActiveSkill?.('Reading')">Về Reading</button>
+          <button type="button" class="lsb-switch-btn" onclick="window.TotoroUI?.switchView?.('task', { fromUser: true })">131 Task Listening →</button>
         </div>
       </div>
 
@@ -775,6 +775,30 @@
               </div>
 
               <div class="fc-center-front">
+                <!-- Dedicated Listening Front Audio Stage (shown ONLY when html[data-skill="listening"]) -->
+                <div class="fc-listening-front-stage" id="fc-listening-front-stage" onclick="event.stopPropagation()">
+                  <div class="fc-l-pills">
+                    <span class="fc-l-part-pill" id="fc-l-part-badge">Part 1</span>
+                    <span class="fc-l-trap-pill" id="fc-l-trap-badge" style="display:none;"></span>
+                  </div>
+                  <div class="fc-l-audio-hero">
+                    <button type="button" class="fc-l-play-btn is-primary" id="btn-fc-l-uk" onclick="speakCurrentWord('en-GB', event)" title="Nghe chuẩn Anh - Anh (UK)">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                      <span>Nghe UK</span>
+                    </button>
+                    <button type="button" class="fc-l-play-btn" id="btn-fc-l-us" onclick="speakCurrentWord('en-US', event)" title="Nghe chuẩn Anh - Mỹ (US)">
+                      <span>US</span>
+                    </button>
+                    <button type="button" class="fc-l-play-btn" id="btn-fc-l-slow" onclick="window.__VOCAB_BRIDGE__?.speakSlowCurrentWord?.(event)" title="Nghe chậm 0.7× để nghe rõ âm cuối">
+                      <span>Chậm 0.7×</span>
+                    </button>
+                  </div>
+                  <div class="fc-l-hint-line" id="fc-l-hint-line">Nghe âm thanh &amp; đoán nghĩa + chính tả trước khi lật thẻ</div>
+                  <button type="button" class="fc-l-reveal-btn" id="btn-fc-listening-reveal" onclick="toggleListeningFrontReveal(event)">
+                    <span id="fc-l-reveal-txt">👁️ Hé chữ</span>
+                  </button>
+                </div>
+
                 <div class="fc-word" id="fc-front-word">loading...</div>
                 <svg class="calm-hand-underline" viewBox="0 0 160 14" fill="none" aria-hidden="true">
                   <path d="M6 9.5C38 4.2 108 3.2 154 8.2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
@@ -1749,17 +1773,9 @@
           </div>
         </div>
         <div id="recall-listening-body" style="display:none;">
-          <div class="rl-audio-row">
-            <button type="button" class="rl-audio-btn is-primary" id="btn-rl-play-uk" onclick="playListeningRecallAudio('en-GB', 0.92)">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-              <span>Nghe mẫu (UK)</span>
-            </button>
-            <button type="button" class="rl-audio-btn" id="btn-rl-play-us" onclick="playListeningRecallAudio('en-US', 0.92)">
-              <span>US</span>
-            </button>
-            <button type="button" class="rl-audio-btn" id="btn-rl-play-slow" onclick="playListeningRecallAudio('en-GB', 0.68)" title="Nghe chậm 0.68× để bắt rõ từng âm tiết">
-              <span>Chậm 0.7×</span>
-            </button>
+          <div class="rl-oneshot-strip is-playing" id="rl-oneshot-strip" role="status" aria-live="polite">
+            <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+            <span id="rl-oneshot-text">🔊 Đang phát âm (1 lần duy nhất — không phát lại)…</span>
           </div>
           <div class="rl-cue-box" id="rl-cue-box">
             <span class="rl-cue-pos" id="rl-cue-pos"></span>
@@ -1776,7 +1792,7 @@
               </span>
               <span class="rl-mic-label" id="rl-mic-label">Bấm để nói lại từ</span>
             </button>
-            <div class="rl-mic-sub" id="rl-mic-sub">Tự động kích giọng nhỏ &amp; dừng khi nói xong · Phím tắt: <strong>Space</strong> nói · <strong>R</strong> nghe lại</div>
+            <div class="rl-mic-sub" id="rl-mic-sub">Nghe 1 lần duy nhất · Bấm nút hoặc nhấn <strong>Space</strong> để nói lại từ (≥ 55% chấm Đã thuộc ngay)</div>
           </div>
           <div class="rl-heard-box" id="rl-heard-box" style="display:none;"></div>
         </div>
@@ -2110,7 +2126,9 @@
 
   <script src="data/accounts.js?v=20261119t"></script>
   <script src="data/vocab_data.js?v=20261119t"></script>
+  <script src="data/listening_vocab_data.js?v=20261124a"></script>
   <script src="data/tasks_data.js?v=20261119t"></script>
+  <script src="data/listening_tasks_data.js?v=20261124a"></script>
   <script src="data/reading_tasks_exam_data.js?v=20261121c"></script>
   <script src="data/ipa_dict.js?v=20261119t"></script>
   <script src="js/motion.js?v=20261121c"></script>
@@ -2126,7 +2144,7 @@
   <script src="js/recognition_test.js?v=20261123a"></script>
   <script src="js/speech_stt.js?v=20261123e"></script>
   <script src="js/voice_lab.js?v=20261123c"></script>
-  <script src="js/app.js?v=20261123d"></script>
+  <script src="js/app.js?v=20261124a"></script>
   <script src="data/v2_paraphrase.js?v=20261122e"></script>
   <script src="data/v2_foundation.js?v=20261122e"></script>
   <script src="data/v2_academic.js?v=20261122e"></script>
@@ -2134,6 +2152,7 @@
   <script src="data/reading_practice_data.js?v=20261124c"></script>
   <script src="js/reading_practice.js?v=20261124d"></script>
   <script src="js/tasks.js?v=20261122j"></script>
-  <script src="js/totoro_ui.js?v=20261124b"></script>
+  <script src="js/listening_tasks.js?v=20261124a"></script>
+  <script src="js/totoro_ui.js?v=20261124e"></script>
 </body>
 </html>

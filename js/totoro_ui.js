@@ -872,9 +872,10 @@
     const meta = {
       listening: {
         name: 'Listening Home',
-        badge: 'Shadowing sẵn sàng · Đề Section 1–4 sắp mở',
-        desc: 'Không gian trang chủ riêng cho IELTS Listening: luyện nghe-nhại (Shadowing), Dictation theo Section 1–4 và lịch sử Band Listening.',
-        cta: `<button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.setActiveSkill('Listening'); window.TotoroUI.switchView('flashcard');">Vào luyện nghe Listening →</button>`
+        badge: '3.864 từ Listening · 131 Task · 8 Flagship đủ 3 Test',
+        desc: 'Học 3.864 từ IELTS Listening trích từ 282 bài thi thật (mặt trước ẩn chữ luyện tai, Đã thuộc 1 lần nghe → nói lại Mic AI) và làm 131 Task thực chiến 3 bước: Nghe-Viết → 12 Hội thoại → Note Completion.',
+        cta: `<button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard');">Học Flashcard Listening →</button>
+              <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task');">Mở 131 Task Listening →</button>`
       },
       writing: {
         name: 'Writing Home',
@@ -935,6 +936,17 @@
     const tabsEl = document.getElementById('inline-task-suites');
     const gridEl = document.getElementById('inline-tasks-grid');
     if (!gridEl) return;
+
+    if (html.getAttribute('data-skill') === 'listening' && typeof window.ListeningTasksModule?.renderHub === 'function') {
+      gridEl.classList.add('is-listening-grid');
+      window.ListeningTasksModule.renderHub(tabsEl, gridEl);
+      return;
+    }
+
+    gridEl.classList.remove('is-listening-grid');
+    const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
+    if (titleEl) titleEl.textContent = 'Task bài tập · Reading';
+
     const B = window.__VOCAB_BRIDGE__;
     const esc = B?.escapeHtml || ((x) => String(x));
     const uid = B?.getScopedUid?.() || '';
@@ -1252,11 +1264,12 @@
 
       if (!opts.silent) {
         if (next === 'Listening') {
-          window.__VOCAB_BRIDGE__?.showToast?.('🎧 Đã chuyển sang IELTS Listening — Bấm "Đã thuộc" để kiểm tra Nghe → Nói lại từ!');
+          window.__VOCAB_BRIDGE__?.showToast?.('🎧 Đã chuyển sang IELTS Listening — 3.864 từ & 131 Task thực chiến!');
         } else {
           window.__VOCAB_BRIDGE__?.showToast?.('📖 Đã chuyển sang IELTS Reading (Reading Home · Flashcard · Task · Practice)');
         }
       }
+      if (activeView === 'task') renderInlineTaskHub();
       document.dispatchEvent(new CustomEvent('totoro:skill-changed', { detail: { skill: next } }));
     }
 
