@@ -9449,8 +9449,47 @@ body.rp-exam-fullscreen {
 .ins-group-inst {
   margin: 0 0 14px;
   font-size: calc(var(--ins-fs, 15px) - 0.5px);
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--ins-ink);
+  white-space: pre-line;
+}
+.ins-select-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 34px;
+  margin-top: 6px;
+}
+.ins-sel-chip {
+  min-width: 36px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 5px;
+  border: 1px solid var(--ins-input-bd, #888);
+  background: var(--ins-input-bg, #fff);
+  color: var(--ins-ink, #111);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 150ms cubic-bezier(0.22, 1, 0.36, 1), border-color 150ms cubic-bezier(0.22, 1, 0.36, 1), color 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ins-sel-chip:hover:not(:disabled) {
+  border-color: var(--ins-active-ring, #2b7bd6);
+}
+.ins-sel-chip.is-selected {
+  background: var(--ins-sel-bg, #b8d8f0);
+  border-color: var(--ins-active-ring, #2b7bd6);
+  color: var(--ins-ink, #111);
+}
+.ins-sel-chip.is-key {
+  background: #dcfce7;
+  border-color: #16a34a;
+  color: #14532d;
+}
+.ins-sel-chip.is-wrong-pick {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #7f1d1d;
 }
 .ins-headings-sub {
   font-size: 14px;

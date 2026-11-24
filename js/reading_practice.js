@@ -81,6 +81,7 @@
     if (type === 'mcq') return 'Multiple Choice';
     if (type === 'gap') return 'Gap Fill';
     if (type === 'matching_headings') return 'Matching Headings';
+    if (type === 'select') return 'Matching';
     return 'Reading';
   }
 
@@ -216,11 +217,13 @@
     view: 'portal',         // 'portal' | 'source' | 'exam'
     source: 'cambridge',    // 'cambridge' | 'volume' | 'actual' | 'news'
     camGroup: 'recent',     // 'recent' (Cam 10-20) | 'all' (Cam 1-20)
+    actualGroup: 'recent',  // 'recent' (Bộ 1-10) | 'all' (Tất cả 30 bộ)
     selectedBookId: 'cam_20',
     selectedTestNum: 1,     // 1..4
     partFilter: 'all',      // 'all' | 'p1' | 'p2' | 'p3' | 'full'
     newsTopic: 'all',
     searchQuery: '',
+    loadingBank: null,
 
     session: null,
     timerId: null,
@@ -229,6 +232,64 @@
     mobilePane: 'passage',
     selectedHeadingKey: null // for tap-to-assign Matching Headings on touch/click
   };
+
+  const BANK_VERSION = '20261124e';
+  const _loadedBanks = {};
+  const _bankPromises = {};
+
+  function mergeBankPayload(src, payload) {
+    if (!payload) return;
+    const d = DATA();
+    if (!d.PASSAGES) d.PASSAGES = {};
+    if (!d.FULL_TESTS) d.FULL_TESTS = [];
+    if (payload.PASSAGES) {
+      Object.keys(payload.PASSAGES).forEach((pid) => {
+        if (!d.PASSAGES[pid]) d.PASSAGES[pid] = payload.PASSAGES[pid];
+      });
+    }
+    if (Array.isArray(payload.FULL_TESTS)) {
+      const existing = new Set(d.FULL_TESTS.map((f) => f.id));
+      payload.FULL_TESTS.forEach((ft) => {
+        if (ft && ft.id && !existing.has(ft.id)) {
+          d.FULL_TESTS.push(ft);
+          existing.add(ft.id);
+        }
+      });
+    }
+    _loadedBanks[src] = true;
+  }
+
+  function ensureSourceBankLoaded(src) {
+    if (!['cambridge', 'volume', 'actual'].includes(src)) return Promise.resolve();
+    if (_loadedBanks[src]) return Promise.resolve();
+    if (window.__READING_BANKS__ && window.__READING_BANKS__[src]) {
+      mergeBankPayload(src, window.__READING_BANKS__[src]);
+      return Promise.resolve();
+    }
+    if (_bankPromises[src]) return _bankPromises[src];
+
+    state.loadingBank = src;
+    const base = (typeof window.__APP_BASE_PATH__ === 'string' && window.__APP_BASE_PATH__) ? `${window.__APP_BASE_PATH__}/` : '';
+    const scriptSrc = `${base}data/bank_${src}.js?v=${BANK_VERSION}`;
+    _bankPromises[src] = new Promise((resolve) => {
+      const sc = document.createElement('script');
+      sc.src = scriptSrc;
+      sc.async = true;
+      sc.onload = () => {
+        if (window.__READING_BANKS__ && window.__READING_BANKS__[src]) {
+          mergeBankPayload(src, window.__READING_BANKS__[src]);
+        }
+        if (state.loadingBank === src) state.loadingBank = null;
+        resolve();
+      };
+      sc.onerror = () => {
+        if (state.loadingBank === src) state.loadingBank = null;
+        resolve();
+      };
+      document.head.appendChild(sc);
+    });
+    return _bankPromises[src];
+  }
 
   function getRoot() { return document.getElementById('rp-app-root'); }
 
@@ -312,11 +373,11 @@
     }
     if (bk.source === 'volume') {
       const v = Number(bk.num) || 1;
-      return { era: `vol-${((v - 1) % 6) + 1}`, brand: 'VOLUME', numText: String(v).padStart(2, '0'), kind: 'volume' };
+      return { era: `vol-${((v - 1) % 6) + 1}`, brand: 'REAL VOL', numText: String(v).padStart(2, '0'), kind: 'volume' };
     }
-    const yr = String(bk.num || bk.shortLabel || '2025');
-    const yrIdx = Math.abs(2026 - (Number(bk.num) || 2025)) % 4;
-    return { era: `act-${yrIdx + 1}`, brand: 'ACTUAL', numText: yr, kind: 'dossier' };
+    const sNum = Number(bk.num) || 1;
+    const sIdx = (sNum - 1) % 4;
+    return { era: `act-${sIdx + 1}`, brand: 'RECENT', numText: String(sNum).padStart(2, '0'), kind: 'dossier' };
   }
 
   function renderBookendSvg() {
@@ -379,11 +440,12 @@
         ? (Math.round((srcHist.reduce((acc, x) => acc + (Number(x.band) || 0), 0) / srcHist.length) * 2) / 2).toFixed(1)
         : null;
 
+      const summary = d.BANK_SUMMARY || {};
       let rightBadge = avgBand ? `Band ${avgBand}` : '';
       if (!rightBadge) {
-        if (s.id === 'cambridge') rightBadge = '20 bộ · Cam 1–20';
-        else if (s.id === 'volume') rightBadge = '6 tập · Vol 1–6';
-        else if (s.id === 'actual') rightBadge = '2023 – 2026';
+        if (s.id === 'cambridge') rightBadge = `${summary.cambridge?.booksReady || 13}/20 cuốn · ${summary.cambridge?.passages || 126} bài`;
+        else if (s.id === 'volume') rightBadge = `10 tập · ${summary.volume?.passages || 120} bài`;
+        else if (s.id === 'actual') rightBadge = `${summary.actual?.booksTotal || 30} bộ · ${summary.actual?.passages || 349} bài`;
         else rightBadge = `${allPassages.filter((p) => p.source === 'news').length} bài báo`;
       }
 
@@ -438,7 +500,7 @@
             </span>
             <div>
               <h2 class="tot-shell-title">Luyện đọc · Practice</h2>
-              <p class="tot-shell-sub">Chọn kho đề Cambridge 1–20, Volume 1–6, Actual Tests hoặc đọc báo học thuật News.</p>
+              <p class="tot-shell-sub">Chọn Cambridge 1–20, Real Reading Test Volume 1–10, IELTS Reading Recent Actual Tests hoặc đọc báo học thuật News.</p>
             </div>
           </div>
         </div>
@@ -463,14 +525,6 @@
     const sources = d.SOURCES || [];
     const curSourceObj = sources.find((s) => s.id === state.source) || sources[0];
     const isNews = state.source === 'news';
-
-    const sourceTabsHtml = sources.map((s) => `
-      <button type="button" class="rp-source-tab ${state.source === s.id ? 'active' : ''}"
-        data-rp-source="${esc(s.id)}" onclick="ReadingPracticeApp.setSource('${esc(s.id)}')">
-        <span>${esc(s.label)}</span>
-      </button>
-    `).join('');
-
     const q = state.searchQuery.trim().toLowerCase();
     const matchesSearch = (obj) => {
       if (!q) return true;
@@ -492,11 +546,13 @@
 
       const visibleBooks = (state.source === 'cambridge' && state.camGroup === 'recent')
         ? books.filter((b) => b.group === 'recent')
-        : books;
+        : (state.source === 'actual' && state.actualGroup === 'recent' && books.length > 10)
+          ? books.filter((b) => b.group === 'recent')
+          : books;
 
       const readyBooksCount = books.filter((b) => countReadyTestsInBook(b.id) > 0).length;
 
-      const camGroupToggle = state.source === 'cambridge' ? `
+      const groupToggleHtml = state.source === 'cambridge' ? `
         <div class="rp-book-group-toggle" role="group" aria-label="Phạm vi kệ sách Cambridge">
           <button type="button" class="rp-mini-tab ${state.camGroup === 'recent' ? 'active' : ''}"
             aria-pressed="${state.camGroup === 'recent' ? 'true' : 'false'}"
@@ -505,7 +561,16 @@
             aria-pressed="${state.camGroup === 'all' ? 'true' : 'false'}"
             onclick="ReadingPracticeApp.setCamGroup('all')">Tất cả Cam 1 – 20 (${books.length} cuốn)</button>
         </div>
-      ` : '';
+      ` : (state.source === 'actual' && books.length > 10 ? `
+        <div class="rp-book-group-toggle" role="group" aria-label="Phạm vi bộ Recent Actual Tests">
+          <button type="button" class="rp-mini-tab ${state.actualGroup === 'recent' ? 'active' : ''}"
+            aria-pressed="${state.actualGroup === 'recent' ? 'true' : 'false'}"
+            onclick="ReadingPracticeApp.setActualGroup('recent')">Bộ 1 – 10 (Mới nhất)</button>
+          <button type="button" class="rp-mini-tab ${state.actualGroup === 'all' ? 'active' : ''}"
+            aria-pressed="${state.actualGroup === 'all' ? 'true' : 'false'}"
+            onclick="ReadingPracticeApp.setActualGroup('all')">Tất cả (${books.length} bộ)</button>
+        </div>
+      ` : '');
 
       const renderBookCard = (bk) => {
         const readyTests = countReadyTestsInBook(bk.id);
@@ -540,20 +605,30 @@
         `;
       };
 
-      // Organize books onto authentic wooden shelf tiers (balanced 10+10 for All Cam 1–20, 1 row otherwise)
+      // Organize books onto balanced wooden oak shelf tiers (10 per tier when > 11 books)
       const shelfTiers = [];
       if (state.source === 'cambridge' && state.camGroup === 'all' && visibleBooks.length > 11) {
         shelfTiers.push({ label: 'Kệ trên · Cam 20 – 11', items: visibleBooks.slice(0, 10), cols: 10, compact: false });
         shelfTiers.push({ label: 'Kệ dưới · Cam 10 – 1', items: visibleBooks.slice(10), cols: 10, compact: false });
+      } else if (state.source === 'actual' && visibleBooks.length > 10) {
+        for (let i = 0; i < visibleBooks.length; i += 10) {
+          const chunk = visibleBooks.slice(i, i + 10);
+          shelfTiers.push({
+            label: `Kệ ${Math.floor(i / 10) + 1} · Bộ ${chunk[0].num} – ${chunk[chunk.length - 1].num}`,
+            items: chunk,
+            cols: 10,
+            compact: false
+          });
+        }
       } else {
         const tierLabel = state.source === 'cambridge'
           ? 'Kệ trọng tâm · Cam 20 – 10'
-          : (state.source === 'volume' ? 'Kệ tuyển tập · Volume 1 – 6' : 'Hồ sơ đề thi · 2026 – 2023');
+          : (state.source === 'volume' ? 'Kệ sách · Real Reading Test Vol 1 – 10' : 'Kệ hồ sơ · Recent Actual Tests Bộ 1 – 10');
         shelfTiers.push({
           label: tierLabel,
           items: visibleBooks,
-          cols: visibleBooks.length,
-          compact: state.source !== 'cambridge'
+          cols: Math.min(11, visibleBooks.length),
+          compact: visibleBooks.length <= 6
         });
       }
 
@@ -596,8 +671,8 @@
 
       const shelfHeading = state.source === 'cambridge'
         ? 'Kệ sách Cambridge IELTS'
-        : (state.source === 'volume' ? 'Kệ sách Recent Actual Volume' : 'Kệ hồ sơ Actual Tests');
-      const unitNoun = state.source === 'volume' ? 'tập' : (state.source === 'actual' ? 'năm' : 'cuốn');
+        : (state.source === 'volume' ? 'Kệ sách Real Reading Test (Vol 1–10)' : 'Kệ hồ sơ Recent Actual Tests');
+      const unitNoun = state.source === 'volume' ? 'tập' : (state.source === 'actual' ? 'bộ' : 'cuốn');
 
       shelfHtml = `
         <section class="rp-shelf-box rp-bookcase" aria-label="${esc(shelfHeading)}">
@@ -607,7 +682,7 @@
               <span class="rp-shelf-stat">${readyBooksCount}/${books.length} ${unitNoun} sẵn sàng</span>
             </div>
             <div class="rp-shelf-controls">
-              ${camGroupToggle}
+              ${groupToggleHtml}
               <div class="rp-shelf-scroll-btns" aria-label="Cuộn kệ sách">
                 <button type="button" class="rp-shelf-nav-btn" aria-label="Cuộn kệ sách sang trái" onclick="ReadingPracticeApp.scrollShelf(-1)">
                   <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M10 3.5L5.5 8L10 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -665,7 +740,14 @@
       const testPassages = bookPassages.filter((p) => (p.testNum || 1) === state.selectedTestNum);
       const testFulls = bookFullTests.filter((t) => (t.testNum || 1) === state.selectedTestNum);
 
-      if (!testPassages.length && !testFulls.length && !q) {
+      if (state.loadingBank === state.source) {
+        contentHtml = `
+          <div class="rp-unloaded-box rp-bank-loading" role="status" aria-live="polite">
+            <div class="rp-unloaded-title">Đang mở kệ đề từ kho dữ liệu…</div>
+            <p class="rp-unloaded-desc">Hệ thống đang nạp toàn bộ đề thi, câu hỏi và bảng đáp án chuẩn cho kho này.</p>
+          </div>
+        `;
+      } else if (!testPassages.length && !testFulls.length && !q) {
         contentHtml = `
           <div class="rp-unloaded-box" role="status">
             <div class="rp-unloaded-icon" aria-hidden="true">
@@ -736,9 +818,6 @@
               <h2 class="tot-shell-title">${esc(curSourceObj?.bookTitle || curSourceObj?.label || 'Practice')}</h2>
               <p class="tot-shell-sub">${esc(curSourceObj?.desc || '')}</p>
             </div>
-          </div>
-          <div class="rp-source-bar" role="tablist" aria-label="Nguồn đề đọc">
-            ${sourceTabsHtml}
           </div>
         </div>
 
@@ -1252,7 +1331,7 @@
               onclick="ReadingPracticeApp.handlePassageWordClick(event)">
               <div class="ins-passage-inner">
                 <h1 class="ins-passage-title">${esc(curPassage.title)}</h1>
-                ${curPassage.subtitle ? `<p class="ins-passage-sub">${esc(curPassage.subtitle)}</p>` : ''}
+                ${(curPassage.subtitle && !(curPassage.paragraphs?.[0]?.en || '').startsWith(curPassage.subtitle.replace(/…$/, '').slice(0, 40))) ? `<p class="ins-passage-sub">${esc(curPassage.subtitle)}</p>` : ''}
                 <div class="rp-passage-content" id="rp-passage-content">
                   ${(curPassage.paragraphs || []).map((para) => renderPassageParagraphHtml(para, curPassage, enableDict, isReview)).join('')}
                 </div>
@@ -1486,9 +1565,28 @@
           }).join('')}
         </div>
       `;
+    } else if (q.type === 'select') {
+      const opts = Array.isArray(q.options) && q.options.length ? q.options : ['A', 'B', 'C', 'D', 'E'];
+      const ansArr = Array.isArray(q.answer) ? q.answer.map((a) => String(a).toUpperCase()) : [String(q.answer || '').toUpperCase()];
+      optionsHtml = `
+        <div class="ins-select-chips" role="radiogroup" aria-label="Question ${q.num}">
+          ${opts.map((opt) => {
+            const val = String(opt).trim();
+            const active = userVal.toUpperCase() === val.toUpperCase();
+            let cls = `ins-sel-chip${active ? ' is-selected' : ''}`;
+            if (isReview && ansArr.includes(val.toUpperCase())) cls += ' is-key';
+            if (isReview && active && !ok) cls += ' is-wrong-pick';
+            return `
+              <button type="button" class="${cls}" ${isReview ? 'disabled' : ''}
+                aria-pressed="${active ? 'true' : 'false'}"
+                onclick="ReadingPracticeApp.setAnswer('${esc(qid)}', '${esc(val)}')">${esc(val)}</button>
+            `;
+          }).join('')}
+        </div>
+      `;
     }
 
-    const correctDisplay = Array.isArray(q.answer) ? q.answer[0] : q.answer;
+    const correctDisplay = Array.isArray(q.answer) ? q.answer.join(' / ') : q.answer;
     return `
       <div class="ins-q-item ${isCur && !isReview ? 'is-current' : ''}" id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
         <div class="ins-q-stem-row">
@@ -1597,18 +1695,29 @@
     },
 
     openSource(src, part) {
-      state.source = src || 'cambridge';
+      const targetSrc = src || 'cambridge';
+      state.source = targetSrc;
       state.view = 'source';
       state.partFilter = part || 'all';
       state.newsTopic = 'all';
       state.searchQuery = '';
-      const books = getBooksForSource(state.source);
-      if (books.length) {
-        const ready = books.find((b) => countReadyTestsInBook(b.id) > 0) || books[0];
-        state.selectedBookId = ready.id;
-        state.selectedTestNum = 1;
-      }
+      const pickDefaultBook = () => {
+        const books = getBooksForSource(state.source);
+        if (books.length) {
+          const ready = books.find((b) => countReadyTestsInBook(b.id) > 0) || books[0];
+          state.selectedBookId = ready.id;
+          state.selectedTestNum = 1;
+        }
+      };
+      pickDefaultBook();
+      const loadPromise = ensureSourceBankLoaded(targetSrc);
       renderHub();
+      loadPromise.then(() => {
+        if (state.view === 'source' && state.source === targetSrc) {
+          if (countReadyTestsInBook(state.selectedBookId) === 0) pickDefaultBook();
+          renderHub();
+        }
+      });
     },
 
     setSource(src) {
@@ -1617,6 +1726,11 @@
 
     setCamGroup(grp) {
       state.camGroup = grp === 'all' ? 'all' : 'recent';
+      renderHub();
+    },
+
+    setActualGroup(grp) {
+      state.actualGroup = grp === 'all' ? 'all' : 'recent';
       renderHub();
     },
 

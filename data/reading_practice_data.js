@@ -1134,36 +1134,10 @@
       suggestedMins: 60,
       deckDefaultName: 'Cambridge 20 · Test 1',
       passageIds: ['cam_s1_p1', 'cam_s1_p2', 'cam_s1_p3']
-    },
-    {
-      id: 'vol_s1_full',
-      source: 'volume',
-      bookId: 'vol_1',
-      testNum: 1,
-      series: 'Recent Actual Tests · Vol 1 · Test 1',
-      title: 'Volume 1 · Test 1 · FULL TEST',
-      subtitle: 'Pollinator Corridors · Volcanic Sand Batteries · Bilingual Uncertainty',
-      targetBand: '6.5 – 8.5',
-      suggestedMins: 60,
-      deckDefaultName: 'Volume 1 · Test 1',
-      passageIds: ['vol_s1_p1', 'vol_s1_p2', 'vol_s1_p3']
-    },
-    {
-      id: 'act_s1_full',
-      source: 'actual',
-      bookId: 'act_2025',
-      testNum: 1,
-      series: 'Actual Tests 2025 · Test 1',
-      title: 'Actual Tests 2025 · Test 1 · FULL TEST',
-      subtitle: 'Mass-Timber Skyscrapers · Ocean Kelp Sinks · Clinical Triage AI',
-      targetBand: '6.5 – 8.5',
-      suggestedMins: 60,
-      deckDefaultName: 'Actual 2025 · Test 1',
-      passageIds: ['act_s1_p1', 'act_s1_p2', 'act_s1_p3']
     }
   ];
 
-  // Attach bookId + testNum cleanly to seeded passages
+  // Attach bookId + testNum cleanly to curated Cam 20 Test 1 showcase passages
   ['cam_s1_p1', 'cam_s1_p2', 'cam_s1_p3'].forEach((id) => {
     if (PASSAGES[id]) {
       PASSAGES[id].bookId = 'cam_20';
@@ -1172,19 +1146,9 @@
       PASSAGES[id].deckDefaultName = `Cambridge 20 · T1 P${PASSAGES[id].passageNum}`;
     }
   });
-  ['vol_s1_p1', 'vol_s1_p2', 'vol_s1_p3'].forEach((id) => {
-    if (PASSAGES[id]) {
-      PASSAGES[id].bookId = 'vol_1';
-      PASSAGES[id].testNum = 1;
-      PASSAGES[id].series = 'Volume 1 · Test 1';
-    }
-  });
-  ['act_s1_p1', 'act_s1_p2', 'act_s1_p3'].forEach((id) => {
-    if (PASSAGES[id]) {
-      PASSAGES[id].bookId = 'act_2025';
-      PASSAGES[id].testNum = 1;
-      PASSAGES[id].series = 'Actual Tests 2025 · Test 1';
-    }
+  // Drop legacy placeholder vol_s1 / act_s1 entries now that full verified banks load from bank_volume.js & bank_actual.js
+  ['vol_s1_p1', 'vol_s1_p2', 'vol_s1_p3', 'act_s1_p1', 'act_s1_p2', 'act_s1_p3'].forEach((id) => {
+    delete PASSAGES[id];
   });
 
   // Full 20-book Cambridge IELTS Shelf (Cam 20 -> Cam 1, 4 Tests per book)
@@ -1201,35 +1165,44 @@
     });
   }
 
-  // Full 6-Volume Recent Actual Tests Shelf (Vol 1 -> Vol 6, 4 Tests per Vol)
+  // Full 10-Volume Real Reading Test Shelf (Vol 1 -> Vol 10, 4 Tests per Vol)
   const VOLUME_BOOKS = [];
-  for (let v = 1; v <= 6; v++) {
+  for (let v = 1; v <= 10; v++) {
     VOLUME_BOOKS.push({
       id: `vol_${v}`,
       source: 'volume',
       num: v,
       shortLabel: `Vol ${v}`,
-      title: `Recent Actual Tests · Vol ${v}`,
+      title: `Real Reading Test · Volume ${v}`,
       group: 'all',
       testsCount: 4
     });
   }
 
-  // Actual Tests by Year (2026 -> 2023)
-  const ACTUAL_YEARS = [2026, 2025, 2024, 2023].map((yr) => ({
-    id: `act_${yr}`,
-    source: 'actual',
-    num: yr,
-    shortLabel: `${yr}`,
-    title: `IELTS Actual Tests ${yr}`,
-    group: 'all',
-    testsCount: 4
-  }));
+  // IELTS Reading Recent Actual Tests (30 Sets · 349 Verified Passages, 4 Tests per Set)
+  const ACTUAL_SETS = [];
+  for (let s = 1; s <= 30; s++) {
+    ACTUAL_SETS.push({
+      id: `act_${String(s).padStart(2, '0')}`,
+      source: 'actual',
+      num: s,
+      shortLabel: `Bộ ${s}`,
+      title: `IELTS Reading Recent Actual Tests · Bộ ${s}`,
+      group: s <= 10 ? 'recent' : 'archive',
+      testsCount: 4
+    });
+  }
+
+  const BANK_SUMMARY = {
+    cambridge: { booksReady: 13, booksTotal: 20, passages: 126 },
+    volume: { booksReady: 10, booksTotal: 10, passages: 120 },
+    actual: { booksReady: 30, booksTotal: 30, passages: 349 }
+  };
 
   const SOURCES = [
-    { id: 'cambridge', label: 'Cambridge', bookTitle: 'Cambridge IELTS 1 – 20', desc: 'Đủ kệ 20 cuốn Cambridge University Press — mỗi cuốn gồm Test 1–4, tách Passage 1–3 & Full Test.' },
-    { id: 'volume', label: 'Volume', bookTitle: 'IELTS Reading Recent Actual Tests (Vol 1–6)', desc: 'Đủ 6 tập Volume luyện tăng Band chuyên sâu — chia rõ Test 1–4, Passage 1–3 và Full Test.' },
-    { id: 'actual', label: 'Actual Tests', bookTitle: 'IELTS Reading Actual Tests (2023–2026)', desc: 'Tuyển tập đề thi thật & dự đoán theo từng năm — luyện tốc độ và nhận diện bẫy Paraphrase.' },
+    { id: 'cambridge', label: 'Cambridge', bookTitle: 'Cambridge IELTS 1 – 20', desc: 'Đủ kệ 20 cuốn Cambridge University Press — đã nạp 13 cuốn (Cam 1–12 & Cam 20), tách Passage 1–3 & Full Test.' },
+    { id: 'volume', label: 'Volume', bookTitle: 'Real Reading Test — Volume 1–10', desc: 'Trọn bộ 10 tập Real Reading Test (40 Full Tests · 120 bài đọc học thuật) — chia rõ Test 1–4, Passage 1–3 & Full Test.' },
+    { id: 'actual', label: 'Recent Actual', bookTitle: 'IELTS Reading Recent Actual Tests', desc: 'Kho 349 bài đề thi thật gần đây chia 30 bộ (116 Full Tests) — luyện tốc độ & nhận diện bẫy Paraphrase chuẩn phòng thi.' },
     { id: 'news', label: 'News', bookTitle: 'The Economist · Nature · BBC Future', desc: 'Đọc báo học thuật chọn lọc theo chủ đề — dịch song ngữ & bấm tra từ lưu thẳng về Flashcard.' }
   ];
 
@@ -1237,7 +1210,9 @@
     SOURCES,
     CAMBRIDGE_BOOKS,
     VOLUME_BOOKS,
-    ACTUAL_YEARS,
+    ACTUAL_YEARS: ACTUAL_SETS,
+    ACTUAL_SETS,
+    BANK_SUMMARY,
     PASSAGES,
     FULL_TESTS
   };
