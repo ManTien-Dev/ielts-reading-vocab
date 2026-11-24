@@ -10017,56 +10017,55 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 
 
 /* =========================================================
-   LISTENING PRACTICE PRO — 3x3 TOTORO-SHAPED BOOKSHELF (#lp-app-root)
+   LISTENING PRACTICE PRO — 3x3 PORTAL + WOODEN TOTORO BOOKSHELF (#lp-app-root)
    Scoped strictly to #lp-app-root / .lp-* so ZERO collision with Reading (.rp-*)
    ========================================================= */
 #lp-app-root {
   --lp-ease: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* ---------- PORTAL (4 STUDIO CARDS · 2x2 BALANCED) ---------- */
-.lp-portal-grid {
+/* ---------- 3x3 STUDIO PORTAL (9 CARDS: 3 EXAM BANKS + 3 DRILLS + 3 LABS) ---------- */
+.lp-portal-3x3 {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
   margin-top: 14px;
 }
 
-.lp-portal-card {
+.lp-p3-card {
   display: flex;
   flex-direction: column;
   padding: 0 !important;
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--surface, #fffdf8);
   border: 1px solid var(--border, rgba(36, 34, 31, 0.11));
   cursor: pointer;
-  transition: transform 0.24s var(--lp-ease), border-color 0.22s ease, box-shadow 0.24s var(--lp-ease);
+  transition: transform 0.22s var(--lp-ease), border-color 0.2s ease, box-shadow 0.22s var(--lp-ease);
 }
 
-.lp-portal-card:hover {
+.lp-p3-card:hover {
   transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--accent, #2F6049) 42%, transparent);
-  box-shadow: 0 12px 26px rgba(31, 46, 37, 0.09);
+  box-shadow: 0 12px 24px rgba(31, 46, 37, 0.09);
 }
 
-.lp-portal-card:active {
+.lp-p3-card:active {
   transform: translateY(-1px) scale(0.992);
 }
 
-.lp-portal-art {
+.lp-p3-art {
   position: relative;
-  height: 148px;
+  height: 112px;
   background: linear-gradient(135deg, var(--lp-bg1, #EAF3EC) 0%, var(--lp-bg2, #D4E6D9) 100%);
   border-bottom: 1px solid color-mix(in srgb, var(--lp-ring, #2F6049) 14%, transparent);
   overflow: hidden;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding: 0 24px;
+  padding: 0 18px;
 }
 
-.lp-portal-bg-svg {
+.lp-p3-bg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -10074,101 +10073,108 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   pointer-events: none;
 }
 
-.lp-portal-totoro-wrap {
+.lp-p3-totoro {
   position: relative;
   z-index: 2;
-  width: 118px;
-  height: 134px;
-  margin-left: 16px;
+  width: 90px;
+  height: 102px;
+  margin-left: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 8px 14px rgba(24, 38, 30, 0.14));
-  transition: transform 0.28s var(--lp-ease);
+  filter: drop-shadow(0 6px 10px rgba(24, 38, 30, 0.14));
+  transition: transform 0.26s var(--lp-ease);
 }
 
-.lp-portal-totoro-wrap .lp-totoro-book-svg {
-  width: 118px;
-  height: 134px;
+.lp-p3-totoro .lp-totoro-book-svg {
+  width: 90px;
+  height: 102px;
 }
 
-.lp-portal-card:hover .lp-portal-totoro-wrap {
-  transform: translateY(-4px) rotate(-2deg);
+.lp-p3-card:hover .lp-p3-totoro {
+  transform: translateY(-3px) rotate(-2deg);
 }
 
-.lp-portal-body {
+.lp-p3-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px 18px 18px;
+  gap: 6px;
+  padding: 13px 15px 15px;
   flex: 1;
 }
 
-.lp-portal-badges {
+.lp-p3-badges {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .lp-source-pill {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 2.5px 9px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent, #2F6049) 12%, transparent);
   color: var(--accent, #2F6049);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.03em;
 }
 
 .lp-meta-pill {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 2.5px 9px;
   border-radius: 999px;
   background: var(--surface-panel, #f4f1ea);
   color: var(--ink-2, #524D45);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.lp-portal-title {
+.lp-p3-title {
   margin: 2px 0 0;
-  font-size: 17px;
+  font-size: 15.5px;
   font-weight: 800;
   color: var(--ink, #1F2421);
-  line-height: 1.3;
+  line-height: 1.28;
 }
 
-.lp-portal-desc {
+.lp-p3-desc {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.56;
+  font-size: 12.5px;
+  line-height: 1.5;
   color: var(--ink-2, #57524A);
   flex: 1;
 }
 
-.lp-portal-foot {
+.lp-p3-foot {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 7px;
   margin-top: 8px;
-  padding-top: 12px;
+  padding-top: 10px;
   border-top: 1px dashed var(--border, rgba(36, 34, 31, 0.1));
 }
 
-/* ---------- HUB HEADER & RANGE CONTROLS ---------- */
+.lp-p3-btn {
+  height: 31px !important;
+  min-height: 31px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+}
+
+/* ---------- HUB HEADER ---------- */
 .lp-hub-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .lp-hub-head-left {
@@ -10186,47 +10192,54 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   border-radius: 10px;
 }
 
-.lp-shelf-stat {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent, #2F6049) 11%, transparent);
-  color: var(--accent, #2F6049);
-  font-size: 12.5px;
-  font-weight: 750;
-}
-
-.lp-shelf-section {
-  background: var(--surface-panel, #f6f2e8);
+/* ---------- COMPACT WOODEN OAK TOTORO BOOKSHELF (CAM 1-20 & VOL 1-10) ---------- */
+.lp-bookcase {
+  background: var(--surface-panel, #f6f1e6);
   border: 1px solid var(--border, rgba(36, 34, 31, 0.1));
   border-radius: 20px;
-  padding: 18px 18px 20px;
+  padding: 16px 18px 18px;
   margin-bottom: 18px;
 }
 
-.lp-shelf-toolbar {
+.lp-bookcase-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
-.lp-shelf-heading {
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+.lp-bookcase-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lp-bookcase-label {
+  font-size: 14.5px;
+  font-weight: 850;
   color: var(--ink, #1F2421);
+}
+
+.lp-shelf-stat {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent, #2F6049) 12%, transparent);
+  color: var(--accent, #2F6049);
+  font-size: 12px;
+  font-weight: 750;
 }
 
 .lp-range-tabs {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px;
-  border-radius: 12px;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 11px;
   background: var(--surface, #fffdf8);
   border: 1px solid var(--border, rgba(36, 34, 31, 0.1));
 }
@@ -10234,16 +10247,16 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 .lp-range-tab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 9px;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 8px;
   border: none;
   background: transparent;
   color: var(--ink-2, #57524A);
-  font-size: 12.5px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 750;
   cursor: pointer;
-  transition: background 0.18s ease, color 0.18s ease, transform 0.16s var(--lp-ease);
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
 .lp-range-tab:hover {
@@ -10256,151 +10269,96 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   color: #fff;
 }
 
-.lp-grid-tag {
-  font-size: 10.5px;
-  font-weight: 800;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
+.lp-oak-tier {
+  position: relative;
+  padding-top: 6px;
+  margin-bottom: 14px;
 }
 
-.lp-range-tab:not(.active) .lp-grid-tag {
-  background: color-mix(in srgb, var(--accent, #2F6049) 12%, transparent);
-  color: var(--accent, #2F6049);
-}
-
-.lp-shelf-grid-badge {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--ink-2, #57524A);
-  padding: 5px 11px;
-  border-radius: 999px;
-  background: var(--surface, #fffdf8);
-  border: 1px solid var(--border, rgba(36, 34, 31, 0.1));
-}
-
-/* ---------- STRICT 3x3 TOTORO-SHAPED BOOK GRID ---------- */
-.lp-totoro-grid {
+.lp-oak-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(var(--lp-cols, 11), minmax(82px, 1fr));
+  gap: 6px;
+  align-items: end;
+  padding: 6px 8px 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
-.lp-totoro-card {
+.lp-oak-plank {
+  height: 11px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #d7bc91 0%, #bd9c6c 55%, #9f7e4f 100%);
+  box-shadow: 0 4px 10px rgba(74, 52, 24, 0.18), inset 0 1px 0 rgba(255, 250, 235, 0.55);
+  margin-top: -4px;
+}
+
+.lp-shelf-totoro {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  text-align: left;
-  padding: 13px 14px 14px;
-  border-radius: 18px;
-  background: var(--surface, #fffdf8);
-  border: 1.5px solid var(--border, rgba(36, 34, 31, 0.1));
+  align-items: center;
+  gap: 3px;
+  padding: 4px 2px 6px;
+  border: none;
+  border-radius: 14px 14px 6px 6px;
+  background: transparent;
   cursor: pointer;
-  transition: transform 0.24s var(--lp-ease), border-color 0.2s ease, box-shadow 0.24s var(--lp-ease), background 0.2s ease;
+  transition: transform 0.24s var(--lp-ease), filter 0.2s ease, background 0.2s ease;
 }
 
-.lp-totoro-card:hover {
-  transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--lp-fur, #2F6049) 55%, transparent);
-  box-shadow: 0 14px 28px rgba(27, 42, 34, 0.1);
+.lp-shelf-totoro:hover {
+  transform: translateY(-7px) scale(1.04);
+  z-index: 4;
 }
 
-.lp-totoro-card:active {
-  transform: translateY(-1px) scale(0.985);
+.lp-shelf-totoro:active {
+  transform: translateY(-2px) scale(0.98);
 }
 
-.lp-totoro-card.is-active {
-  border-color: var(--lp-fur, #2F6049);
-  background: color-mix(in srgb, var(--lp-fur, #2F6049) 6%, var(--surface, #fffdf8));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--lp-fur, #2F6049) 18%, transparent), 0 12px 24px rgba(27, 42, 34, 0.09);
+.lp-shelf-totoro.is-active {
+  transform: translateY(-6px) scale(1.05);
+  background: color-mix(in srgb, var(--lp-fur, #2F6049) 12%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--lp-fur, #2F6049) 55%, transparent);
+  z-index: 5;
 }
 
-.lp-card-top {
+.lp-shelf-totoro-fig {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.lp-trait-chip {
-  font-size: 11px;
-  font-weight: 750;
-  color: var(--lp-fur, #2F6049);
-  background: color-mix(in srgb, var(--lp-fur, #2F6049) 10%, transparent);
-  padding: 3px 8px;
-  border-radius: 999px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 62%;
-}
-
-.lp-band-chip {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ink-2, #57524A);
-  white-space: nowrap;
-}
-
-.lp-totoro-stage {
-  display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 6px 0 4px;
-  min-height: 162px;
+  width: 100%;
 }
 
-.lp-totoro-book-svg {
-  width: 144px;
-  height: 162px;
+.lp-shelf-totoro-fig .lp-totoro-book-svg {
+  width: 96px;
+  height: 112px;
   display: block;
   overflow: visible;
-  transition: transform 0.28s var(--lp-ease);
+  filter: drop-shadow(0 4px 6px rgba(28, 38, 32, 0.14));
 }
 
-.lp-totoro-card:hover .lp-totoro-book-svg {
-  transform: translateY(-5px) scale(1.035) rotate(-1.5deg);
-}
-
-.lp-totoro-card.is-active .lp-totoro-book-svg {
-  transform: translateY(-3px) scale(1.025);
-}
-
-.lp-card-info {
-  margin-top: 6px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border, rgba(36, 34, 31, 0.1));
-}
-
-.lp-card-title {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--ink, #1F2421);
-  line-height: 1.25;
-  margin-bottom: 7px;
-}
-
-.lp-card-foot {
-  display: flex;
+.lp-shelf-totoro-foot {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.88);
+  border: 1px solid rgba(36, 34, 31, 0.08);
 }
 
 .lp-pips {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
 }
 
 .lp-pip {
-  width: 9px;
-  height: 9px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
-  background: var(--border-strong, rgba(36, 34, 31, 0.16));
-  transition: transform 0.18s ease;
+  background: rgba(36, 34, 31, 0.18);
 }
 
 .lp-pip.is-ready {
@@ -10409,18 +10367,12 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 
 .lp-pip.is-done {
   background: var(--ok, #16a34a);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ok, #16a34a) 22%, transparent);
 }
 
-.lp-ready-txt {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--ink-2, #6b655c);
-}
-
-.lp-ready-txt.is-ready {
-  color: var(--lp-fur, #2F6049);
+.lp-shelf-totoro-cnt {
+  font-size: 10px;
   font-weight: 800;
+  color: var(--ink-2, #57524A);
 }
 
 /* ---------- BOOK DESK + TEST 1-4 TABS ---------- */
@@ -10428,26 +10380,25 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 16px;
   flex-wrap: wrap;
-  padding: 16px 20px;
-  border-radius: 18px;
+  padding: 14px 18px;
+  border-radius: 16px;
   background: var(--surface, #fffdf8);
-  border: 1.5px solid var(--border, rgba(36, 34, 31, 0.11));
-  margin-bottom: 18px;
+  border: 1px solid var(--border, rgba(36, 34, 31, 0.1));
 }
 
 .lp-desk-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   flex: 1 1 360px;
   min-width: 0;
 }
 
 .lp-desk-totoro-emblem {
-  width: 82px;
-  height: 94px;
+  width: 72px;
+  height: 82px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -10455,8 +10406,8 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 }
 
 .lp-desk-totoro-emblem .lp-totoro-book-svg {
-  width: 82px;
-  height: 94px;
+  width: 72px;
+  height: 82px;
 }
 
 .lp-desk-meta {
@@ -10469,12 +10420,12 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .lp-desk-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 850;
   color: var(--ink, #1F2421);
 }
@@ -10482,7 +10433,7 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 .lp-diff-pill {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 2.5px 9px;
   border-radius: 999px;
   background: #fef3c7;
   color: #92400e;
@@ -10493,7 +10444,7 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 .lp-desk-badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 2.5px 9px;
   border-radius: 999px;
   font-size: 11.5px;
   font-weight: 750;
@@ -10511,24 +10462,24 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 
 .lp-desk-review {
   margin: 0;
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.52;
   color: var(--ink-2, #57524A);
 }
 
 .lp-test-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(84px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(80px, 1fr));
+  gap: 7px;
 }
 
 .lp-test-tab {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  padding: 9px 12px;
-  border-radius: 12px;
+  gap: 1px;
+  padding: 8px 11px;
+  border-radius: 11px;
   background: var(--surface-panel, #f4f1ea);
   border: 1.5px solid transparent;
   color: var(--ink, #1F2421);
@@ -10537,7 +10488,7 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 }
 
 .lp-test-tab:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--accent, #2F6049) 35%, transparent);
 }
 
@@ -10548,8 +10499,8 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 }
 
 .lp-test-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
   background: var(--border-strong, rgba(36, 34, 31, 0.25));
   margin-bottom: 2px;
@@ -10564,19 +10515,158 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 }
 
 .lp-test-name {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 800;
-  line-height: 1.2;
 }
 
 .lp-test-tab small {
-  font-size: 11px;
+  font-size: 10.5px;
   opacity: 0.78;
 }
 
-/* ---------- PART 1..4 & FULL TEST CARDS ---------- */
+/* ---------- RECENT ACTUAL TOOLBAR (MATCHES READING) ---------- */
+.lp-actual-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.lp-actual-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--surface, #fffdf8);
+  border: 1px solid var(--border, rgba(36, 34, 31, 0.1));
+}
+
+.lp-actual-tab {
+  padding: 6px 13px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--ink-2, #57524A);
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.lp-actual-tab.active {
+  background: var(--accent, #2F6049);
+  color: #fff;
+}
+
+.lp-actual-search-wrap {
+  position: relative;
+  min-width: 260px;
+}
+
+.lp-actual-search-combo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 10px;
+  border-radius: 11px;
+  background: var(--surface, #fffdf8);
+  border: 1px solid var(--border, rgba(36, 34, 31, 0.12));
+}
+
+.lp-search-ico {
+  width: 15px;
+  height: 15px;
+  color: var(--ink-2, #6b655c);
+  flex-shrink: 0;
+}
+
+.lp-search-input {
+  border: none;
+  background: transparent;
+  color: var(--ink, #1F2421);
+  font-size: 13px;
+  width: 100%;
+  outline: none;
+  padding: 4px 2px;
+}
+
+.lp-active-filter-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: none;
+  background: color-mix(in srgb, var(--accent, #2F6049) 14%, transparent);
+  color: var(--accent, #2F6049);
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lp-filter-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--ink-2, #57524A);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.lp-filter-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.lp-filter-btn.is-active {
+  background: color-mix(in srgb, var(--accent, #2F6049) 14%, transparent);
+  color: var(--accent, #2F6049);
+}
+
+.lp-filter-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 180px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--surface, #fffdf8);
+  border: 1px solid var(--border, rgba(36, 34, 31, 0.14));
+  box-shadow: 0 12px 26px rgba(20, 30, 24, 0.14);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lp-filter-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--ink, #1F2421);
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.lp-filter-item:hover,
+.lp-filter-item.active {
+  background: color-mix(in srgb, var(--accent, #2F6049) 11%, transparent);
+  color: var(--accent, #2F6049);
+}
+
+/* ---------- PART 1-4 & FULL TEST CARDS ---------- */
 .lp-section-block {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .lp-section-head {
@@ -10584,13 +10674,12 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .lp-section-title {
   margin: 0;
-  font-size: 15.5px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--ink, #1F2421);
 }
@@ -10623,14 +10712,6 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   border-radius: 16px;
   background: var(--surface, #fffdf8);
   border: 1px solid var(--border, rgba(36, 34, 31, 0.11));
-  cursor: pointer;
-  transition: transform 0.2s var(--lp-ease), border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.lp-part-card:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--accent, #2F6049) 45%, transparent);
-  box-shadow: 0 10px 22px rgba(27, 42, 34, 0.08);
 }
 
 .lp-part-card.is-full {
@@ -10648,7 +10729,7 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 .lp-part-tag {
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   padding: 3px 9px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent, #2F6049) 12%, transparent);
@@ -10662,14 +10743,9 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 
 .lp-score-pill {
   font-size: 11.5px;
-  font-weight: 700;
+  font-weight: 750;
   padding: 3px 9px;
   border-radius: 999px;
-  background: var(--surface-panel, #f4f1ea);
-  color: var(--ink-2, #57524A);
-}
-
-.lp-score-pill.is-done {
   background: color-mix(in srgb, var(--ok, #16a34a) 14%, transparent);
   color: var(--ok, #15803d);
 }
@@ -10679,7 +10755,6 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   font-size: 15.5px;
   font-weight: 800;
   color: var(--ink, #1F2421);
-  line-height: 1.3;
 }
 
 .lp-part-sub {
@@ -10687,7 +10762,17 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   font-size: 13px;
   line-height: 1.5;
   color: var(--ink-2, #57524A);
-  flex: 1;
+}
+
+.lp-part-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border, rgba(36, 34, 31, 0.1));
 }
 
 .lp-part-meta {
@@ -10706,20 +10791,10 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   color: var(--ink-2, #57524A);
 }
 
-.lp-part-foot {
-  display: flex;
+.lp-part-btns {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border, rgba(36, 34, 31, 0.1));
-}
-
-.lp-part-audio-note {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-2, #6b655c);
+  gap: 7px;
 }
 
 .lp-part-go {
@@ -10729,26 +10804,26 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   font-weight: 750;
 }
 
-/* ---------- EMPTY IMPORT-READY SLOT ---------- */
+/* ---------- EMPTY SLOT ---------- */
 .lp-empty-slot {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 22px 24px;
-  border-radius: 18px;
+  gap: 18px;
+  padding: 20px 22px;
+  border-radius: 16px;
   background: var(--surface, #fffdf8);
-  border: 1.5px dashed color-mix(in srgb, var(--accent, #2F6049) 34%, transparent);
+  border: 1.5px dashed color-mix(in srgb, var(--accent, #2F6049) 32%, transparent);
 }
 
 .lp-empty-mini-totoro {
-  width: 92px;
-  height: 106px;
+  width: 82px;
+  height: 94px;
   flex-shrink: 0;
 }
 
 .lp-empty-mini-totoro .lp-totoro-book-svg {
-  width: 92px;
-  height: 106px;
+  width: 82px;
+  height: 94px;
 }
 
 .lp-empty-copy {
@@ -10757,70 +10832,58 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 }
 
 .lp-empty-title {
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 800;
   color: var(--ink, #1F2421);
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .lp-empty-desc {
-  margin: 0 0 14px;
-  font-size: 13.5px;
-  line-height: 1.58;
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.55;
   color: var(--ink-2, #57524A);
-}
-
-.lp-empty-desc code {
-  padding: 2px 6px;
-  border-radius: 6px;
-  background: var(--surface-panel, #f4f1ea);
-  font-size: 12px;
-  color: var(--accent, #2F6049);
 }
 
 .lp-empty-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   flex-wrap: wrap;
 }
 
 .lp-btn-sm {
-  min-height: 35px;
-  padding: 6px 14px;
-  font-size: 13px;
+  min-height: 34px;
+  padding: 5px 13px;
+  font-size: 12.5px;
   font-weight: 750;
 }
 
-/* ---------- DARK MODE REFINEMENTS ---------- */
-[data-theme="dark"] .lp-portal-art {
+/* ---------- DARK MODE ---------- */
+[data-theme="dark"] .lp-p3-art {
   background: linear-gradient(135deg, color-mix(in srgb, var(--lp-ring, #2F6049) 24%, #181c1a) 0%, color-mix(in srgb, var(--lp-ring, #2F6049) 14%, #131614) 100%);
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
-[data-theme="dark"] .lp-shelf-section {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.09);
-}
-
-[data-theme="dark"] .lp-totoro-card {
+[data-theme="dark"] .lp-bookcase,
+[data-theme="dark"] .lp-book-desk,
+[data-theme="dark"] .lp-part-card,
+[data-theme="dark"] .lp-empty-slot,
+[data-theme="dark"] .lp-actual-tabs,
+[data-theme="dark"] .lp-actual-search-combo,
+[data-theme="dark"] .lp-filter-pop {
   background: rgba(255, 255, 255, 0.035);
   border-color: rgba(255, 255, 255, 0.09);
 }
 
-[data-theme="dark"] .lp-totoro-card.is-active {
-  background: color-mix(in srgb, var(--lp-fur, #4a9a74) 16%, #181d1a);
-  border-color: color-mix(in srgb, var(--lp-fur, #4a9a74) 75%, #fff);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--lp-fur, #4a9a74) 26%, transparent);
+[data-theme="dark"] .lp-oak-plank {
+  background: linear-gradient(180deg, #5e4c34 0%, #463723 55%, #342819 100%);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 235, 195, 0.16);
 }
 
-[data-theme="dark"] .lp-trait-chip {
-  color: #e6f2ec;
-  background: color-mix(in srgb, var(--lp-fur, #2F6049) 34%, transparent);
-}
-
-[data-theme="dark"] .lp-ready-txt.is-ready {
-  color: #86efac;
+[data-theme="dark"] .lp-shelf-totoro-foot {
+  background: rgba(24, 29, 26, 0.88);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="dark"] .lp-diff-pill {
@@ -10828,32 +10891,26 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   color: #fde68a;
 }
 
-[data-theme="dark"] .lp-book-desk,
-[data-theme="dark"] .lp-part-card,
-[data-theme="dark"] .lp-empty-slot {
-  background: rgba(255, 255, 255, 0.035);
-  border-color: rgba(255, 255, 255, 0.09);
+[data-theme="dark"] .lp-range-tabs {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .lp-range-tab.active,
+[data-theme="dark"] .lp-test-tab.active,
+[data-theme="dark"] .lp-actual-tab.active {
+  background: #2d5f46;
+  border-color: #3f7c5d;
+  color: #ffffff;
 }
 
 [data-theme="dark"] .lp-test-tab {
   background: rgba(255, 255, 255, 0.05);
 }
 
-[data-theme="dark"] .lp-range-tab.active,
-[data-theme="dark"] .lp-test-tab.active {
-  background: #2d5f46;
-  border-color: #3f7c5d;
-  color: #ffffff;
-}
-
-[data-theme="dark"] .lp-range-tabs {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
 /* ---------- RESPONSIVE ---------- */
-@media (max-width: 980px) {
-  .lp-totoro-grid,
+@media (max-width: 1024px) {
+  .lp-portal-3x3,
   .lp-parts-grid.is-three {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -10863,8 +10920,7 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 }
 
 @media (max-width: 640px) {
-  .lp-portal-grid,
-  .lp-totoro-grid,
+  .lp-portal-3x3,
   .lp-parts-grid,
   .lp-parts-grid.is-three {
     grid-template-columns: minmax(0, 1fr);
@@ -10879,11 +10935,9 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp-portal-card,
-  .lp-portal-totoro-wrap,
-  .lp-totoro-card,
-  .lp-totoro-book-svg,
-  .lp-part-card,
+  .lp-p3-card,
+  .lp-p3-totoro,
+  .lp-shelf-totoro,
   .lp-test-tab {
     transition: none !important;
   }
