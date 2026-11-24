@@ -126,19 +126,20 @@
       this.save(st);
     },
 
-    saveInProgress(draft) {
-      const st = this.load();
-      st.inProgress = draft;
-      this.save(st);
+    saveInProgress() {
+      // Disabled: students complete the test or end & grade immediately (no resumable drafts).
+      this.clearInProgress();
     },
 
     clearInProgress() {
       const st = this.load();
-      st.inProgress = null;
-      this.save(st);
+      if (st.inProgress != null) {
+        st.inProgress = null;
+        this.save(st);
+      }
     },
 
-    getInProgress() { return this.load().inProgress; },
+    getInProgress() { return null; },
     getHistory() { return this.load().history; },
 
     getBestAttempt(itemId) {
@@ -522,23 +523,8 @@
   }
 
   function buildResumeBannerHtml() {
-    const inProg = ReadingPracticeStore.getInProgress();
-    if (!inProg) return '';
-    return `
-      <div class="rp-resume-banner">
-        <div class="rp-resume-info">
-          <span class="rp-resume-dot"></span>
-          <div>
-            <div class="rp-resume-title">Đang làm dở: <strong>${esc(inProg.title)}</strong></div>
-            <div class="rp-resume-sub">Đã trả lời ${Object.keys(inProg.answers || {}).length}/${inProg.totalQuestions || 0} câu · Còn ${formatDuration(inProg.remainingSec)}</div>
-          </div>
-        </div>
-        <div class="rp-resume-actions">
-          <button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.discardResume()">Bỏ dở</button>
-          <button type="button" class="btn btn-primary rp-btn-sm" onclick="ReadingPracticeApp.resumeDraft()">Làm tiếp →</button>
-        </div>
-      </div>
-    `;
+    ReadingPracticeStore.clearInProgress();
+    return '';
   }
 
   /* =========================================================
@@ -1113,36 +1099,7 @@
   }
 
   function persistDraft() {
-    if (!state.session || state.session.mode !== 'exam') return;
-    ReadingPracticeStore.saveInProgress({
-      itemId: state.session.itemId,
-      title: state.session.title,
-      source: state.session.source,
-      isFull: state.session.isFull,
-      studyMode: state.session.studyMode,
-      contrast: state.session.contrast,
-      practiceContrast: state.session.practiceContrast,
-      textSize: state.session.textSize,
-      activePenColor: state.session.activePenColor,
-      brushAuto: false,
-      showTimer: state.session.showTimer,
-      attemptCount: state.session.attemptCount || 0,
-      firstAttemptResult: state.session.firstAttemptResult || null,
-      lockedCorrect: state.session.lockedCorrect || {},
-      wrongSet: state.session.wrongSet || {},
-      antiCheatStrikes: state.session.antiCheatStrikes || 0,
-      highlights: state.session.highlights,
-      deckDefaultName: state.session.deckDefaultName,
-      passageIds: state.session.passageIds,
-      remainingSec: state.session.remainingSec,
-      elapsedSec: state.session.elapsedSec,
-      totalQuestions: getAllSessionQuestions().length,
-      answers: state.session.answers,
-      flagged: state.session.flagged,
-      struck: state.session.struck,
-      notes: state.session.notes,
-      updatedAt: Date.now()
-    });
+    // No resumable drafts: students finish the attempt or end & grade immediately on exit.
   }
 
   /* ---------- PERSISTENT TEXT-OFFSET PASTEL HIGHLIGHT ENGINE ---------- */
@@ -1715,7 +1672,7 @@
             </div>
           </div>
 
-          <button type="button" class="ins-opt-exit-btn" onclick="ReadingPracticeApp.exitToHub()">← Exit to Practice Library (Lưu bài làm dở)</button>
+          <button type="button" class="ins-opt-exit-btn" onclick="ReadingPracticeApp.exitToHub()">← Kết thúc &amp; Chấm điểm (Thoát ra kho đề)</button>
         </div>
       </div>
     ` : '';
@@ -1723,7 +1680,7 @@
     // Header Left + Right
     const brandBlockHtml = isPractice
       ? `
-        <button type="button" class="prac-back-btn" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề (tự động lưu bài làm dở)" aria-label="Quay về kho đề">
+        <button type="button" class="prac-back-btn" onclick="ReadingPracticeApp.exitToHub()" title="${isReview || s.isNews ? 'Quay về kho đề' : 'Kết thúc bài & chấm điểm ngay (không lưu làm dở)'}" aria-label="Quay về kho đề">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           <span>Kho đề</span>
         </button>
@@ -2452,42 +2409,95 @@
     },
 
     resumeDraft() {
-      const d = ReadingPracticeStore.getInProgress();
-      if (!d || !Array.isArray(d.passageIds) || !d.passageIds.length) return;
-      startSession({
-        itemId: d.itemId, title: d.title, source: d.source, isFull: !!d.isFull,
-        studyMode: d.studyMode || (d.source === 'news' ? 'practice' : 'exam'),
-        contrast: d.contrast, practiceContrast: d.practiceContrast, textSize: d.textSize,
-        activePenColor: d.activePenColor,
-        showTimer: d.showTimer !== false,
-        attemptCount: d.attemptCount || 0,
-        firstAttemptResult: d.firstAttemptResult || null,
-        lockedCorrect: d.lockedCorrect || {},
-        wrongSet: d.wrongSet || {},
-        antiCheatStrikes: d.antiCheatStrikes || 0,
-        highlights: d.highlights || {},
-        suggestedMins: Math.max(1, Math.ceil((d.remainingSec || 1200) / 60)),
-        remainingSec: d.remainingSec, elapsedSec: d.elapsedSec,
-        deckDefaultName: d.deckDefaultName, passageIds: d.passageIds,
-        answers: d.answers || {}, flagged: d.flagged || {}, struck: d.struck || {}, notes: d.notes || []
-      });
+      ReadingPracticeStore.clearInProgress();
     },
 
     discardResume() {
       ReadingPracticeStore.clearInProgress();
       this.render();
-      toast('Đã xóa bài làm dở.');
     },
 
-    exitToHub() {
-      if (state.session && state.session.mode === 'exam') persistDraft();
+    exitToHub(forceImmediate = false) {
+      const s = state.session;
+      // Strict Finish-to-Leave Policy: leaving an active test ALWAYS requires ending & grading immediately (NO draft!)
+      if (!forceImmediate && s && s.mode === 'exam' && !s.isNews) {
+        if (s.optionsOpen) {
+          s.optionsOpen = false;
+          renderExamWorkspace();
+        }
+        this.openExitConfirmModal();
+        return;
+      }
       stopTimer();
       stopReadingAntiCheat();
+      ReadingPracticeStore.clearInProgress();
       state.pendingSelection = null;
       document.body.classList.remove('rp-exam-fullscreen');
       state.view = 'source';
       state.session = null;
       renderHub();
+    },
+
+    openExitConfirmModal() {
+      if (!state.session) return;
+      const modal = document.getElementById('rp-presubmit-modal');
+      const body = document.getElementById('rp-presubmit-body');
+      if (!modal || !body) return;
+      const allQ = getAllSessionQuestions();
+      const answered = allQ.filter((q) => !!String(state.session.answers[q._qid] || '').trim()).length;
+      const unanswered = allQ.length - answered;
+      const titleEl = modal.querySelector('.rp-modal-head h3');
+      if (titleEl) titleEl.textContent = 'Kết thúc & Chấm điểm bài đang làm?';
+
+      body.innerHTML = `
+        <div class="rp-ps-stats">
+          <div class="rp-ps-box"><span>Đã làm</span><strong class="tabular">${answered} / ${allQ.length}</strong></div>
+          <div class="rp-ps-box ${unanswered > 0 ? 'warn' : ''}"><span>Chưa làm</span><strong class="tabular">${unanswered}</strong></div>
+          <div class="rp-ps-box"><span>Chế độ</span><strong>Không lưu nháp</strong></div>
+        </div>
+        <p style="margin:12px 0 16px;font-size:13.5px;line-height:1.58;color:var(--ink-2);">
+          Bài làm chỉ hoàn tất khi bạn nộp bài. Nếu rời khỏi lúc này, hệ thống sẽ <strong>kết thúc lượt làm và chấm điểm ngay</strong> theo các câu bạn đã điền (chỉ mở Solution &amp; Từ điển khi đạt 100%).
+        </p>
+        <div class="rp-ps-foot">
+          <button type="button" class="btn btn-primary" onclick="ReadingPracticeApp.closePreSubmitModal()">Ở lại làm tiếp</button>
+          <button type="button" class="btn-subtle" id="rp-btn-confirm-exit-grade" style="color:var(--danger,#b91c1c);border-color:color-mix(in srgb,var(--danger,#b91c1c) 38%,transparent);" onclick="ReadingPracticeApp.confirmFinishAndExit()">Kết thúc &amp; Chấm điểm</button>
+        </div>
+      `;
+      modal.classList.add('open');
+    },
+
+    confirmFinishAndExit() {
+      if (!state.session) return;
+      const s = state.session;
+      this.closePreSubmitModal();
+      const res = computeReviewResult();
+      const isMastered = res.total > 0 && res.score === res.total;
+
+      stopTimer();
+      stopReadingAntiCheat();
+      ReadingPracticeStore.clearInProgress();
+
+      ReadingPracticeStore.recordAttempt({
+        itemId: s.itemId,
+        title: s.title,
+        source: s.source,
+        isFull: s.isFull,
+        score: res.score,
+        total: res.total,
+        band: res.band,
+        elapsedSec: res.elapsedSec,
+        mastered: isMastered,
+        completedAt: Date.now()
+      });
+
+      state.pendingSelection = null;
+      document.body.classList.remove('rp-exam-fullscreen');
+      state.view = 'source';
+      state.session = null;
+      renderHub();
+      toast(isMastered
+        ? `Hoàn tất 100%: ${res.score}/${res.total} · Band ${res.band.toFixed(1)} — Đã mở khóa Solution!`
+        : `Đã kết thúc & chấm điểm: ${res.score}/${res.total} câu đúng · Band ${res.band.toFixed(1)} (cần đạt 100% để mở Solution).`);
     },
 
     switchExamPassage(idx) {
@@ -2817,6 +2827,8 @@
       const modal = document.getElementById('rp-presubmit-modal');
       const body = document.getElementById('rp-presubmit-body');
       if (!modal || !body) return;
+      const titleEl = modal.querySelector('.rp-modal-head h3');
+      if (titleEl) titleEl.textContent = 'Xác nhận nộp bài';
 
       body.innerHTML = `
         <div class="rp-ps-stats">

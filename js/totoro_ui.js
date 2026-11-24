@@ -938,25 +938,14 @@
       `;
     }).join('');
 
-    const inProg = rpStats.inProgress;
-    const resumeHtml = inProg ? `
-      <div class="rh-resume-card ink-brackets">
-        <div>
-          <div class="rh-resume-kicker">Đang làm dở · Reading Practice</div>
-          <div class="rh-resume-title">${esc(inProg.title)}</div>
-          <div class="rh-resume-sub">Đã trả lời ${Object.keys(inProg.answers || {}).length}/${inProg.totalQuestions || 0} câu · Còn ${Math.ceil((inProg.remainingSec || 0) / 60)} phút</div>
-        </div>
-        <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.resumeDraft();">Làm tiếp ngay →</button>
-      </div>
-    ` : '';
-
     const rpHistHtml = rpStats.recent.length
       ? rpStats.recent.map((h) => {
           const dt = h.completedAt ? new Date(h.completedAt).toLocaleDateString('vi-VN') : '';
           const srcLabel = h.source === 'cambridge' ? 'Cambridge' : h.source === 'volume' ? 'Volume' : h.source === 'actual' ? 'Actual' : 'News';
+          const isMastered = !!(h.mastered || (h.total > 0 && h.score === h.total));
           const openCall = h.isFull
-            ? `window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.startFullTest('${esc(h.itemId)}', { openInReview: true });`
-            : `window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.startPassage('${esc(h.itemId)}', { openInReview: true });`;
+            ? `window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.startFullTest('${esc(h.itemId)}', { ${isMastered ? 'openInReview: true' : "studyMode: 'practice'"} });`
+            : `window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.startPassage('${esc(h.itemId)}', { ${isMastered ? 'openInReview: true' : "studyMode: 'practice'"} });`;
           return `
             <div class="rh-hist-item">
               <div style="min-width:0;">
@@ -965,7 +954,7 @@
               </div>
               <div class="rh-hist-right">
                 <span class="rh-band-pill tabular">Band ${(Number(h.band) || 0).toFixed(1)}</span>
-                <button type="button" class="tot-foot-btn" onclick="${openCall}">Xem giải</button>
+                <button type="button" class="tot-foot-btn" onclick="${openCall}">${isMastered ? 'Xem giải' : 'Làm lại'}</button>
               </div>
             </div>
           `;
@@ -1036,17 +1025,7 @@
               </div>
               <span class="rh-band-big tabular">${rpStats.avgBand ? `Band ${rpStats.avgBand.toFixed(1)}` : '—'}</span>
             </div>
-            ${inProg ? `
-              <div class="rh-inline-resume">
-                <div style="min-width:0;">
-                  <div class="rh-resume-title" style="font-size:13.5px;">Đang làm dở: ${esc(inProg.title)}</div>
-                  <div class="rh-resume-sub">${Object.keys(inProg.answers || {}).length}/${inProg.totalQuestions || 0} câu · Còn ${Math.ceil((inProg.remainingSec || 0) / 60)} phút</div>
-                </div>
-                <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;flex-shrink:0;" onclick="window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.resumeDraft();">Làm tiếp →</button>
-              </div>
-            ` : `
-              <div class="rh-empty" style="margin:auto 0;">Chọn một Passage hoặc Full Test trong kho <strong>Cambridge · Volume · Actual · News</strong> để đo Band Reading thực tế.</div>
-            `}
+            <div class="rh-empty" style="margin:auto 0;">Chọn một Passage hoặc Full Test trong kho <strong>Cambridge · Volume · Actual · News</strong> để đo Band Reading thực tế.</div>
             <div class="tot-panel-foot" style="margin-top:auto;">
               <span class="tot-foot-meta">Tiến độ Task <strong class="tabular">${snap.completedTasks.length}/110</strong></span>
               <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.switchView('practice')">Làm đề mới →</button>
