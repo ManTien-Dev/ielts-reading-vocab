@@ -8013,8 +8013,18 @@ body:not(.is-global-home):not(.is-teacher-mode) .tot-skill-wrap {
   from { opacity: 0; transform: translateY(-3px) scale(0.985); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+#nav-global-skills .tot-nav-tab {
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
 #nav-global-skills .tot-nav-tab.is-muted {
   opacity: 0.54;
+}
+#header-mode-chip-text {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 .tot-nav-tab,
 .tot-skill-trigger {

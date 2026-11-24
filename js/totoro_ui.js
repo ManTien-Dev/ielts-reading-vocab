@@ -506,7 +506,7 @@
     const modeChip = document.getElementById('header-mode-chip-text');
     if (modeChip && !(isTeacher && teacherVisible)) {
       const curMode = typeof window.__TOTORO_GET_MODE__ === 'function' ? window.__TOTORO_GET_MODE__() : 'Overview';
-      modeChip.textContent = curMode === 'Overview' ? 'Home chung' : curMode;
+      modeChip.textContent = curMode === 'Overview' ? 'HOME' : String(curMode).toUpperCase();
     }
     const snap = getRealStudentSnapshot();
     const u = snap.user;
@@ -731,7 +731,7 @@
     const modeChip = document.getElementById('header-mode-chip-text');
     if (modeChip && !document.body.classList.contains('is-teacher-mode')) {
       const curMode = typeof window.__TOTORO_GET_MODE__ === 'function' ? window.__TOTORO_GET_MODE__() : 'Overview';
-      modeChip.textContent = curMode === 'Overview' ? 'Home chung' : curMode;
+      modeChip.textContent = curMode === 'Overview' ? 'HOME' : String(curMode).toUpperCase();
     }
     const snap = getRealStudentSnapshot();
     const plan = getStudyPlan(snap.uid);
@@ -1262,13 +1262,13 @@
         name: 'Writing Home',
         badge: 'Đang phát triển · Sắp ra mắt',
         desc: 'Không gian trang chủ riêng cho IELTS Writing: bản đồ Flow Ideas Task 2, biểu đồ Task 1, kho bài mẫu chữa chi tiết và lịch sử chấm Band.',
-        cta: `<button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchHomeScope('global')">← Quay về Home chung</button>`
+        cta: `<button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchHomeScope('global')">← Quay về HOME</button>`
       },
       speaking: {
         name: 'Speaking Home',
         badge: 'Đang phát triển · Sắp ra mắt',
         desc: 'Không gian trang chủ riêng cho IELTS Speaking: Spoken Chunks Part 1–3, kho Cue Card theo quý và lịch sử luyện phát âm.',
-        cta: `<button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchHomeScope('global')">← Quay về Home chung</button>`
+        cta: `<button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchHomeScope('global')">← Quay về HOME</button>`
       }
     }[scope];
     if (!meta) return;
@@ -1279,7 +1279,7 @@
         <h2 class="rh-title" style="margin-top:10px;">${meta.name}</h2>
         <p class="rh-sub" style="max-width:560px;margin:6px auto 18px;">${meta.desc}</p>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-          <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openGlobalHome()">← Về Home chung</button>
+          <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openGlobalHome()">← Về HOME</button>
           ${scope === 'listening' ? meta.cta : ''}
         </div>
       </div>
@@ -1599,7 +1599,7 @@
       document.body.classList.toggle('is-global-home', isGlobal);
 
       const chipTxt = document.getElementById('header-mode-chip-text');
-      if (chipTxt) chipTxt.textContent = isGlobal ? 'Home chung' : modeVal;
+      if (chipTxt) chipTxt.textContent = isGlobal ? 'HOME' : String(modeVal).toUpperCase();
 
       const homeTabLbl = document.getElementById('nav-home-tab-label');
       if (homeTabLbl) homeTabLbl.textContent = 'Tổng quan';
@@ -1628,7 +1628,7 @@
         switchHomeScope('global');
         if (!opts.keepView) switchView('home', { fromUser: false });
         if (!opts.silent) {
-          window.__VOCAB_BRIDGE__?.showToast?.('🏠 Đang ở Home chung — Tổng quan Plan, Xếp hạng & 4 kỹ năng');
+          window.__VOCAB_BRIDGE__?.showToast?.('🏠 Đang ở HOME — Tổng quan mục tiêu, kế hoạch & tiến độ học');
         }
         return;
       }

@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
   <link rel="stylesheet" href="css/enhancements.css?v=20261124o">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261124x">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261124y">
 </head>
 <body>
 
@@ -199,18 +199,18 @@
       </button>
 
       <div class="tot-pop-wrap tot-skill-wrap">
-        <button type="button" class="tot-skill-trigger" id="btn-skill-trigger" title="Chuyển nhanh giữa Home chung và các kỹ năng IELTS">
+        <button type="button" class="tot-skill-trigger" id="btn-skill-trigger" title="Chuyển nhanh giữa HOME và các kỹ năng IELTS">
           <span class="tot-skill-dot"></span>
-          <span id="header-mode-chip-text">Reading</span>
+          <span id="header-mode-chip-text">READING</span>
           <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="tot-popover" id="skill-popover">
-          <button type="button" class="tot-skill-opt active" data-tot-skill="Overview"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">Home chung</div><div class="tot-skill-opt-sub">Tổng quan · Mục tiêu · Kế hoạch</div></div><span class="tot-tag">Đang mở</span></button>
+          <button type="button" class="tot-skill-opt active" data-tot-skill="Overview"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">HOME</div><div class="tot-skill-opt-sub">Tổng quan · Mục tiêu · Kế hoạch</div></div><span class="tot-tag">Đang mở</span></button>
           <div class="tot-pop-divider" style="margin:6px 0;"></div>
-          <button type="button" class="tot-skill-opt" data-tot-skill="Reading"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">IELTS Reading</div><div class="tot-skill-opt-sub">4.489 họ từ · 110 Tasks · Practice</div></div><span class="tot-tag">Sẵn sàng</span></button>
-          <button type="button" class="tot-skill-opt" data-tot-skill="Listening"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">IELTS Listening</div><div class="tot-skill-opt-sub">Nghe → Nói lại từ · Shadowing</div></div><span class="tot-tag">Sẵn sàng</span></button>
-          <button type="button" class="tot-skill-opt" data-tot-skill="Writing"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">IELTS Writing</div><div class="tot-skill-opt-sub">Flow Ideas · Task 1 &amp; 2</div></div><span class="tot-tag soon">Sắp mở</span></button>
-          <button type="button" class="tot-skill-opt" data-tot-skill="Speaking"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">IELTS Speaking</div><div class="tot-skill-opt-sub">Spoken Chunks · Part 1–3</div></div><span class="tot-tag soon">Sắp mở</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Reading"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">READING</div><div class="tot-skill-opt-sub">4.489 họ từ · 110 Tasks · Practice</div></div><span class="tot-tag">Sẵn sàng</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Listening"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">LISTENING</div><div class="tot-skill-opt-sub">Nghe → Nói lại từ · Shadowing</div></div><span class="tot-tag">Sẵn sàng</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Writing"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">WRITING</div><div class="tot-skill-opt-sub">Flow Ideas · Task 1 &amp; 2</div></div><span class="tot-tag soon">Sắp mở</span></button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Speaking"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">SPEAKING</div><div class="tot-skill-opt-sub">Spoken Chunks · Part 1–3</div></div><span class="tot-tag soon">Sắp mở</span></button>
         </div>
       </div>
     </div>
@@ -218,12 +218,12 @@
     <nav class="tot-nav-tabs tot-global-skill-nav" id="nav-global-skills" aria-label="Chọn không gian kỹ năng IELTS">
       <button type="button" class="tot-nav-tab active" data-global-tab="Overview" onclick="window.TotoroUI?.openGlobalHome()">
         <svg class="tot-ico" viewBox="0 0 24 24" fill="none"><path d="M5 10.5L12 4l7 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-3v6H6a1 1 0 0 1-1-1v-9.5z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="1.95" stroke-linejoin="round"/></svg>
-        Tổng quan
+        HOME
       </button>
-      <button type="button" class="tot-nav-tab" data-global-tab="Reading" onclick="window.TotoroUI?.enterSkillMode('Reading', 'home')">Reading</button>
-      <button type="button" class="tot-nav-tab" data-global-tab="Listening" onclick="window.TotoroUI?.enterSkillMode('Listening', 'home')">Listening</button>
-      <button type="button" class="tot-nav-tab is-muted" data-global-tab="Writing" onclick="window.TotoroUI?.notifySkillSoon('IELTS Writing')">Writing</button>
-      <button type="button" class="tot-nav-tab is-muted" data-global-tab="Speaking" onclick="window.TotoroUI?.notifySkillSoon('IELTS Speaking')">Speaking</button>
+      <button type="button" class="tot-nav-tab" data-global-tab="Reading" onclick="window.TotoroUI?.enterSkillMode('Reading', 'home')">READING</button>
+      <button type="button" class="tot-nav-tab" data-global-tab="Listening" onclick="window.TotoroUI?.enterSkillMode('Listening', 'home')">LISTENING</button>
+      <button type="button" class="tot-nav-tab is-muted" data-global-tab="Writing" onclick="window.TotoroUI?.notifySkillSoon('IELTS WRITING')">WRITING</button>
+      <button type="button" class="tot-nav-tab is-muted" data-global-tab="Speaking" onclick="window.TotoroUI?.notifySkillSoon('IELTS SPEAKING')">SPEAKING</button>
     </nav>
 
     <nav class="tot-nav-tabs" id="nav-skill-tabs" aria-label="Điều hướng kỹ năng">
@@ -2212,6 +2212,6 @@
   <script src="js/reading_practice.js?v=20261124s"></script>
   <script src="js/tasks.js?v=20261122j"></script>
   <script src="js/listening_tasks.js?v=20261124o"></script>
-  <script src="js/totoro_ui.js?v=20261124m"></script>
+  <script src="js/totoro_ui.js?v=20261124n"></script>
 </body>
 </html>
