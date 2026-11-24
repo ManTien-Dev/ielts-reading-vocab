@@ -269,6 +269,7 @@
     camGroup: 'recent',     // 'recent' (Cam 10-20) | 'classic' (Cam 1-9)
     actualTab: 'p1',        // 'p1' | 'p2' | 'p3' | 'full'
     actualQType: '',        // '' | 'tfng' | 'ynng' | 'gap' | 'select' | 'mcq'
+    actualFilterOpen: false,
     actualPage: 1,
     selectedBookId: 'cam_20',
     selectedTestNum: 1,     // 1..4
@@ -1019,6 +1020,9 @@
         { key: 'mcq', label: 'Multiple Choice' }
       ];
 
+      const activeFilterObj = qtypeFilters.find((qf) => qf.key === state.actualQType) || null;
+      const filterOpen = !isFullTab && !!state.actualFilterOpen;
+
       shelfHtml = `
         <div class="rp-actual-toolbar">
           <div class="rp-actual-top-row">
@@ -1028,20 +1032,56 @@
               <button type="button" role="tab" class="rp-actual-tab ${actualTab === 'p3' ? 'active' : ''}" aria-selected="${actualTab === 'p3' ? 'true' : 'false'}" onclick="ReadingPracticeApp.setActualTab('p3')">Passage 3</button>
               <button type="button" role="tab" class="rp-actual-tab ${actualTab === 'full' ? 'active' : ''}" aria-selected="${actualTab === 'full' ? 'true' : 'false'}" onclick="ReadingPracticeApp.setActualTab('full')">Full Test</button>
             </div>
-            <input type="search" class="rp-search-input rp-actual-search" id="rp-hub-search"
-              value="${esc(state.searchQuery)}"
-              placeholder="Tìm tên bài đọc..."
-              oninput="ReadingPracticeApp.onSearch(this.value)" autocomplete="off">
-          </div>
-          ${!isFullTab ? `
-            <div class="rp-actual-qtypes" role="group" aria-label="Lọc theo dạng câu hỏi">
-              ${qtypeFilters.map((qf) => `
-                <button type="button" class="rp-actual-qpill ${state.actualQType === qf.key ? 'active' : ''}"
-                  aria-pressed="${state.actualQType === qf.key ? 'true' : 'false'}"
-                  onclick="ReadingPracticeApp.toggleActualQType('${qf.key}')">${esc(qf.label)}</button>
-              `).join('')}
+            <div class="rp-actual-search-wrap">
+              <div class="rp-actual-search-combo ${activeFilterObj ? 'has-filter' : ''}">
+                <span class="rp-actual-search-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                </span>
+                <input type="search" class="rp-actual-search-input" id="rp-hub-search"
+                  value="${esc(state.searchQuery)}"
+                  placeholder="Tìm tên bài đọc..."
+                  oninput="ReadingPracticeApp.onSearch(this.value)" autocomplete="off">
+                ${(!isFullTab && activeFilterObj) ? `
+                  <button type="button" class="rp-actual-active-chip" onclick="ReadingPracticeApp.toggleActualQType('${esc(activeFilterObj.key)}')" title="Bỏ lọc dạng câu hỏi">
+                    <span>${esc(activeFilterObj.label)}</span>
+                    <span aria-hidden="true">✕</span>
+                  </button>
+                ` : ''}
+                ${!isFullTab ? `
+                  <span class="rp-actual-combo-sep" aria-hidden="true"></span>
+                  <button type="button" class="rp-actual-filter-btn ${activeFilterObj || filterOpen ? 'is-active' : ''}"
+                    id="rp-actual-filter-btn"
+                    aria-expanded="${filterOpen ? 'true' : 'false'}"
+                    aria-haspopup="true"
+                    title="Lọc theo dạng câu hỏi"
+                    aria-label="Lọc theo dạng câu hỏi"
+                    onclick="event.stopPropagation(); ReadingPracticeApp.toggleActualFilterMenu()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>
+                    ${activeFilterObj ? '<span class="rp-filter-dot" aria-hidden="true"></span>' : ''}
+                  </button>
+                ` : ''}
+              </div>
+              ${filterOpen ? `
+                <div class="rp-actual-filter-pop" id="rp-actual-filter-pop" role="menu" onclick="event.stopPropagation()">
+                  <div class="rp-filter-pop-head">
+                    <span>Lọc dạng câu hỏi</span>
+                    ${activeFilterObj ? `<button type="button" class="rp-filter-clear-btn" onclick="ReadingPracticeApp.toggleActualQType('${esc(activeFilterObj.key)}')">Bỏ lọc</button>` : ''}
+                  </div>
+                  <div class="rp-filter-pop-list">
+                    ${qtypeFilters.map((qf) => `
+                      <button type="button" role="menuitemradio"
+                        class="rp-filter-pop-item ${state.actualQType === qf.key ? 'active' : ''}"
+                        aria-checked="${state.actualQType === qf.key ? 'true' : 'false'}"
+                        onclick="ReadingPracticeApp.toggleActualQType('${qf.key}')">
+                        <span>${esc(qf.label)}</span>
+                        ${state.actualQType === qf.key ? '<span class="rp-filter-check" aria-hidden="true">✓</span>' : ''}
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
             </div>
-          ` : ''}
+          </div>
         </div>
       `;
 
@@ -2996,12 +3036,28 @@
     setActualTab(tab) {
       state.actualTab = ['p1', 'p2', 'p3', 'full'].includes(tab) ? tab : 'p1';
       state.actualPage = 1;
+      state.actualFilterOpen = false;
       if (state.actualTab === 'full') state.actualQType = '';
       renderHub();
     },
 
+    toggleActualFilterMenu(forceVal) {
+      state.actualFilterOpen = typeof forceVal === 'boolean' ? forceVal : !state.actualFilterOpen;
+      renderHub();
+      if (state.actualFilterOpen && !window.__rpActualPopBound) {
+        window.__rpActualPopBound = true;
+        document.addEventListener('click', (e) => {
+          if (!state.actualFilterOpen) return;
+          if (e.target && e.target.closest && e.target.closest('.rp-actual-search-wrap')) return;
+          state.actualFilterOpen = false;
+          if (state.view === 'source' && state.source === 'actual') renderHub();
+        });
+      }
+    },
+
     toggleActualQType(qtype) {
       state.actualQType = state.actualQType === qtype ? '' : String(qtype || '');
+      state.actualFilterOpen = false;
       state.actualPage = 1;
       renderHub();
     },
