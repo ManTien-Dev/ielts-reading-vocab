@@ -528,13 +528,210 @@
     return `<span class="tot-chestnut-unit" aria-label="hạt dẻ điểm" title="Hạt dẻ điểm"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.4C13 4.6 19.8 8.2 21 13.8C21.8 17.6 18.6 21 12 21C5.4 21 2.2 17.6 3 13.8C4.2 8.2 11 4.6 12 2.4Z" fill="#8B3A14" stroke="#531F07" stroke-width="1.4" stroke-linejoin="round"/><path d="M5 17.5C7 15.8 17 15.8 19 17.5C17.6 19.9 15 20.8 12 20.8C9 20.8 6.4 19.9 5 17.5Z" fill="#E8CCA0"/><path d="M7.2 12.2C7.8 9.6 9.8 7.8 11.4 6.6" stroke="#DF8B56" stroke-width="1.6" stroke-linecap="round" opacity=".85"/><path d="M12 4.8V15.4M8.5 8.5C7.9 11 7.8 13.2 8.2 15.6M15.5 8.5C16.1 11 16.2 13.2 15.8 15.6" stroke="#5E2409" stroke-width="0.9" stroke-linecap="round" opacity=".45"/></svg></span>`;
   }
 
+  const STUDY_PLAN_KEY_BASE = 'totoro_study_plan_v1_';
+
+  function getStudyPlan(uidInput) {
+    const uid = String(uidInput || window.__VOCAB_BRIDGE__?.getCurrentUser?.()?.id || 'guest').toLowerCase();
+    const defaults = { targetBand: '7.5', examDate: '', dailyMins: 30, dailyWords: 20 };
+    try {
+      const raw = localStorage.getItem(STUDY_PLAN_KEY_BASE + uid);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          targetBand: ['6.0', '6.5', '7.0', '7.5', '8.0', '8.5'].includes(String(parsed.targetBand)) ? String(parsed.targetBand) : defaults.targetBand,
+          examDate: typeof parsed.examDate === 'string' ? parsed.examDate : '',
+          dailyMins: [15, 30, 45, 60].includes(Number(parsed.dailyMins)) ? Number(parsed.dailyMins) : defaults.dailyMins,
+          dailyWords: [10, 20, 30, 50].includes(Number(parsed.dailyWords)) ? Number(parsed.dailyWords) : defaults.dailyWords,
+        };
+      }
+    } catch (_) {}
+    return defaults;
+  }
+
+  function togglePlanEditor(forceOpen) {
+    const view = document.getElementById('home-target-view');
+    const form = document.getElementById('home-plan-editor');
+    const btn = document.getElementById('btn-toggle-plan-edit');
+    if (!view || !form) return;
+    const willOpen = typeof forceOpen === 'boolean' ? forceOpen : form.classList.contains('hidden');
+    if (willOpen) {
+      const plan = getStudyPlan();
+      const bEl = document.getElementById('plan-input-band');
+      const dEl = document.getElementById('plan-input-date');
+      const mEl = document.getElementById('plan-input-mins');
+      const wEl = document.getElementById('plan-input-words');
+      if (bEl) bEl.value = plan.targetBand;
+      if (dEl) dEl.value = plan.examDate;
+      if (mEl) mEl.value = String(plan.dailyMins);
+      if (wEl) wEl.value = String(plan.dailyWords);
+    }
+    form.classList.toggle('hidden', !willOpen);
+    view.classList.toggle('hidden', willOpen);
+    if (btn) btn.textContent = willOpen ? 'Đóng' : 'Chỉnh mục tiêu';
+  }
+
+  function saveStudyPlan(ev) {
+    if (ev && typeof ev.preventDefault === 'function') ev.preventDefault();
+    const uid = String(window.__VOCAB_BRIDGE__?.getCurrentUser?.()?.id || 'guest').toLowerCase();
+    const plan = {
+      targetBand: document.getElementById('plan-input-band')?.value || '7.5',
+      examDate: document.getElementById('plan-input-date')?.value || '',
+      dailyMins: Number(document.getElementById('plan-input-mins')?.value || 30),
+      dailyWords: Number(document.getElementById('plan-input-words')?.value || 20),
+    };
+    try { localStorage.setItem(STUDY_PLAN_KEY_BASE + uid, JSON.stringify(plan)); } catch (_) {}
+    togglePlanEditor(false);
+    renderHomeDashboard();
+    window.__VOCAB_BRIDGE__?.showToast?.(`Đã lưu mục tiêu Band ${plan.targetBand} · ${plan.dailyMins}p & ${plan.dailyWords} từ/ngày!`);
+  }
+
+  function renderHomePlanAndMonitor(snap, plan) {
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    const rpStats = window.ReadingPracticeStore?.getSummaryStats?.() || {
+      attemptsCount: 0, completedUnique: 0, avgBand: 0, totalMins: 0, recent: []
+    };
+
+    // 1. Target Band & Exam Countdown Card
+    const targetNum = parseFloat(plan.targetBand) || 7.5;
+    let estBand = 0;
+    if (rpStats.avgBand > 0) {
+      estBand = rpStats.avgBand;
+    } else if (snap.mastered > 0 || snap.completedTasks.length > 0) {
+      estBand = Math.min(targetNum, +(4.5 + (snap.masteryPct / 100) * 3.0 + Math.min(1.0, snap.completedTasks.length / 40)).toFixed(1));
+    }
+    const readinessPct = estBand > 0 ? Math.min(100, Math.round((estBand / targetNum) * 100)) : Math.min(100, snap.masteryPct);
+
+    setTxt('home-target-band-val', targetNum.toFixed(1));
+    setTxt('home-current-band-val', estBand > 0 ? estBand.toFixed(1) : '—');
+    setTxt('home-target-readiness', `${readinessPct}%`);
+    const tBar = document.getElementById('home-target-bar');
+    if (tBar) tBar.style.width = `${readinessPct}%`;
+
+    let daysText = 'Chưa đặt';
+    let countdownSub = 'Đặt ngày thi để theo dõi nhịp độ';
+    if (plan.examDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const targetDt = new Date(`${plan.examDate}T00:00:00`);
+      if (!Number.isNaN(targetDt.getTime())) {
+        const diffDays = Math.ceil((targetDt.getTime() - today.getTime()) / 86400000);
+        if (diffDays > 0) {
+          daysText = `${diffDays} ngày`;
+          countdownSub = `Dự thi ${targetDt.toLocaleDateString('vi-VN')} · còn ${diffDays} ngày`;
+        } else if (diffDays === 0) {
+          daysText = 'Hôm nay';
+          countdownSub = 'Ngày thi IELTS đã đến — chúc bạn tự tin!';
+        } else {
+          daysText = 'Đã qua';
+          countdownSub = 'Ngày thi cũ đã qua — cập nhật lịch thi mới';
+        }
+      }
+    }
+    setTxt('home-days-left-val', daysText);
+    setTxt('home-target-countdown', countdownSub);
+    setTxt('home-target-pace', `Nhịp mục tiêu: ${plan.dailyMins} phút · ${plan.dailyWords} từ / ngày · 1 bài luyện`);
+
+    // 2. Daily Study Plan Checklist (live auto-checked!)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayTs = todayStart.getTime();
+    const todayRpCount = (window.ReadingPracticeStore?.getHistory?.() || []).filter((h) => (h.submittedAt || 0) >= todayTs).length;
+    const todayTaskCount = snap.completedTasks.filter(([, info]) => (info?.updatedAt || 0) >= todayTs).length;
+    const todayExercises = todayRpCount + todayTaskCount;
+    const todayWords = Math.max(sessionGoalState?.done || 0, Math.min(snap.mastered, snap.todayMins > 0 ? Math.min(plan.dailyWords, snap.mastered) : 0));
+
+    const items = [
+      {
+        title: 'Ôn & học từ vựng mới',
+        meta: `${todayWords}/${plan.dailyWords} từ`,
+        pct: Math.min(100, Math.round((todayWords / Math.max(1, plan.dailyWords)) * 100)),
+        done: todayWords >= plan.dailyWords,
+        action: "window.TotoroUI?.enterSkillMode(window.TotoroUI?.getActiveSkill?.() || 'Reading', 'flashcard')",
+      },
+      {
+        title: 'Tập trung thực học',
+        meta: `${snap.todayMins}/${plan.dailyMins} phút`,
+        pct: Math.min(100, Math.round((snap.todayMins / Math.max(1, plan.dailyMins)) * 100)),
+        done: snap.todayMins >= plan.dailyMins,
+        action: "window.TotoroUI?.enterSkillMode(window.TotoroUI?.getActiveSkill?.() || 'Reading', 'flashcard')",
+      },
+      {
+        title: 'Hoàn thành 1 Task / bài Practice',
+        meta: `${todayExercises}/1 bài`,
+        pct: todayExercises >= 1 ? 100 : 0,
+        done: todayExercises >= 1,
+        action: "window.TotoroUI?.enterSkillMode('Reading', 'practice')",
+      },
+    ];
+    const doneCnt = items.filter((it) => it.done).length;
+    const badgeEl = document.getElementById('home-daily-plan-badge');
+    if (badgeEl) {
+      badgeEl.textContent = `${doneCnt}/${items.length} xong`;
+      badgeEl.classList.toggle('soon', doneCnt === 0);
+    }
+    const listEl = document.getElementById('home-plan-checklist');
+    if (listEl) {
+      listEl.innerHTML = items.map((it) => `
+        <button type="button" class="tot-plan-row ${it.done ? 'is-done' : ''}" onclick="${it.action}">
+          <span class="tot-plan-chk" aria-hidden="true">${it.done ? '✓' : ''}</span>
+          <span class="tot-plan-row-body">
+            <span class="tot-plan-row-top">
+              <span class="tot-plan-row-title">${esc(it.title)}</span>
+              <strong class="tot-plan-row-meta tabular">${esc(it.meta)}</strong>
+            </span>
+            <span class="tot-plan-mini-bar"><span style="width:${it.pct}%"></span></span>
+          </span>
+        </button>
+      `).join('');
+    }
+
+    // 3. Cross-Skill Progress Monitor Card
+    const B = window.__VOCAB_BRIDGE__;
+    const assess = B?.getAssessmentsMap?.() || {};
+    const lv = window.APP_LISTENING_VOCAB || {};
+    const allListenVocab = [...(lv.target_all || []), ...(lv.foundation || [])];
+    const listenVocabTotal = allListenVocab.length || 3864;
+    const listenVocabDone = allListenVocab.filter((w) => assess[w.id] === 3).length;
+    const listenProg = window.ListeningTasksModule?.getProgressMap?.() || {};
+    const listenTasksTotal = (window.APP_LISTENING_TASKS?.tasks || []).length || 139;
+    const listenTasksDone = Object.values(listenProg).filter((p) => p && p.completed).length;
+
+    const readTaskPct = Math.min(100, Math.round((snap.completedTasks.length / 110) * 100));
+    const readPracPct = Math.min(100, Math.round((rpStats.completedUnique / 30) * 100));
+    const listenPct = Math.min(100, Math.round(((listenVocabDone / Math.max(1, listenVocabTotal)) * 0.5 + (listenTasksDone / Math.max(1, listenTasksTotal)) * 0.5) * 100));
+    const overallPct = Math.min(100, Math.round((snap.masteryPct + readTaskPct + readPracPct + listenPct) / 4));
+
+    setTxt('home-monitor-overall-pct', `${overallPct}%`);
+    setTxt('home-monitor-summary', `${snap.mastered.toLocaleString('vi-VN')} từ Reading · ${listenVocabDone.toLocaleString('vi-VN')} từ Listening`);
+
+    const barsEl = document.getElementById('home-monitor-bars');
+    if (barsEl) {
+      const meters = [
+        { label: 'Từ vựng Reading', val: `${snap.mastered.toLocaleString('vi-VN')} / ${snap.totalFamilies.toLocaleString('vi-VN')}`, pct: snap.masteryPct, cls: 'is-sage' },
+        { label: 'Reading Tasks', val: `${snap.completedTasks.length} / 110 bài`, pct: readTaskPct, cls: 'is-warm' },
+        { label: 'Luyện đề Reading', val: rpStats.avgBand ? `${rpStats.completedUnique} bài · Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} bài đã nộp`, pct: readPracPct, cls: 'is-emerald' },
+        { label: 'Listening & Shadowing', val: `${listenVocabDone.toLocaleString('vi-VN')} từ · ${listenTasksDone}/${listenTasksTotal} Task`, pct: listenPct, cls: 'is-indigo' },
+      ];
+      barsEl.innerHTML = meters.map((m) => `
+        <div class="tot-mon-meter">
+          <div class="tot-mon-meter-head">
+            <span>${esc(m.label)}</span>
+            <strong class="tabular">${esc(m.val)}</strong>
+          </div>
+          <div class="tot-mastery-bar"><div class="tot-mon-fill ${m.cls}" style="width:${Math.max(m.pct > 0 ? 3 : 0, m.pct)}%"></div></div>
+        </div>
+      `).join('');
+    }
+  }
+
   function renderHomeDashboard() {
     const modeChip = document.getElementById('header-mode-chip-text');
     if (modeChip && !document.body.classList.contains('is-teacher-mode')) {
       const curMode = typeof window.__TOTORO_GET_MODE__ === 'function' ? window.__TOTORO_GET_MODE__() : 'Overview';
-      modeChip.textContent = curMode === 'Overview' ? 'Home chung' : curMode;
+      modeChip.textContent = curMode === 'Overview' ? 'Home chung' : `IELTS ${curMode}`;
     }
     const snap = getRealStudentSnapshot();
+    const plan = getStudyPlan(snap.uid);
     const esc = window.__VOCAB_BRIDGE__?.escapeHtml || ((x) => String(x));
     const uName = snap.user?.name || snap.user?.id || 'bạn';
     const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -548,8 +745,8 @@
       subEl.innerHTML = `Còn <strong style="color:var(--streak)">${snap.due} từ đến hạn ôn</strong> · ${rankTxt}`;
     }
 
-    // Daily goal ring
-    const goalMins = 30;
+    // Daily goal ring (synced with user's Study Plan target minutes!)
+    const goalMins = plan.dailyMins || 30;
     const goalPct = Math.min(100, Math.round(((Math.min(snap.todayMins, goalMins) / goalMins) * 0.6 + (snap.completedTasks.length > 0 ? 0.4 : 0)) * 100));
     setTxt('home-goal-pct', `${goalPct}%`);
     const ring = document.getElementById('home-goal-arc');
@@ -558,11 +755,8 @@
     setTxt('home-goal-tasks', `${snap.completedTasks.length}`);
     setTxt('home-goal-mins', `${snap.todayMins}/${goalMins}p`);
 
-    // Reading skill card stats
-    setTxt('home-reading-sub', `${snap.mastered.toLocaleString('vi-VN')} từ · ${snap.completedTasks.length}/110 Tasks`);
-    setTxt('home-reading-pct', `${snap.masteryPct}%`);
-    const rBarOk = document.getElementById('home-reading-bar-ok');
-    if (rBarOk) rBarOk.style.width = `${snap.masteryPct}%`;
+    // Render Plan, Target Band & Progress Monitor Strip
+    renderHomePlanAndMonitor(snap, plan);
 
     // Study Rhythm Chart (Exact demo_v3: Tuần / Tháng / Năm + Dashed Target Line + Real localStorage data)
     const chartEl = document.getElementById('home-chart-bars');
@@ -578,7 +772,7 @@
       const labels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
       const now = new Date();
       let cols = [];
-      let totalMins = 0, activeUnits = 0, targetLabel = 'Mục tiêu 30p';
+      let totalMins = 0, activeUnits = 0, targetLabel = `Mục tiêu ${goalMins}p`;
 
       if (activeHomeChartPeriod === 'week') {
         for (let i = 6; i >= 0; i--) {
@@ -1389,10 +1583,14 @@
       document.body.classList.toggle('is-global-home', isGlobal);
 
       const chipTxt = document.getElementById('header-mode-chip-text');
-      if (chipTxt) chipTxt.textContent = isGlobal ? 'Home chung' : modeVal;
+      if (chipTxt) chipTxt.textContent = isGlobal ? 'Home chung' : `IELTS ${modeVal}`;
 
       const homeTabLbl = document.getElementById('nav-home-tab-label');
-      if (homeTabLbl) homeTabLbl.textContent = isGlobal ? 'Home' : 'Tổng quan';
+      if (homeTabLbl) homeTabLbl.textContent = 'Tổng quan';
+
+      document.querySelectorAll('#nav-global-skills [data-global-tab]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.globalTab === modeVal);
+      });
 
       document.querySelectorAll('[data-tot-skill]').forEach((btn) => {
         const s = btn.dataset.totSkill;
@@ -1765,6 +1963,8 @@
     setPalette,
     setMotion,
     renderHomeDashboard,
+    togglePlanEditor,
+    saveStudyPlan,
     renderInlineTaskHub,
     syncStudyFocusWidgets,
     syncScopeDropdown,

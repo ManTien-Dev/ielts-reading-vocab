@@ -7966,31 +7966,484 @@ mark.rp-hl-mark.hl-purple {
   border-color: var(--accent);
   color: var(--accent);
 }
-/* On Global Home, center nav already lists Tổng quan / Reading / Listening / Writing / Speaking — hide duplicate skill dropdown */
-body.is-global-home .tot-skill-wrap,
-body.is-teacher-mode .tot-skill-wrap,
-body.is-global-home #btn-back-global-home,
-body.is-teacher-mode #btn-back-global-home {
-  display: none !important;
-}
+/* Persistent Topbar (ALWAYS visible outside Teacher Mode — zero jump between Home & Reading/Listening!) */
 #nav-global-skills {
-  display: none;
-}
-body.is-global-home:not(.is-teacher-mode) #nav-global-skills {
   display: inline-flex;
 }
-body.is-global-home:not(.is-teacher-mode) #nav-skill-tabs {
-  display: none;
+body.is-teacher-mode #nav-global-skills {
+  display: none !important;
 }
 #nav-global-skills .tot-nav-tab.is-muted {
-  opacity: 0.56;
+  opacity: 0.54;
 }
-@media (max-width: 900px) {
-  .tot-back-global-btn span {
-    display: none;
+
+/* Contextual Slim Skill Sub-Bar (Vercel / Linear style — glides beneath fixed Topbar inside Reading / Listening) */
+.tot-skill-subbar {
+  position: relative;
+  z-index: 38;
+  height: 40px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--bg));
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0 22px;
+  animation: totSubbarIn 170ms var(--ease-out) both;
+}
+@keyframes totSubbarIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+body.is-global-home .tot-skill-subbar,
+body.is-teacher-mode .tot-skill-subbar,
+body.rp-exam-fullscreen .tot-skill-subbar {
+  display: none !important;
+}
+.tot-skill-subbar-inner {
+  width: 100%;
+  max-width: 1460px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 16px;
+}
+.tot-subbar-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--ink-2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.tot-subbar-tabs {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 4px;
+  margin-right: auto;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+.tot-subbar-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 13px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 140ms var(--ease-out), background-color 140ms var(--ease-out);
+}
+.tot-subbar-tab .tot-ico {
+  width: 15px;
+  height: 15px;
+  opacity: 0.78;
+}
+.tot-subbar-tab:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--surface-muted) 55%, transparent);
+}
+.tot-subbar-tab.active {
+  color: var(--accent);
+  font-weight: 800;
+}
+.tot-subbar-tab.active .tot-ico {
+  opacity: 1;
+}
+.tot-subbar-tab.active::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 2.5px;
+  border-radius: 99px 99px 0 0;
+  background: var(--accent);
+}
+
+/* Adjust desktop viewport-fit height smoothly when 40px Skill Sub-Bar is active (prevents clipping on 768p/900p!) */
+@media (min-width: 1200px) {
+  body:not(.is-global-home):not(.is-teacher-mode):has(#screen-study.active) main.app-main {
+    height: calc(100dvh - 100px) !important;
   }
-  .tot-back-global-btn {
-    padding: 0 8px;
+  body:not(.is-global-home):not(.is-teacher-mode) #screen-study {
+    --fc-h: clamp(340px, calc(100dvh - 258px), 648px);
+  }
+  body:not(.is-global-home):not(.is-teacher-mode):has(#screen-tasks-hub.active) main.app-main {
+    height: calc(100dvh - 109px) !important;
+  }
+}
+@media (min-width: 1200px) and (max-height: 820px) {
+  body:not(.is-global-home):not(.is-teacher-mode):has(#screen-study.active) main.app-main {
+    height: calc(100dvh - 94px) !important;
+  }
+  body:not(.is-global-home):not(.is-teacher-mode) #screen-study {
+    --fc-h: clamp(326px, calc(100dvh - 232px), 542px);
+  }
+  body:not(.is-global-home):not(.is-teacher-mode):has(#screen-tasks-hub.active) main.app-main {
+    height: calc(100dvh - 103px) !important;
+  }
+}
+@media (max-width: 767px) {
+  .tot-skill-subbar {
+    display: none !important;
+  }
+}
+
+/* =========================================================
+   HOME CHUNG — STUDY PLAN · TARGET BAND · PROGRESS MONITOR BENTO
+   ========================================================= */
+.tot-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  min-height: 0;
+  align-items: stretch;
+}
+.tot-monitor-card {
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
+  padding: 15px 17px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  min-width: 0;
+  height: 100%;
+}
+.tot-mon-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tot-mon-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.tot-mon-title-wrap .tot-icon-tile {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.tot-mon-title-wrap .tot-icon-tile svg {
+  width: 17px;
+  height: 17px;
+}
+.tot-mon-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.tot-mon-sub {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tot-mon-edit-btn {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: transform 130ms var(--ease-out), border-color 140ms ease, color 140ms ease, background-color 140ms ease;
+}
+.tot-mon-edit-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.tot-mon-edit-btn:active {
+  transform: scale(0.96);
+}
+.tot-mon-save-btn {
+  height: 28px;
+  padding: 0 13px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 11.5px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 130ms var(--ease-out), filter 140ms ease;
+}
+.tot-mon-save-btn:hover { filter: brightness(1.06); }
+.tot-mon-save-btn:active { transform: scale(0.96); }
+
+/* Card 1: Target Band & Countdown */
+.tot-target-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 auto;
+  justify-content: space-between;
+}
+.tot-target-view.hidden,
+.tot-plan-editor.hidden {
+  display: none;
+}
+.tot-target-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.tot-target-band-box {
+  padding: 8px 9px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tot-target-band-box.is-current,
+.tot-target-band-box.is-days {
+  background: var(--surface-item);
+  border-color: var(--border);
+}
+.tot-target-k-lbl {
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.tot-target-k-val {
+  font-size: 16px;
+  font-weight: 850;
+  color: var(--accent);
+  line-height: 1.15;
+}
+.tot-target-band-box.is-current .tot-target-k-val,
+.tot-target-band-box.is-days .tot-target-k-val {
+  color: var(--ink);
+}
+.tot-target-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tot-target-meter-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.tot-target-meter-top strong {
+  color: var(--accent);
+  font-weight: 800;
+}
+.tot-target-pace {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  line-height: 1.35;
+}
+
+/* Inline Plan Editor */
+.tot-plan-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex: 1 1 auto;
+  justify-content: space-between;
+}
+.tot-plan-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.tot-plan-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.tot-plan-field select,
+.tot-plan-field input {
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+}
+.tot-plan-editor-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* Card 2: Daily Study Plan Checklist */
+.tot-plan-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+.tot-plan-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-item);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 130ms var(--ease-out), border-color 140ms ease, background-color 140ms ease;
+}
+.tot-plan-row:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: var(--surface);
+}
+.tot-plan-row:active {
+  transform: scale(0.985);
+}
+.tot-plan-row.is-done {
+  background: color-mix(in srgb, var(--accent-soft) 68%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 36%, transparent);
+}
+.tot-plan-chk {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--accent-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 850;
+  flex-shrink: 0;
+}
+.tot-plan-row.is-done .tot-plan-chk {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.tot-plan-row-body {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tot-plan-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.tot-plan-row-title {
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tot-plan-row.is-done .tot-plan-row-title {
+  color: var(--accent);
+}
+.tot-plan-row-meta {
+  font-size: 11px;
+  font-weight: 750;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.tot-plan-mini-bar {
+  display: block;
+  width: 100%;
+  height: 4.5px;
+  border-radius: 99px;
+  background: var(--bg-subtle);
+  overflow: hidden;
+}
+.tot-plan-mini-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width 260ms var(--ease-out);
+}
+
+/* Card 3: Learning Progress Monitor */
+.tot-mon-pct {
+  font-size: 15.5px;
+  font-weight: 850;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.tot-mon-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+.tot-mon-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tot-mon-meter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.tot-mon-meter-head strong {
+  font-size: 11.5px;
+  font-weight: 750;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.tot-mon-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 280ms var(--ease-out);
+}
+.tot-mon-fill.is-sage { background: var(--accent); }
+.tot-mon-fill.is-warm { background: var(--streak); }
+.tot-mon-fill.is-emerald { background: #3f8a62; }
+.tot-mon-fill.is-indigo { background: #6460b0; }
+
+@media (max-width: 1024px) {
+  .tot-monitor-grid {
+    grid-template-columns: 1fr;
   }
 }
 
