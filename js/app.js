@@ -2638,8 +2638,25 @@
   }
 
   function getCleanForms(item) {
-    if (Array.isArray(item?.clean_forms)) return item.clean_forms;
-    return getNonTrivialForms(item?.word_forms, item?.lemma);
+    const raw = Array.isArray(item?.clean_forms)
+      ? item.clean_forms
+      : getNonTrivialForms(item?.word_forms, item?.lemma);
+    const lemmaParts = new Set(
+      String(item?.lemma || '')
+        .split('/')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+    );
+    const seen = new Set();
+    const out = [];
+    for (const f of (raw || [])) {
+      const clean = String(f || '').trim();
+      const low = clean.toLowerCase();
+      if (!clean || lemmaParts.has(low) || seen.has(low)) continue;
+      seen.add(low);
+      out.push(clean);
+    }
+    return out;
   }
 
   function hasListeningTip(item) {
