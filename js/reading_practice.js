@@ -2501,6 +2501,110 @@
   }
 
   /* ---------- FLAT INSPERA / PRACTICE PRO QUESTION GROUP & ITEM RENDERER ---------- */
+  function formatGroupInstructionHtml(inst) {
+    if (!inst) return '';
+    return esc(String(inst).trim())
+      .replace(/\b(NO MORE THAN (?:ONE|TWO|THREE|FOUR) WORDS?(?: AND\/OR A NUMBER)?|ONE WORD AND\/OR A NUMBER|ONE WORD ONLY|TWO WORDS ONLY|THREE WORDS ONLY|ONE NUMBER ONLY|TRUE|FALSE|NOT GIVEN|YES|NO)\b/g, '<strong>$1</strong>')
+      .replace(/\n+/g, '<br>');
+  }
+
+  function getGapGroupFrameKind(group) {
+    const qs = group?.questions || [];
+    if (!qs.length || !qs.every((q) => q.type === 'gap')) return null;
+    const hay = `${group.title || ''} ${group.instruction || ''}`;
+    if (/\b(complete the notes?|note completion)\b/i.test(hay)) return 'note';
+    if (/\b(complete the summary|summary completion)\b/i.test(hay)) return 'summary';
+    const bulletCount = qs.filter((q) => /^\s*[•●○▪▸◦\-–—]\s*/.test(String(q.prompt || ''))).length;
+    if (bulletCount >= Math.max(2, Math.ceil(qs.length * 0.5))) return 'note';
+    return null;
+  }
+
+  function renderNoteCompletionGroup(group, passage, isReview, frameKind) {
+    const s = state.session;
+    const isPractice = s?.studyMode === 'practice';
+    const qs = group.questions || [];
+    const frameTitle = group.noteTitle || passage?.title || '';
+
+    const rowsHtml = qs.map((q) => {
+      const qid = `${passage.id}__q${q.num}`;
+      const userVal = String(s.answers[qid] ?? '');
+      const flagged = !!s.flagged[qid];
+      const isCur = s.activeQid === qid;
+      const isLockedOk = !isReview && !!s.lockedCorrect?.[qid];
+      const wrongState = !isReview ? s.wrongSet?.[qid] : null;
+      const isWrongRetry = !!wrongState;
+      const isReadOnly = isReview || isLockedOk;
+      const ok = isReview ? isAnswerCorrect(q, userVal) : isLockedOk;
+
+      const badgeStateCls = isReview
+        ? (ok ? 'is-ok' : 'is-bad')
+        : (isLockedOk ? 'is-ok' : (isWrongRetry ? (wrongState === 'edited' ? 'is-edited' : 'is-bad') : (isCur ? 'is-current' : '')));
+
+      const gapCls = isReview ? (ok ? 'is-ok' : 'is-bad') : (isLockedOk ? 'is-ok' : (isWrongRetry && wrongState !== 'edited' ? 'is-bad' : ''));
+      const inlineBlankHtml = `<span class="ins-note-blank-wrap"><span class="ins-note-qnum ${badgeStateCls}">${q.num}</span><input type="text" class="ins-gap-input ins-note-input ${gapCls}" value="${esc(userVal)}" ${isReadOnly ? 'readonly' : ''} aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off"></span>`;
+
+      const rawPrompt = String(q.prompt || '');
+      const isSubBullet = /^\s*[○◦\-–—]\s*/.test(rawPrompt);
+      const cleanPrompt = rawPrompt
+        .replace(/^\s*(?:[•●○▪▸◦·\-–—]\s*)+/, '')
+        .replace(/(?:…|\.{3,})\s*\.?\s*_{3,}/g, '_____');
+
+      const stem = /_{3,}/.test(cleanPrompt)
+        ? esc(cleanPrompt).replace(/_{3,}/, inlineBlankHtml)
+        : `${esc(cleanPrompt)} ${inlineBlankHtml}`;
+
+      const bookmarkBtn = !isReadOnly ? `
+        <button type="button" class="ins-bookmark-btn ${flagged ? 'active' : ''}"
+          onclick="event.stopPropagation(); ReadingPracticeApp.toggleFlag('${esc(qid)}')" title="Đánh dấu xem lại (Bookmark)">
+          <svg viewBox="0 0 24 24" fill="${flagged ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        </button>
+      ` : '';
+
+      const retryStatusPill = isLockedOk
+        ? `<span class="rp-q-status is-ok" title="Câu này bạn đã làm đúng">✓ Đúng</span>`
+        : (isWrongRetry
+          ? `<span class="rp-q-status ${wrongState === 'edited' ? 'is-edited' : 'is-bad'}">${wrongState === 'edited' ? '↻ Đã sửa' : '✕ Làm lại'}</span>`
+          : '');
+
+      const cardStateCls = `${isCur && !isReview ? 'is-current' : ''}${isLockedOk ? ' is-checked-ok is-locked-ok' : (isWrongRetry ? (wrongState === 'edited' ? ' is-retry-edited' : ' is-checked-bad') : '')}`;
+      const correctDisplay = Array.isArray(q.answer) ? q.answer[0] : q.answer;
+      const subheadingHtml = q.subheading ? `<div class="ins-note-subheading">${esc(q.subheading)}</div>` : '';
+
+      return `
+        ${subheadingHtml}
+        <div class="ins-q-item ins-note-row ${isSubBullet ? 'is-sub-bullet' : ''} ${frameKind === 'summary' ? 'is-summary-row' : ''} ${cardStateCls}"
+          id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
+          <div class="ins-note-line-wrap">
+            ${frameKind === 'note' ? `<span class="ins-note-bullet" aria-hidden="true">${isSubBullet ? '◦' : '•'}</span>` : ''}
+            <div class="ins-note-line">${stem}</div>
+            ${(retryStatusPill || bookmarkBtn) ? `<div class="prac-q-inline-acts ins-note-acts">${retryStatusPill}${bookmarkBtn}</div>` : ''}
+          </div>
+          ${isReview ? renderReviewBlock(q, ok, correctDisplay) : ''}
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="ins-q-group ins-q-group-note">
+        <div class="ins-group-head">
+          ${isPractice ? `
+            <span class="prac-group-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </span>
+          ` : ''}
+          <h3 class="ins-group-title">${esc(group.title)}</h3>
+        </div>
+        ${group.instruction ? `<p class="ins-group-inst">${formatGroupInstructionHtml(group.instruction)}</p>` : ''}
+        <div class="ins-note-frame ${frameKind === 'summary' ? 'is-summary-frame' : ''}">
+          ${frameTitle ? `<div class="ins-note-heading">${esc(frameTitle)}</div>` : ''}
+          <div class="ins-note-list">
+            ${rowsHtml}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderQuestionGroup(group, passage, isReview) {
     const s = state.session;
     const isPractice = s?.studyMode === 'practice';
@@ -2535,13 +2639,18 @@
       return `
         <div class="ins-q-group">
           <h3 class="ins-group-title">${esc(group.title)}</h3>
-          ${group.instruction ? `<p class="ins-group-inst">${esc(group.instruction)}</p>` : ''}
+          ${group.instruction ? `<p class="ins-group-inst">${formatGroupInstructionHtml(group.instruction)}</p>` : ''}
           <div class="ins-headings-sub">List of Headings</div>
           <div class="ins-headings-stack">${headingsHtml}</div>
           ${!isReview ? '<div class="ins-mh-hint">Kéo thả tiêu đề sang ô viền xanh bên trái, hoặc bấm chọn 1 tiêu đề rồi bấm vào ô số câu bên trái.</div>' : ''}
           ${reviewRowsHtml}
         </div>
       `;
+    }
+
+    const frameKind = getGapGroupFrameKind(group);
+    if (frameKind) {
+      return renderNoteCompletionGroup(group, passage, isReview, frameKind);
     }
 
     return `
@@ -2554,7 +2663,7 @@
           ` : ''}
           <h3 class="ins-group-title">${esc(group.title)}</h3>
         </div>
-        ${group.instruction ? `<p class="ins-group-inst">${esc(group.instruction)}</p>` : ''}
+        ${group.instruction ? `<p class="ins-group-inst">${formatGroupInstructionHtml(group.instruction)}</p>` : ''}
         <div class="ins-q-items">
           ${(group.questions || []).map((q) => renderFlatQuestionItem(q, passage, isReview)).join('')}
         </div>
@@ -2621,8 +2730,10 @@
 
     if (q.type === 'gap') {
       const gapCls = isReview ? (ok ? 'is-ok' : 'is-bad') : (isLockedOk ? 'is-ok' : (isWrongRetry && wrongState !== 'edited' ? 'is-bad' : ''));
-      const inlineBox = `<input type="text" class="ins-gap-input ${gapCls}" value="${esc(userVal)}" ${isReadOnly ? 'readonly' : ''} placeholder="${q.num}" aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off">`;
-      const cleanPrompt = String(q.prompt || '').replace(/^\s*(?:[•●▪▸◦·\-–—]\s*)+/, '');
+      const inlineBox = `<span class="ins-note-blank-wrap"><span class="ins-note-qnum ${gapCls || (isCur ? 'is-current' : '')}">${q.num}</span><input type="text" class="ins-gap-input ins-note-input ${gapCls}" value="${esc(userVal)}" ${isReadOnly ? 'readonly' : ''} aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off"></span>`;
+      const cleanPrompt = String(q.prompt || '')
+        .replace(/^\s*(?:[•●○▪▸◦·\-–—]\s*)+/, '')
+        .replace(/(?:…|\.{3,})\s*\.?\s*_{3,}/g, '_____');
       const stem = /_{3,}/.test(cleanPrompt) ? esc(cleanPrompt).replace(/_{3,}/, inlineBox) : `${esc(cleanPrompt)} ${inlineBox}`;
       const correctDisplay = Array.isArray(q.answer) ? q.answer[0] : q.answer;
       return `

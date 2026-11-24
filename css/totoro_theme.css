@@ -13504,3 +13504,183 @@ mark.rp-hl-preview {
     align-self: center;
   }
 }
+
+/* =========================================================
+   AUTHENTIC CAMBRIDGE IELTS NOTE & SUMMARY COMPLETION FRAME
+   ========================================================= */
+.ins-note-frame {
+  margin-top: 12px;
+  padding: 20px 24px 22px;
+  border: 1.5px solid rgba(44, 52, 46, 0.24);
+  border-radius: 6px;
+  background: var(--prac-paper-card, #ffffff);
+  box-shadow: 0 1px 2px rgba(20, 26, 22, 0.03);
+}
+.ins-contrast-totoro .ins-note-frame {
+  background: #fdfcf8;
+  border-color: rgba(68, 80, 68, 0.24);
+}
+.ins-contrast-yellow .ins-note-frame {
+  background: #fffcf0;
+  border-color: rgba(112, 92, 48, 0.25);
+}
+.ins-contrast-cd .ins-note-frame {
+  background: #ffffff;
+  border-color: #c7cdd4;
+  border-radius: 4px;
+}
+.ins-note-heading {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--prac-ink, #1b221e);
+  letter-spacing: -0.01em;
+  margin: 0 0 16px;
+  line-height: 1.35;
+}
+.ins-note-subheading {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--prac-ink, #1b221e);
+  margin: 14px 0 6px;
+  line-height: 1.35;
+}
+.ins-note-subheading:first-child {
+  margin-top: 0;
+}
+.ins-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ins-note-row.ins-q-item {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 5px 8px;
+  margin: 0 -8px;
+  border-radius: 8px;
+  transition: background 0.14s ease;
+}
+.ins-note-row.ins-q-item.is-current {
+  background: rgba(67, 104, 70, 0.065) !important;
+}
+.ins-note-row.ins-q-item.is-checked-ok {
+  background: rgba(22, 163, 74, 0.06) !important;
+}
+.ins-note-row.ins-q-item.is-checked-bad {
+  background: rgba(220, 38, 38, 0.06) !important;
+}
+.ins-note-row.ins-q-item.is-sub-bullet {
+  padding-left: 28px;
+}
+.ins-note-line-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.ins-note-bullet {
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--prac-ink, #1f2421);
+  font-weight: 700;
+  user-select: none;
+}
+.ins-note-line {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 2.05;
+  color: var(--prac-ink, #1f2421);
+}
+.ins-note-acts {
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: 6px;
+}
+
+/* Circular Green Number Badge + Crisp Underline Input */
+.ins-note-blank-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 5px;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+.ins-note-qnum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.ins-note-qnum.is-current {
+  background: #bbf7d0;
+  color: #14532d;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.28);
+}
+.ins-note-qnum.is-ok {
+  background: #16a34a;
+  color: #ffffff;
+}
+.ins-note-qnum.is-bad {
+  background: #fee2e2;
+  color: #b91c1c;
+  box-shadow: 0 0 0 1.5px rgba(220, 38, 38, 0.35);
+}
+.ins-note-qnum.is-edited {
+  background: #fef3c7;
+  color: #b45309;
+}
+.ins-gap-input.ins-note-input {
+  width: 148px;
+  min-width: 118px;
+  height: 28px;
+  padding: 2px 6px 3px;
+  border: 0 !important;
+  border-bottom: 1.5px solid #4b5563 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--prac-ink, #111827);
+  font-size: 14.5px;
+  font-weight: 650;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ins-gap-input.ins-note-input:focus {
+  outline: none;
+  border-bottom-color: #2f6b47 !important;
+  border-bottom-width: 2px !important;
+  background: rgba(67, 104, 70, 0.06) !important;
+}
+.ins-gap-input.ins-note-input.is-ok {
+  border-bottom-color: #16a34a !important;
+  color: #15803d;
+  background: rgba(22, 163, 74, 0.06) !important;
+}
+.ins-gap-input.ins-note-input.is-bad {
+  border-bottom-color: #dc2626 !important;
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.06) !important;
+}
+
+@media (max-width: 640px) {
+  .ins-note-frame {
+    padding: 15px 14px 16px;
+  }
+  .ins-gap-input.ins-note-input {
+    width: 120px;
+    min-width: 96px;
+  }
+}
