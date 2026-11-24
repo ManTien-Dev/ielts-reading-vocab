@@ -8238,3 +8238,1259 @@ body.is-global-home:not(.is-teacher-mode) #nav-skill-tabs {
     justify-content: flex-start;
   }
 }
+
+
+/* =========================================================
+   CAMBRIDGE 1–20 / VOLUME 1–6 / ACTUAL YEARS BOOK SHELF
+   ========================================================= */
+.rp-shelf-box {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-item, rgba(127, 138, 128, 0.06));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rp-shelf-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rp-shelf-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.rp-book-group-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.rp-mini-tab {
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.rp-mini-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+.rp-book-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+.rp-book-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 140ms ease, background 140ms ease, transform 120ms ease;
+}
+.rp-book-pill:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+.rp-book-pill.is-empty:not(.active) {
+  opacity: 0.68;
+}
+.rp-book-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.rp-book-name {
+  font-size: 13px;
+  font-weight: 800;
+}
+.rp-book-dot {
+  font-size: 10.5px;
+  font-weight: 650;
+  opacity: 0.78;
+}
+.rp-book-pill.has-data:not(.active) .rp-book-dot {
+  color: var(--accent);
+  opacity: 1;
+}
+.rp-book-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.rp-cur-book-title {
+  display: block;
+  font-size: 15px;
+  color: var(--ink);
+}
+.rp-cur-book-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 2px;
+}
+.rp-test-tabs {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rp-test-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.rp-test-tab small {
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+.rp-test-tab.is-empty:not(.active) {
+  opacity: 0.65;
+}
+.rp-test-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.rp-test-tab.active small {
+  color: rgba(255, 255, 255, 0.85);
+}
+.rp-unloaded-box {
+  padding: 26px 20px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+  background: var(--surface);
+  text-align: center;
+}
+.rp-unloaded-title {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.rp-unloaded-desc {
+  max-width: 580px;
+  margin: 6px auto 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.rp-card-tags {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.rp-qtype-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--surface-item, rgba(127, 138, 128, 0.12));
+  color: var(--ink-2);
+}
+
+/* =========================================================
+   1:1 INSPERA CD-IELTS FULL-SCREEN EXAM SHELL + 4 CONTRAST MODES
+   ========================================================= */
+body.rp-exam-fullscreen {
+  overflow: hidden;
+}
+.ins-shell {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 950 !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: row !important;
+  font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--ins-bg);
+  color: var(--ins-ink);
+}
+
+/* 4 Contrast Presets (Official Inspera + Totoro Washi) */
+.ins-contrast-cd {
+  --ins-bg: #ffffff;
+  --ins-hdr: #ffffff;
+  --ins-banner: #f4f5f4;
+  --ins-border: #d9dad9;
+  --ins-ink: #111111;
+  --ins-muted: #555555;
+  --ins-sel-bg: #b8d8f0;
+  --ins-active-ring: #2b7bd6;
+  --ins-notes-bg: #e6e7e6;
+  --ins-footer: #ffffff;
+  --ins-input-bg: #ffffff;
+  --ins-input-bd: #888888;
+}
+.ins-contrast-totoro {
+  --ins-bg: #fbf8f1;
+  --ins-hdr: #f7f3e8;
+  --ins-banner: #efe9dc;
+  --ins-border: #d8d0bf;
+  --ins-ink: #24221f;
+  --ins-muted: #5e584e;
+  --ins-sel-bg: #d9ece0;
+  --ins-active-ring: #3f6d52;
+  --ins-notes-bg: #ede7da;
+  --ins-footer: #f7f3e8;
+  --ins-input-bg: #fffdf9;
+  --ins-input-bd: #7f8c7e;
+}
+.ins-contrast-dark {
+  --ins-bg: #121212;
+  --ins-hdr: #181818;
+  --ins-banner: #1f1f1f;
+  --ins-border: #3a3a3a;
+  --ins-ink: #f4f4f4;
+  --ins-muted: #b8b8b8;
+  --ins-sel-bg: #1e4770;
+  --ins-active-ring: #60a5fa;
+  --ins-notes-bg: #1c1c1c;
+  --ins-footer: #181818;
+  --ins-input-bg: #1e1e1e;
+  --ins-input-bd: #777777;
+}
+.ins-contrast-yellow {
+  --ins-bg: #000000;
+  --ins-hdr: #000000;
+  --ins-banner: #141400;
+  --ins-border: #666600;
+  --ins-ink: #ffee32;
+  --ins-muted: #d8c828;
+  --ins-sel-bg: #3b3700;
+  --ins-active-ring: #ffee32;
+  --ins-notes-bg: #141400;
+  --ins-footer: #000000;
+  --ins-input-bg: #000000;
+  --ins-input-bd: #ffee32;
+}
+
+/* 3 Text Sizes */
+.ins-size-regular { --ins-fs: 15px; }
+.ins-size-large   { --ins-fs: 17.5px; }
+.ins-size-xlarge  { --ins-fs: 20px; }
+
+.ins-main-col {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 56px Official Inspera Header */
+.ins-header {
+  height: 56px;
+  flex-shrink: 0;
+  padding: 0 18px;
+  background: var(--ins-hdr);
+  border-bottom: 1px solid var(--ins-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.ins-hdr-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.ins-brand-mark {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: #d51a2c;
+  line-height: 1;
+  user-select: none;
+}
+.ins-contrast-yellow .ins-brand-mark { color: #ffee32; }
+.ins-hdr-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ins-hdr-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ins-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ins-hdr-timer {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--ins-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ins-hdr-timer.is-warn { color: #b45309; font-weight: 700; }
+.ins-hdr-timer.is-critical { color: #d51a2c; font-weight: 800; }
+.ins-timer-exact { opacity: 0.78; }
+.ins-paused-tag {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #d97706;
+  color: #fff;
+}
+.ins-hdr-review-lbl {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1f8a4c;
+}
+.ins-hdr-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ins-hdr-ico {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--ins-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.ins-hdr-ico:hover,
+.ins-hdr-ico.active {
+  background: var(--ins-banner);
+}
+.ins-hdr-ico svg {
+  width: 21px;
+  height: 21px;
+}
+.ins-notes-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #d51a2c;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ins-hdr-pill,
+.ins-hdr-exit {
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 6px;
+  border: 1px solid var(--ins-border);
+  background: transparent;
+  color: var(--ins-ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ins-hdr-pill.active {
+  background: var(--ins-active-ring);
+  border-color: var(--ins-active-ring);
+  color: #fff;
+}
+.ins-hdr-exit:hover {
+  background: var(--ins-banner);
+}
+
+/* Review Strip inside Full-Screen Inspera */
+.ins-review-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--ins-border);
+  background: var(--ins-banner);
+  flex-wrap: wrap;
+}
+
+/* Full-width Official Inspera Part Sub-Banner */
+.ins-part-banner {
+  margin: 10px 18px 8px;
+  padding: 11px 16px;
+  border-radius: 5px;
+  border: 1px solid var(--ins-border);
+  background: var(--ins-banner);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.ins-part-banner strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ins-ink);
+}
+.ins-part-banner span {
+  font-size: 13.5px;
+  color: var(--ins-ink);
+}
+
+/* 50/50 Split Workspace */
+.ins-split-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+.ins-pane {
+  overflow-y: auto;
+  padding: 14px 26px 86px;
+  min-width: 0;
+  background: var(--ins-bg);
+}
+.ins-pane-right {
+  flex: 1 1 auto;
+  position: relative;
+}
+.ins-resizer {
+  width: 2px;
+  background: var(--ins-border);
+  position: relative;
+  cursor: col-resize;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 4px;
+}
+.ins-resizer-box {
+  position: absolute;
+  width: 24px;
+  height: 32px;
+  border-radius: 3px;
+  border: 1px solid #888;
+  background: var(--ins-bg);
+  color: var(--ins-ink);
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  z-index: 4;
+}
+
+/* Passage Typography */
+.ins-passage-title {
+  margin: 0 0 8px;
+  font-size: calc(var(--ins-fs, 15px) + 4px);
+  font-weight: 800;
+  color: var(--ins-ink);
+  line-height: 1.3;
+}
+.ins-passage-sub {
+  margin: 0 0 14px;
+  font-size: calc(var(--ins-fs, 15px) - 1px);
+  font-style: italic;
+  color: var(--ins-muted);
+}
+.ins-para-block {
+  margin-bottom: 16px;
+}
+.ins-para-en {
+  margin: 0;
+  font-size: var(--ins-fs, 15px);
+  line-height: 1.68;
+  color: var(--ins-ink);
+}
+.ins-para-lbl {
+  font-weight: 800;
+  margin-right: 4px;
+}
+
+/* Matching Headings Dashed Blue Drop Zone (exact step_41_shot_2!) */
+.ins-dropzone {
+  margin-bottom: 10px;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1.5px dashed #3b82f6;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.ins-dropzone.is-over,
+.ins-dropzone.is-awaiting {
+  background: rgba(59, 130, 246, 0.12);
+  border-style: solid;
+}
+.ins-dropzone.is-filled {
+  justify-content: flex-start;
+  border-style: solid;
+  border-color: var(--ins-active-ring);
+  background: var(--ins-sel-bg);
+}
+.ins-dropzone.is-ok  { border-color: #1f8a4c; background: rgba(31, 138, 76, 0.15); }
+.ins-dropzone.is-bad { border-color: #d51a2c; background: rgba(213, 26, 44, 0.12); }
+.ins-dz-placeholder {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ins-ink);
+}
+.ins-dz-num {
+  font-weight: 800;
+  font-size: 13px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--ins-bg);
+  border: 1px solid var(--ins-active-ring);
+}
+.ins-dz-text {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ins-ink);
+}
+.ins-dz-clear {
+  border: 0;
+  background: transparent;
+  color: var(--ins-ink);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* Flat Inspera Question Paper (NO heavy card borders!) */
+.ins-q-group {
+  margin-bottom: 26px;
+}
+.ins-group-title {
+  margin: 0 0 6px;
+  font-size: calc(var(--ins-fs, 15px) + 1px);
+  font-weight: 800;
+  color: var(--ins-ink);
+}
+.ins-group-inst {
+  margin: 0 0 14px;
+  font-size: calc(var(--ins-fs, 15px) - 0.5px);
+  line-height: 1.5;
+  color: var(--ins-ink);
+}
+.ins-headings-sub {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  color: var(--ins-ink);
+}
+.ins-headings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ins-heading-pill {
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #bbbbbb;
+  background: var(--ins-bg);
+  color: var(--ins-ink);
+  font-size: calc(var(--ins-fs, 15px) - 0.5px);
+  cursor: grab;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+.ins-heading-pill:hover {
+  border-color: var(--ins-active-ring);
+}
+.ins-heading-pill.is-picked {
+  border-color: var(--ins-active-ring);
+  background: var(--ins-sel-bg);
+  box-shadow: 0 0 0 1px var(--ins-active-ring);
+}
+.ins-heading-pill.is-used {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.ins-mh-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ins-muted);
+}
+
+.ins-q-items {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ins-q-item {
+  padding: 2px 0;
+}
+.ins-q-stem-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.ins-q-num {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  border-radius: 3px;
+  border: 1.5px solid transparent;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ins-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ins-q-num.is-active {
+  border-color: var(--ins-active-ring);
+}
+.ins-q-stem {
+  flex: 1;
+  font-size: var(--ins-fs, 15px);
+  line-height: 1.52;
+  color: var(--ins-ink);
+}
+.ins-bookmark-btn {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  background: transparent;
+  color: var(--ins-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+.ins-bookmark-btn:hover,
+.ins-bookmark-btn.active {
+  opacity: 1;
+  color: #d97706;
+}
+.ins-bookmark-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Vertical Radio Rows with Full-Width Sky-Blue Selection Highlight (#b8d8f0) */
+.ins-radio-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+  padding-left: 34px;
+}
+.ins-radio-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: calc(var(--ins-fs, 15px) - 0.5px);
+  color: var(--ins-ink);
+}
+.ins-radio-row:hover {
+  background: var(--ins-banner);
+}
+.ins-radio-row.is-selected {
+  background: var(--ins-sel-bg) !important;
+}
+.ins-radio-row.is-key {
+  background: rgba(34, 160, 82, 0.2) !important;
+  font-weight: 700;
+}
+.ins-radio-row.is-wrong-pick {
+  background: rgba(213, 26, 44, 0.16) !important;
+}
+.ins-radio-row input[type="radio"] {
+  accent-color: var(--ins-active-ring);
+  width: 15px;
+  height: 15px;
+  margin: 0 8px 0 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ins-radio-lbl {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  cursor: pointer;
+}
+.ins-radio-row.is-struck .ins-mcq-txt {
+  text-decoration: line-through;
+  opacity: 0.45;
+}
+.ins-strike-btn {
+  border: 1px solid var(--ins-border);
+  background: transparent;
+  color: var(--ins-muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ins-strike-btn.active {
+  background: rgba(213, 26, 44, 0.14);
+  color: #b91c1c;
+  border-color: rgba(213, 26, 44, 0.4);
+}
+
+/* Inline Rectangular Gap-Fill Input (#888 border, centered bold question number placeholder!) */
+.ins-gap-bullet {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.ins-bullet-dot {
+  font-size: 18px;
+  line-height: 1.45;
+  color: var(--ins-ink);
+}
+.ins-gap-line {
+  flex: 1;
+  font-size: var(--ins-fs, 15px);
+  line-height: 1.9;
+  color: var(--ins-ink);
+}
+.ins-gap-input {
+  display: inline-block;
+  width: 158px;
+  height: 28px;
+  padding: 0 8px;
+  margin: 0 4px;
+  border: 1px solid var(--ins-input-bd);
+  border-radius: 3px;
+  background: var(--ins-input-bg);
+  color: var(--ins-ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+.ins-gap-input::placeholder {
+  color: var(--ins-ink);
+  font-weight: 800;
+  opacity: 0.9;
+}
+.ins-gap-input:focus {
+  outline: 2px solid var(--ins-active-ring);
+  border-color: var(--ins-active-ring);
+}
+.ins-gap-input.is-ok  { border-color: #1f8a4c; background: rgba(31, 138, 76, 0.14); }
+.ins-gap-input.is-bad { border-color: #d51a2c; background: rgba(213, 26, 44, 0.12); }
+
+.ins-rev-box {
+  margin-left: 34px;
+  margin-top: 8px;
+}
+
+/* Floating Official 40x40px Prev / Next Square Arrows */
+.ins-float-arrows {
+  position: absolute;
+  right: 22px;
+  bottom: 14px;
+  display: inline-flex;
+  gap: 4px;
+  z-index: 8;
+}
+.ins-arrow-btn {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 3px;
+  background: #333333;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ins-arrow-btn.is-next {
+  background: #000000;
+}
+.ins-arrow-btn.is-disabled,
+.ins-arrow-btn:disabled {
+  background: #e2e2e2;
+  color: #999999;
+  cursor: not-allowed;
+}
+
+/* Fixed 48px Official Inspera Bottom Navigator Bar */
+.ins-footer {
+  height: 48px;
+  flex-shrink: 0;
+  background: var(--ins-footer);
+  border-top: 1px solid var(--ins-border);
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+}
+.ins-footer-parts {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 18px;
+  overflow-x: auto;
+}
+.ins-part-expanded {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.ins-part-lbl {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ins-ink);
+}
+.ins-qboxes-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.ins-qbox {
+  position: relative;
+  min-width: 24px;
+  height: 36px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ins-ink);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.ins-qbox-dash {
+  width: 18px;
+  height: 3px;
+  border-radius: 1px;
+  background: var(--ins-border);
+}
+.ins-qbox.is-attempted .ins-qbox-dash,
+.ins-qbox.is-correct .ins-qbox-dash {
+  background: #22a052;
+}
+.ins-qbox.is-wrong .ins-qbox-dash {
+  background: #d51a2c;
+}
+.ins-qbox-num {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 3px;
+  border-radius: 3px;
+  border: 1.5px solid transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ins-qbox.is-current .ins-qbox-num {
+  border-color: var(--ins-active-ring);
+  font-weight: 800;
+}
+.ins-qbox.is-review .ins-qbox-num {
+  border-radius: 50%;
+  border-color: #d97706;
+  background: rgba(245, 158, 11, 0.16);
+}
+.ins-part-collapsed {
+  border: 0;
+  background: transparent;
+  color: var(--ins-ink);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+.ins-part-collapsed:hover {
+  background: var(--ins-banner);
+}
+.ins-part-collapsed span {
+  color: var(--ins-muted);
+}
+.ins-submit-check-btn {
+  width: 56px;
+  flex-shrink: 0;
+  border: 0;
+  border-left: 1px solid var(--ins-border);
+  background: #ececec;
+  color: #222222;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ins-submit-check-btn:hover {
+  background: #dce8f5;
+  color: #1d4ed8;
+}
+
+/* Official Inspera Right-Hand Notes Sidebar (#e6e7e6) */
+.ins-notes-sidebar {
+  width: 0;
+  overflow: hidden;
+  background: var(--ins-notes-bg);
+  border-left: 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width 180ms ease;
+}
+.ins-notes-sidebar.open {
+  width: 280px;
+  border-left: 1px solid var(--ins-border);
+}
+.ins-notes-header {
+  height: 56px;
+  padding: 0 16px;
+  background: var(--ins-hdr);
+  border-bottom: 1px solid var(--ins-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ins-ink);
+  flex-shrink: 0;
+}
+.ins-notes-close {
+  border: 0;
+  background: transparent;
+  color: var(--ins-ink);
+  font-size: 16px;
+  cursor: pointer;
+}
+.ins-notes-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  gap: 12px;
+}
+.ins-notes-empty {
+  margin: auto 0;
+  text-align: center;
+  color: var(--ins-ink);
+  padding: 12px;
+}
+.ins-notes-empty strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+.ins-notes-empty p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ins-muted);
+}
+.ins-notes-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ins-note-card {
+  padding: 9px 10px;
+  border-radius: 5px;
+  background: var(--ins-bg);
+  border: 1px solid var(--ins-border);
+  font-size: 12.5px;
+}
+.ins-note-quote {
+  font-style: italic;
+  color: var(--ins-muted);
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.ins-note-text {
+  color: var(--ins-ink);
+  line-height: 1.45;
+}
+.ins-note-del {
+  margin-top: 5px;
+  border: 0;
+  background: transparent;
+  color: #d51a2c;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.ins-notes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+}
+.ins-notes-form textarea {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--ins-border);
+  background: var(--ins-bg);
+  color: var(--ins-ink);
+  font-size: 12.5px;
+  font-family: inherit;
+  resize: vertical;
+}
+.ins-note-save-btn {
+  height: 32px;
+  border: 0;
+  border-radius: 4px;
+  background: #222222;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Official Inspera Options Full-Screen Overlay (exact step_32.png!) */
+.ins-options-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 990;
+  background: var(--ins-bg);
+  color: var(--ins-ink);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 26px 18px;
+  overflow-y: auto;
+}
+.ins-options-overlay.open {
+  display: flex;
+}
+.ins-options-head {
+  width: 100%;
+  max-width: 680px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 24px;
+}
+.ins-options-head h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+.ins-options-x {
+  position: absolute;
+  right: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ins-ink);
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ins-options-body {
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ins-opt-submit-btn {
+  width: 100%;
+  padding: 16px 20px;
+  border: 0;
+  border-radius: 6px;
+  background: #e31937;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+.ins-opt-card {
+  border-radius: 6px;
+  border: 1px solid var(--ins-border);
+  overflow: hidden;
+  background: var(--ins-bg);
+}
+.ins-opt-sec-title {
+  padding: 10px 16px;
+  background: var(--ins-banner);
+  border-bottom: 1px solid var(--ins-border);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ins-muted);
+}
+.ins-opt-choices {
+  display: flex;
+  flex-direction: column;
+}
+.ins-opt-row {
+  width: 100%;
+  padding: 13px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--ins-border);
+  background: transparent;
+  color: var(--ins-ink);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+}
+.ins-opt-row:last-child { border-bottom: 0; }
+.ins-opt-row:hover { background: var(--ins-banner); }
+.ins-opt-row.active {
+  background: var(--ins-sel-bg);
+  font-weight: 700;
+}
+.ins-opt-row small {
+  color: var(--ins-muted);
+  font-weight: 500;
+}
+.ins-opt-exit-btn {
+  margin-top: 6px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--ins-border);
+  background: transparent;
+  color: var(--ins-ink);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Official Inspera Compact Selection / Right-Click Popover (Note + Highlight with upward caret) */
+.ins-sel-popover {
+  position: fixed;
+  z-index: 985;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 7px;
+  border-radius: 6px;
+  border: 1px solid #d0d0d0;
+  background: #ffffff;
+  color: #333333;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+}
+.ins-sel-popover.hidden {
+  display: none !important;
+}
+.ins-sel-act {
+  border: 0;
+  background: transparent;
+  color: #333333;
+  padding: 5px 10px;
+  border-radius: 4px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ins-sel-act:hover { background: #f2f4f7; }
+.ins-sel-act svg { width: 16px; height: 16px; }
+.ins-sel-clear,
+.ins-sel-dict {
+  border: 0;
+  border-left: 1px solid #e4e4e4;
+  background: transparent;
+  color: #555555;
+  padding: 6px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ins-sel-dict {
+  color: #2e6b46;
+}
+
+@media (max-width: 900px) {
+  .ins-resizer { display: none; }
+  .ins-pane {
+    display: none;
+    flex: 1 1 100% !important;
+    padding: 12px 14px 76px;
+  }
+  .ins-pane.mob-active { display: block; }
+  .ins-notes-sidebar.open {
+    position: fixed;
+    top: 56px;
+    right: 0;
+    bottom: 48px;
+    width: 86vw;
+    z-index: 960;
+  }
+  .ins-radio-list,
+  .ins-rev-box {
+    padding-left: 0;
+    margin-left: 0;
+  }
+}

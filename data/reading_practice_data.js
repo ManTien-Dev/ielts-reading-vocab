@@ -240,11 +240,61 @@
       },
       groups: [
         {
-          title: 'Questions 10–13 · YES / NO / NOT GIVEN & Completion',
-          instruction: 'Answer questions 10–13 based on the passage.',
+          title: 'Questions 10–12 · Matching Headings',
+          instruction: 'The passage has three paragraphs, A–C. Choose the correct heading for each paragraph and drag (or tap) it into the gap above the paragraph.',
+          type: 'matching_headings',
+          headings: [
+            { key: 'i', text: 'Why modern fabrics and smooth surfaces ruin classical acoustics' },
+            { key: 'ii', text: 'The physics of how stepped stone rows filter unwanted noise' },
+            { key: 'iii', text: 'Early myths surrounding clear sound in ancient stone theatres' },
+            { key: 'iv', text: 'How bronze microphones were cast in Mediterranean workshops' },
+            { key: 'v', text: 'Ticket pricing across upper and lower theatre tiers' }
+          ],
           questions: [
             {
               num: 10,
+              type: 'matching_headings',
+              sectionLabel: 'A',
+              prompt: 'Paragraph A',
+              answer: 'iii',
+              evidenceId: 'e1',
+              paraphrase: [
+                { q: 'Early myths surrounding clear sound', p: 'For centuries, historians attributed this acoustic precision to mythical wind currents or hidden bronze resonators' }
+              ],
+              explanation: 'Đoạn A mở đầu bằng hiện tượng nghe rõ tiếng đồng xu từ 50m và các giả thuyết huyền bí trước kia của sử gia.'
+            },
+            {
+              num: 11,
+              type: 'matching_headings',
+              sectionLabel: 'B',
+              prompt: 'Paragraph B',
+              answer: 'ii',
+              evidenceId: 'e2',
+              paraphrase: [
+                { q: 'stepped stone rows filter unwanted noise', p: 'corrugated rows of stepped limestone benches act as a natural acoustic filter that suppresses low-frequency background noise' }
+              ],
+              explanation: 'Đoạn B giải thích nguyên lý vật lý bộ lọc âm tự nhiên của bậc đá vôi xếp nếp.'
+            },
+            {
+              num: 12,
+              type: 'matching_headings',
+              sectionLabel: 'C',
+              prompt: 'Paragraph C',
+              answer: 'i',
+              evidenceId: 'e3',
+              paraphrase: [
+                { q: 'modern fabrics and smooth surfaces ruin classical acoustics', p: 'diminishes substantially when spectators sit on plush modern cushions ... smoother concrete slopes, speech intelligibility fell sharply' }
+              ],
+              explanation: 'Đoạn C chứng minh đệm vải mềm và dốc bê tông phẳng mịn đều làm hỏng hiệu ứng âm học cổ đại.'
+            }
+          ]
+        },
+        {
+          title: 'Questions 13–16 · YES / NO / NOT GIVEN, Note Completion & MCQ',
+          instruction: 'Answer questions 13–16 based on the passage.',
+          questions: [
+            {
+              num: 13,
               type: 'ynng',
               prompt: 'Earlier historians accurately explained the acoustic clarity by studying the geometry of the stone seats.',
               answer: 'NO',
@@ -255,7 +305,7 @@
               explanation: 'Đoạn A cho biết sử gia trước kia gán cho gió huyền bí hoặc hộp đồng chôn dưới ghế, chứ không phải nhờ nghiên cứu hình học bậc đá.'
             },
             {
-              num: 11,
+              num: 14,
               type: 'ynng',
               prompt: 'Stepped limestone benches help dampen low-frequency ambient sounds like wind and crowd chatter.',
               answer: 'YES',
@@ -266,7 +316,7 @@
               explanation: 'Đoạn B khẳng định các bậc đá vôi lọc/triệt tiêu tiếng ồn tần số thấp dưới 500 Hz.'
             },
             {
-              num: 12,
+              num: 15,
               type: 'gap',
               prompt: 'Adding soft modern _________ reduces acoustic clarity by absorbing vocal reflections.',
               answer: ['cushions'],
@@ -277,7 +327,7 @@
               explanation: 'Đoạn C: "when spectators sit on plush modern cushions".'
             },
             {
-              num: 13,
+              num: 16,
               type: 'mcq',
               prompt: 'What did computer simulations with smooth concrete slopes demonstrate?',
               options: [
@@ -337,11 +387,11 @@
       },
       groups: [
         {
-          title: 'Questions 14–17 · YES / NO / NOT GIVEN & MCQ',
-          instruction: 'Answer questions 14–17 based on the passage.',
+          title: 'Questions 17–20 · YES / NO / NOT GIVEN & MCQ',
+          instruction: 'Answer questions 17–20 based on the passage.',
           questions: [
             {
-              num: 14,
+              num: 17,
               type: 'ynng',
               prompt: 'Cognitive offloading is a recent behavior that only emerged after smartphones were invented.',
               answer: 'NO',
@@ -352,7 +402,7 @@
               explanation: 'Đoạn A khẳng định con người đã giảm tải nhận thức từ thời thanh gỗ khắc vạch và bách khoa toàn thư in.'
             },
             {
-              num: 15,
+              num: 18,
               type: 'ynng',
               prompt: 'People who expect digital files to remain saved often remember where to locate facts instead of memorizing the facts.',
               answer: 'YES',
@@ -363,7 +413,7 @@
               explanation: 'Đoạn B mô tả chính xác hiện tượng "transactive memory".'
             },
             {
-              num: 16,
+              num: 19,
               type: 'gap',
               prompt: 'Delegating routine figures frees up _________ for more demanding analytical tasks.',
               answer: ['working memory'],
@@ -374,7 +424,7 @@
               explanation: 'Đoạn B: "liberates working memory, enabling volunteers to solve multi-step analytical puzzles".'
             },
             {
-              num: 17,
+              num: 20,
               type: 'mcq',
               prompt: 'According to Paragraph C, what is the primary risk of relying heavily on online search engines?',
               options: [
@@ -1075,47 +1125,119 @@
     {
       id: 'cam_s1_full',
       source: 'cambridge',
-      series: 'Practice Set 01',
-      title: 'Cambridge Practice Set 01 · FULL TEST',
+      bookId: 'cam_20',
+      testNum: 1,
+      series: 'Cambridge IELTS 20 · Test 1',
+      title: 'Cambridge IELTS 20 · Test 1 · FULL TEST',
       subtitle: 'Vertical Farming · Ancient Amphitheatres · Cognitive Offloading',
       targetBand: '6.5 – 8.5',
       suggestedMins: 60,
-      deckDefaultName: 'Cambridge Set 01',
+      deckDefaultName: 'Cambridge 20 · Test 1',
       passageIds: ['cam_s1_p1', 'cam_s1_p2', 'cam_s1_p3']
     },
     {
       id: 'vol_s1_full',
       source: 'volume',
-      series: 'Volume 01 · Test 1',
-      title: 'Volume 01 · Test 1 · FULL TEST',
+      bookId: 'vol_1',
+      testNum: 1,
+      series: 'Recent Actual Tests · Vol 1 · Test 1',
+      title: 'Volume 1 · Test 1 · FULL TEST',
       subtitle: 'Pollinator Corridors · Volcanic Sand Batteries · Bilingual Uncertainty',
       targetBand: '6.5 – 8.5',
       suggestedMins: 60,
-      deckDefaultName: 'Volume 01 · Test 1',
+      deckDefaultName: 'Volume 1 · Test 1',
       passageIds: ['vol_s1_p1', 'vol_s1_p2', 'vol_s1_p3']
     },
     {
       id: 'act_s1_full',
       source: 'actual',
-      series: 'Actual Test 2025 · Set 01',
-      title: 'Actual Test 2025 · Set 01 · FULL TEST',
+      bookId: 'act_2025',
+      testNum: 1,
+      series: 'Actual Tests 2025 · Test 1',
+      title: 'Actual Tests 2025 · Test 1 · FULL TEST',
       subtitle: 'Mass-Timber Skyscrapers · Ocean Kelp Sinks · Clinical Triage AI',
       targetBand: '6.5 – 8.5',
       suggestedMins: 60,
-      deckDefaultName: 'Actual 2025 · Set 01',
+      deckDefaultName: 'Actual 2025 · Test 1',
       passageIds: ['act_s1_p1', 'act_s1_p2', 'act_s1_p3']
     }
   ];
 
+  // Attach bookId + testNum cleanly to seeded passages
+  ['cam_s1_p1', 'cam_s1_p2', 'cam_s1_p3'].forEach((id) => {
+    if (PASSAGES[id]) {
+      PASSAGES[id].bookId = 'cam_20';
+      PASSAGES[id].testNum = 1;
+      PASSAGES[id].series = 'Cambridge IELTS 20 · Test 1';
+      PASSAGES[id].deckDefaultName = `Cambridge 20 · T1 P${PASSAGES[id].passageNum}`;
+    }
+  });
+  ['vol_s1_p1', 'vol_s1_p2', 'vol_s1_p3'].forEach((id) => {
+    if (PASSAGES[id]) {
+      PASSAGES[id].bookId = 'vol_1';
+      PASSAGES[id].testNum = 1;
+      PASSAGES[id].series = 'Volume 1 · Test 1';
+    }
+  });
+  ['act_s1_p1', 'act_s1_p2', 'act_s1_p3'].forEach((id) => {
+    if (PASSAGES[id]) {
+      PASSAGES[id].bookId = 'act_2025';
+      PASSAGES[id].testNum = 1;
+      PASSAGES[id].series = 'Actual Tests 2025 · Test 1';
+    }
+  });
+
+  // Full 20-book Cambridge IELTS Shelf (Cam 20 -> Cam 1, 4 Tests per book)
+  const CAMBRIDGE_BOOKS = [];
+  for (let n = 20; n >= 1; n--) {
+    CAMBRIDGE_BOOKS.push({
+      id: `cam_${String(n).padStart(2, '0')}`,
+      source: 'cambridge',
+      num: n,
+      shortLabel: `Cam ${n}`,
+      title: `Cambridge IELTS ${n}`,
+      group: n >= 10 ? 'recent' : 'classic',
+      testsCount: 4
+    });
+  }
+
+  // Full 6-Volume Recent Actual Tests Shelf (Vol 1 -> Vol 6, 4 Tests per Vol)
+  const VOLUME_BOOKS = [];
+  for (let v = 1; v <= 6; v++) {
+    VOLUME_BOOKS.push({
+      id: `vol_${v}`,
+      source: 'volume',
+      num: v,
+      shortLabel: `Vol ${v}`,
+      title: `Recent Actual Tests · Vol ${v}`,
+      group: 'all',
+      testsCount: 4
+    });
+  }
+
+  // Actual Tests by Year (2026 -> 2023)
+  const ACTUAL_YEARS = [2026, 2025, 2024, 2023].map((yr) => ({
+    id: `act_${yr}`,
+    source: 'actual',
+    num: yr,
+    shortLabel: `${yr}`,
+    title: `IELTS Actual Tests ${yr}`,
+    group: 'all',
+    testsCount: 4
+  }));
+
   const SOURCES = [
-    { id: 'cambridge', label: 'Cambridge', bookTitle: 'Cambridge IELTS 1 – 20', desc: 'Bộ đề chuẩn Cambridge University Press — tách riêng Passage 1–3 & Full Test 40 câu.' },
-    { id: 'volume', label: 'Volume', bookTitle: 'IELTS Reading Recent Actual Tests (Vol 1–6)', desc: 'Bộ đề Volume luyện tăng Band chuyên sâu — chia rõ Passage 1–3 và Full Test.' },
-    { id: 'actual', label: 'Actual Tests', bookTitle: 'IELTS Reading Actual Tests 2025', desc: 'Tuyển tập đề thi thật & dự đoán gần đây — luyện tốc độ và nhận diện bẫy Paraphrase.' },
+    { id: 'cambridge', label: 'Cambridge', bookTitle: 'Cambridge IELTS 1 – 20', desc: 'Đủ kệ 20 cuốn Cambridge University Press — mỗi cuốn gồm Test 1–4, tách Passage 1–3 & Full Test.' },
+    { id: 'volume', label: 'Volume', bookTitle: 'IELTS Reading Recent Actual Tests (Vol 1–6)', desc: 'Đủ 6 tập Volume luyện tăng Band chuyên sâu — chia rõ Test 1–4, Passage 1–3 và Full Test.' },
+    { id: 'actual', label: 'Actual Tests', bookTitle: 'IELTS Reading Actual Tests (2023–2026)', desc: 'Tuyển tập đề thi thật & dự đoán theo từng năm — luyện tốc độ và nhận diện bẫy Paraphrase.' },
     { id: 'news', label: 'News', bookTitle: 'The Economist · Nature · BBC Future', desc: 'Đọc báo học thuật chọn lọc theo chủ đề — dịch song ngữ & bấm tra từ lưu thẳng về Flashcard.' }
   ];
 
   window.READING_PRACTICE_DATA = {
     SOURCES,
+    CAMBRIDGE_BOOKS,
+    VOLUME_BOOKS,
+    ACTUAL_YEARS,
     PASSAGES,
     FULL_TESTS
   };

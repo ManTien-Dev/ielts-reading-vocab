@@ -1,17 +1,20 @@
 /* =========================================================
-   MODULE: IELTS Reading Practice PRO Engine & Local History Store
-   - 4-source library: Cambridge | Volume | Actual Tests | News
-   - Exact order inside Cambridge/Volume/Actual:
-       Passage 1 -> Passage 2 -> Passage 3 -> FULL TEST
-   - Split-screen resizable exam workspace + Ghibli / Thi máy toggle
-   - Selection Highlight toolbar (Yellow / Green / Pink / Clear)
-   - MCQ Strike-through eliminator (S̶ Loại trừ) & Question Flag (⚑)
-   - Bluebook Pre-Submit Review Check modal
-   - Post-Exam Review: Band, Time, Accuracy by Question Type,
-     Paraphrase Mapping, Locate Evidence, Interleaved Bilingual toggle,
-     and YouPass-style Click-to-Dictionary -> 1-click Save to My Vocab
-     (with auto-captured Reading context sentence + saved-word underline)
-   - 100% local per-student history & in-progress resume in localStorage
+   MODULE: IELTS Reading Practice PRO — Cambridge 1–20 Shelf & Inspera CD-IELTS Engine
+   - Portal 3-column native Totoro grid: Cambridge 1–20 | Volume 1–6 | Actual Tests | News
+   - 2-level Library inside Cambridge/Volume/Actual:
+       Book/Vol/Year Selector -> Test 1..4 -> Passage 1 -> Passage 2 -> Passage 3 -> FULL TEST
+   - Full-Screen 1:1 Inspera CD-IELTS Exam Workspace (customized with Totoro Washi contrast):
+       * 56px Header + Options (≡) Overlay (Contrast x4, Text size x3, Submit)
+       * Full-width Part Sub-Banner
+       * Resizable 50/50 Split Pane + right-hand Notes Drawer (#e6e7e6)
+       * Right-click / Selection compact Note + Highlight caret popover
+       * Flat exam paper questions: vertical radio rows (#b8d8f0 full-row highlight),
+         inline rectangular Gap-Fill (#888 border + centered bold question number),
+         Drag-and-Drop (+ tap-to-assign) Matching Headings with dashed blue drop zones
+       * Floating 40x40px <- / -> arrows + 48px Inspera Bottom Bar (green top status dashes,
+         blue active box, collapsed Part 2/3 summary tabs, far-right checkmark Submit)
+   - Post-Exam Review PRO: Band, Accuracy by Type, Paraphrase Mapping, Locate Evidence,
+     Interleaved Bilingual Translation, and Click-to-Dictionary -> 1-click Save to My Vocab
    ========================================================= */
 (function () {
   'use strict';
@@ -19,7 +22,11 @@
   const STORAGE_KEY_BASE = 'ielts_reading_practice_v1_';
 
   function B() { return window.__VOCAB_BRIDGE__ || null; }
-  function DATA() { return window.READING_PRACTICE_DATA || { SOURCES: [], PASSAGES: {}, FULL_TESTS: [] }; }
+  function DATA() {
+    return window.READING_PRACTICE_DATA || {
+      SOURCES: [], CAMBRIDGE_BOOKS: [], VOLUME_BOOKS: [], ACTUAL_YEARS: [], PASSAGES: {}, FULL_TESTS: []
+    };
+  }
 
   function getUid() {
     const uid = B()?.getScopedUid?.() || B()?.getCurrentUser?.()?.id || 'guest';
@@ -36,7 +43,6 @@
     if (typeof window.showToast === 'function') window.showToast(msg);
   }
 
-  /* ---------- Official Academic Reading Band Estimator ---------- */
   function estimateBand(correct, total) {
     if (!total || total <= 0) return 0;
     const scaled40 = Math.round((correct / total) * 40);
@@ -62,17 +68,24 @@
     return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
   }
 
+  function formatMinsRemaining(sec) {
+    const s = Math.max(0, Math.floor(sec || 0));
+    if (s < 60) return `${s} seconds remaining`;
+    const mins = Math.ceil(s / 60);
+    return `${mins} minute${mins === 1 ? '' : 's'} remaining`;
+  }
+
   function qTypeLabel(type) {
     if (type === 'tfng') return 'T / F / NG';
     if (type === 'ynng') return 'Y / N / NG';
     if (type === 'mcq') return 'Multiple Choice';
     if (type === 'gap') return 'Gap Fill';
-    if (type === 'match') return 'Matching';
+    if (type === 'matching_headings') return 'Matching Headings';
     return 'Reading';
   }
 
   /* =========================================================
-     1. LOCAL STORE: ReadingPracticeStore (for Practice + Reading Home)
+     1. LOCAL STORE: ReadingPracticeStore
      ========================================================= */
   const ReadingPracticeStore = {
     _key() { return `${STORAGE_KEY_BASE}${getUid()}`; },
@@ -91,22 +104,16 @@
       return { history: [], inProgress: null };
     },
 
-    save(state) {
-      try {
-        localStorage.setItem(this._key(), JSON.stringify(state));
-      } catch (_) {}
-      try {
-        window.dispatchEvent(new CustomEvent('reading-practice-updated'));
-      } catch (_) {}
+    save(stateObj) {
+      try { localStorage.setItem(this._key(), JSON.stringify(stateObj)); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('reading-practice-updated')); } catch (_) {}
     },
 
     recordAttempt(entry) {
       const st = this.load();
       st.history.unshift(entry);
       if (st.history.length > 80) st.history = st.history.slice(0, 80);
-      if (st.inProgress && st.inProgress.itemId === entry.itemId) {
-        st.inProgress = null;
-      }
+      if (st.inProgress && st.inProgress.itemId === entry.itemId) st.inProgress = null;
       this.save(st);
     },
 
@@ -122,13 +129,8 @@
       this.save(st);
     },
 
-    getInProgress() {
-      return this.load().inProgress;
-    },
-
-    getHistory() {
-      return this.load().history;
-    },
+    getInProgress() { return this.load().inProgress; },
+    getHistory() { return this.load().history; },
 
     getBestAttempt(itemId) {
       const list = this.load().history.filter((h) => h.itemId === itemId);
@@ -155,15 +157,14 @@
   };
 
   /* =========================================================
-     2. DICTIONARY LOOKUP (Passage Glossary + APP_DATA + IPA_DICT)
+     2. DICTIONARY LOOKUP (Post-Exam Review & News -> My Vocab)
      ========================================================= */
   let _appWordMap = null;
   function getAppWordMap() {
     if (_appWordMap) return _appWordMap;
     const map = new Map();
     const d = (typeof APP_DATA !== 'undefined' ? APP_DATA : window.APP_DATA) || {};
-    const lists = [d.file1_paraphrase_1500 || [], d.file2_families_3500 || [], d.signal_words || []];
-    lists.forEach((arr) => {
+    [d.file1_paraphrase_1500 || [], d.file2_families_3500 || [], d.signal_words || []].forEach((arr) => {
       arr.forEach((it) => {
         if (!it || !it.lemma) return;
         const k = String(it.lemma).trim().toLowerCase();
@@ -180,14 +181,8 @@
     if (w.endsWith('ies') && w.length > 4) cands.push(w.slice(0, -3) + 'y');
     if (w.endsWith('es') && w.length > 3) cands.push(w.slice(0, -2));
     if (w.endsWith('s') && w.length > 3) cands.push(w.slice(0, -1));
-    if (w.endsWith('ing') && w.length > 5) {
-      cands.push(w.slice(0, -3));
-      cands.push(w.slice(0, -3) + 'e');
-    }
-    if (w.endsWith('ed') && w.length > 4) {
-      cands.push(w.slice(0, -2));
-      cands.push(w.slice(0, -1));
-    }
+    if (w.endsWith('ing') && w.length > 5) { cands.push(w.slice(0, -3)); cands.push(w.slice(0, -3) + 'e'); }
+    if (w.endsWith('ed') && w.length > 4) { cands.push(w.slice(0, -2)); cands.push(w.slice(0, -1)); }
     if (w.endsWith('ly') && w.length > 4) cands.push(w.slice(0, -2));
     return cands;
   }
@@ -202,63 +197,40 @@
     for (const cand of stemCandidates(lower)) {
       if (gloss[cand]) {
         const g = gloss[cand];
-        return {
-          word: clean,
-          lemma: cand,
-          ipa: g.ipa || ipaDict[cand] || '',
-          pos: g.pos || 'word',
-          vi: g.vi || '',
-          synonyms: Array.isArray(g.syn) ? g.syn : [],
-          found: true
-        };
+        return { word: clean, lemma: cand, ipa: g.ipa || ipaDict[cand] || '', pos: g.pos || 'word', vi: g.vi || '', synonyms: Array.isArray(g.syn) ? g.syn : [], found: true };
       }
     }
     for (const cand of stemCandidates(lower)) {
       const cat = appMap.get(cand);
       if (cat) {
-        return {
-          word: clean,
-          lemma: cat.lemma || clean,
-          ipa: cat.ipa || ipaDict[cand] || '',
-          pos: cat.pos || 'word',
-          vi: cat.clean_meaning || cat.definition || '',
-          synonyms: Array.isArray(cat.synonyms) ? cat.synonyms.slice(0, 4) : [],
-          found: true
-        };
+        return { word: clean, lemma: cat.lemma || clean, ipa: cat.ipa || ipaDict[cand] || '', pos: cat.pos || 'word', vi: cat.clean_meaning || cat.definition || '', synonyms: Array.isArray(cat.synonyms) ? cat.synonyms.slice(0, 4) : [], found: true };
       }
     }
-    return {
-      word: clean,
-      lemma: clean,
-      ipa: ipaDict[lower] || '',
-      pos: 'word',
-      vi: '',
-      synonyms: [],
-      found: false
-    };
+    return { word: clean, lemma: clean, ipa: ipaDict[lower] || '', pos: 'word', vi: '', synonyms: [], found: false };
   }
 
   /* =========================================================
      3. READING PRACTICE APP CONTROLLER
      ========================================================= */
   const state = {
-    view: 'portal',       // 'portal' (3x3 source grid) | 'source' (Passage 1-3 + FULL TEST) | 'exam'
-    source: 'cambridge',  // 'cambridge' | 'volume' | 'actual' | 'news'
-    partFilter: 'all',    // 'all' | 'p1' | 'p2' | 'p3' | 'full'
+    view: 'portal',         // 'portal' | 'source' | 'exam'
+    source: 'cambridge',    // 'cambridge' | 'volume' | 'actual' | 'news'
+    camGroup: 'recent',     // 'recent' (Cam 10-20) | 'all' (Cam 1-20)
+    selectedBookId: 'cam_20',
+    selectedTestNum: 1,     // 1..4
+    partFilter: 'all',      // 'all' | 'p1' | 'p2' | 'p3' | 'full'
     newsTopic: 'all',
     searchQuery: '',
 
-    // Active exam session
     session: null,
     timerId: null,
-    dictTarget: null,     // { word, entry, context, deckName }
-    splitRatio: 50,       // percentage for left pane
-    mobilePane: 'passage' // 'passage' | 'questions'
+    dictTarget: null,
+    splitRatio: 50,
+    mobilePane: 'passage',
+    selectedHeadingKey: null // for tap-to-assign Matching Headings on touch/click
   };
 
-  function getRoot() {
-    return document.getElementById('rp-app-root');
-  }
+  function getRoot() { return document.getElementById('rp-app-root'); }
 
   function isAnswerCorrect(q, userVal) {
     const raw = String(userVal ?? '').trim();
@@ -267,15 +239,19 @@
       const low = raw.toLowerCase().replace(/\s+/g, ' ');
       return q.answer.some((a) => String(a).trim().toLowerCase() === low);
     }
-    return raw.toUpperCase() === String(q.answer).trim().toUpperCase();
+    return raw.toLowerCase() === String(q.answer).trim().toLowerCase();
   }
 
   function getAllQuestionsInPassage(p) {
     const out = [];
-    (p.groups || []).forEach((g) => {
-      (g.questions || []).forEach((q) => out.push(q));
-    });
+    (p?.groups || []).forEach((g) => (g.questions || []).forEach((q) => out.push(q)));
     return out;
+  }
+
+  function getPassageTypes(p) {
+    const set = new Set();
+    getAllQuestionsInPassage(p).forEach((q) => set.add(qTypeLabel(q.type)));
+    return Array.from(set);
   }
 
   function getSessionPassages() {
@@ -294,7 +270,21 @@
     return all;
   }
 
-  /* ---------- PORTAL 3x3 GRID RENDERER (Cambridge | Volume | Actual Tests | News) ---------- */
+  function getBooksForSource(src) {
+    const d = DATA();
+    if (src === 'cambridge') return d.CAMBRIDGE_BOOKS || [];
+    if (src === 'volume') return d.VOLUME_BOOKS || [];
+    if (src === 'actual') return d.ACTUAL_YEARS || [];
+    return [];
+  }
+
+  function countReadyTestsInBook(bookId) {
+    const d = DATA();
+    const ps = Object.values(d.PASSAGES || {}).filter((p) => p.bookId === bookId);
+    const tNums = new Set(ps.map((p) => p.testNum || 1));
+    return tNums.size;
+  }
+
   function buildResumeBannerHtml() {
     const inProg = ReadingPracticeStore.getInProgress();
     if (!inProg) return '';
@@ -315,13 +305,16 @@
     `;
   }
 
+  /* =========================================================
+     4. PORTAL 3-COLUMN GRID (Native Totoro .tot-exam-card)
+     ========================================================= */
   function renderPortal() {
     const root = getRoot();
     if (!root) return;
+    document.body.classList.remove('rp-exam-fullscreen');
     const d = DATA();
     const sources = d.SOURCES || [];
     const allPassages = Object.values(d.PASSAGES || {});
-    const allFull = d.FULL_TESTS || [];
     const hist = ReadingPracticeStore.getHistory();
 
     const stampById = {
@@ -332,16 +325,18 @@
     };
 
     const cardsHtml = sources.map((s) => {
-      const pCount = allPassages.filter((p) => p.source === s.id).length;
-      const fCount = allFull.filter((f) => f.source === s.id).length;
       const srcHist = hist.filter((h) => h.source === s.id);
       const avgBand = srcHist.length
         ? (Math.round((srcHist.reduce((acc, x) => acc + (Number(x.band) || 0), 0) / srcHist.length) * 2) / 2).toFixed(1)
         : null;
 
-      const rightBadge = avgBand
-        ? `Band ${avgBand}`
-        : (s.id === 'news' ? `${pCount} bài báo` : `${pCount} Passages · ${fCount} Full`);
+      let rightBadge = avgBand ? `Band ${avgBand}` : '';
+      if (!rightBadge) {
+        if (s.id === 'cambridge') rightBadge = '20 bộ · Cam 1–20';
+        else if (s.id === 'volume') rightBadge = '6 tập · Vol 1–6';
+        else if (s.id === 'actual') rightBadge = '2023 – 2026';
+        else rightBadge = `${allPassages.filter((p) => p.source === 'news').length} bài báo`;
+      }
 
       const actionsHtml = s.id === 'news'
         ? `
@@ -349,7 +344,7 @@
           <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('news')">Đọc báo ngay</button>
         `
         : `
-          <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'all')">Chọn Passage</button>
+          <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'all')">Chọn bộ đề</button>
           <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'full')">Làm Full Test</button>
         `;
 
@@ -394,7 +389,7 @@
             </span>
             <div>
               <h2 class="tot-shell-title">Luyện đọc · Practice</h2>
-              <p class="tot-shell-sub">Chọn kho đề Cambridge, Volume, Actual Tests hoặc đọc báo học thuật News.</p>
+              <p class="tot-shell-sub">Chọn kho đề Cambridge 1–20, Volume 1–6, Actual Tests hoặc đọc báo học thuật News.</p>
             </div>
           </div>
         </div>
@@ -408,13 +403,17 @@
     `;
   }
 
-  /* ---------- SOURCE LIBRARY RENDERER (Inside Cambridge / Volume / Actual / News) ---------- */
+  /* =========================================================
+     5. SOURCE LIBRARY (20-Book Cam Shelf / Vol 1-6 / Actual Years / News)
+     ========================================================= */
   function renderHub() {
     const root = getRoot();
     if (!root) return;
+    document.body.classList.remove('rp-exam-fullscreen');
     const d = DATA();
     const sources = d.SOURCES || [];
     const curSourceObj = sources.find((s) => s.id === state.source) || sources[0];
+    const isNews = state.source === 'news';
 
     const sourceTabsHtml = sources.map((s) => `
       <button type="button" class="rp-source-tab ${state.source === s.id ? 'active' : ''}"
@@ -423,22 +422,85 @@
       </button>
     `).join('');
 
-    const isNews = state.source === 'news';
-    const allPassages = Object.values(d.PASSAGES || {}).filter((p) => p.source === state.source);
-    const fullTests = (d.FULL_TESTS || []).filter((t) => t.source === state.source);
     const q = state.searchQuery.trim().toLowerCase();
-
     const matchesSearch = (obj) => {
       if (!q) return true;
       const hay = `${obj.title || ''} ${obj.subtitle || ''} ${obj.topic || ''} ${obj.series || ''}`.toLowerCase();
       return hay.includes(q);
     };
 
+    let shelfHtml = '';
     let subBarHtml = '';
     let contentHtml = '';
 
     if (!isNews) {
-      // Exact user-specified order: Passage 1 -> Passage 2 -> Passage 3 -> FULL TEST
+      const books = getBooksForSource(state.source);
+      if (!books.some((b) => b.id === state.selectedBookId) && books.length) {
+        const firstReady = books.find((b) => countReadyTestsInBook(b.id) > 0) || books[0];
+        state.selectedBookId = firstReady.id;
+        state.selectedTestNum = 1;
+      }
+
+      const visibleBooks = (state.source === 'cambridge' && state.camGroup === 'recent')
+        ? books.filter((b) => b.group === 'recent')
+        : books;
+
+      const camGroupToggle = state.source === 'cambridge' ? `
+        <div class="rp-book-group-toggle">
+          <button type="button" class="rp-mini-tab ${state.camGroup === 'recent' ? 'active' : ''}"
+            onclick="ReadingPracticeApp.setCamGroup('recent')">Cam 10 – 20 (Trọng tâm)</button>
+          <button type="button" class="rp-mini-tab ${state.camGroup === 'all' ? 'active' : ''}"
+            onclick="ReadingPracticeApp.setCamGroup('all')">Tất cả Cam 1 – 20 (${books.length} cuốn)</button>
+        </div>
+      ` : '';
+
+      const bookPillsHtml = visibleBooks.map((bk) => {
+        const readyTests = countReadyTestsInBook(bk.id);
+        const active = state.selectedBookId === bk.id;
+        return `
+          <button type="button" class="rp-book-pill ${active ? 'active' : ''} ${readyTests > 0 ? 'has-data' : 'is-empty'}"
+            data-rp-book="${esc(bk.id)}" onclick="ReadingPracticeApp.selectBook('${esc(bk.id)}')">
+            <span class="rp-book-name">${esc(bk.shortLabel)}</span>
+            <span class="rp-book-dot">${readyTests > 0 ? `${readyTests}/${bk.testsCount}` : 'Sắp nạp'}</span>
+          </button>
+        `;
+      }).join('');
+
+      const curBook = books.find((b) => b.id === state.selectedBookId) || books[0];
+      const bookPassages = Object.values(d.PASSAGES || {}).filter((p) => p.bookId === curBook?.id);
+      const bookFullTests = (d.FULL_TESTS || []).filter((t) => t.bookId === curBook?.id);
+
+      // 4 Test tabs inside the selected Book
+      const testTabsHtml = [1, 2, 3, 4].map((tNum) => {
+        const hasP = bookPassages.some((p) => (p.testNum || 1) === tNum);
+        const isAct = state.selectedTestNum === tNum;
+        return `
+          <button type="button" class="rp-test-tab ${isAct ? 'active' : ''} ${hasP ? 'has-data' : 'is-empty'}"
+            data-rp-test="${tNum}" onclick="ReadingPracticeApp.selectTestNum(${tNum})">
+            <span>Test ${tNum}</span>
+            <small>${hasP ? 'Sẵn sàng' : 'Trống'}</small>
+          </button>
+        `;
+      }).join('');
+
+      shelfHtml = `
+        <div class="rp-shelf-box">
+          <div class="rp-shelf-top">
+            <div class="rp-shelf-label">${state.source === 'cambridge' ? 'Chọn cuốn Cambridge' : (state.source === 'volume' ? 'Chọn tập Volume' : 'Chọn năm Actual Tests')}</div>
+            ${camGroupToggle}
+          </div>
+          <div class="rp-book-rail" id="rp-book-rail">${bookPillsHtml}</div>
+          <div class="rp-book-detail-head">
+            <div>
+              <strong class="rp-cur-book-title">${esc(curBook?.title || '')}</strong>
+              <span class="rp-cur-book-sub">4 Tests · Chọn từng Passage 1–3 hoặc làm trọn bộ FULL TEST chuẩn phòng thi máy</span>
+            </div>
+            <div class="rp-test-tabs" id="rp-test-tabs">${testTabsHtml}</div>
+          </div>
+        </div>
+      `;
+
+      // Exact order required by user: Passage 1 -> Passage 2 -> Passage 3 -> FULL TEST
       const parts = [
         { id: 'all', label: 'Tất cả' },
         { id: 'p1', label: 'Passage 1' },
@@ -455,39 +517,40 @@
         </div>
       `;
 
-      const sections = [
-        { key: 'p1', title: 'Passage 1', badge: '20 phút · Dễ → Trung bình', items: allPassages.filter((p) => p.passageNum === 1 && matchesSearch(p)), isFull: false },
-        { key: 'p2', title: 'Passage 2', badge: '20 phút · Trung bình → Khá', items: allPassages.filter((p) => p.passageNum === 2 && matchesSearch(p)), isFull: false },
-        { key: 'p3', title: 'Passage 3', badge: '20 phút · Nâng cao Band 7.5+', items: allPassages.filter((p) => p.passageNum === 3 && matchesSearch(p)), isFull: false },
-        { key: 'full', title: 'FULL TEST', badge: '60 phút · Trọn bộ 3 Passage', items: fullTests.filter(matchesSearch), isFull: true }
-      ].filter((sec) => state.partFilter === 'all' || state.partFilter === sec.key);
+      const testPassages = bookPassages.filter((p) => (p.testNum || 1) === state.selectedTestNum);
+      const testFulls = bookFullTests.filter((t) => (t.testNum || 1) === state.selectedTestNum);
 
-      contentHtml = sections.map((sec) => {
-        if (!sec.items.length) {
-          return `
-            <div class="rp-section-block" data-rp-section="${sec.key}">
-              <div class="rp-section-head">
-                <h3 class="rp-section-title">${esc(sec.title)}</h3>
-                <span class="rp-section-badge">${esc(sec.badge)}</span>
-              </div>
-              <div class="rp-empty-inline">Không tìm thấy đề phù hợp với từ khóa hiện tại.</div>
-            </div>
-          `;
-        }
-        return `
+      if (!testPassages.length && !testFulls.length && !q) {
+        contentHtml = `
+          <div class="rp-unloaded-box">
+            <div class="rp-unloaded-title">${esc(curBook?.title || '')} · Test ${state.selectedTestNum} chưa nạp đề</div>
+            <p class="rp-unloaded-desc">Khung danh mục đã sẵn sàng đủ 4 phần (<strong>Passage 1 → Passage 2 → Passage 3 → FULL TEST</strong>). Bạn chỉ cần thêm bài vào <code>data/reading_practice_data.js</code> với <code>bookId: '${esc(curBook?.id || '')}', testNum: ${state.selectedTestNum}</code> là đề sẽ tự hiện tại đây.</p>
+            <button type="button" class="btn btn-primary rp-btn-sm" onclick="ReadingPracticeApp.jumpToFirstReady('${esc(state.source)}')">Mở bộ đề đang sẵn sàng →</button>
+          </div>
+        `;
+      } else {
+        const sections = [
+          { key: 'p1', title: 'Passage 1', badge: '20 phút · Dễ → Trung bình', items: testPassages.filter((p) => p.passageNum === 1 && matchesSearch(p)), isFull: false },
+          { key: 'p2', title: 'Passage 2', badge: '20 phút · Trung bình → Khá', items: testPassages.filter((p) => p.passageNum === 2 && matchesSearch(p)), isFull: false },
+          { key: 'p3', title: 'Passage 3', badge: '20 phút · Nâng cao Band 7.5+', items: testPassages.filter((p) => p.passageNum === 3 && matchesSearch(p)), isFull: false },
+          { key: 'full', title: 'FULL TEST', badge: '60 phút · Trọn bộ 3 Passage', items: testFulls.filter(matchesSearch), isFull: true }
+        ].filter((sec) => state.partFilter === 'all' || state.partFilter === sec.key);
+
+        contentHtml = sections.map((sec) => `
           <div class="rp-section-block" data-rp-section="${sec.key}">
             <div class="rp-section-head">
               <h3 class="rp-section-title">${esc(sec.title)}</h3>
               <span class="rp-section-badge">${esc(sec.badge)}</span>
             </div>
-            <div class="rp-cards-grid">
-              ${sec.items.map((it) => renderHubCard(it, sec.isFull)).join('')}
-            </div>
+            ${sec.items.length
+              ? `<div class="rp-cards-grid">${sec.items.map((it) => renderHubCard(it, sec.isFull)).join('')}</div>`
+              : `<div class="rp-empty-inline">Không có đề khớp trong mục ${esc(sec.title)}.</div>`}
           </div>
-        `;
-      }).join('');
+        `).join('');
+      }
     } else {
-      const topics = ['all', ...Array.from(new Set(allPassages.map((p) => p.topic).filter(Boolean)))];
+      const allNews = Object.values(d.PASSAGES || {}).filter((p) => p.source === 'news');
+      const topics = ['all', ...Array.from(new Set(allNews.map((p) => p.topic).filter(Boolean)))];
       subBarHtml = `
         <div class="rp-part-tabs" role="tablist" aria-label="Lọc chủ đề News">
           ${topics.map((tp) => `
@@ -496,11 +559,11 @@
           `).join('')}
         </div>
       `;
-      const filteredNews = allPassages.filter((p) => (state.newsTopic === 'all' || p.topic === state.newsTopic) && matchesSearch(p));
+      const filteredNews = allNews.filter((p) => (state.newsTopic === 'all' || p.topic === state.newsTopic) && matchesSearch(p));
       contentHtml = `
         <div class="rp-section-block" data-rp-section="news">
           <div class="rp-section-head">
-            <h3 class="rp-section-title">Academic News Reading</h3>
+            <h3 class="rp-section-title">The Economist · Nature · BBC Future</h3>
             <span class="rp-section-badge">Song ngữ 1 chạm · Click tra từ &amp; lưu vào Từ của tôi</span>
           </div>
           <div class="rp-cards-grid">
@@ -518,7 +581,7 @@
           <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
             <button type="button" class="btn-subtle rp-btn-sm" id="rp-btn-back-portal" onclick="ReadingPracticeApp.openPortal()">← Practice</button>
             <div>
-              <h2 class="tot-shell-title">${esc(curSourceObj?.label || 'Reading Practice')}</h2>
+              <h2 class="tot-shell-title">${esc(curSourceObj?.bookTitle || curSourceObj?.label || 'Practice')}</h2>
               <p class="tot-shell-sub">${esc(curSourceObj?.desc || '')}</p>
             </div>
           </div>
@@ -528,6 +591,7 @@
         </div>
 
         ${buildResumeBannerHtml()}
+        ${shelfHtml}
 
         <div class="rp-filter-toolbar">
           ${subBarHtml}
@@ -558,6 +622,8 @@
       ? `<span class="rp-done-badge">✓ Band ${best.band.toFixed(1)} · ${best.score}/${best.total}</span>`
       : `<span class="rp-meta-pill">${esc(item.targetBand || 'IELTS')}</span>`;
 
+    const qTypes = isFull ? ['Passage 1–3', 'Full 60 phút'] : getPassageTypes(item);
+
     const startCall = isFull
       ? `ReadingPracticeApp.startFullTest('${esc(item.id)}')`
       : `ReadingPracticeApp.startPassage('${esc(item.id)}')`;
@@ -575,16 +641,18 @@
         <div class="rp-card-series">${esc(item.series || item.topic || '')}</div>
         <h4 class="rp-card-title">${esc(item.title)}</h4>
         <p class="rp-card-sub">${esc(item.subtitle || '')}</p>
+        <div class="rp-card-tags">
+          ${qTypes.map((qt) => `<span class="rp-qtype-tag">${esc(qt)}</span>`).join('')}
+        </div>
         <div class="rp-card-meta">
           <span>${totalQ} câu hỏi</span>
           <span>·</span>
           <span>${item.suggestedMins || 20} phút</span>
-          ${item.topic ? `<span>·</span><span>${esc(item.topic)}</span>` : ''}
         </div>
         <div class="rp-card-foot">
           ${isNews
             ? `<button type="button" class="btn-subtle rp-btn-sm" onclick="${reviewCall}">Đọc song ngữ</button>`
-            : (best ? `<button type="button" class="btn-subtle rp-btn-sm" onclick="${reviewCall}">Xem lại</button>` : '<span></span>')}
+            : (best ? `<button type="button" class="btn-subtle rp-btn-sm" onclick="${reviewCall}">Xem giải</button>` : '<span></span>')}
           <button type="button" class="btn btn-primary rp-btn-sm" onclick="${startCall}">
             ${isNews ? 'Đọc & Làm bài →' : (isFull ? 'Làm Full Test →' : 'Làm bài →')}
           </button>
@@ -593,7 +661,9 @@
     `;
   }
 
-  /* ---------- EXAM / REVIEW SESSION ENGINE ---------- */
+  /* =========================================================
+     6. INSPERA 1:1 FULL-SCREEN CD-IELTS EXAM ENGINE
+     ========================================================= */
   function startSession(config) {
     stopTimer();
     const totalSec = (config.suggestedMins || 20) * 60;
@@ -607,9 +677,11 @@
       deckDefaultName: config.deckDefaultName || config.title,
       passageIds: config.passageIds,
       activePassageIdx: 0,
-      mode: config.openInReview ? 'review' : 'exam', // 'exam' | 'review'
-      examTheme: 'totoro', // 'totoro' (Totoro CD-IELTS) | 'cd' (Thi máy Trắng) | 'night' (Nền tối)
-      fontScale: 1,
+      mode: config.openInReview ? 'review' : 'exam',
+      // Default to official CD-IELTS Black-on-White ('cd') for exam authenticity; News defaults to Totoro Washi
+      contrast: isNews ? 'totoro' : 'cd', // 'cd' | 'totoro' | 'dark' | 'yellow'
+      textSize: 'regular',                // 'regular' | 'large' | 'xlarge'
+      optionsOpen: false,
       showBilingual: !!config.openInReview && isNews,
       totalSec,
       remainingSec: config.remainingSec ?? totalSec,
@@ -618,7 +690,6 @@
       answers: config.answers ? { ...config.answers } : {},
       flagged: config.flagged ? { ...config.flagged } : {},
       struck: config.struck ? { ...config.struck } : {},
-      highlights: config.highlights ? { ...config.highlights } : {},
       notes: Array.isArray(config.notes) ? config.notes.slice() : [],
       notesOpen: false,
       activeQid: null,
@@ -628,6 +699,8 @@
     state.view = 'exam';
     state.mobilePane = 'passage';
     state.dictTarget = null;
+    state.selectedHeadingKey = null;
+    document.body.classList.add('rp-exam-fullscreen');
 
     if (state.session.mode === 'exam') {
       startTimer();
@@ -643,25 +716,21 @@
     state.timerId = setInterval(() => {
       if (!state.session || state.session.mode !== 'exam' || state.session.paused) return;
       state.session.elapsedSec += 1;
-      if (state.session.remainingSec > 0) {
-        state.session.remainingSec -= 1;
-      }
+      if (state.session.remainingSec > 0) state.session.remainingSec -= 1;
       const el = document.getElementById('rp-timer-display');
-      if (el) el.textContent = formatDuration(state.session.remainingSec);
+      if (el) el.textContent = formatMinsRemaining(state.session.remainingSec);
+      const exactEl = document.getElementById('rp-timer-exact');
+      if (exactEl) exactEl.textContent = formatDuration(state.session.remainingSec);
       if (state.session.elapsedSec % 10 === 0) persistDraft();
     }, 1000);
   }
 
   function stopTimer() {
-    if (state.timerId) {
-      clearInterval(state.timerId);
-      state.timerId = null;
-    }
+    if (state.timerId) { clearInterval(state.timerId); state.timerId = null; }
   }
 
   function persistDraft() {
     if (!state.session || state.session.mode !== 'exam') return;
-    const totalQuestions = getAllSessionQuestions().length;
     ReadingPracticeStore.saveInProgress({
       itemId: state.session.itemId,
       title: state.session.title,
@@ -671,10 +740,11 @@
       passageIds: state.session.passageIds,
       remainingSec: state.session.remainingSec,
       elapsedSec: state.session.elapsedSec,
-      totalQuestions,
+      totalQuestions: getAllSessionQuestions().length,
       answers: state.session.answers,
       flagged: state.session.flagged,
       struck: state.session.struck,
+      notes: state.session.notes,
       updatedAt: Date.now()
     });
   }
@@ -692,23 +762,26 @@
       if (ok) byType[t].correct += 1;
     });
     const total = allQ.length;
-    const band = estimateBand(score, total);
-    return {
-      score,
-      total,
-      band,
-      elapsedSec: state.session.elapsedSec,
-      byType: Object.values(byType)
-    };
+    return { score, total, band: estimateBand(score, total), elapsedSec: state.session.elapsedSec, byType: Object.values(byType) };
   }
 
-  /* ---------- PASSAGE TEXT RENDERING (clickable words + evidence + saved underline) ---------- */
-  function renderPassageParagraphHtml(para, passage, enableDictClick) {
+  /* ---------- PASSAGE PARAGRAPH RENDERER (Matching Headings Drop Zones + Clickable Dict Words) ---------- */
+  function getMatchingHeadingForPara(passage, paraLabel) {
+    for (const g of (passage.groups || [])) {
+      if (g.type === 'matching_headings') {
+        const q = (g.questions || []).find((x) => String(x.sectionLabel).toUpperCase() === String(paraLabel).toUpperCase());
+        if (q) return { group: g, q };
+      }
+    }
+    return null;
+  }
+
+  function renderPassageParagraphHtml(para, passage, enableDictClick, isReview) {
+    const s = state.session;
     const savedSet = (window.MyVocabStore && typeof window.MyVocabStore.getSavedWordSet === 'function')
       ? window.MyVocabStore.getSavedWordSet()
       : new Set();
 
-    // Parse <ev id="eX">...</ev> cleanly while wrapping clickable words
     const tokenWrap = (plainText) => {
       if (!enableDictClick) return esc(plainText);
       return plainText.split(/([A-Za-z][A-Za-z'-]*)/g).map((seg) => {
@@ -728,22 +801,43 @@
     const enHtml = parts.map((chunk) => {
       const m = chunk.match(/^<ev id="([^"]+)">([\s\S]*?)<\/ev>$/);
       if (m) {
-        const evId = m[1];
-        const inner = m[2];
-        const activeCls = state.session?.activeEvidenceId === evId ? ' rp-evidence-active' : '';
-        return `<span class="rp-ev-span${activeCls}" data-ev-id="${esc(evId)}">${tokenWrap(inner)}</span>`;
+        const activeCls = s?.activeEvidenceId === m[1] ? ' rp-evidence-active' : '';
+        return `<span class="rp-ev-span${activeCls}" data-ev-id="${esc(m[1])}">${tokenWrap(m[2])}</span>`;
       }
       return tokenWrap(chunk);
     }).join('');
 
-    const viBlock = (state.session?.showBilingual && para.vi)
+    // Inspera Dashed Blue Drop Zone above paragraph for Matching Headings (like step_41_shot_2!)
+    let dropZoneHtml = '';
+    const mh = getMatchingHeadingForPara(passage, para.label);
+    if (mh) {
+      const qid = `${passage.id}__q${mh.q.num}`;
+      const pickedKey = String(s.answers[qid] || '');
+      const pickedObj = (mh.group.headings || []).find((h) => h.key === pickedKey);
+      const isOk = isReview && isAnswerCorrect(mh.q, pickedKey);
+      const cls = `ins-dropzone${pickedObj ? ' is-filled' : ''}${state.selectedHeadingKey && !isReview ? ' is-awaiting' : ''}${isReview ? (isOk ? ' is-ok' : ' is-bad') : ''}`;
+      dropZoneHtml = `
+        <div class="${cls}" data-mh-qid="${esc(qid)}"
+          ondragover="event.preventDefault(); this.classList.add('is-over');"
+          ondragleave="this.classList.remove('is-over');"
+          ondrop="ReadingPracticeApp.onDropHeading(event, '${esc(qid)}')"
+          onclick="ReadingPracticeApp.onClickDropZone('${esc(qid)}')">
+          ${pickedObj
+            ? `<span class="ins-dz-num">${mh.q.num}</span><span class="ins-dz-text">${esc(pickedObj.text)}</span>${!isReview ? `<button type="button" class="ins-dz-clear" onclick="event.stopPropagation(); ReadingPracticeApp.clearHeading('${esc(qid)}')" title="Gỡ tiêu đề">✕</button>` : ''}`
+            : `<span class="ins-dz-placeholder">${mh.q.num}</span>`}
+        </div>
+      `;
+    }
+
+    const viBlock = (s?.showBilingual && para.vi)
       ? `<div class="rp-para-vi">${esc(para.vi)}</div>`
       : '';
 
     return `
-      <div class="rp-para-block" data-para-label="${esc(para.label || '')}">
-        <p class="rp-para-en">
-          ${para.label ? `<span class="rp-para-lbl">${esc(para.label)}</span>` : ''}
+      <div class="ins-para-block" data-para-label="${esc(para.label || '')}">
+        ${dropZoneHtml}
+        <p class="ins-para-en">
+          ${para.label ? `<strong class="ins-para-lbl">${esc(para.label)}</strong> ` : ''}
           <span class="rp-para-text">${enHtml}</span>
         </p>
         ${viBlock}
@@ -751,7 +845,7 @@
     `;
   }
 
-  /* ---------- EXAM WORKSPACE RENDERER (CD-IELTS Authentic x Totoro Custom) ---------- */
+  /* ---------- RENDER FULL-SCREEN INSPERA WORKSPACE ---------- */
   function renderExamWorkspace() {
     const root = getRoot();
     if (!root || !state.session) return;
@@ -771,13 +865,15 @@
     const curQs = allQ.filter((q) => q._pIdx === s.activePassageIdx);
     const qMin = curQs.length ? curQs[0].num : 1;
     const qMax = curQs.length ? curQs[curQs.length - 1].num : curQs.length;
-    const minsAlloc = curPassage.suggestedMins || 20;
+    const curGlobalIdx = allQ.findIndex((q) => q._qid === s.activeQid);
 
+    const contrastCls = `ins-contrast-${s.contrast || 'cd'}`;
+    const sizeCls = `ins-size-${s.textSize || 'regular'}`;
     const timerUrgency = s.remainingSec <= 300 ? ' is-critical' : (s.remainingSec <= 600 ? ' is-warn' : '');
-    const themeCls = s.examTheme === 'cd' ? 'rp-theme-cd' : (s.examTheme === 'night' ? 'rp-theme-night' : 'rp-theme-totoro');
 
+    // Review Summary Strip (only visible AFTER submitting)
     const reviewStripHtml = isReview && s.reviewResult ? `
-      <div class="rp-review-strip">
+      <div class="ins-review-strip">
         <div class="rp-rev-metric is-band">
           <span>Band dự kiến</span>
           <strong class="tabular">${s.reviewResult.band.toFixed(1)}</strong>
@@ -791,9 +887,7 @@
           <strong class="tabular">${formatDuration(s.reviewResult.elapsedSec)}</strong>
         </div>
         <div class="rp-rev-types">
-          ${s.reviewResult.byType.map((t) => `
-            <span class="rp-type-chip">${esc(t.label)}: <strong>${t.correct}/${t.total}</strong></span>
-          `).join('')}
+          ${s.reviewResult.byType.map((t) => `<span class="rp-type-chip">${esc(t.label)}: <strong>${t.correct}/${t.total}</strong></span>`).join('')}
         </div>
         <div class="rp-rev-actions">
           <button type="button" class="btn-subtle rp-btn-sm ${s.showBilingual ? 'is-on' : ''}" id="rp-btn-bilingual"
@@ -801,217 +895,275 @@
             ${s.showBilingual ? '✓ Đang hiện Song ngữ' : 'Dịch song ngữ'}
           </button>
           <button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.retryCurrent()">Làm lại</button>
+          <button type="button" class="btn btn-primary rp-btn-sm" onclick="ReadingPracticeApp.exitToHub()">← Về kho đề</button>
         </div>
       </div>
     ` : '';
 
-    const newsToolbarHtml = (!isReview && s.isNews) ? `
-      <div class="rp-news-bar">
-        <span>Đọc báo song ngữ: Bấm vào bất kỳ từ nào trong bài để tra nghĩa &amp; lưu vào <strong>Từ của tôi</strong></span>
-        <button type="button" class="btn-subtle rp-btn-sm ${s.showBilingual ? 'is-on' : ''}" id="rp-btn-bilingual"
-          onclick="ReadingPracticeApp.toggleBilingual()">
-          ${s.showBilingual ? '✓ Đang hiện Song ngữ' : 'Bật dịch song ngữ'}
-        </button>
-      </div>
-    ` : '';
+    // Inspera Part Sub-Banner (full-width light gray card right under header!)
+    const partLabel = s.isNews ? (curPassage.newsSource || 'Academic News') : `Part ${curPassage.passageNum || (s.activePassageIdx + 1)}`;
+    const partSubText = s.isNews
+      ? `Bấm vào bất kỳ từ nào để tra nghĩa & lưu vào "Từ của tôi" · ${curQs.length} câu kiểm tra nhanh.`
+      : `Read the text and answer questions ${qMin}–${qMax}.`;
 
-    const groupsHtml = (curPassage.groups || []).map((g) => `
-      <div class="rp-q-group">
-        <div class="rp-q-group-banner">
-          <div class="rp-q-group-title">${esc(g.title)}</div>
-          ${g.instruction ? `<div class="rp-q-group-inst">${esc(g.instruction)}</div>` : ''}
-        </div>
-        <div class="rp-q-list">
-          ${(g.questions || []).map((q) => renderQuestionCard(q, curPassage, isReview)).join('')}
-        </div>
-      </div>
-    `).join('');
+    const groupsHtml = (curPassage.groups || []).map((g) => renderQuestionGroup(g, curPassage, isReview)).join('');
 
-    // Official CD-IELTS Inspera bottom bar: Part tabs + Square/Circle numbered buttons
-    const partSummariesHtml = passages.length > 1 ? `
-      <div class="rp-cd-parts" role="tablist">
-        ${passages.map((p, idx) => {
-          const pQs = allQ.filter((q) => q._pIdx === idx);
-          const pDone = pQs.filter((q) => String(s.answers[q._qid] || '').trim()).length;
-          return `
-            <button type="button" class="rp-exam-ptab ${idx === s.activePassageIdx ? 'active' : ''}"
-              onclick="ReadingPracticeApp.switchExamPassage(${idx})">
-              <span>Passage ${p.passageNum || (idx + 1)}</span>
-              <small class="tabular">${pDone}/${pQs.length}</small>
-            </button>
-          `;
-        }).join('')}
-      </div>
-    ` : '';
-
-    const navPillsHtml = allQ.map((q) => {
-      const val = String(s.answers[q._qid] || '').trim();
-      const flagged = !!s.flagged[q._qid];
-      const isCur = s.activeQid === q._qid;
-      let cls = 'rp-nav-dot';
-      if (isCur) cls += ' is-current';
-      if (isReview) {
-        cls += isAnswerCorrect(q, val) ? ' is-correct' : ' is-wrong';
-      } else {
-        if (val) cls += ' is-answered';
-        if (flagged) cls += ' is-review-circle';
+    // Inspera Bottom Navigator Bar: Active Part expands [1][2]...[13] with green top dash; inactive Parts collapse "Part 2  0 of 13"
+    const bottomPartsHtml = passages.map((p, pIdx) => {
+      const pQs = allQ.filter((q) => q._pIdx === pIdx);
+      const pDone = pQs.filter((q) => String(s.answers[q._qid] || '').trim()).length;
+      const isActPart = pIdx === s.activePassageIdx;
+      const pTitle = s.isNews ? 'Questions' : `Part ${p.passageNum || (pIdx + 1)}`;
+      if (!isActPart) {
+        return `
+          <button type="button" class="ins-part-collapsed" onclick="ReadingPracticeApp.switchExamPassage(${pIdx})">
+            <strong>${esc(pTitle)}</strong>
+            <span class="tabular">${pDone} of ${pQs.length}</span>
+          </button>
+        `;
       }
-      return `<button type="button" class="${cls}" onclick="ReadingPracticeApp.jumpToQuestion(${q._pIdx}, '${esc(q._qid)}')" title="Question ${q.num}${flagged ? ' (Review)' : ''}">${q.num}</button>`;
+      const qBoxesHtml = pQs.map((q) => {
+        const val = String(s.answers[q._qid] || '').trim();
+        const isFlg = !!s.flagged[q._qid];
+        const isCur = s.activeQid === q._qid;
+        let cls = 'ins-qbox';
+        if (isCur) cls += ' is-current';
+        if (isReview) {
+          cls += isAnswerCorrect(q, val) ? ' is-correct' : ' is-wrong';
+        } else {
+          if (val) cls += ' is-attempted';
+          if (isFlg) cls += ' is-review';
+        }
+        return `
+          <button type="button" class="${cls}" onclick="ReadingPracticeApp.jumpToQuestion(${pIdx}, '${esc(q._qid)}')" title="Question ${q.num}">
+            <span class="ins-qbox-dash"></span>
+            <span class="ins-qbox-num">${q.num}</span>
+          </button>
+        `;
+      }).join('');
+      return `
+        <div class="ins-part-expanded">
+          <strong class="ins-part-lbl">${esc(pTitle)}</strong>
+          <div class="ins-qboxes-row">${qBoxesHtml}</div>
+        </div>
+      `;
     }).join('');
 
     const notesCount = (s.notes || []).length;
     const notesDrawerHtml = `
-      <aside class="rp-notes-drawer ${s.notesOpen ? 'open' : ''}" id="rp-notes-drawer" aria-label="Ghi chú bài thi">
-        <div class="rp-notes-head">
-          <strong>Ghi chú (Notes · ${notesCount})</strong>
-          <button type="button" class="rp-icon-btn" onclick="ReadingPracticeApp.toggleNotesDrawer(false)">✕</button>
+      <aside class="ins-notes-sidebar ${s.notesOpen ? 'open' : ''}" id="rp-notes-drawer" aria-label="Notes">
+        <div class="ins-notes-header">
+          <span>Notes${notesCount ? ` (${notesCount})` : ''}</span>
+          <button type="button" class="ins-notes-close" onclick="ReadingPracticeApp.toggleNotesDrawer(false)" aria-label="Close notes">✕</button>
         </div>
-        <form class="rp-notes-form" onsubmit="ReadingPracticeApp.addManualNote(event)">
-          <textarea id="rp-note-input" rows="2" placeholder="Viết ghi chú nhanh cho bài đọc..."></textarea>
-          <button type="submit" class="btn btn-primary rp-btn-sm">+ Lưu ghi chú</button>
-        </form>
-        <div class="rp-notes-list">
-          ${notesCount ? s.notes.map((n) => `
-            <div class="rp-note-item">
-              ${n.quote ? `<div class="rp-note-quote">“${esc(n.quote)}”</div>` : ''}
-              <div class="rp-note-text">${esc(n.text)}</div>
-              <button type="button" class="rp-note-del" onclick="ReadingPracticeApp.deleteNote('${esc(n.id)}')">Xóa</button>
+        <div class="ins-notes-body">
+          ${notesCount ? `
+            <div class="ins-notes-list">
+              ${s.notes.map((n) => `
+                <div class="ins-note-card">
+                  ${n.quote ? `<div class="ins-note-quote">“${esc(n.quote)}”</div>` : ''}
+                  <div class="ins-note-text">${esc(n.text)}</div>
+                  <button type="button" class="ins-note-del" onclick="ReadingPracticeApp.deleteNote('${esc(n.id)}')">Delete</button>
+                </div>
+              `).join('')}
             </div>
-          `).join('') : '<div class="rp-notes-empty">Chưa có ghi chú nào. Bạn có thể bôi đen đoạn văn bên trái rồi bấm <strong>+ Ghi chú</strong> giống phòng thi máy IELTS.</div>'}
+          ` : `
+            <div class="ins-notes-empty">
+              <strong>Your private notes will show here</strong>
+              <p>Select text to highlight or create a note.</p>
+            </div>
+          `}
+          <form class="ins-notes-form" onsubmit="ReadingPracticeApp.addManualNote(event)">
+            <textarea id="rp-note-input" rows="2" placeholder="Add a private note..."></textarea>
+            <button type="submit" class="ins-note-save-btn">+ Save note</button>
+          </form>
         </div>
       </aside>
     `;
 
-    const passageInstruction = s.isNews
-      ? `${esc(curPassage.newsSource || 'Academic News')} · ${esc(curPassage.topic || '')}`
-      : `READING PASSAGE ${curPassage.passageNum || (s.activePassageIdx + 1)} · You should spend about ${minsAlloc} minutes on Questions ${qMin}–${qMax}, which are based on the passage below.`;
+    // Inspera Official Options Overlay (like step_32.png!)
+    const optionsOverlayHtml = `
+      <div class="ins-options-overlay ${s.optionsOpen ? 'open' : ''}" id="ins-options-overlay">
+        <div class="ins-options-head">
+          <h2>Options</h2>
+          <button type="button" class="ins-options-x" onclick="ReadingPracticeApp.toggleOptionsOverlay(false)" aria-label="Close options">✕</button>
+        </div>
+        <div class="ins-options-body">
+          ${!isReview ? `
+            <button type="button" class="ins-opt-submit-btn" onclick="ReadingPracticeApp.toggleOptionsOverlay(false); ReadingPracticeApp.openPreSubmitModal();">
+              <span>Go to submission page (Nộp bài)</span>
+              <span>›</span>
+            </button>
+          ` : ''}
+
+          <div class="ins-opt-card">
+            <div class="ins-opt-sec-title">Contrast (Màu nền phòng thi)</div>
+            <div class="ins-opt-choices">
+              <button type="button" class="ins-opt-row ${s.contrast === 'cd' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('cd')">
+                <span>Black on white <small>(Chuẩn thi máy CD-IELTS)</small></span><span>${s.contrast === 'cd' ? '✓' : ''}</span>
+              </button>
+              <button type="button" class="ins-opt-row ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('totoro')">
+                <span>Totoro Washi <small>(Giấy ấm dịu mắt)</small></span><span>${s.contrast === 'totoro' ? '✓' : ''}</span>
+              </button>
+              <button type="button" class="ins-opt-row ${s.contrast === 'dark' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('dark')">
+                <span>White on black <small>(Nền tối chuẩn Inspera)</small></span><span>${s.contrast === 'dark' ? '✓' : ''}</span>
+              </button>
+              <button type="button" class="ins-opt-row ${s.contrast === 'yellow' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('yellow')">
+                <span>Yellow on black <small>(Tương phản cao)</small></span><span>${s.contrast === 'yellow' ? '✓' : ''}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="ins-opt-card">
+            <div class="ins-opt-sec-title">Text size (Cỡ chữ)</div>
+            <div class="ins-opt-choices">
+              <button type="button" class="ins-opt-row ${s.textSize === 'regular' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('regular')">
+                <span>Regular</span><span>${s.textSize === 'regular' ? '✓' : ''}</span>
+              </button>
+              <button type="button" class="ins-opt-row ${s.textSize === 'large' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('large')">
+                <span>Large</span><span>${s.textSize === 'large' ? '✓' : ''}</span>
+              </button>
+              <button type="button" class="ins-opt-row ${s.textSize === 'xlarge' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('xlarge')">
+                <span>Extra large</span><span>${s.textSize === 'xlarge' ? '✓' : ''}</span>
+              </button>
+            </div>
+          </div>
+
+          <button type="button" class="ins-opt-exit-btn" onclick="ReadingPracticeApp.exitToHub()">← Exit to Practice Library (Lưu bài làm dở)</button>
+        </div>
+      </div>
+    `;
 
     root.innerHTML = `
-      <div class="rp-workspace ${themeCls}" id="rp-workspace" style="--rp-font-scale:${s.fontScale};">
-        <header class="rp-exam-topbar rp-cd-topbar">
-          <div class="rp-top-left">
-            <button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.exitToHub()">← Kho đề</button>
-            <div class="rp-exam-title-wrap">
-              <div class="rp-exam-title">${esc(s.title)}</div>
-              <span class="rp-cd-qrange tabular">Questions ${qMin}–${qMax}</span>
-            </div>
-          </div>
-
-          <div class="rp-top-center">
-            ${!isReview ? `
-              <button type="button" class="rp-cd-clock${timerUrgency}" onclick="ReadingPracticeApp.togglePauseTimer()" title="Bấm để tạm dừng / tiếp tục đồng hồ">
-                <svg class="rp-clock-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg>
-                <span id="rp-timer-display" class="tabular">${formatDuration(s.remainingSec)}</span>
-                <span class="rp-clock-lbl">${s.paused ? 'tạm dừng' : 'còn lại'}</span>
-              </button>
-            ` : `<span class="rp-mode-pill">Chế độ xem giải · Paraphrase &amp; Tra từ</span>`}
-          </div>
-
-          <div class="rp-top-right">
-            <button type="button" class="rp-tool-btn ${s.notesOpen ? 'active' : ''}" id="rp-btn-notes"
-              onclick="ReadingPracticeApp.toggleNotesDrawer()" title="Mở sổ ghi chú giống phòng thi CD-IELTS">
-              Ghi chú${notesCount ? ` (${notesCount})` : ''}
-            </button>
-
-            <div class="rp-theme-switch" role="group" aria-label="Màu nền phòng thi">
-              <button type="button" class="rp-theme-btn ${s.examTheme === 'totoro' ? 'active' : ''}"
-                onclick="ReadingPracticeApp.setExamTheme('totoro')">Totoro</button>
-              <button type="button" class="rp-theme-btn ${s.examTheme === 'cd' ? 'active' : ''}"
-                onclick="ReadingPracticeApp.setExamTheme('cd')">Thi máy</button>
-              <button type="button" class="rp-theme-btn ${s.examTheme === 'night' ? 'active' : ''}"
-                onclick="ReadingPracticeApp.setExamTheme('night')">Đêm</button>
-            </div>
-
-            <div class="rp-font-btns">
-              <button type="button" class="rp-icon-btn" onclick="ReadingPracticeApp.adjustFont(-0.08)" title="Giảm cỡ chữ">A-</button>
-              <button type="button" class="rp-icon-btn" onclick="ReadingPracticeApp.adjustFont(0.08)" title="Tăng cỡ chữ">A+</button>
-            </div>
-
-            ${!isReview ? `
-              <button type="button" class="btn btn-primary rp-btn-sm" id="rp-btn-open-submit"
-                onclick="ReadingPracticeApp.openPreSubmitModal()">Nộp bài</button>
-            ` : ''}
-          </div>
-        </header>
-
-        ${reviewStripHtml}
-        ${newsToolbarHtml}
-
-        <div class="rp-mobile-pane-bar">
-          <button type="button" class="rp-mob-tab ${state.mobilePane === 'passage' ? 'active' : ''}"
-            onclick="ReadingPracticeApp.setMobilePane('passage')">Bài đọc</button>
-          <button type="button" class="rp-mob-tab ${state.mobilePane === 'questions' ? 'active' : ''}"
-            onclick="ReadingPracticeApp.setMobilePane('questions')">Câu hỏi (${allQ.filter((x) => String(s.answers[x._qid] || '').trim()).length}/${allQ.length})</button>
-        </div>
-
-        <div class="rp-split-body" id="rp-split-body">
-          <section class="rp-pane rp-pane-left ${state.mobilePane === 'passage' ? 'mob-active' : ''}"
-            id="rp-passage-pane" style="flex: 0 0 ${state.splitRatio}%;"
-            onmouseup="ReadingPracticeApp.handlePassageSelection(event)"
-            onclick="ReadingPracticeApp.handlePassageWordClick(event)">
-            <div class="rp-cd-part-banner">
-              <span>${passageInstruction}</span>
-              <span class="rp-dict-hint">${enableDict ? 'Bấm từ bất kỳ để tra &amp; lưu' : 'Bôi đen để Highlight / Ghi chú'}</span>
-            </div>
-            <div class="rp-passage-inner">
-              <h2 class="rp-passage-title">${esc(curPassage.title)}</h2>
-              ${curPassage.subtitle ? `<p class="rp-passage-sub">${esc(curPassage.subtitle)}</p>` : ''}
-              <div class="rp-passage-content" id="rp-passage-content">
-                ${(curPassage.paragraphs || []).map((para) => renderPassageParagraphHtml(para, curPassage, enableDict)).join('')}
+      <div class="rp-workspace ins-shell ${contrastCls} ${sizeCls}" id="rp-workspace">
+        <div class="ins-main-col">
+          <!-- 56px Official Inspera Header -->
+          <header class="ins-header">
+            <div class="ins-hdr-left">
+              <span class="ins-brand-mark">IELTS</span>
+              <div class="ins-hdr-meta">
+                <div class="ins-hdr-title">${esc(s.title)}</div>
+                ${!isReview ? `
+                  <button type="button" class="ins-hdr-timer${timerUrgency}" onclick="ReadingPracticeApp.togglePauseTimer()" title="Bấm để tạm dừng / tiếp tục đồng hồ">
+                    <span id="rp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
+                    <span class="ins-timer-exact tabular" id="rp-timer-exact">(${formatDuration(s.remainingSec)})</span>
+                    ${s.paused ? '<span class="ins-paused-tag">PAUSED</span>' : ''}
+                  </button>
+                ` : `<div class="ins-hdr-review-lbl">Review Mode · Paraphrase &amp; Dictionary Unlocked</div>`}
               </div>
             </div>
-          </section>
 
-          <div class="rp-resizer" id="rp-resizer" title="Kéo trái/phải để chỉnh tỷ lệ bài đọc và câu hỏi"
-            onmousedown="ReadingPracticeApp.startResize(event)">
-            <span class="rp-resizer-handle" aria-hidden="true">⇄</span>
+            <div class="ins-hdr-right">
+              ${s.isNews && !isReview ? `
+                <button type="button" class="ins-hdr-pill ${s.showBilingual ? 'active' : ''}" id="rp-btn-bilingual" onclick="ReadingPracticeApp.toggleBilingual()">
+                  ${s.showBilingual ? '✓ Song ngữ' : 'Song ngữ'}
+                </button>
+              ` : ''}
+              <button type="button" class="ins-hdr-ico" title="Kết nối cục bộ (Offline safe)" aria-label="Status">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="19.5" r="1" fill="currentColor"/></svg>
+              </button>
+              <button type="button" class="ins-hdr-ico ${s.optionsOpen ? 'active' : ''}" id="ins-btn-options"
+                onclick="ReadingPracticeApp.toggleOptionsOverlay()" title="Options (Contrast · Text size · Submit)" aria-label="Options">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+              </button>
+              <button type="button" class="ins-hdr-ico ${s.notesOpen ? 'active' : ''}" id="rp-btn-notes"
+                onclick="ReadingPracticeApp.toggleNotesDrawer()" title="Show / Hide notes" aria-label="Notes">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                ${notesCount ? `<span class="ins-notes-badge">${notesCount}</span>` : ''}
+              </button>
+              <button type="button" class="ins-hdr-exit" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề">Thoát</button>
+            </div>
+          </header>
+
+          ${reviewStripHtml}
+
+          <!-- Full-width Official Inspera Part Sub-Banner -->
+          <div class="ins-part-banner">
+            <strong>${esc(partLabel)}</strong>
+            <span>${esc(partSubText)}</span>
           </div>
 
-          <section class="rp-pane rp-pane-right ${state.mobilePane === 'questions' ? 'mob-active' : ''}" id="rp-questions-pane">
-            <div class="rp-questions-inner">
-              ${groupsHtml}
-            </div>
-          </section>
+          <!-- Mobile Pane Toggle -->
+          <div class="rp-mobile-pane-bar">
+            <button type="button" class="rp-mob-tab ${state.mobilePane === 'passage' ? 'active' : ''}"
+              onclick="ReadingPracticeApp.setMobilePane('passage')">Passage</button>
+            <button type="button" class="rp-mob-tab ${state.mobilePane === 'questions' ? 'active' : ''}"
+              onclick="ReadingPracticeApp.setMobilePane('questions')">Questions (${allQ.filter((x) => String(s.answers[x._qid] || '').trim()).length}/${allQ.length})</button>
+          </div>
 
-          ${notesDrawerHtml}
+          <!-- 50/50 Split Workspace -->
+          <div class="ins-split-body" id="rp-split-body">
+            <section class="ins-pane ins-pane-left ${state.mobilePane === 'passage' ? 'mob-active' : ''}"
+              id="rp-passage-pane" style="flex: 0 0 ${state.splitRatio}%;"
+              onmouseup="ReadingPracticeApp.handlePassageSelection(event)"
+              oncontextmenu="ReadingPracticeApp.handlePassageContextMenu(event)"
+              onclick="ReadingPracticeApp.handlePassageWordClick(event)">
+              <div class="ins-passage-inner">
+                <h1 class="ins-passage-title">${esc(curPassage.title)}</h1>
+                ${curPassage.subtitle ? `<p class="ins-passage-sub">${esc(curPassage.subtitle)}</p>` : ''}
+                <div class="rp-passage-content" id="rp-passage-content">
+                  ${(curPassage.paragraphs || []).map((para) => renderPassageParagraphHtml(para, curPassage, enableDict, isReview)).join('')}
+                </div>
+              </div>
+            </section>
+
+            <div class="ins-resizer" id="rp-resizer" title="Kéo để chia lại tỷ lệ bài đọc / câu hỏi"
+              onmousedown="ReadingPracticeApp.startResize(event)">
+              <span class="ins-resizer-box" aria-hidden="true">↔</span>
+            </div>
+
+            <section class="ins-pane ins-pane-right ${state.mobilePane === 'questions' ? 'mob-active' : ''}" id="rp-questions-pane">
+              <div class="ins-questions-inner">
+                ${groupsHtml}
+              </div>
+            </section>
+
+            <!-- Official Floating 40x40px Prev / Next Square Arrows -->
+            <div class="ins-float-arrows">
+              <button type="button" class="ins-arrow-btn ${curGlobalIdx <= 0 ? 'is-disabled' : ''}"
+                onclick="ReadingPracticeApp.stepQuestion(-1)" title="Previous question" ${curGlobalIdx <= 0 ? 'disabled' : ''}>←</button>
+              <button type="button" class="ins-arrow-btn is-next ${curGlobalIdx >= allQ.length - 1 ? 'is-disabled' : ''}"
+                onclick="ReadingPracticeApp.stepQuestion(1)" title="Next question" ${curGlobalIdx >= allQ.length - 1 ? 'disabled' : ''}>→</button>
+            </div>
+          </div>
+
+          <!-- Fixed 48px Official Inspera Bottom Navigator Bar -->
+          <footer class="ins-footer">
+            <div class="ins-footer-parts">${bottomPartsHtml}</div>
+            ${!isReview ? `
+              <button type="button" class="ins-submit-check-btn" id="rp-btn-open-submit"
+                onclick="ReadingPracticeApp.openPreSubmitModal()" title="Review &amp; Submit your answers" aria-label="Review and Submit">✓</button>
+            ` : `
+              <button type="button" class="ins-submit-check-btn is-done" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề">←</button>
+            `}
+          </footer>
         </div>
 
-        <footer class="rp-exam-footer rp-cd-footer">
-          <div class="rp-cd-footer-left">
-            ${partSummariesHtml}
-            <div class="rp-nav-dots">${navPillsHtml}</div>
-          </div>
-          <div class="rp-cd-footer-right">
-            <div class="rp-footer-legend">
-              ${!isReview
-                ? '<span><i class="rp-dot-key ans"></i>Đã làm</span><span><i class="rp-dot-key rev"></i>Review</span>'
-                : '<span><i class="rp-dot-key ok"></i>Đúng</span><span><i class="rp-dot-key bad"></i>Sai</span>'}
-            </div>
-            <div class="rp-cd-step-btns">
-              <button type="button" class="rp-step-btn" onclick="ReadingPracticeApp.stepQuestion(-1)" title="Câu trước">←</button>
-              <button type="button" class="rp-step-btn" onclick="ReadingPracticeApp.stepQuestion(1)" title="Câu kế tiếp">→</button>
-            </div>
-          </div>
-        </footer>
+        ${notesDrawerHtml}
+        ${optionsOverlayHtml}
 
-        <!-- Floating Selection Highlight & Note Toolbar (CD-IELTS Inspera style) -->
-        <div class="rp-hl-toolbar hidden" id="rp-hl-toolbar">
-          <button type="button" class="rp-hl-btn yl" onclick="ReadingPracticeApp.applyHighlight('yellow')" title="Highlight vàng (CD-IELTS)"></button>
-          <button type="button" class="rp-hl-btn gn" onclick="ReadingPracticeApp.applyHighlight('green')" title="Highlight xanh"></button>
-          <button type="button" class="rp-hl-btn pk" onclick="ReadingPracticeApp.applyHighlight('pink')" title="Highlight hồng"></button>
-          <button type="button" class="rp-hl-txt" onclick="ReadingPracticeApp.addNoteFromSelection()">+ Ghi chú</button>
-          <button type="button" class="rp-hl-txt" onclick="ReadingPracticeApp.clearSelectionHighlight()">Xóa</button>
-          ${enableDict ? '<button type="button" class="rp-hl-txt is-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra từ</button>' : ''}
+        <!-- Official Inspera Compact Selection / Right-Click Popover (Note + Highlight) -->
+        <div class="ins-sel-popover hidden" id="rp-hl-toolbar">
+          <button type="button" class="ins-sel-act" onclick="ReadingPracticeApp.addNoteFromSelection()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Note</span>
+          </button>
+          <button type="button" class="ins-sel-act" onclick="ReadingPracticeApp.applyHighlight('yellow')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+            <span>Highlight</span>
+          </button>
+          <button type="button" class="ins-sel-clear" onclick="ReadingPracticeApp.clearSelectionHighlight()" title="Xóa highlight">Clear</button>
+          ${enableDict ? '<button type="button" class="ins-sel-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra từ</button>' : ''}
         </div>
 
-        <!-- YouPass Click-to-Dictionary Popover -->
+        <!-- Click-to-Dictionary Popover (Review & News mode) -->
         <div class="rp-dict-popover hidden" id="rp-dict-popover" onclick="event.stopPropagation()"></div>
 
         <!-- Pre-Submit Review Check Modal -->
         <div class="modal-overlay" id="rp-presubmit-modal" onclick="ReadingPracticeApp.closePreSubmitModal(event)">
           <div class="modal-card rp-presubmit-card" onclick="event.stopPropagation()">
             <div class="modal-header">
-              <div class="modal-title">Kiểm tra trước khi nộp bài</div>
+              <div class="modal-title">Review your answers before submitting</div>
               <button type="button" class="btn-icon-glass" style="width:30px;height:30px;" onclick="ReadingPracticeApp.closePreSubmitModal()">✕</button>
             </div>
             <div class="modal-body" id="rp-presubmit-body"></div>
@@ -1021,7 +1173,90 @@
     `;
   }
 
-  function renderQuestionCard(q, passage, isReview) {
+  /* ---------- FLAT INSPERA QUESTION GROUP & ITEM RENDERER ---------- */
+  function renderQuestionGroup(group, passage, isReview) {
+    const s = state.session;
+    if (group.type === 'matching_headings') {
+      const usedKeys = new Set();
+      (group.questions || []).forEach((q) => {
+        const v = String(s.answers[`${passage.id}__q${q.num}`] || '');
+        if (v) usedKeys.add(v);
+      });
+
+      const headingsHtml = (group.headings || []).map((h) => {
+        const isUsed = usedKeys.has(h.key);
+        const isPicked = state.selectedHeadingKey === h.key;
+        return `
+          <div class="ins-heading-pill ${isUsed ? 'is-used' : ''} ${isPicked ? 'is-picked' : ''}"
+            draggable="${!isReview}"
+            data-heading-key="${esc(h.key)}"
+            ondragstart="ReadingPracticeApp.onDragStartHeading(event, '${esc(h.key)}')"
+            onclick="ReadingPracticeApp.onSelectHeadingPill('${esc(h.key)}')">
+            <strong>${esc(h.text)}</strong>
+          </div>
+        `;
+      }).join('');
+
+      const reviewRowsHtml = isReview ? (group.questions || []).map((q) => {
+        const qid = `${passage.id}__q${q.num}`;
+        const ok = isAnswerCorrect(q, s.answers[qid]);
+        const keyObj = (group.headings || []).find((h) => h.key === q.answer);
+        return renderReviewBlock(q, ok, keyObj ? `${keyObj.key}. ${keyObj.text}` : q.answer);
+      }).join('') : '';
+
+      return `
+        <div class="ins-q-group">
+          <h3 class="ins-group-title">${esc(group.title)}</h3>
+          ${group.instruction ? `<p class="ins-group-inst">${esc(group.instruction)}</p>` : ''}
+          <div class="ins-headings-sub">List of Headings</div>
+          <div class="ins-headings-stack">${headingsHtml}</div>
+          ${!isReview ? '<div class="ins-mh-hint">Kéo thả tiêu đề sang ô viền xanh bên trái, hoặc bấm chọn 1 tiêu đề rồi bấm vào ô số câu bên trái.</div>' : ''}
+          ${reviewRowsHtml}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="ins-q-group">
+        <h3 class="ins-group-title">${esc(group.title)}</h3>
+        ${group.instruction ? `<p class="ins-group-inst">${esc(group.instruction)}</p>` : ''}
+        <div class="ins-q-items">
+          ${(group.questions || []).map((q) => renderFlatQuestionItem(q, passage, isReview)).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderReviewBlock(q, ok, correctDisplay) {
+    const paraRows = (q.paraphrase || []).map((pr) => `
+      <div class="rp-para-map-row">
+        <span class="rp-pm-q">${esc(pr.q)}</span>
+        <span class="rp-pm-arrow">↔</span>
+        <span class="rp-pm-p">${esc(pr.p)}</span>
+      </div>
+    `).join('');
+
+    return `
+      <div class="rp-rev-box ins-rev-box ${ok ? 'is-ok' : 'is-bad'}">
+        <div class="rp-rev-box-head">
+          <span><strong>Q${q.num}:</strong> ${ok ? '✓ Chính xác' : `✕ Đáp án đúng: <strong>${esc(correctDisplay)}</strong>`}</span>
+          ${q.evidenceId ? `
+            <button type="button" class="rp-locate-btn"
+              onclick="ReadingPracticeApp.locateEvidence('${esc(q.evidenceId)}')">Định vị dẫn chứng</button>
+          ` : ''}
+        </div>
+        ${paraRows ? `
+          <div class="rp-para-map">
+            <div class="rp-pm-title">Paraphrase Mapping (Câu hỏi ↔ Bài đọc)</div>
+            ${paraRows}
+          </div>
+        ` : ''}
+        ${q.explanation ? `<div class="rp-rev-exp">${esc(q.explanation)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  function renderFlatQuestionItem(q, passage, isReview) {
     const s = state.session;
     const qid = `${passage.id}__q${q.num}`;
     const userVal = String(s.answers[qid] ?? '');
@@ -1029,50 +1264,70 @@
     const isCur = s.activeQid === qid;
     const ok = isReview ? isAnswerCorrect(q, userVal) : false;
 
-    let promptHtml = esc(q.prompt);
-    let inputHtml = '';
+    const bookmarkBtn = !isReview ? `
+      <button type="button" class="ins-bookmark-btn ${flagged ? 'active' : ''}"
+        onclick="event.stopPropagation(); ReadingPracticeApp.toggleFlag('${esc(qid)}')" title="Đánh dấu xem lại (Bookmark)">
+        <svg viewBox="0 0 24 24" fill="${flagged ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
+    ` : '';
+
+    if (q.type === 'gap') {
+      const inlineBox = `<input type="text" class="ins-gap-input ${isReview ? (ok ? 'is-ok' : 'is-bad') : ''}" value="${esc(userVal)}" ${isReview ? 'readonly' : ''} placeholder="${q.num}" aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off">`;
+      const stem = /_{3,}/.test(q.prompt) ? esc(q.prompt).replace(/_{3,}/, inlineBox) : `${esc(q.prompt)} ${inlineBox}`;
+      const correctDisplay = Array.isArray(q.answer) ? q.answer[0] : q.answer;
+      return `
+        <div class="ins-q-item ins-q-gap ${isCur && !isReview ? 'is-current' : ''}" id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
+          <div class="ins-gap-bullet">
+            <span class="ins-bullet-dot">•</span>
+            <div class="ins-gap-line">${stem}</div>
+            ${bookmarkBtn}
+          </div>
+          ${isReview ? renderReviewBlock(q, ok, correctDisplay) : ''}
+        </div>
+      `;
+    }
+
+    let optionsHtml = '';
     if (q.type === 'tfng' || q.type === 'ynng') {
       const opts = q.type === 'tfng' ? ['TRUE', 'FALSE', 'NOT GIVEN'] : ['YES', 'NO', 'NOT GIVEN'];
-      inputHtml = `
-        <div class="rp-pill-choices">
+      optionsHtml = `
+        <div class="ins-radio-list" role="radiogroup" aria-label="Question ${q.num}">
           ${opts.map((opt) => {
             const active = userVal.toUpperCase() === opt;
-            let cls = `rp-choice-pill${active ? ' selected' : ''}`;
+            let cls = `ins-radio-row${active ? ' is-selected' : ''}`;
             if (isReview && opt === String(q.answer).toUpperCase()) cls += ' is-key';
             if (isReview && active && !ok) cls += ' is-wrong-pick';
-            return `<button type="button" class="${cls}" ${isReview ? 'disabled' : ''}
-              onclick="ReadingPracticeApp.setAnswer('${esc(qid)}', '${opt}')">${opt}</button>`;
+            return `
+              <label class="${cls}">
+                <input type="radio" name="${esc(qid)}" value="${opt}" ${active ? 'checked' : ''} ${isReview ? 'disabled' : ''}
+                  onchange="ReadingPracticeApp.setAnswer('${esc(qid)}', '${opt}')">
+                <span>${opt}</span>
+              </label>
+            `;
           }).join('')}
         </div>
       `;
-    } else if (q.type === 'gap') {
-      const inlineBox = `<input type="text" class="rp-gap-input rp-gap-inline ${isReview ? (ok ? 'is-ok' : 'is-bad') : ''}" value="${esc(userVal)}" ${isReview ? 'readonly' : ''} placeholder="${q.num}" aria-label="Câu ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off">`;
-      if (/_{3,}/.test(q.prompt)) {
-        promptHtml = esc(q.prompt).replace(/_{3,}/, inlineBox);
-      } else {
-        inputHtml = `<div class="rp-gap-wrap">${inlineBox}</div>`;
-      }
     } else if (q.type === 'mcq') {
-      inputHtml = `
-        <div class="rp-mcq-list">
+      optionsHtml = `
+        <div class="ins-radio-list" role="radiogroup" aria-label="Question ${q.num}">
           ${(q.options || []).map((opt) => {
             const active = userVal.toUpperCase() === opt.key;
             const strikeKey = `${qid}__${opt.key}`;
             const isStruck = !!s.struck[strikeKey];
-            let cls = `rp-mcq-row${active ? ' selected' : ''}${isStruck ? ' is-struck' : ''}`;
+            let cls = `ins-radio-row${active ? ' is-selected' : ''}${isStruck ? ' is-struck' : ''}`;
             if (isReview && opt.key === String(q.answer).toUpperCase()) cls += ' is-key';
             if (isReview && active && !ok) cls += ' is-wrong-pick';
             return `
               <div class="${cls}">
-                <button type="button" class="rp-mcq-pick" ${isReview ? 'disabled' : ''}
-                  onclick="ReadingPracticeApp.setAnswer('${esc(qid)}', '${esc(opt.key)}')">
-                  <span class="rp-mcq-key">${esc(opt.key)}</span>
-                  <span class="rp-mcq-text">${esc(opt.text)}</span>
-                </button>
+                <label class="ins-radio-lbl">
+                  <input type="radio" name="${esc(qid)}" value="${esc(opt.key)}" ${active ? 'checked' : ''} ${isReview ? 'disabled' : ''}
+                    onchange="ReadingPracticeApp.setAnswer('${esc(qid)}', '${esc(opt.key)}')">
+                  <strong>${esc(opt.key)}</strong>
+                  <span class="ins-mcq-txt">${esc(opt.text)}</span>
+                </label>
                 ${!isReview ? `
-                  <button type="button" class="rp-strike-btn ${isStruck ? 'active' : ''}"
-                    onclick="ReadingPracticeApp.toggleStrike('${esc(strikeKey)}', event)"
-                    title="Loại trừ đáp án này (gạch ngang)">S̶</button>
+                  <button type="button" class="ins-strike-btn ${isStruck ? 'active' : ''}"
+                    onclick="ReadingPracticeApp.toggleStrike('${esc(strikeKey)}', event)" title="Loại trừ phương án này">S̶</button>
                 ` : ''}
               </div>
             `;
@@ -1081,55 +1336,21 @@
       `;
     }
 
-    let reviewPanelHtml = '';
-    if (isReview) {
-      const correctDisplay = Array.isArray(q.answer) ? q.answer[0] : q.answer;
-      const paraRows = (q.paraphrase || []).map((pr) => `
-        <div class="rp-para-map-row">
-          <span class="rp-pm-q">${esc(pr.q)}</span>
-          <span class="rp-pm-arrow">↔</span>
-          <span class="rp-pm-p">${esc(pr.p)}</span>
-        </div>
-      `).join('');
-
-      reviewPanelHtml = `
-        <div class="rp-rev-box ${ok ? 'is-ok' : 'is-bad'}">
-          <div class="rp-rev-box-head">
-            <span>${ok ? '✓ Chính xác' : `✕ Đáp án đúng: <strong>${esc(correctDisplay)}</strong>`}</span>
-            ${q.evidenceId ? `
-              <button type="button" class="rp-locate-btn"
-                onclick="ReadingPracticeApp.locateEvidence('${esc(q.evidenceId)}')">Định vị dẫn chứng</button>
-            ` : ''}
-          </div>
-          ${paraRows ? `
-            <div class="rp-para-map">
-              <div class="rp-pm-title">Paraphrase Mapping (Câu hỏi ↔ Bài đọc)</div>
-              ${paraRows}
-            </div>
-          ` : ''}
-          ${q.explanation ? `<div class="rp-rev-exp">${esc(q.explanation)}</div>` : ''}
-        </div>
-      `;
-    }
-
+    const correctDisplay = Array.isArray(q.answer) ? q.answer[0] : q.answer;
     return `
-      <div class="rp-q-card ${isCur && !isReview ? 'is-current' : ''} ${isReview ? (ok ? 'rev-ok' : 'rev-bad') : ''}"
-        id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
-        <div class="rp-q-head">
-          <span class="rp-q-num">${q.num}</span>
-          <div class="rp-q-prompt">${promptHtml}</div>
-          ${!isReview ? `
-            <button type="button" class="rp-flag-btn ${flagged ? 'active' : ''}"
-              onclick="event.stopPropagation(); ReadingPracticeApp.toggleFlag('${esc(qid)}')" title="Đánh dấu Review (chuyển số câu thành hình tròn giống CD-IELTS)">${flagged ? 'Review ✓' : 'Review'}</button>
-          ` : ''}
+      <div class="ins-q-item ${isCur && !isReview ? 'is-current' : ''}" id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
+        <div class="ins-q-stem-row">
+          <span class="ins-q-num ${isCur && !isReview ? 'is-active' : ''}">${q.num}</span>
+          <div class="ins-q-stem">${esc(q.prompt)}</div>
+          ${bookmarkBtn}
         </div>
-        ${inputHtml}
-        ${reviewPanelHtml}
+        ${optionsHtml}
+        ${isReview ? renderReviewBlock(q, ok, correctDisplay) : ''}
       </div>
     `;
   }
 
-  /* ---------- CLICK-TO-DICTIONARY POPOVER -> SAVE TO MY VOCAB ---------- */
+  /* ---------- CLICK-TO-DICTIONARY POPOVER (Review & News -> My Vocab) ---------- */
   function extractSentenceForNode(node) {
     const pEl = node?.closest?.('.rp-para-text');
     if (!pEl) return '';
@@ -1155,11 +1376,7 @@
     const savedSet = window.MyVocabStore ? window.MyVocabStore.getSavedWordSet() : new Set();
     const alreadySaved = savedSet.has(entry.word.toLowerCase()) || savedSet.has(entry.lemma.toLowerCase());
 
-    state.dictTarget = {
-      entry,
-      context: contextSentence || '',
-      deckName: defaultDeckName
-    };
+    state.dictTarget = { entry, context: contextSentence || '', deckName: defaultDeckName };
 
     pop.innerHTML = `
       <div class="rp-dict-head">
@@ -1176,40 +1393,23 @@
           <button type="button" class="rp-dict-close" onclick="ReadingPracticeApp.closeDictPopover()">✕</button>
         </div>
       </div>
-
       <div class="rp-dict-meaning-wrap">
         <label class="rp-dict-lbl">Nghĩa tiếng Việt</label>
-        <input type="text" class="rp-dict-input" id="rp-dict-meaning-input"
-          value="${esc(entry.vi)}" placeholder="Nhập nghĩa ngắn gọn nếu từ chưa có sẵn...">
+        <input type="text" class="rp-dict-input" id="rp-dict-meaning-input" value="${esc(entry.vi)}" placeholder="Nhập nghĩa ngắn gọn...">
       </div>
-
-      ${entry.synonyms.length ? `
-        <div class="rp-dict-syns">
-          <span>Đồng nghĩa:</span>
-          ${entry.synonyms.map((sy) => `<span class="rp-syn-chip">${esc(sy)}</span>`).join('')}
-        </div>
-      ` : ''}
-
-      ${contextSentence ? `
-        <div class="rp-dict-ctx">
-          <div class="rp-dict-lbl">Ngữ cảnh trích từ bài đọc (tự đính kèm Flashcard)</div>
-          <div class="rp-dict-ctx-text">“${esc(contextSentence)}”</div>
-        </div>
-      ` : ''}
-
+      ${entry.synonyms.length ? `<div class="rp-dict-syns"><span>Đồng nghĩa:</span>${entry.synonyms.map((sy) => `<span class="rp-syn-chip">${esc(sy)}</span>`).join('')}</div>` : ''}
+      ${contextSentence ? `<div class="rp-dict-ctx"><div class="rp-dict-lbl">Ngữ cảnh trích từ bài đọc</div><div class="rp-dict-ctx-text">“${esc(contextSentence)}”</div></div>` : ''}
       <div class="rp-dict-foot">
         <select class="rp-dict-deck-sel" id="rp-dict-deck-select">
           ${deckOptions.map((dn) => `<option value="${esc(dn)}">${esc(dn)}</option>`).join('')}
         </select>
-        <button type="button" class="btn btn-primary rp-btn-sm" id="rp-btn-save-myvocab"
-          onclick="ReadingPracticeApp.saveDictWordToMyVocab()">
-          ${alreadySaved ? '✓ Lưu thêm / Cập nhật' : '+ Lưu vào Từ của tôi'}
+        <button type="button" class="btn btn-primary rp-btn-sm" id="rp-btn-save-myvocab" onclick="ReadingPracticeApp.saveDictWordToMyVocab()">
+          ${alreadySaved ? '✓ Lưu thêm' : '+ Lưu vào Từ của tôi'}
         </button>
       </div>
     `;
 
     pop.classList.remove('hidden');
-    // Position cleanly inside viewport
     const pw = 340;
     const left = Math.max(14, Math.min(window.innerWidth - pw - 16, (anchorRect?.left || 100) - 20));
     const top = Math.max(70, Math.min(window.innerHeight - 310, (anchorRect?.bottom || 180) + 10));
@@ -1217,7 +1417,9 @@
     pop.style.top = `${top}px`;
   }
 
-  /* ---------- PUBLIC API ---------- */
+  /* =========================================================
+     7. PUBLIC CONTROLLER API
+     ========================================================= */
   const ReadingPracticeApp = {
     init() {
       renderPortal();
@@ -1226,18 +1428,15 @@
           this.closeDictPopover();
           this.hideHighlightToolbar();
           this.closePreSubmitModal();
+          if (state.session?.optionsOpen) this.toggleOptionsOverlay(false);
         }
       });
     },
 
     render() {
-      if (state.view === 'exam' && state.session) {
-        renderExamWorkspace();
-      } else if (state.view === 'source') {
-        renderHub();
-      } else {
-        renderPortal();
-      }
+      if (state.view === 'exam' && state.session) renderExamWorkspace();
+      else if (state.view === 'source') renderHub();
+      else renderPortal();
     },
 
     openPortal() {
@@ -1251,15 +1450,44 @@
       state.partFilter = part || 'all';
       state.newsTopic = 'all';
       state.searchQuery = '';
+      const books = getBooksForSource(state.source);
+      if (books.length) {
+        const ready = books.find((b) => countReadyTestsInBook(b.id) > 0) || books[0];
+        state.selectedBookId = ready.id;
+        state.selectedTestNum = 1;
+      }
       renderHub();
     },
 
     setSource(src) {
-      state.source = src;
-      state.view = 'source';
-      state.partFilter = 'all';
-      state.newsTopic = 'all';
+      this.openSource(src, 'all');
+    },
+
+    setCamGroup(grp) {
+      state.camGroup = grp === 'all' ? 'all' : 'recent';
       renderHub();
+    },
+
+    selectBook(bookId) {
+      state.selectedBookId = bookId;
+      state.selectedTestNum = 1;
+      renderHub();
+    },
+
+    selectTestNum(num) {
+      state.selectedTestNum = Number(num) || 1;
+      renderHub();
+    },
+
+    jumpToFirstReady(src) {
+      const books = getBooksForSource(src || state.source);
+      const ready = books.find((b) => countReadyTestsInBook(b.id) > 0) || books[0];
+      if (ready) {
+        state.selectedBookId = ready.id;
+        state.selectedTestNum = 1;
+        state.partFilter = 'all';
+        renderHub();
+      }
     },
 
     setPartFilter(part) {
@@ -1276,24 +1504,16 @@
       state.searchQuery = String(val || '');
       renderHub();
       const inp = document.getElementById('rp-hub-search');
-      if (inp) {
-        inp.focus();
-        inp.setSelectionRange(inp.value.length, inp.value.length);
-      }
+      if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
     },
 
     startPassage(passageId, opts = {}) {
       const p = (DATA().PASSAGES || {})[passageId];
       if (!p) return;
       startSession({
-        itemId: p.id,
-        title: p.title,
-        source: p.source,
-        isFull: false,
-        suggestedMins: p.suggestedMins || 20,
-        deckDefaultName: p.deckDefaultName || p.title,
-        passageIds: [p.id],
-        openInReview: !!opts.openInReview
+        itemId: p.id, title: p.title, source: p.source, isFull: false,
+        suggestedMins: p.suggestedMins || 20, deckDefaultName: p.deckDefaultName || p.title,
+        passageIds: [p.id], openInReview: !!opts.openInReview
       });
     },
 
@@ -1301,14 +1521,9 @@
       const ft = (DATA().FULL_TESTS || []).find((x) => x.id === fullId);
       if (!ft) return;
       startSession({
-        itemId: ft.id,
-        title: ft.title,
-        source: ft.source,
-        isFull: true,
-        suggestedMins: ft.suggestedMins || 60,
-        deckDefaultName: ft.deckDefaultName || ft.title,
-        passageIds: ft.passageIds.slice(),
-        openInReview: !!opts.openInReview
+        itemId: ft.id, title: ft.title, source: ft.source, isFull: true,
+        suggestedMins: ft.suggestedMins || 60, deckDefaultName: ft.deckDefaultName || ft.title,
+        passageIds: ft.passageIds.slice(), openInReview: !!opts.openInReview
       });
     },
 
@@ -1316,18 +1531,11 @@
       const d = ReadingPracticeStore.getInProgress();
       if (!d || !Array.isArray(d.passageIds) || !d.passageIds.length) return;
       startSession({
-        itemId: d.itemId,
-        title: d.title,
-        source: d.source,
-        isFull: !!d.isFull,
+        itemId: d.itemId, title: d.title, source: d.source, isFull: !!d.isFull,
         suggestedMins: Math.max(1, Math.ceil((d.remainingSec || 1200) / 60)),
-        remainingSec: d.remainingSec,
-        elapsedSec: d.elapsedSec,
-        deckDefaultName: d.deckDefaultName,
-        passageIds: d.passageIds,
-        answers: d.answers || {},
-        flagged: d.flagged || {},
-        struck: d.struck || {}
+        remainingSec: d.remainingSec, elapsedSec: d.elapsedSec,
+        deckDefaultName: d.deckDefaultName, passageIds: d.passageIds,
+        answers: d.answers || {}, flagged: d.flagged || {}, struck: d.struck || {}, notes: d.notes || []
       });
     },
 
@@ -1338,10 +1546,9 @@
     },
 
     exitToHub() {
-      if (state.session && state.session.mode === 'exam') {
-        persistDraft();
-      }
+      if (state.session && state.session.mode === 'exam') persistDraft();
       stopTimer();
+      document.body.classList.remove('rp-exam-fullscreen');
       state.view = 'source';
       state.session = null;
       renderHub();
@@ -1351,87 +1558,28 @@
       if (!state.session) return;
       state.session.activePassageIdx = idx;
       state.session.activeEvidenceId = null;
+      const firstQ = getAllSessionQuestions().find((q) => q._pIdx === idx);
+      if (firstQ) state.session.activeQid = firstQ._qid;
       this.closeDictPopover();
       renderExamWorkspace();
     },
 
-    setExamTheme(theme) {
+    toggleOptionsOverlay(forceVal) {
       if (!state.session) return;
-      state.session.examTheme = (theme === 'cd' || theme === 'night') ? theme : 'totoro';
+      state.session.optionsOpen = typeof forceVal === 'boolean' ? forceVal : !state.session.optionsOpen;
       renderExamWorkspace();
     },
 
-    focusQuestion(qid) {
-      if (!state.session || state.session.activeQid === qid) return;
-      state.session.activeQid = qid;
-      document.querySelectorAll('.rp-q-card.is-current').forEach((c) => c.classList.remove('is-current'));
-      const card = document.getElementById(`rp-qcard-${qid}`);
-      if (card) card.classList.add('is-current');
-      const allQ = getAllSessionQuestions();
-      const idx = allQ.findIndex((x) => x._qid === qid);
-      document.querySelectorAll('.rp-nav-dot').forEach((d, i) => d.classList.toggle('is-current', i === idx));
-    },
-
-    stepQuestion(delta) {
+    setContrast(mode) {
       if (!state.session) return;
-      const allQ = getAllSessionQuestions();
-      if (!allQ.length) return;
-      const curIdx = Math.max(0, allQ.findIndex((q) => q._qid === state.session.activeQid));
-      const nextIdx = Math.max(0, Math.min(allQ.length - 1, curIdx + (delta || 0)));
-      const target = allQ[nextIdx];
-      if (target) this.jumpToQuestion(target._pIdx, target._qid);
-    },
-
-    toggleNotesDrawer(forceVal) {
-      if (!state.session) return;
-      state.session.notesOpen = typeof forceVal === 'boolean' ? forceVal : !state.session.notesOpen;
+      state.session.contrast = ['cd', 'totoro', 'dark', 'yellow'].includes(mode) ? mode : 'cd';
       renderExamWorkspace();
     },
 
-    addNoteFromSelection() {
+    setTextSize(sz) {
       if (!state.session) return;
-      const sel = window.getSelection();
-      const quote = (sel ? sel.toString() : '').trim().slice(0, 180);
-      if (quote) this.applyHighlight('yellow');
-      this.hideHighlightToolbar();
-      state.session.notesOpen = true;
-      if (quote) {
-        state.session.notes.unshift({
-          id: 'n_' + Date.now().toString(36),
-          quote,
-          text: 'Ghi chú cho đoạn này...'
-        });
-      }
+      state.session.textSize = ['regular', 'large', 'xlarge'].includes(sz) ? sz : 'regular';
       renderExamWorkspace();
-      const ta = document.getElementById('rp-note-input');
-      if (ta) ta.focus();
-    },
-
-    addManualNote(ev) {
-      if (ev) ev.preventDefault();
-      if (!state.session) return;
-      const ta = document.getElementById('rp-note-input');
-      const text = (ta?.value || '').trim();
-      if (!text) return;
-      state.session.notes.unshift({
-        id: 'n_' + Date.now().toString(36),
-        quote: '',
-        text
-      });
-      renderExamWorkspace();
-    },
-
-    deleteNote(noteId) {
-      if (!state.session) return;
-      state.session.notes = (state.session.notes || []).filter((n) => n.id !== noteId);
-      renderExamWorkspace();
-    },
-
-    adjustFont(delta) {
-      if (!state.session) return;
-      state.session.fontScale = Math.max(0.84, Math.min(1.28, Math.round((state.session.fontScale + delta) * 100) / 100));
-      const ws = document.getElementById('rp-workspace');
-      if (ws) ws.style.setProperty('--rp-font-scale', state.session.fontScale);
     },
 
     togglePauseTimer() {
@@ -1445,22 +1593,51 @@
       renderExamWorkspace();
     },
 
+    focusQuestion(qid) {
+      if (!state.session || state.session.activeQid === qid) return;
+      state.session.activeQid = qid;
+      document.querySelectorAll('.ins-q-item.is-current').forEach((el) => el.classList.remove('is-current'));
+      document.querySelectorAll('.ins-q-num.is-active').forEach((el) => el.classList.remove('is-active'));
+      const card = document.getElementById(`rp-qcard-${qid}`);
+      if (card) {
+        card.classList.add('is-current');
+        card.querySelector('.ins-q-num')?.classList.add('is-active');
+      }
+      const pQs = getAllSessionQuestions().filter((q) => q._pIdx === state.session.activePassageIdx);
+      const idx = pQs.findIndex((q) => q._qid === qid);
+      document.querySelectorAll('.ins-qbox').forEach((b, i) => b.classList.toggle('is-current', i === idx));
+    },
+
+    stepQuestion(delta) {
+      if (!state.session) return;
+      const allQ = getAllSessionQuestions();
+      if (!allQ.length) return;
+      const curIdx = Math.max(0, allQ.findIndex((q) => q._qid === state.session.activeQid));
+      const nextIdx = Math.max(0, Math.min(allQ.length - 1, curIdx + (delta || 0)));
+      const target = allQ[nextIdx];
+      if (target) this.jumpToQuestion(target._pIdx, target._qid);
+    },
+
+    jumpToQuestion(pIdx, qid) {
+      if (!state.session) return;
+      state.session.activeQid = qid;
+      state.mobilePane = 'questions';
+      state.session.activePassageIdx = pIdx;
+      renderExamWorkspace();
+      const el = document.getElementById(`rp-qcard-${qid}`) || document.querySelector(`[data-mh-qid="${qid}"]`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    },
+
     setAnswer(qid, value, skipFullRerender = false) {
       if (!state.session || state.session.mode !== 'exam') return;
       state.session.answers[qid] = value;
       state.session.activeQid = qid;
       persistDraft();
       if (skipFullRerender) {
-        // Lightweight update of footer nav dot without stealing input focus
-        const allQ = getAllSessionQuestions();
-        const qObj = allQ.find((x) => x._qid === qid);
-        if (qObj) {
-          const dots = document.querySelectorAll('.rp-nav-dot');
-          const idx = allQ.indexOf(qObj);
-          if (dots[idx]) {
-            dots[idx].classList.toggle('is-answered', String(value || '').trim().length > 0);
-          }
-        }
+        const pQs = getAllSessionQuestions().filter((q) => q._pIdx === state.session.activePassageIdx);
+        const idx = pQs.findIndex((q) => q._qid === qid);
+        const boxes = document.querySelectorAll('.ins-qbox');
+        if (boxes[idx]) boxes[idx].classList.toggle('is-attempted', String(value || '').trim().length > 0);
         return;
       }
       renderExamWorkspace();
@@ -1481,50 +1658,112 @@
       renderExamWorkspace();
     },
 
-    jumpToQuestion(pIdx, qid) {
-      if (!state.session) return;
-      state.session.activeQid = qid;
-      state.mobilePane = 'questions';
-      if (state.session.activePassageIdx !== pIdx) {
-        state.session.activePassageIdx = pIdx;
-        renderExamWorkspace();
-      } else {
-        this.focusQuestion(qid);
-        renderExamWorkspace();
-      }
-      const el = document.getElementById(`rp-qcard-${qid}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    /* ---------- MATCHING HEADINGS DRAG & DROP + TAP ---------- */
+    onDragStartHeading(ev, key) {
+      ev.dataTransfer.setData('text/plain', key);
+      state.selectedHeadingKey = key;
     },
 
+    onDropHeading(ev, qid) {
+      ev.preventDefault();
+      ev.currentTarget.classList.remove('is-over');
+      const key = ev.dataTransfer.getData('text/plain') || state.selectedHeadingKey;
+      if (key) {
+        state.selectedHeadingKey = null;
+        this.setAnswer(qid, key);
+      }
+    },
+
+    onSelectHeadingPill(key) {
+      if (!state.session || state.session.mode !== 'exam') return;
+      state.selectedHeadingKey = state.selectedHeadingKey === key ? null : key;
+      renderExamWorkspace();
+    },
+
+    onClickDropZone(qid) {
+      if (!state.session || state.session.mode !== 'exam') return;
+      if (state.selectedHeadingKey) {
+        const k = state.selectedHeadingKey;
+        state.selectedHeadingKey = null;
+        this.setAnswer(qid, k);
+      }
+    },
+
+    clearHeading(qid) {
+      if (!state.session || state.session.mode !== 'exam') return;
+      delete state.session.answers[qid];
+      persistDraft();
+      renderExamWorkspace();
+    },
+
+    /* ---------- NOTES DRAWER ---------- */
+    toggleNotesDrawer(forceVal) {
+      if (!state.session) return;
+      state.session.notesOpen = typeof forceVal === 'boolean' ? forceVal : !state.session.notesOpen;
+      renderExamWorkspace();
+    },
+
+    addNoteFromSelection() {
+      if (!state.session) return;
+      const sel = window.getSelection();
+      const quote = (sel ? sel.toString() : '').trim().slice(0, 180);
+      if (quote) this.applyHighlight('yellow');
+      this.hideHighlightToolbar();
+      state.session.notesOpen = true;
+      if (quote) {
+        state.session.notes.unshift({ id: 'n_' + Date.now().toString(36), quote, text: 'Note attached to passage highlight' });
+      }
+      persistDraft();
+      renderExamWorkspace();
+      document.getElementById('rp-note-input')?.focus();
+    },
+
+    addManualNote(ev) {
+      if (ev) ev.preventDefault();
+      if (!state.session) return;
+      const ta = document.getElementById('rp-note-input');
+      const text = (ta?.value || '').trim();
+      if (!text) return;
+      state.session.notes.unshift({ id: 'n_' + Date.now().toString(36), quote: '', text });
+      persistDraft();
+      renderExamWorkspace();
+    },
+
+    deleteNote(noteId) {
+      if (!state.session) return;
+      state.session.notes = (state.session.notes || []).filter((n) => n.id !== noteId);
+      persistDraft();
+      renderExamWorkspace();
+    },
+
+    /* ---------- PRE-SUBMIT & REVIEW ---------- */
     openPreSubmitModal() {
       if (!state.session) return;
       const allQ = getAllSessionQuestions();
       const answered = allQ.filter((q) => String(state.session.answers[q._qid] || '').trim()).length;
       const unanswered = allQ.length - answered;
-      const flaggedList = allQ.filter((q) => state.session.flagged[q._qid]);
+      const flaggedCnt = allQ.filter((q) => state.session.flagged[q._qid]).length;
       const modal = document.getElementById('rp-presubmit-modal');
       const body = document.getElementById('rp-presubmit-body');
       if (!modal || !body) return;
 
       body.innerHTML = `
         <div class="rp-ps-stats">
-          <div class="rp-ps-box"><span>Đã làm</span><strong class="tabular">${answered} / ${allQ.length}</strong></div>
-          <div class="rp-ps-box ${unanswered > 0 ? 'warn' : ''}"><span>Chưa làm</span><strong class="tabular">${unanswered}</strong></div>
-          <div class="rp-ps-box"><span>Đặt cờ ⚑</span><strong class="tabular">${flaggedList.length}</strong></div>
+          <div class="rp-ps-box"><span>Answered</span><strong class="tabular">${answered} / ${allQ.length}</strong></div>
+          <div class="rp-ps-box ${unanswered > 0 ? 'warn' : ''}"><span>Unanswered</span><strong class="tabular">${unanswered}</strong></div>
+          <div class="rp-ps-box"><span>Bookmarked</span><strong class="tabular">${flaggedCnt}</strong></div>
         </div>
         <div class="rp-ps-grid">
           ${allQ.map((q) => {
             const has = !!String(state.session.answers[q._qid] || '').trim();
             const flg = !!state.session.flagged[q._qid];
             return `<button type="button" class="rp-ps-cell ${has ? 'is-ans' : 'is-empty'} ${flg ? 'is-flg' : ''}"
-              onclick="ReadingPracticeApp.closePreSubmitModal(); ReadingPracticeApp.jumpToQuestion(${q._pIdx}, '${esc(q._qid)}')">
-              ${q.num}${flg ? '⚑' : ''}
-            </button>`;
+              onclick="ReadingPracticeApp.closePreSubmitModal(); ReadingPracticeApp.jumpToQuestion(${q._pIdx}, '${esc(q._qid)}')">${q.num}</button>`;
           }).join('')}
         </div>
         <div class="rp-ps-foot">
-          <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal()">Kiểm tra lại</button>
-          <button type="button" class="btn btn-primary" id="rp-btn-confirm-submit" onclick="ReadingPracticeApp.confirmSubmit()">Chấm điểm ngay →</button>
+          <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal()">Back to test</button>
+          <button type="button" class="btn btn-primary" id="rp-btn-confirm-submit" onclick="ReadingPracticeApp.confirmSubmit()">Submit &amp; View Results →</button>
         </div>
       `;
       modal.classList.add('open');
@@ -1545,15 +1784,9 @@
       state.session.reviewResult = res;
 
       ReadingPracticeStore.recordAttempt({
-        itemId: state.session.itemId,
-        title: state.session.title,
-        source: state.session.source,
-        isFull: state.session.isFull,
-        score: res.score,
-        total: res.total,
-        band: res.band,
-        elapsedSec: res.elapsedSec,
-        completedAt: Date.now()
+        itemId: state.session.itemId, title: state.session.title, source: state.session.source,
+        isFull: state.session.isFull, score: res.score, total: res.total,
+        band: res.band, elapsedSec: res.elapsedSec, completedAt: Date.now()
       });
 
       renderExamWorkspace();
@@ -1562,9 +1795,8 @@
 
     retryCurrent() {
       if (!state.session) return;
-      const cur = state.session;
-      if (cur.isFull) this.startFullTest(cur.itemId);
-      else this.startPassage(cur.itemId);
+      if (state.session.isFull) this.startFullTest(state.session.itemId);
+      else this.startPassage(state.session.itemId);
     },
 
     toggleBilingual() {
@@ -1579,12 +1811,19 @@
       state.mobilePane = 'passage';
       renderExamWorkspace();
       setTimeout(() => {
-        const el = document.querySelector(`.rp-ev-span[data-ev-id="${evId}"]`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.querySelector(`.rp-ev-span[data-ev-id="${evId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 40);
     },
 
-    /* ---------- HIGHLIGHT TOOLBAR ---------- */
+    /* ---------- SELECTION & RIGHT-CLICK HIGHLIGHT POPOVER ---------- */
+    _positionSelectionPopover(rect) {
+      const bar = document.getElementById('rp-hl-toolbar');
+      if (!bar || !rect) return;
+      bar.style.left = `${Math.max(12, Math.min(window.innerWidth - 230, rect.left + rect.width / 2 - 90))}px`;
+      bar.style.top = `${Math.max(62, rect.bottom + 8)}px`;
+      bar.classList.remove('hidden');
+    },
+
     handlePassageSelection() {
       const sel = window.getSelection();
       const bar = document.getElementById('rp-hl-toolbar');
@@ -1599,15 +1838,19 @@
         bar.classList.add('hidden');
         return;
       }
-      const rect = range.getBoundingClientRect();
-      bar.style.left = `${Math.max(12, Math.min(window.innerWidth - 220, rect.left + rect.width / 2 - 90))}px`;
-      bar.style.top = `${Math.max(66, rect.top - 44)}px`;
-      bar.classList.remove('hidden');
+      this._positionSelectionPopover(range.getBoundingClientRect());
+    },
+
+    handlePassageContextMenu(ev) {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && sel.toString().trim()) {
+        ev.preventDefault();
+        this._positionSelectionPopover(sel.getRangeAt(0).getBoundingClientRect());
+      }
     },
 
     hideHighlightToolbar() {
-      const bar = document.getElementById('rp-hl-toolbar');
-      if (bar) bar.classList.add('hidden');
+      document.getElementById('rp-hl-toolbar')?.classList.add('hidden');
     },
 
     applyHighlight(color) {
@@ -1616,7 +1859,7 @@
       try {
         const range = sel.getRangeAt(0);
         const mark = document.createElement('mark');
-        mark.className = `rp-hl-mark hl-${color}`;
+        mark.className = `rp-hl-mark hl-${color || 'yellow'}`;
         mark.appendChild(range.extractContents());
         range.insertNode(mark);
         sel.removeAllRanges();
@@ -1627,17 +1870,15 @@
     },
 
     clearSelectionHighlight() {
-      const sel = window.getSelection();
       const pane = document.getElementById('rp-passage-content');
       if (pane) {
-        const marks = pane.querySelectorAll('mark.rp-hl-mark');
-        marks.forEach((m) => {
+        pane.querySelectorAll('mark.rp-hl-mark').forEach((m) => {
           const parent = m.parentNode;
           while (m.firstChild) parent.insertBefore(m.firstChild, m);
           parent.removeChild(m);
         });
       }
-      if (sel) sel.removeAllRanges();
+      window.getSelection()?.removeAllRanges();
       this.hideHighlightToolbar();
     },
 
@@ -1647,87 +1888,56 @@
       const text = sel.toString().trim();
       if (!text) return;
       const range = sel.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      const parentEl = range.commonAncestorContainer.nodeType === 1
-        ? range.commonAncestorContainer
-        : range.commonAncestorContainer.parentElement;
+      const parentEl = range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
       const ctx = extractSentenceForNode(parentEl);
       this.hideHighlightToolbar();
-      showDictPopover(text, ctx, rect);
+      showDictPopover(text, ctx, range.getBoundingClientRect());
     },
 
-    /* ---------- CLICK-TO-DICTIONARY ---------- */
     handlePassageWordClick(ev) {
       const s = state.session;
       if (!s || !(s.mode === 'review' || s.isNews)) return;
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) return;
-
       const wordEl = ev.target.closest('.rp-word');
-      if (!wordEl) {
-        this.closeDictPopover();
-        return;
-      }
-      const word = wordEl.dataset.word || wordEl.textContent.trim();
-      const ctx = extractSentenceForNode(wordEl);
-      showDictPopover(word, ctx, wordEl.getBoundingClientRect());
+      if (!wordEl) { this.closeDictPopover(); return; }
+      showDictPopover(wordEl.dataset.word || wordEl.textContent.trim(), extractSentenceForNode(wordEl), wordEl.getBoundingClientRect());
     },
 
     closeDictPopover() {
-      const pop = document.getElementById('rp-dict-popover');
-      if (pop) pop.classList.add('hidden');
+      document.getElementById('rp-dict-popover')?.classList.add('hidden');
       state.dictTarget = null;
     },
 
     speakDictWord(accent) {
       if (!state.dictTarget?.entry?.word) return;
-      if (B()?.speakText) {
-        B().speakText(state.dictTarget.entry.word, accent || 'en-US');
-      } else if (window.AudioEngine?.speak) {
-        window.AudioEngine.speak(state.dictTarget.entry.word, { accent: accent || 'en-US' });
-      }
+      if (B()?.speakText) B().speakText(state.dictTarget.entry.word, accent || 'en-US');
+      else if (window.AudioEngine?.speak) window.AudioEngine.speak(state.dictTarget.entry.word, { accent: accent || 'en-US' });
     },
 
     saveDictWordToMyVocab() {
-      if (!state.dictTarget || !window.MyVocabStore) {
-        toast('Chức năng Từ của tôi chưa sẵn sàng.');
-        return;
-      }
-      const meaningInput = document.getElementById('rp-dict-meaning-input');
-      const deckSel = document.getElementById('rp-dict-deck-select');
-      const deckName = deckSel?.value || state.dictTarget.deckName || 'Từ của tôi';
-      const meaning = (meaningInput?.value || state.dictTarget.entry.vi || '').trim() || '(Tự ghi chú nghĩa sau)';
+      if (!state.dictTarget || !window.MyVocabStore) return;
+      const meaning = (document.getElementById('rp-dict-meaning-input')?.value || state.dictTarget.entry.vi || '').trim() || '(Tự ghi chú nghĩa sau)';
+      const deckName = document.getElementById('rp-dict-deck-select')?.value || state.dictTarget.deckName || 'Từ của tôi';
       const entry = state.dictTarget.entry;
-
       const res = window.MyVocabStore.addWordToNamedDeck(deckName, {
-        lemma: entry.word,
-        pos: entry.pos || 'word',
-        ipa: entry.ipa || '',
-        clean_meaning: meaning,
-        reading_context: state.dictTarget.context || '',
-        synonyms: entry.synonyms || [],
-        source: state.session?.title || 'Reading Practice'
+        lemma: entry.word, pos: entry.pos || 'word', ipa: entry.ipa || '',
+        clean_meaning: meaning, reading_context: state.dictTarget.context || '',
+        synonyms: entry.synonyms || [], source: state.session?.title || 'Reading Practice'
       });
-
       this.closeDictPopover();
       renderExamWorkspace();
-      if (res?.ok) {
-        toast(`Đã lưu "${entry.word}" vào "${deckName}" (Từ của tôi)!`);
-      } else {
-        toast(`"${entry.word}" đã có trong "${deckName}".`);
-      }
+      toast(res?.ok ? `Đã lưu "${entry.word}" vào "${deckName}" (Từ của tôi)!` : `"${entry.word}" đã có trong "${deckName}".`);
     },
 
-    /* ---------- SPLIT-SCREEN RESIZER ---------- */
     startResize(ev) {
       ev.preventDefault();
       const body = document.getElementById('rp-split-body');
       const left = document.getElementById('rp-passage-pane');
       if (!body || !left) return;
       const rect = body.getBoundingClientRect();
-
       const onMove = (e) => {
-        const pct = Math.max(30, Math.min(70, ((e.clientX - rect.left) / rect.width) * 100));
+        const pct = Math.max(28, Math.min(72, ((e.clientX - rect.left) / rect.width) * 100));
         state.splitRatio = Math.round(pct * 10) / 10;
         left.style.flex = `0 0 ${state.splitRatio}%`;
       };
@@ -1743,9 +1953,6 @@
   window.ReadingPracticeStore = ReadingPracticeStore;
   window.ReadingPracticeApp = ReadingPracticeApp;
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => ReadingPracticeApp.init());
-  } else {
-    ReadingPracticeApp.init();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => ReadingPracticeApp.init());
+  else ReadingPracticeApp.init();
 })();
