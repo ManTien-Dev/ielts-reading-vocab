@@ -865,7 +865,7 @@
         ts: h.submittedAt || 0,
         title: h.title || 'Reading Practice',
         sub: `${h.source === 'cambridge' ? 'Cambridge' : (h.source === 'volume' ? 'Volume' : (h.source === 'actual' ? 'Actual' : 'Reading'))} · ${h.submittedAt ? new Date(h.submittedAt).toLocaleDateString('vi-VN') : 'Đã nộp'}`,
-        badge: `Band ${Number(h.band || 0).toFixed(1)} · ${h.score}/${h.total}`,
+        badge: `${h.score}/${h.total} câu`,
         action: h.isFull
           ? `window.TotoroUI.enterSkillMode('Reading', 'practice'); window.ReadingPracticeApp?.startFullTest('${esc(h.itemId)}', { openInReview: true });`
           : `window.TotoroUI.enterSkillMode('Reading', 'practice'); window.ReadingPracticeApp?.startPassage('${esc(h.itemId)}', { openInReview: true });`,
@@ -953,7 +953,7 @@
                 <div class="rh-hist-meta">${esc(srcLabel)} · ${h.score}/${h.total} câu đúng · ${dt}</div>
               </div>
               <div class="rh-hist-right">
-                <span class="rh-band-pill tabular">Band ${(Number(h.band) || 0).toFixed(1)}</span>
+                <span class="rh-band-pill tabular">${h.score}/${h.total} câu</span>
                 <button type="button" class="tot-foot-btn" onclick="${openCall}">${isMastered ? 'Xem giải' : 'Làm lại'}</button>
               </div>
             </div>

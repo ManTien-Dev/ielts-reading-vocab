@@ -405,12 +405,11 @@
       const unlockClock = opts.until ? formatClockHHMM(opts.until) : '--:--';
       const cdInit = opts.remainingMs ? formatLockCountdown(opts.remainingMs) : '30:00';
       const hasScore = typeof opts.score === 'number' && typeof opts.total === 'number' && opts.total > 0;
-      const bandLabel = typeof opts.band === 'number' ? ` · Band ${opts.band.toFixed(1)}` : '';
       metricsHtml = `
         <div class="rp-ac-stats ${hasScore ? '' : 'is-single'}">
           ${hasScore ? `
             <div class="rp-ac-stat">
-              <span class="rp-ac-stat-label">Kết quả${esc(bandLabel)}</span>
+              <span class="rp-ac-stat-label">Kết quả</span>
               <strong class="rp-ac-stat-val tabular" style="font-size:19px;">${opts.score} <span class="rp-exit-metric-total">/ ${opts.total} câu</span></strong>
             </div>
           ` : ''}
@@ -912,19 +911,12 @@
     };
 
     const cardsHtml = sources.map((s) => {
-      const srcHist = hist.filter((h) => h.source === s.id);
-      const avgBand = srcHist.length
-        ? (Math.round((srcHist.reduce((acc, x) => acc + (Number(x.band) || 0), 0) / srcHist.length) * 2) / 2).toFixed(1)
-        : null;
-
       const summary = d.BANK_SUMMARY || {};
-      let rightBadge = avgBand ? `Band ${avgBand}` : '';
-      if (!rightBadge) {
-        if (s.id === 'cambridge') rightBadge = `${summary.cambridge?.booksReady || 20}/20 cuốn`;
-        else if (s.id === 'volume') rightBadge = `10 tập · Real Reading`;
-        else if (s.id === 'actual') rightBadge = `Passage 1–3 · Full Test`;
-        else rightBadge = `Song ngữ · Tra từ`;
-      }
+      let rightBadge = '';
+      if (s.id === 'cambridge') rightBadge = `${summary.cambridge?.booksReady || 20}/20 cuốn`;
+      else if (s.id === 'volume') rightBadge = `10 tập · Real Reading`;
+      else if (s.id === 'actual') rightBadge = `Passage 1–3 · Full Test`;
+      else rightBadge = `Song ngữ · Tra từ`;
 
       const actionsHtml = s.id === 'news'
         ? `
@@ -1524,7 +1516,7 @@
 
     const isMastered = !!(best && (best.mastered || (best.total > 0 && best.score === best.total)));
     const scoreBadge = best
-      ? `<span class="rp-cover-pill is-done">${isMastered ? '✓ 100% · ' : ''}Band ${best.band.toFixed(1)} · ${best.score}/${best.total}</span>`
+      ? `<span class="rp-cover-pill is-done">${isMastered ? '✓ 100% · ' : ''}${best.score}/${best.total} câu</span>`
       : `<span class="rp-cover-pill is-band">${esc(item.targetBand || 'IELTS')}</span>`;
 
     const qTypes = isFull ? ['Passage 1–3', 'Full 60 phút'] : getPassageTypes(item);
@@ -3268,8 +3260,8 @@
       state.session = null;
       renderHub();
       toast(isMastered
-        ? `Hoàn tất 100%: ${res.score}/${res.total} · Band ${res.band.toFixed(1)} — Đã mở khóa Solution!`
-        : `Đã kết thúc & chấm điểm: ${res.score}/${res.total} câu đúng · Band ${res.band.toFixed(1)} (cần đạt 100% để mở Solution).`);
+        ? `Hoàn tất 100%: ${res.score}/${res.total} câu đúng — Đã mở khóa Solution!`
+        : `Đã kết thúc & chấm điểm: ${res.score}/${res.total} câu đúng (cần đạt 100% để mở Solution).`);
     },
 
     switchExamPassage(idx) {
