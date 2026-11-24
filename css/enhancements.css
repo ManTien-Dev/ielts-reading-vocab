@@ -9876,5 +9876,126 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   background: var(--surface, #ffffff);
 }
 
+/* =========================================================
+   AUDIO-FIRST LISTENING SPEED QUIZ STAGE (#recog-listen-stage)
+   Hides written English word before answer; plays audio with
+   tactile sage speaker orb + live waveform + letter slots,
+   then reveals spelling & IPA immediately upon selection.
+   ========================================================= */
+.recog-listen-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  padding: 18px 16px 14px;
+  margin: 4px 0 8px;
+  border-radius: 16px;
+  border: 1px solid var(--border, rgba(36, 34, 31, 0.12));
+  background: var(--bg-soft, #f5f2ea);
+}
+.recog-l-audio-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.recog-l-wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 4.5px;
+  height: 32px;
+}
+.recog-l-wave > span {
+  width: 3.5px;
+  height: var(--h, 16px);
+  border-radius: 999px;
+  background: var(--accent, #4E724D);
+  opacity: 0.3;
+  transform-origin: center;
+  transition: opacity 180ms ease;
+}
+.recog-listen-stage.is-playing .recog-l-wave > span {
+  opacity: 0.92;
+  animation: fcWaveLive 540ms ease-in-out var(--d, 0s) infinite alternate;
+}
+.recog-l-orb {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent, #4E724D);
+  color: var(--accent-ink, #ffffff) !important;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 140ms var(--lt-ease-out), box-shadow 180ms ease;
+}
+.recog-l-orb:hover {
+  transform: scale(1.05);
+}
+.recog-l-orb:active {
+  transform: scale(0.95);
+}
+.recog-listen-stage.is-playing .recog-l-orb {
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent, #4E724D) 18%, transparent);
+}
+.recog-l-slots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 22px;
+  padding-top: 2px;
+}
+.recog-l-slot {
+  width: 14px;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink-2, #524D45) 45%, transparent);
+}
+.recog-l-slot-gap {
+  width: 10px;
+}
+.recog-l-slot-dash {
+  color: var(--ink-2, #524D45);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+}
+.recog-l-reveal {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 34px;
+}
+.recog-l-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.recog-l-replay-hint {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2, #6b655c);
+}
+.recog-l-replay-hint kbd {
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong, rgba(36, 34, 31, 0.2));
+  background: var(--surface, #ffffff);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink, #24221F);
+}
+
 
 

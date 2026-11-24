@@ -10,9 +10,35 @@
   const CERT_KEY_BASE = 'ielts_list_certs_v1_';
   const SOUND_PREF_KEY = 'ielts_recog_sound_v1';
   const WORD_TIME_LIMIT_MS = 5000;
+  const LISTENING_TIME_LIMIT_MS = 6000;
   const OLD_REVIEW_TIME_LIMIT_MS = 4000;
+  const IELTS_LISTEN_ACCENTS = ['en-GB', 'en-AU', 'en-US', 'en-GB', 'en-AU', 'en-NZ', 'en-GB', 'en-CA'];
   const ROUND_SIZE = 50;
   const PASS_THRESHOLD_PCT = 94;
+
+  function isListeningSession() {
+    return Boolean(session && (session.isListening || session.isListeningTask || /^(l_|ltask_)/i.test(String(session.scopeKey || ''))));
+  }
+
+  function formatListeningPosVi(posRaw) {
+    const p = String(posRaw || '').trim().toLowerCase();
+    if (p === 'n' || p === 'noun') return 'Danh từ';
+    if (p === 'v' || p === 'verb') return 'Động từ';
+    if (p === 'a' || p === 'adj' || p === 'adjective') return 'Tính từ';
+    if (p === 'r' || p === 'adv' || p === 'adverb') return 'Trạng từ';
+    if (p === 'cue') return 'Tín hiệu';
+    return posRaw || 'Từ vựng';
+  }
+
+  function buildLetterSlotsHtml(lemma) {
+    const clean = String(lemma || '').trim();
+    if (!clean) return '';
+    return clean.split('').slice(0, 18).map((ch) => {
+      if (ch === ' ') return '<span class="recog-l-slot-gap" aria-hidden="true"></span>';
+      if (ch === '-') return '<span class="recog-l-slot-dash" aria-hidden="true">-</span>';
+      return '<span class="recog-l-slot" aria-hidden="true"></span>';
+    }).join('');
+  }
 
   function loadSoundEnabled() {
     try {
@@ -106,11 +132,27 @@
     } catch (_) {}
   }
 
+  let listenPulseTimer = null;
+
+  function pulseListenWave(ms = 900) {
+    const stage = document.getElementById('recog-listen-stage');
+    if (!stage) return;
+    stage.classList.add('is-playing');
+    if (listenPulseTimer) clearTimeout(listenPulseTimer);
+    listenPulseTimer = setTimeout(() => {
+      document.getElementById('recog-listen-stage')?.classList.remove('is-playing');
+      listenPulseTimer = null;
+    }, ms);
+  }
+
   function speakCurrentWord(accentOverride, engineOverride) {
     const lemma = session?.currentItem?.lemma;
     if (!lemma) return;
+    const isListen = isListeningSession();
+    const accent = accentOverride || (isListen ? (session.currentAccent || 'en-GB') : undefined);
     const chosenEngine = engineOverride || 'auto';
-    speakWordAudio(lemma, accentOverride, chosenEngine);
+    if (isListen) pulseListenWave(950);
+    speakWordAudio(lemma, accent, chosenEngine);
   }
 
   function syncSoundToggleButton() {
@@ -138,7 +180,9 @@
   }
 
   function getWordTimeLimitMs() {
-    return session?.mode === 'old_review' ? OLD_REVIEW_TIME_LIMIT_MS : WORD_TIME_LIMIT_MS;
+    if (session?.mode === 'old_review') return OLD_REVIEW_TIME_LIMIT_MS;
+    if (isListeningSession()) return LISTENING_TIME_LIMIT_MS;
+    return WORD_TIME_LIMIT_MS;
   }
 
   function B() { return window.__VOCAB_BRIDGE__ || null; }
@@ -183,6 +227,10 @@
   }
 
   function getGlobalVocabPool() {
+    if (isListeningSession() && window.APP_LISTENING_VOCAB) {
+      const lv = window.APP_LISTENING_VOCAB;
+      return [...(lv.target_all || []), ...(lv.foundation || []), ...(lv.cues_40 || [])];
+    }
     const d = window.APP_DATA || {};
     return [...(d.file2_families_3500 || []), ...(d.file1_paraphrase_1500 || [])];
   }
@@ -284,9 +332,20 @@
         taskObj,
       };
     }
+    const lv = window.APP_LISTENING_VOCAB || {};
+    const lMap = {
+      l_foundation: { key: 'l_foundation', name: 'Từ Vựng Nền Tảng', list: lv.foundation || [], isTask: false, isListening: true },
+      l_all_parts: { key: 'l_all_parts', name: 'Từ Vựng Cốt Lõi', list: lv.all_parts || [], isTask: false, isListening: true },
+      l_part1: { key: 'l_part1', name: 'Giao Tiếp & Dịch Vụ', list: lv.part1 || [], isTask: false, isListening: true },
+      l_part2: { key: 'l_part2', name: 'Bản Đồ & Địa Điểm', list: lv.part2 || [], isTask: false, isListening: true },
+      l_part3: { key: 'l_part3', name: 'Thảo Luận & Dự Án', list: lv.part3 || [], isTask: false, isListening: true },
+      l_part4: { key: 'l_part4', name: 'Bài Giảng Học Thuật', list: lv.part4 || [], isTask: false, isListening: true },
+      l_cues_40: { key: 'l_cues_40', name: 'Từ Tín Hiệu & Bẫy Đổi Ý', list: lv.cues_40 || [], isTask: false, isListening: true },
+    };
+    if (lMap[scopeKey]) return lMap[scopeKey];
     const ltInfo = window.ListeningTasksModule?.getTaskScopeInfo?.(scopeKey);
     if (ltInfo && Array.isArray(ltInfo.list) && ltInfo.list.length) {
-      return ltInfo;
+      return { ...ltInfo, isListening: true };
     }
     return null;
   }
@@ -545,6 +604,7 @@
         taskLabel: info.name,
         scopeKey: info.key,
         scopeName: info.name,
+        isListening: Boolean(info.isListening || info.isListeningTask),
         isListeningTask: Boolean(info.isListeningTask),
         title: `Speed Quiz · ${info.name}`,
         pool: info.list,
@@ -599,6 +659,7 @@
       mode: 'list_final',
       scopeKey: info.key,
       scopeName: info.name,
+      isListening: Boolean(info.isListening),
       title: `Speed Quiz · ${info.name}`,
       pool: info.list,
       itemById,
@@ -686,13 +747,19 @@
     const isTaskStudy = session.mode === 'task_study_quiz';
     const limitSec = Math.round(getWordTimeLimitMs() / 1000);
     const poolTotal = Array.isArray(session.pool) && session.pool.length ? session.pool.length : total;
-    const isListenMode = Boolean(session.isListeningTask || /^ltask_/i.test(String(session.scopeKey || '')));
+    const isListenMode = isListeningSession();
 
     body.innerHTML = `
       <div class="recog-intro-card">
-        <div class="recog-intro-title">${isList ? `Kiểm chứng 100% mặt chữ &amp; nghĩa (${total.toLocaleString('vi-VN')} từ)` : (isTaskStudy ? `Speed Quiz ${total} từ của ${esc(session.taskLabel)} — Đúng hết mở Test ngay!` : (isOldReview ? `Ôn nhanh ${total} từ cũ qua Speed Quiz để mở ${esc(session.taskLabel)}` : `Kiểm tra phản xạ đọc hiểu (${total} từ)`))}</div>
+        <div class="recog-intro-title">${isList
+          ? (isListenMode ? `Nghe &amp; chọn nghĩa siêu tốc (${total.toLocaleString('vi-VN')} từ)` : `Kiểm chứng 100% mặt chữ &amp; nghĩa (${total.toLocaleString('vi-VN')} từ)`)
+          : (isTaskStudy
+            ? `${isListenMode ? 'Speed Quiz Nghe' : 'Speed Quiz'} ${total} từ của ${esc(session.taskLabel)} — Đúng hết mở Test ngay!`
+            : (isOldReview ? `Ôn nhanh ${total} từ cũ qua Speed Quiz để mở ${esc(session.taskLabel)}` : `Kiểm tra phản xạ đọc hiểu (${total} từ)`))}</div>
         <div class="recog-rules-list">
-          <div><strong>1. Tốc độ ${isListenMode ? 'Listening' : 'Reading'} thực chiến:</strong> Mỗi từ có <strong>${limitSec} giây</strong> để ${isListenMode ? 'nghe/nhìn từ' : 'nhìn mặt chữ'} và chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>).</div>
+          ${isListenMode
+            ? `<div><strong>1. Phản xạ Nghe thực chiến (Ẩn mặt chữ):</strong> Hệ thống tự động đọc từ chuẩn giọng IELTS (xoay vòng Anh / Úc / Mỹ · bấm nút loa hoặc phím <code>R</code> để nghe lại). Bạn có <strong>${limitSec} giây</strong> nghe âm và chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>), sau đó mặt chữ &amp; IPA sẽ hiện ngay để đối chiếu.</div>`
+            : `<div><strong>1. Tốc độ Reading thực chiến:</strong> Mỗi từ có <strong>${limitSec} giây</strong> để nhìn mặt chữ và chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>).</div>`}
           <div><strong>2. Đảm bảo thuộc nằm lòng:</strong> ${(isOldReview || isTaskStudy) ? 'Hoàn tất lượt kiểm tra và vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.' : `Vòng 1 cần đạt <strong>&ge; ${PASS_THRESHOLD_PCT}%</strong>, sau đó vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.`}</div>
           ${isList
             ? `<div><strong>3. Tự động phân loại Đã thuộc / Chưa thuộc:</strong> Trả lời đúng &le; ${limitSec} giây tự động đưa vào <strong>Đã thuộc</strong>; trả lời sai, hết giờ hoặc bấm <em>Chưa biết</em> tự động đưa vào <strong>Chưa thuộc</strong> (và <strong>Cần ôn</strong>) để lọc học lại ngay.</div>
@@ -808,11 +875,15 @@
     if (!item) return;
     session.currentItem = item;
     session.currentOptions = shuffleArr(buildMeaningDistractors(item, session.pool, 3));
+    session.currentAccent = IELTS_LISTEN_ACCENTS[(session.cursor + session.errorAttempts) % IELTS_LISTEN_ACCENTS.length];
     session.locked = false;
     session._tickFlags = { t1500: false, t750: false };
 
     renderQuestionCard();
-    if (soundEnabled) {
+    if (isListeningSession()) {
+      pulseListenWave(950);
+      speakWordAudio(item.lemma, session.currentAccent, 'auto');
+    } else if (soundEnabled) {
       speakWordAudio(item.lemma);
     }
     wordDeadlineAt = Date.now() + getWordTimeLimitMs();
@@ -833,6 +904,8 @@
     const curRound = Math.min(totalRounds, Math.floor(session.cursor / ROUND_SIZE) + 1);
     const ipaText = item.ipa || window.IPA_DICT?.[String(item.lemma || '').toLowerCase()] || '';
     const posText = item.clean_pos || item.pos || '';
+    const isListenMode = isListeningSession();
+    const listenPosVi = formatListeningPosVi(posText);
 
     const optsHtml = session.currentOptions.map((opt, i) => `
       <button type="button" class="recog-opt-btn" id="recog-opt-${i}" onclick="RecognitionTestModule.chooseOption(${i})">
@@ -840,6 +913,53 @@
         <span class="recog-opt-text">${esc(opt.meaning)}</span>
       </button>
     `).join('');
+
+    const wordStageHtml = isListenMode
+      ? `
+        <div class="recog-listen-stage is-playing" id="recog-listen-stage">
+          <div class="recog-l-audio-row">
+            <div class="recog-l-wave" aria-hidden="true">
+              <span style="--h:10px;--d:0.04s"></span>
+              <span style="--h:18px;--d:0.16s"></span>
+              <span style="--h:24px;--d:0.28s"></span>
+              <span style="--h:14px;--d:0.10s"></span>
+              <span style="--h:20px;--d:0.22s"></span>
+            </div>
+            <button type="button" class="recog-l-orb" onclick="RecognitionTestModule.speakCurrentWord()" title="Nghe lại (phím R)" aria-label="Nghe lại từ">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            </button>
+            <div class="recog-l-wave" aria-hidden="true">
+              <span style="--h:20px;--d:0.22s"></span>
+              <span style="--h:14px;--d:0.10s"></span>
+              <span style="--h:24px;--d:0.28s"></span>
+              <span style="--h:18px;--d:0.16s"></span>
+              <span style="--h:10px;--d:0.04s"></span>
+            </div>
+          </div>
+          <div class="recog-l-slots" id="recog-l-slots">${buildLetterSlotsHtml(item.lemma)}</div>
+          <div class="recog-l-reveal" id="recog-listen-reveal" style="display:none;">
+            <span class="recog-word-main">${esc(item.lemma)}</span>
+            ${ipaText ? `<span class="recog-ipa">${esc(ipaText)}</span>` : ''}
+          </div>
+          <div class="recog-l-meta">
+            <span class="recog-pos-chip">${esc(listenPosVi)}</span>
+            <span class="recog-l-replay-hint">Bấm loa hoặc <kbd>R</kbd> để nghe lại</span>
+          </div>
+        </div>
+      `
+      : `
+        <div class="recog-word-stage">
+          <div class="recog-word-row">
+            <span class="recog-word-main" id="recog-word-main">${esc(item.lemma)}</span>
+            <button type="button" class="btn-voice-speak" title="Nghe phát âm Anh - Anh (UK)" onclick="RecognitionTestModule.speakCurrentWord('en-GB')"><span>UK</span></button>
+            <button type="button" class="btn-voice-speak" title="Nghe phát âm Anh - Mỹ (US)" onclick="RecognitionTestModule.speakCurrentWord('en-US')"><span>US</span></button>
+          </div>
+          <div class="recog-word-sub">
+            ${ipaText ? `<span class="recog-ipa">${esc(ipaText)}</span>` : ''}
+            ${posText ? `<span class="recog-pos-chip">${esc(posText)}</span>` : ''}
+          </div>
+        </div>
+      `;
 
     body.innerHTML = `
       <div class="recog-quiz-wrap">
@@ -850,9 +970,9 @@
               : `<span class="recog-pill">${session.mode === 'list_final' ? `Chặng ${curRound}/${totalRounds} · ` : ''}Câu ${curPos} / ${total}</span>`}
           </div>
           <div class="recog-meta-right">
-            <button type="button" class="btn-subtle recog-sound-btn ${soundEnabled ? 'is-on' : 'is-off'}" id="btn-recog-sound-toggle" title="Bật / Tắt phát âm tự động và hiệu ứng âm thanh (phím R để nghe lại)" aria-pressed="${soundEnabled ? 'true' : 'false'}" onclick="RecognitionTestModule.toggleSound()">
+            ${isListenMode ? '' : `<button type="button" class="btn-subtle recog-sound-btn ${soundEnabled ? 'is-on' : 'is-off'}" id="btn-recog-sound-toggle" title="Bật / Tắt phát âm tự động và hiệu ứng âm thanh (phím R để nghe lại)" aria-pressed="${soundEnabled ? 'true' : 'false'}" onclick="RecognitionTestModule.toggleSound()">
               ${soundEnabled ? '🔊 Âm: Bật' : '🔇 Âm: Tắt'}
-            </button>
+            </button>`}
             <span class="recog-timer-text" id="recog-timer-text">${(getWordTimeLimitMs() / 1000).toFixed(1)}s</span>
             ${session.mode === 'list_final' && !isErrLoop
               ? `<button type="button" class="btn-subtle" style="padding:4px 10px; font-size:12px;" onclick="RecognitionTestModule.pauseAndSaveExit()">Tạm lưu</button>`
@@ -868,17 +988,7 @@
           <div class="recog-countdown-fill" id="recog-countdown-fill" style="width:100%;"></div>
         </div>
 
-        <div class="recog-word-stage">
-          <div class="recog-word-row">
-            <span class="recog-word-main" id="recog-word-main">${esc(item.lemma)}</span>
-            <button type="button" class="btn-voice-speak" title="Nghe phát âm Anh - Anh (UK)" onclick="RecognitionTestModule.speakCurrentWord('en-GB')"><span>UK</span></button>
-            <button type="button" class="btn-voice-speak" title="Nghe phát âm Anh - Mỹ (US)" onclick="RecognitionTestModule.speakCurrentWord('en-US')"><span>US</span></button>
-          </div>
-          <div class="recog-word-sub">
-            ${ipaText ? `<span class="recog-ipa">${esc(ipaText)}</span>` : ''}
-            ${posText ? `<span class="recog-pos-chip">${esc(posText)}</span>` : ''}
-          </div>
-        </div>
+        ${wordStageHtml}
 
         <div class="recog-options-grid" id="recog-options-grid">
           ${optsHtml}
@@ -955,14 +1065,26 @@
     const correctBtn = correctIdx >= 0 ? document.getElementById(`recog-opt-${correctIdx}`) : null;
     const fb = document.getElementById('recog-feedback-line');
 
+    const isListenMode = isListeningSession();
+    if (isListenMode) {
+      const slotsEl = document.getElementById('recog-l-slots');
+      const revEl = document.getElementById('recog-listen-reveal');
+      const stageEl = document.getElementById('recog-listen-stage');
+      if (stageEl) stageEl.classList.remove('is-playing');
+      if (slotsEl) slotsEl.style.display = 'none';
+      if (revEl) revEl.style.display = 'inline-flex';
+    }
+
     if (isCorrect) {
       if (chosenBtn) chosenBtn.classList.add('is-correct');
-      if (fb) { fb.textContent = '✓ Chính xác!'; fb.className = 'recog-feedback-line is-ok'; }
+      if (fb) { fb.textContent = isListenMode ? `✓ Chính xác! (${item.lemma})` : '✓ Chính xác!'; fb.className = 'recog-feedback-line is-ok'; }
     } else {
       if (chosenBtn) chosenBtn.classList.add('is-wrong');
       if (correctBtn) correctBtn.classList.add('is-correct');
       if (fb) {
-        fb.textContent = `${noteText || 'Sai'} — Đáp án: ${item.clean_meaning || item.meaning || ''}`;
+        fb.textContent = isListenMode
+          ? `${noteText || 'Sai'} — ${item.lemma}: ${item.clean_meaning || item.meaning || ''}`
+          : `${noteText || 'Sai'} — Đáp án: ${item.clean_meaning || item.meaning || ''}`;
         fb.className = 'recog-feedback-line is-err';
       }
     }
@@ -987,7 +1109,7 @@
       session.cursor += 1;
       if (session.mode === 'list_final') persistListCheckpoint();
 
-      const delay = isCorrect ? 220 : 820;
+      const delay = isListenMode ? (isCorrect ? 520 : 1150) : (isCorrect ? 220 : 820);
       autoNextTimer = setTimeout(() => {
         if (!session) return;
         if (session.mode === 'list_final' && session.cursor < session.orderIds.length && session.cursor % ROUND_SIZE === 0) {
@@ -1000,13 +1122,13 @@
       session.errorAttempts += 1;
       const curId = session.errorQueue.shift();
       if (!isCorrect && curId) {
-        // Push back to end of error queue until 100% mastered within 5s
+        // Push back to end of error queue until 100% mastered within time limit
         session.errorQueue.push(curId);
       } else if (isCorrect && curId && (session.mode === 'list_final' || session.mode === 'task_study_quiz')) {
         B()?.markMasteredBatch?.([curId]);
         if (session.mode === 'task_study_quiz') window.TasksModule?.updateTaskStudyBar?.();
       }
-      const delay = isCorrect ? 220 : 900;
+      const delay = isListenMode ? (isCorrect ? 520 : 1150) : (isCorrect ? 220 : 900);
       autoNextTimer = setTimeout(() => {
         if (!session) return;
         loadCurrentQuestion();
