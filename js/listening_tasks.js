@@ -15,6 +15,8 @@
   const PROGRESS_KEY_BASE = 'totoro_listening_task_progress_v1_';
   // Gắn link Cloudflare R2 Public URL vào đây sau khi tạo bucket (ví dụ: 'https://pub-xxxx.r2.dev')
   const DEFAULT_AUDIO_BASE_URL = '';
+  // Tốc độ phát chuẩn phòng thi (1.25x ép tai quen nói nhanh & nối âm/nuốt âm)
+  const EXAM_PLAYBACK_RATE = 1.25;
 
   let activeSuiteKey = 'part1';
   let examState = null;
@@ -109,6 +111,7 @@
       try {
         const audio = new Audio(url);
         audio.preload = 'auto';
+        audio.playbackRate = opts.rate || EXAM_PLAYBACK_RATE;
         activeHtmlAudio = audio;
         let settled = false;
         let lastTurnIdx = -1;
@@ -166,7 +169,8 @@
             p.catch(() => finish(false));
           }
           if (endSec != null && startSec != null) {
-            const clipMs = Math.max(400, (endSec - startSec) * 1000 + 250);
+            const rate = audio.playbackRate || 1;
+            const clipMs = Math.max(400, ((endSec - startSec) / rate) * 1000 + 250);
             activeHtmlAudioTimer = setTimeout(() => finish(true), clipMs);
           }
         };
@@ -263,11 +267,11 @@
     const mySeq = audioSeqId;
     const chosenAccent = accent || (Math.random() < 0.65 ? 'en-GB' : 'en-US');
     if (window.AppCore?.audio && !navigator.webdriver) {
-      window.AppCore.audio.speak(word, { accent: chosenAccent, rate: 0.93, engine: 'auto', respectCustom: false });
-      setTimeout(() => { if (mySeq === audioSeqId) onDone?.(); }, 1050);
+      window.AppCore.audio.speak(word, { accent: chosenAccent, rate: EXAM_PLAYBACK_RATE, engine: 'auto', respectCustom: false });
+      setTimeout(() => { if (mySeq === audioSeqId) onDone?.(); }, 900);
       return;
     }
-    speakUtteranceAsync(word, chosenAccent, 'Woman', 0.92, mySeq).then(() => {
+    speakUtteranceAsync(word, chosenAccent, 'Woman', EXAM_PLAYBACK_RATE, mySeq).then(() => {
       if (mySeq === audioSeqId) onDone?.();
     });
   }
@@ -756,13 +760,14 @@
         playStudioMp3(c.audioFile, {
           turns: c.turns || [],
           timestamps: c.turnTimestamps || [],
+          rate: EXAM_PLAYBACK_RATE,
           onTurn: onT2Turn,
           onDone: onT2Done,
         }).then((usedMp3) => {
           if (!usedMp3 && examState && examState.stage === 2 && examState.t2Idx === idx) {
             playTurnsOneShot(c.turns || [], {
-              rate: 0.96,
-              gapMs: 320,
+              rate: EXAM_PLAYBACK_RATE,
+              gapMs: 240,
               onTurn: onT2Turn,
               onDone: onT2Done,
             });
@@ -1126,13 +1131,14 @@
         playStudioMp3(ml.audioFile, {
           turns: segs,
           timestamps: ml.segmentTimestamps || [],
+          rate: EXAM_PLAYBACK_RATE,
           onTurn: onT3Turn,
           onDone: onT3Done,
         }).then((usedMp3) => {
           if (!usedMp3 && examState && examState.stage === 3 && examState.t3Phase !== 'submitted') {
             playTurnsOneShot(segs, {
-              rate: 0.94,
-              gapMs: 420,
+              rate: EXAM_PLAYBACK_RATE,
+              gapMs: 300,
               onTurn: onT3Turn,
               onDone: onT3Done,
             });
@@ -1309,13 +1315,14 @@
         playStudioMp3(nc.audioFile, {
           turns: segs,
           timestamps: nc.segmentTimestamps || [],
+          rate: EXAM_PLAYBACK_RATE,
           onTurn: onT3Turn,
           onDone: onT3Done,
         }).then((usedMp3) => {
           if (!usedMp3 && examState && examState.stage === 3 && examState.t3Phase !== 'submitted') {
             playTurnsOneShot(segs, {
-              rate: 0.94,
-              gapMs: 420,
+              rate: EXAM_PLAYBACK_RATE,
+              gapMs: 300,
               onTurn: onT3Turn,
               onDone: onT3Done,
             });
@@ -1374,12 +1381,12 @@
     if (!seg) return;
     const ts = src?.segmentTimestamps?.[idx];
     if (src?.audioFile && Array.isArray(ts) && ts.length === 2 && getAudioBaseUrl()) {
-      playStudioMp3(src.audioFile, { startSec: ts[0], endSec: ts[1] }).then((ok) => {
-        if (!ok) playTurnsOneShot([seg], { rate: 0.92 });
+      playStudioMp3(src.audioFile, { startSec: ts[0], endSec: ts[1], rate: EXAM_PLAYBACK_RATE }).then((ok) => {
+        if (!ok) playTurnsOneShot([seg], { rate: EXAM_PLAYBACK_RATE });
       });
       return;
     }
-    playTurnsOneShot([seg], { rate: 0.92 });
+    playTurnsOneShot([seg], { rate: EXAM_PLAYBACK_RATE });
   }
 
   function replayAfterSubmit(text, accent) {
