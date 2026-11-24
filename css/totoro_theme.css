@@ -7735,7 +7735,10 @@ mark.rp-hl-mark.hl-purple {
   display: block;
 }
 #home-scope-global.home-scope-panel.active {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 18px;
 }
 
 .rh-layout {
@@ -8042,85 +8045,410 @@ body:not(.is-global-home):not(.is-teacher-mode) .tot-skill-wrap {
 }
 
 /* =========================================================
-   HOME CHUNG — ASYMMETRIC 2-COLUMN EDITORIAL WORKSPACE
-   (Linear / Notion / Apple Health hierarchy — scrollable & zero clipping!)
+   HOME CHUNG — TOTORO EDITORIAL ATELIER (Muji × Linear × Things 3 × Apple Fitness)
+   Zero box-in-box clutter · Refined Serif + Tabular Sans · Hairline Rhythm
    ========================================================= */
 .tot-home-layout.active {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
-.tot-home-top {
+
+/* 1. UNIFIED FLAGSHIP ATELIER HERO */
+.tot-atelier-hero {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.58fr) minmax(0, 1fr);
-  gap: 16px;
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1.52fr) 1px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  padding: 24px 28px;
+  border-radius: 16px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 0 var(--lip-card), 0 12px 28px -18px rgba(36, 34, 31, 0.14);
 }
+.tot-atelier-left {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  min-width: 0;
+}
+.tot-atelier-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.tot-atelier-title {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(22px, 2.05vw, 27px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.22;
+  color: var(--ink);
+  margin: 0;
+}
+.tot-atelier-sub {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin: 0;
+}
+.tot-atelier-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.tot-atelier-cta {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 750;
+}
+.tot-atelier-sec {
+  height: 38px;
+  padding: 0 15px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.totoro-atelier-trio {
+  width: 104px;
+  height: 60px;
+  flex-shrink: 0;
+  margin-bottom: -14px;
+  opacity: 0.95;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 5px rgba(48, 52, 42, 0.1));
+  transition: transform 260ms var(--ease-out);
+}
+.tot-atelier-hero:hover .totoro-atelier-trio {
+  transform: translateY(-2px);
+}
+.tot-atelier-divider {
+  width: 1px;
+  height: 76%;
+  background: var(--border);
+  align-self: center;
+}
+.tot-atelier-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+.tot-atelier-ring {
+  width: 74px;
+  height: 74px;
+  flex-shrink: 0;
+}
+.tot-atelier-stats {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+.tot-atelier-stat {
+  padding: 2px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.tot-atelier-stat:first-child {
+  padding-left: 0;
+}
+.tot-atelier-stat + .tot-atelier-stat {
+  border-left: 1px solid var(--border);
+}
+.tot-atelier-stat-val {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.tot-atelier-stat-lbl {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* 2. ASYMMETRIC 2-COLUMN EDITORIAL WORKSPACE */
 .tot-home-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.58fr) minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.56fr) minmax(0, 1fr);
+  gap: 18px;
   align-items: start;
 }
 .tot-home-main-col,
 .tot-home-side-col {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   min-width: 0;
 }
-.tot-home-workspace .tot-home-panel {
-  padding: 18px 20px;
-  gap: 14px;
-}
-.tot-chart-tall {
-  min-height: 214px;
-  padding-top: 20px;
-}
-.tot-mon-bars-2col {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 18px;
-}
-.tot-mon-bars-2col .tot-mon-meter {
-  padding: 10px 12px;
-  border-radius: 11px;
-  background: var(--surface-item);
+.tot-ed-panel {
+  padding: 20px 24px !important;
+  gap: 16px !important;
+  border-radius: 16px !important;
+  background: var(--surface-panel);
   border: 1px solid var(--border);
-  gap: 7px;
+  box-shadow: 0 2px 0 var(--lip-card), 0 10px 24px -18px rgba(36, 34, 31, 0.12);
 }
-.tot-hist-row-btn {
-  width: 100%;
-  border: 1px solid var(--border);
-  background: var(--surface-item);
-  font-family: inherit;
-  color: inherit;
-  cursor: pointer;
-  transition: transform 130ms var(--ease-out), border-color 140ms ease, background-color 140ms ease;
+.tot-ed-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
-.tot-hist-row-btn:hover {
-  border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
-  background: var(--surface);
+.tot-ed-head-l {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
 }
-.tot-hist-row-btn:active {
-  transform: scale(0.985);
+.tot-ed-ico {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  color: var(--ink-2);
 }
-.tot-monitor-grid {
+.tot-ed-ico.is-accent { color: var(--accent); }
+.tot-ed-ico.is-warm { color: var(--streak); }
+.tot-ed-ico.is-info { color: #6460b0; }
+.tot-ed-title {
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--ink);
+  margin: 0;
+}
+.tot-ed-sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin: 3px 0 0;
+  line-height: 1.35;
+}
+.tot-ed-foot {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* 3. FLAT HAIRLINE DAILY CHECKLIST (Things 3 / Linear — zero bulky boxes!) */
+.tot-ed-list {
+  gap: 0 !important;
+  border-top: 1px solid var(--border);
+}
+.tot-ed-list .tot-plan-row {
+  padding: 13px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  gap: 12px;
+  transition: background-color 140ms ease, padding-left 140ms var(--ease-out);
+}
+.tot-ed-list .tot-plan-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 4px;
+}
+.tot-ed-list .tot-plan-row:hover {
+  background: color-mix(in srgb, var(--surface-item) 72%, transparent);
+  border-radius: 9px;
+}
+.tot-ed-list .tot-plan-row.is-done {
+  background: transparent;
+  border-color: var(--border);
+}
+.tot-ed-list .tot-plan-chk {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+}
+.tot-plan-row-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.tot-plan-arrow {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity 150ms ease, transform 150ms var(--ease-out), color 150ms ease;
+}
+.tot-ed-list .tot-plan-row:hover .tot-plan-arrow {
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--accent);
+}
+.tot-ed-list .tot-plan-mini-bar {
+  height: 4px;
+}
+
+/* 4. EDITORIAL BAND SCOREBOARD (Kinfolk × Apple Watch — serif hero numeral + hairline cells!) */
+.tot-ed-scoreboard {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  min-height: 0;
-  align-items: stretch;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 13px 0;
 }
-@media (max-width: 1080px) {
-  .tot-home-top,
+.tot-ed-score-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 12px;
+  min-width: 0;
+}
+.tot-ed-score-cell:first-child {
+  padding-left: 0;
+}
+.tot-ed-score-cell + .tot-ed-score-cell {
+  border-left: 1px solid var(--border);
+}
+.tot-ed-score-lbl {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--ink-3);
+}
+.tot-ed-score-serif {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+.tot-ed-score-num {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* 5. CLEAN 2x2 HAIRLINE ROADMAP TELEMETRY (Zero nested boxes!) */
+.tot-mon-meter-btn {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 10px;
+  border-radius: 10px;
+  transition: background-color 140ms ease, transform 130ms var(--ease-out);
+}
+.tot-mon-meter-btn:hover {
+  background: color-mix(in srgb, var(--surface-item) 78%, transparent);
+}
+.tot-mon-meter-btn:active {
+  transform: scale(0.985);
+}
+.tot-ed-meters {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  gap: 8px 18px !important;
+}
+.tot-ed-meters .tot-mon-meter {
+  padding: 8px 10px !important;
+  border: 0 !important;
+  background: transparent !important;
+  border-radius: 10px !important;
+}
+.tot-ed-meters .tot-mon-meter:hover {
+  background: color-mix(in srgb, var(--surface-item) 78%, transparent) !important;
+}
+.tot-ed-meters .tot-mastery-bar {
+  height: 5.5px;
+}
+
+/* 6. FLAT HAIRLINE LEADERBOARD & RECENT HISTORY FEED */
+.tot-ed-podium,
+.tot-ed-feed {
+  gap: 0 !important;
+  border-top: 1px solid var(--border);
+}
+.tot-ed-podium .tot-lb-row {
+  padding: 9px 8px;
+  border: 0 !important;
+  border-bottom: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.tot-ed-podium .tot-lb-row:last-child {
+  border-bottom: 0 !important;
+}
+.tot-ed-podium .tot-lb-row.me {
+  background: color-mix(in srgb, var(--accent-soft) 58%, transparent) !important;
+  border-radius: 9px !important;
+  border-bottom-color: transparent !important;
+}
+.tot-ed-feed .tot-hist-row-btn {
+  padding: 10px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+.tot-ed-feed .tot-hist-row-btn:last-child {
+  border-bottom: 0;
+}
+.tot-ed-feed .tot-hist-row-btn:hover {
+  background: color-mix(in srgb, var(--surface-item) 72%, transparent);
+  border-radius: 9px;
+}
+
+.tot-chart-tall {
+  min-height: 224px;
+  padding-top: 20px;
+}
+
+@media (max-width: 1120px) {
+  .tot-atelier-hero {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding: 20px 22px;
+  }
+  .tot-atelier-divider {
+    width: 100%;
+    height: 1px;
+  }
   .tot-home-workspace {
     grid-template-columns: 1fr;
   }
 }
-@media (max-width: 680px) {
-  .tot-mon-bars-2col {
-    grid-template-columns: 1fr;
+@media (max-width: 767px) {
+  .totoro-atelier-trio {
+    display: none;
+  }
+  .tot-atelier-hero {
+    padding: 16px 16px;
+  }
+  .tot-atelier-right {
+    gap: 14px;
+  }
+  .tot-atelier-stat-val {
+    font-size: 17px;
+  }
+  .tot-ed-panel {
+    padding: 16px 16px !important;
   }
 }
 .tot-monitor-card {

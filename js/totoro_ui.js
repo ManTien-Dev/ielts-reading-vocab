@@ -677,7 +677,10 @@
           <span class="tot-plan-row-body">
             <span class="tot-plan-row-top">
               <span class="tot-plan-row-title">${esc(it.title)}</span>
-              <strong class="tot-plan-row-meta tabular">${esc(it.meta)}</strong>
+              <span class="tot-plan-row-right">
+                <strong class="tot-plan-row-meta tabular">${esc(it.meta)}</strong>
+                <span class="tot-plan-arrow" aria-hidden="true">→</span>
+              </span>
             </span>
             <span class="tot-plan-mini-bar"><span style="width:${it.pct}%"></span></span>
           </span>
@@ -707,19 +710,19 @@
     const barsEl = document.getElementById('home-monitor-bars');
     if (barsEl) {
       const meters = [
-        { label: 'Từ vựng Reading', val: `${snap.mastered.toLocaleString('vi-VN')} / ${snap.totalFamilies.toLocaleString('vi-VN')}`, pct: snap.masteryPct, cls: 'is-sage' },
-        { label: 'Reading Tasks', val: `${snap.completedTasks.length} / 110 bài`, pct: readTaskPct, cls: 'is-warm' },
-        { label: 'Luyện đề Reading', val: rpStats.avgBand ? `${rpStats.completedUnique} bài · Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} bài đã nộp`, pct: readPracPct, cls: 'is-emerald' },
-        { label: 'Listening & Shadowing', val: `${listenVocabDone.toLocaleString('vi-VN')} từ · ${listenTasksDone}/${listenTasksTotal} Task`, pct: listenPct, cls: 'is-indigo' },
+        { label: 'Từ vựng Reading', val: `${snap.mastered.toLocaleString('vi-VN')} / ${snap.totalFamilies.toLocaleString('vi-VN')}`, pct: snap.masteryPct, cls: 'is-sage', action: "window.TotoroUI?.enterSkillMode('Reading', 'flashcard')" },
+        { label: 'Reading Tasks', val: `${snap.completedTasks.length} / 110 bài`, pct: readTaskPct, cls: 'is-warm', action: "window.TotoroUI?.enterSkillMode('Reading', 'task')" },
+        { label: 'Luyện đề Reading', val: rpStats.avgBand ? `${rpStats.completedUnique} bài · Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} bài đã nộp`, pct: readPracPct, cls: 'is-emerald', action: "window.TotoroUI?.enterSkillMode('Reading', 'practice')" },
+        { label: 'Listening & Shadowing', val: `${listenVocabDone.toLocaleString('vi-VN')} từ · ${listenTasksDone}/${listenTasksTotal} Task`, pct: listenPct, cls: 'is-indigo', action: "window.TotoroUI?.enterSkillMode('Listening', 'home')" },
       ];
       barsEl.innerHTML = meters.map((m) => `
-        <div class="tot-mon-meter">
+        <button type="button" class="tot-mon-meter tot-mon-meter-btn" onclick="${m.action}">
           <div class="tot-mon-meter-head">
             <span>${esc(m.label)}</span>
             <strong class="tabular">${esc(m.val)}</strong>
           </div>
           <div class="tot-mastery-bar"><div class="tot-mon-fill ${m.cls}" style="width:${Math.max(m.pct > 0 ? 3 : 0, m.pct)}%"></div></div>
-        </div>
+        </button>
       `).join('');
     }
   }

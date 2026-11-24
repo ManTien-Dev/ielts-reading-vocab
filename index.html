@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
   <link rel="stylesheet" href="css/enhancements.css?v=20261124m">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261124w">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261124x">
 </head>
 <body>
 
@@ -1231,15 +1231,22 @@
     <section class="tot-screen active" id="screen-home" aria-label="Trang chủ tiến độ học tập">
       <!-- HOME CHUNG (Tổng quan 4 kỹ năng: Plan, Streak, Bảng thi đua lớp, Ôn tập) -->
       <div class="tot-home-layout home-scope-panel active" id="home-scope-global">
-        <div class="tot-home-top">
-          <div class="tot-hero-card ink-brackets has-stamp">
-            <div class="tot-hero-copy">
-              <h1 class="tot-hero-title" id="home-hero-greeting">Chào bạn, bắt đầu phiên học hôm nay nhé</h1>
-              <p class="tot-hero-sub" id="home-hero-sub">Đang đồng bộ dữ liệu học tập...</p>
+        <!-- UNIFIED FLAGSHIP ATELIER HERO (Muji Washi × Apple Fitness — Zero nested boxes!) -->
+        <section class="tot-atelier-hero ink-brackets has-stamp" aria-label="Tổng quan hôm nay">
+          <div class="tot-atelier-left">
+            <div class="tot-atelier-copy">
+              <h1 class="tot-atelier-title" id="home-hero-greeting">Chào bạn, bắt đầu phiên học hôm nay nhé</h1>
+              <p class="tot-atelier-sub" id="home-hero-sub">Đang đồng bộ dữ liệu học tập...</p>
+              <div class="tot-atelier-actions">
+                <button type="button" class="btn btn-primary tot-demo-btn tot-atelier-cta" onclick="window.TotoroUI?.enterSkillMode(window.TotoroUI?.getActiveSkill?.() || 'Reading', 'flashcard')">
+                  <span>Tiếp tục học</span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                </button>
+                <button type="button" class="tot-demo-btn tot-btn-streak tot-atelier-sec" onclick="RecognitionTestModule.startListFinalExam()">Speed Quiz · 5s</button>
+              </div>
             </div>
-            <!-- Full-Color Totoro Umbrella Trio on Home Hero (inline non-overlapping slot) -->
-            <svg class="totoro-hero-trio" viewBox="0 0 128 74" fill="none" aria-hidden="true">
-              <!-- Big Grey Totoro with Green Umbrella -->
+            <!-- Full-Color Totoro Umbrella Trio resting naturally on the paper floor -->
+            <svg class="totoro-atelier-trio" viewBox="0 0 128 74" fill="none" aria-hidden="true">
               <path d="M40 7V12" stroke="#2F663D" stroke-width="2" stroke-linecap="round"/>
               <path d="M13 25C18 13 28 10 40 10C52 10 62 13 67 25C60 22.4 53.5 22.4 48 24.4C43 22.2 37 22.2 32 24.4C26.5 22.4 20 22.4 13 25Z" fill="#5CA06B" stroke="#2F663D" stroke-width="1.7" stroke-linejoin="round"/>
               <path d="M40 23V44" stroke="#5B4430" stroke-width="1.8" stroke-linecap="round"/>
@@ -1249,144 +1256,134 @@
               <circle cx="31.5" cy="37" r="3.4" fill="#FFFFFF"/><circle cx="32" cy="37" r="1.6" fill="#181A1F"/>
               <circle cx="48.5" cy="37" r="3.4" fill="#FFFFFF"/><circle cx="48" cy="37" r="1.6" fill="#181A1F"/>
               <ellipse cx="40" cy="38.6" rx="2.4" ry="1.3" fill="#23221F"/>
-              <!-- Blue Chu-Totoro (Middle) -->
               <path d="M74 44L71.2 35.2C71 34.2 72.3 33.7 73 34.4L78.4 39.8C80.8 39 83.6 39 86 39.8L91.4 34.4C92.1 33.7 93.4 34.2 93.2 35.2L90.4 44C94.8 47.2 96.8 52.5 96.4 59C96 65.5 90.4 69 82.2 69C74 69 68.4 65.5 68 59C67.6 52.5 69.6 47.2 74 44Z" fill="#6B92B8" stroke="#3F5C78" stroke-width="1.4" stroke-linejoin="round"/>
               <ellipse cx="82.2" cy="59.5" rx="9.5" ry="6.6" fill="#FBF6E8"/>
               <path d="M77.5 58.2L79.5 56.2L81.5 58.2M83 58.2L85 56.2L87 58.2" stroke="#5D82A6" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
               <circle cx="77.2" cy="48.5" r="2.4" fill="#FFFFFF"/><circle cx="77.5" cy="48.5" r="1.15" fill="#181A1F"/>
               <circle cx="87.2" cy="48.5" r="2.4" fill="#FFFFFF"/><circle cx="86.9" cy="48.5" r="1.15" fill="#181A1F"/>
-              <!-- White Chibi-Totoro (Right) -->
               <path d="M104 52L102 45.2C101.8 44.4 102.8 44 103.4 44.6L107.2 48.8C109 48.2 111 48.2 112.8 48.8L116.6 44.6C117.2 44 118.2 44.4 118 45.2L116 52C119.2 54.4 120.8 58.4 120.4 63C120 67 116 69 110 69C104 69 100 67 99.6 63C99.2 58.4 100.8 54.4 104 52Z" fill="#FFFFFF" stroke="#5B5852" stroke-width="1.4" stroke-linejoin="round"/>
               <circle cx="106.5" cy="56.5" r="1.4" fill="#1E2126"/><circle cx="113.5" cy="56.5" r="1.4" fill="#1E2126"/>
               <ellipse cx="104.2" cy="58.6" rx="1.4" ry="0.7" fill="#F29B9B" opacity="0.65"/>
               <ellipse cx="115.8" cy="58.6" rx="1.4" ry="0.7" fill="#F29B9B" opacity="0.65"/>
             </svg>
-            <div class="tot-hero-actions">
-              <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI?.enterSkillMode(window.TotoroUI?.getActiveSkill?.() || 'Reading', 'flashcard')">Tiếp tục học →</button>
-              <button type="button" class="tot-demo-btn tot-btn-streak" onclick="RecognitionTestModule.startListFinalExam()">Speed Quiz</button>
-            </div>
           </div>
 
-          <div class="tot-goal-card ink-brackets has-stamp">
-            <svg class="ghibli-stamp warm" style="right:10px;top:3px;width:36px;height:36px;opacity:0.15;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-              <path d="M24 12V6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
-              <path d="M12 22C12 15.5 17 11.5 24 11.5C31 11.5 36 15.5 36 22H12Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" fill="currentColor" fill-opacity=".1"/>
-              <path d="M15 22C15 32.5 19 39 24 41.5C29 39 33 32.5 33 22" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/>
-              <path d="M24 11.5C27 7 32 6 35 8.5C32 11.5 28 12.5 24 11.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-            </svg>
-            <div class="tot-goal-ring">
+          <div class="tot-atelier-divider" aria-hidden="true"></div>
+
+          <div class="tot-atelier-right">
+            <div class="tot-goal-ring tot-atelier-ring">
               <svg viewBox="0 0 80 80">
-                <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg-subtle)" stroke-width="8"/>
-                <circle id="home-goal-arc" cx="40" cy="40" r="32" fill="none" stroke="var(--streak)" stroke-width="8" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="160"/>
+                <circle cx="40" cy="40" r="32" fill="none" stroke="var(--bg-subtle)" stroke-width="6.5"/>
+                <circle id="home-goal-arc" cx="40" cy="40" r="32" fill="none" stroke="var(--accent)" stroke-width="6.5" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="160"/>
               </svg>
               <div class="tot-goal-center">
-                <span class="tabular" id="home-goal-pct" style="font-size:16.5px;font-weight:800;color:var(--streak);line-height:1;">0%</span>
-                <span style="font-size:9.5px;font-weight:650;color:var(--ink-3);text-transform:uppercase;margin-top:2px;">Hôm nay</span>
+                <span class="tabular" id="home-goal-pct" style="font-size:17px;font-weight:850;color:var(--ink);line-height:1;">0%</span>
+                <span style="font-size:9px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;margin-top:3px;">Hôm nay</span>
               </div>
             </div>
-            <div class="tot-goal-pills">
-              <div class="tot-goal-pill"><div class="tot-goal-num tabular" id="home-goal-mastered">0</div><div class="tot-goal-lbl">Từ vựng</div></div>
-              <div class="tot-goal-pill"><div class="tot-goal-num tabular" id="home-goal-tasks">0</div><div class="tot-goal-lbl">Task xong</div></div>
-              <div class="tot-goal-pill"><div class="tot-goal-num tabular" id="home-goal-mins">0/30p</div><div class="tot-goal-lbl">Tập trung</div></div>
+            <div class="tot-atelier-stats">
+              <div class="tot-atelier-stat">
+                <div class="tot-atelier-stat-val tabular" id="home-goal-mastered">0</div>
+                <div class="tot-atelier-stat-lbl">Từ thuộc</div>
+              </div>
+              <div class="tot-atelier-stat">
+                <div class="tot-atelier-stat-val tabular" id="home-goal-tasks">0</div>
+                <div class="tot-atelier-stat-lbl">Task xong</div>
+              </div>
+              <div class="tot-atelier-stat">
+                <div class="tot-atelier-stat-val tabular" id="home-goal-mins">0/30p</div>
+                <div class="tot-atelier-stat-lbl">Tập trung</div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- ASYMMETRIC 2-COLUMN EDITORIAL WORKSPACE (Scrollable, breathable, zero clipping!) -->
+        <!-- ASYMMETRIC 2-COLUMN EDITORIAL WORKSPACE (Calm Washi panels · Hairline flat rows · Zero nested boxes!) -->
         <div class="tot-home-workspace" id="home-workspace-grid">
-          <!-- LEFT PRIMARY COLUMN (61%): Action Today · Rhythm Analytics · Roadmap Progress -->
+          <!-- LEFT PRIMARY COLUMN (61%): Today's Plan · Rhythm Analytics · Roadmap Progress -->
           <div class="tot-home-main-col">
-            <!-- 1. Daily Study Plan Checklist -->
-            <section class="tot-home-panel tot-monitor-card ink-brackets has-stamp" id="home-daily-plan-card" aria-label="Kế hoạch hôm nay">
-              <div class="tot-panel-head">
-                <div class="tot-panel-title-wrap">
-                  <span class="tot-icon-tile warm" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                  </span>
+            <!-- 1. Daily Study Plan Checklist (Things 3 / Linear hairline list!) -->
+            <section class="tot-home-panel tot-ed-panel ink-brackets" id="home-daily-plan-card" aria-label="Kế hoạch hôm nay">
+              <div class="tot-ed-head">
+                <div class="tot-ed-head-l">
+                  <svg class="tot-ed-ico is-warm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                   <div>
-                    <div class="tot-panel-title">Kế hoạch học hôm nay</div>
-                    <div class="tot-panel-sub">Tự động cập nhật theo tiến độ thực học — bấm từng mục để vào học ngay</div>
+                    <h2 class="tot-ed-title">Kế hoạch học hôm nay</h2>
+                    <p class="tot-ed-sub">Tự động cập nhật theo tiến độ thực học</p>
                   </div>
                 </div>
                 <span class="tot-tag" id="home-daily-plan-badge">0/3 xong</span>
               </div>
-              <div class="tot-plan-checklist" id="home-plan-checklist"></div>
+              <div class="tot-plan-checklist tot-ed-list" id="home-plan-checklist"></div>
             </section>
 
-            <!-- 2. Study Rhythm Chart (Wide, breathable analytics!) -->
-            <section class="tot-home-panel ink-brackets has-stamp" aria-label="Biểu đồ nhịp học">
-              <svg class="ghibli-stamp warm" style="left:54%;bottom:7px;width:30px;height:30px;opacity:0.2;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-                <path d="M24 38V18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
-                <path d="M24 24C16 23 11 17 11 11C18 11 23 16 24 24Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".12"/>
-                <path d="M24 20C32 19 37 13 37 7C30 7 25 12 24 20Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".12"/>
-                <path d="M14 38H34" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-              </svg>
-              <div class="tot-panel-head">
-                <div class="tot-panel-title-wrap">
-                  <span class="tot-icon-tile warm"><svg viewBox="2 2 20 20" fill="none"><rect x="3.5" y="13" width="3.8" height="7" rx="1.6" fill="#D99B58"/><rect x="10.1" y="9" width="3.8" height="11" rx="1.6" fill="#4E9460"/><rect x="16.7" y="5.5" width="3.8" height="14.5" rx="1.6" fill="#E67E35"/><path d="M12 9C12 6 14.2 4 16.5 4.2C15.8 6.8 14 8.5 12 9Z" fill="#4E9460"/></svg></span>
-                  <div><div class="tot-panel-title">Biểu đồ nhịp học</div><div class="tot-panel-sub tabular" id="home-chart-sub">0 / 7 ngày · 0 phút tuần này</div></div>
+            <!-- 2. Study Rhythm Chart (Apple Health / Strava calm editorial chart!) -->
+            <section class="tot-home-panel tot-ed-panel ink-brackets" aria-label="Biểu đồ nhịp học">
+              <div class="tot-ed-head">
+                <div class="tot-ed-head-l">
+                  <svg class="tot-ed-ico is-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                  <div>
+                    <h2 class="tot-ed-title">Biểu đồ nhịp học</h2>
+                    <p class="tot-ed-sub tabular" id="home-chart-sub">0 / 7 ngày · 0 phút tuần này</p>
+                  </div>
                 </div>
                 <div class="tot-seg" id="home-chart-period-tabs" style="padding:2px;">
-                  <button type="button" class="tot-seg-btn active" data-home-chart="week" style="height:24px;padding:0 9px;font-size:11px;">Tuần</button>
-                  <button type="button" class="tot-seg-btn" data-home-chart="month" style="height:24px;padding:0 9px;font-size:11px;">Tháng</button>
-                  <button type="button" class="tot-seg-btn" data-home-chart="year" style="height:24px;padding:0 9px;font-size:11px;">Năm</button>
+                  <button type="button" class="tot-seg-btn active" data-home-chart="week" style="height:25px;padding:0 10px;font-size:11.5px;">Tuần</button>
+                  <button type="button" class="tot-seg-btn" data-home-chart="month" style="height:25px;padding:0 10px;font-size:11.5px;">Tháng</button>
+                  <button type="button" class="tot-seg-btn" data-home-chart="year" style="height:25px;padding:0 10px;font-size:11.5px;">Năm</button>
                 </div>
               </div>
               <div class="tot-chart-wrap tot-chart-tall" id="home-chart-bars"></div>
-              <div class="tot-panel-foot">
+              <div class="tot-panel-foot tot-ed-foot">
                 <span class="tot-foot-meta">Trung bình <strong class="tabular" id="home-chart-avg">0 phút / ngày</strong></span>
                 <span class="tot-foot-pill tabular" id="home-chart-badge">Thực học</span>
               </div>
             </section>
 
-            <!-- 3. Cross-Skill Progress Monitor (Clean 2x2 grid — zero cramping!) -->
-            <section class="tot-home-panel tot-monitor-card ink-brackets has-stamp" id="home-progress-monitor-card" aria-label="Theo dõi tiến độ học">
-              <div class="tot-panel-head">
-                <div class="tot-panel-title-wrap">
-                  <span class="tot-icon-tile info" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
-                  </span>
+            <!-- 3. Cross-Skill Progress Monitor (Clean 2x2 hairline telemetry — zero boxes inside boxes!) -->
+            <section class="tot-home-panel tot-ed-panel ink-brackets" id="home-progress-monitor-card" aria-label="Theo dõi tiến độ học">
+              <div class="tot-ed-head">
+                <div class="tot-ed-head-l">
+                  <svg class="tot-ed-ico is-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
                   <div>
-                    <div class="tot-panel-title">Theo dõi tiến độ lộ trình</div>
-                    <div class="tot-panel-sub tabular" id="home-monitor-summary">Tổng hợp Reading &amp; Listening</div>
+                    <h2 class="tot-ed-title">Theo dõi tiến độ lộ trình</h2>
+                    <p class="tot-ed-sub tabular" id="home-monitor-summary">Tổng hợp Reading &amp; Listening</p>
                   </div>
                 </div>
                 <strong class="tabular tot-mon-pct" id="home-monitor-overall-pct">0%</strong>
               </div>
-              <div class="tot-mon-bars tot-mon-bars-2col" id="home-monitor-bars"></div>
+              <div class="tot-mon-bars tot-mon-bars-2col tot-ed-meters" id="home-monitor-bars"></div>
             </section>
           </div>
 
-          <!-- RIGHT SIDEBAR COLUMN (39%): Target & Countdown · Leaderboard · Recent History -->
+          <!-- RIGHT SIDEBAR COLUMN (39%): Target Band Scoreboard · Leaderboard · Recent History -->
           <aside class="tot-home-side-col">
-            <!-- 1. Target Band & Exam Countdown -->
-            <section class="tot-home-panel tot-monitor-card ink-brackets has-stamp" id="home-plan-target-card" aria-label="Mục tiêu và ngày thi">
-              <div class="tot-panel-head">
-                <div class="tot-panel-title-wrap">
-                  <span class="tot-icon-tile" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
-                  </span>
+            <!-- 1. Target Band & Exam Countdown (Editorial Serif Scoreboard!) -->
+            <section class="tot-home-panel tot-ed-panel ink-brackets" id="home-plan-target-card" aria-label="Mục tiêu và ngày thi">
+              <div class="tot-ed-head">
+                <div class="tot-ed-head-l">
+                  <svg class="tot-ed-ico is-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
                   <div>
-                    <div class="tot-panel-title">Mục tiêu &amp; Ngày thi</div>
-                    <div class="tot-panel-sub tabular" id="home-target-countdown">Đặt ngày thi để tính nhịp học</div>
+                    <h2 class="tot-ed-title">Mục tiêu &amp; Ngày thi</h2>
+                    <p class="tot-ed-sub tabular" id="home-target-countdown">Đặt ngày thi để tính nhịp học</p>
                   </div>
                 </div>
                 <button type="button" class="tot-mon-edit-btn" id="btn-toggle-plan-edit" onclick="window.TotoroUI?.togglePlanEditor()">Chỉnh mục tiêu</button>
               </div>
 
               <div class="tot-target-view" id="home-target-view">
-                <div class="tot-target-kpi-row">
-                  <div class="tot-target-band-box">
-                    <span class="tot-target-k-lbl">Mục tiêu</span>
-                    <strong class="tot-target-k-val tabular" id="home-target-band-val">7.5</strong>
+                <div class="tot-ed-scoreboard">
+                  <div class="tot-ed-score-cell is-primary">
+                    <span class="tot-ed-score-lbl">Mục tiêu</span>
+                    <strong class="tot-ed-score-serif tabular" id="home-target-band-val">7.5</strong>
                   </div>
-                  <div class="tot-target-band-box is-current">
-                    <span class="tot-target-k-lbl">Ước tính</span>
-                    <strong class="tot-target-k-val tabular" id="home-current-band-val">—</strong>
+                  <div class="tot-ed-score-cell">
+                    <span class="tot-ed-score-lbl">Ước tính</span>
+                    <strong class="tot-ed-score-num tabular" id="home-current-band-val">—</strong>
                   </div>
-                  <div class="tot-target-band-box is-days">
-                    <span class="tot-target-k-lbl">Đếm ngược</span>
-                    <strong class="tot-target-k-val tabular" id="home-days-left-val">—</strong>
+                  <div class="tot-ed-score-cell">
+                    <span class="tot-ed-score-lbl">Đếm ngược</span>
+                    <strong class="tot-ed-score-num tabular" id="home-days-left-val">—</strong>
                   </div>
                 </div>
                 <div class="tot-target-meter">
@@ -1396,7 +1393,7 @@
                   </div>
                   <div class="tot-mastery-bar"><div class="tot-seg-ok" id="home-target-bar" style="width:0%"></div></div>
                 </div>
-                <div class="tot-target-pace" id="home-target-pace">Nhịp đề xuất: 30 phút · 20 từ / ngày</div>
+                <div class="tot-target-pace" id="home-target-pace">Nhịp mục tiêu: 30 phút · 20 từ / ngày</div>
               </div>
 
               <form class="tot-plan-editor hidden" id="home-plan-editor" onsubmit="window.TotoroUI?.saveStudyPlan(event)">
@@ -1442,40 +1439,41 @@
               </form>
             </section>
 
-            <!-- 2. Class Leaderboard -->
-            <section class="tot-home-panel ink-brackets has-stamp" aria-label="Bảng thi đua lớp">
-              <svg class="ghibli-stamp" style="left:52%;bottom:7px;width:30px;height:30px;opacity:0.2;" viewBox="0 0 56 56" fill="none" aria-hidden="true">
-                <circle cx="28" cy="28" r="22" stroke="currentColor" stroke-width="2.2" stroke-dasharray="4 3"/>
-                <circle cx="28" cy="28" r="16.5" stroke="currentColor" stroke-width="1.8"/>
-                <path d="M28 16L31 23L38.5 24L33 29L34.5 36.5L28 33L21.5 36.5L23 29L17.5 24L25 23L28 16Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-              </svg>
-              <div class="tot-panel-head">
-                <div class="tot-panel-title-wrap">
-                  <span class="tot-icon-tile"><svg viewBox="2 2 20 20" fill="none"><path d="M7 6.5H4.2C4.2 9.4 5.4 11 7.2 11.2M17 6.5H19.8C19.8 9.4 18.6 11 16.8 11.2" stroke="#C78A20" stroke-width="1.8" stroke-linecap="round"/><path d="M7 4.2H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4.2Z" fill="#F2BE54" stroke="#B67B14" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 15V18.8M8.5 19.5H15.5" stroke="#B67B14" stroke-width="2" stroke-linecap="round"/><path d="M12 6.8L12.7 8.4L14.4 8.6L13.1 9.7L13.5 11.4L12 10.5L10.5 11.4L10.9 9.7L9.6 8.6L11.3 8.4L12 6.8Z" fill="#FFF8E2"/></svg></span>
-                  <div><div class="tot-panel-title">Bảng thi đua lớp</div><div class="tot-panel-sub">Điểm thực học · Chống treo máy</div></div>
+            <!-- 2. Class Leaderboard (Clean hairline podium!) -->
+            <section class="tot-home-panel tot-ed-panel ink-brackets" aria-label="Bảng thi đua lớp">
+              <div class="tot-ed-head">
+                <div class="tot-ed-head-l">
+                  <svg class="tot-ed-ico is-warm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                  <div>
+                    <h2 class="tot-ed-title">Bảng thi đua lớp</h2>
+                    <p class="tot-ed-sub">Điểm thực học · Chống treo máy</p>
+                  </div>
                 </div>
                 <div class="tot-seg" style="padding:2px;">
-                  <button type="button" class="tot-seg-btn active" data-home-lb="week" style="height:24px;padding:0 8px;font-size:11px;">Tuần</button>
-                  <button type="button" class="tot-seg-btn" data-home-lb="month" style="height:24px;padding:0 8px;font-size:11px;">Tháng</button>
+                  <button type="button" class="tot-seg-btn active" data-home-lb="week" style="height:25px;padding:0 9px;font-size:11.5px;">Tuần</button>
+                  <button type="button" class="tot-seg-btn" data-home-lb="month" style="height:25px;padding:0 9px;font-size:11.5px;">Tháng</button>
                 </div>
               </div>
-              <div class="tot-list-stack" id="home-lb-list"></div>
-              <div class="tot-panel-foot">
+              <div class="tot-list-stack tot-ed-podium" id="home-lb-list"></div>
+              <div class="tot-panel-foot tot-ed-foot">
                 <span class="tot-foot-meta">Hạng của bạn <strong class="tabular" id="home-lb-myrank">—</strong></span>
                 <button type="button" class="tot-foot-btn" onclick="openClassReportModal()">Xem cả lớp →</button>
               </div>
             </section>
 
-            <!-- 3. Unified Recent History (Tasks + Reading Practice) -->
-            <section class="tot-home-panel ink-brackets has-stamp" aria-label="Lịch sử làm bài gần đây">
-              <div class="tot-panel-head">
-                <div class="tot-panel-title-wrap">
-                  <span class="tot-icon-tile info"><svg viewBox="2 2 20 20" fill="none"><circle cx="12" cy="12" r="8.2" fill="#FFFFFF" stroke="#6658AD" stroke-width="1.8"/><circle cx="12" cy="12" r="6" fill="#EBE8FA"/><path d="M12 7.8V12L15.2 13.8" stroke="#53469E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="1.2" fill="#E67E35"/></svg></span>
-                  <div><div class="tot-panel-title">Lịch sử làm bài gần đây</div><div class="tot-panel-sub">Task bài tập &amp; Đề Practice</div></div>
+            <!-- 3. Unified Recent History (Clean hairline feed!) -->
+            <section class="tot-home-panel tot-ed-panel ink-brackets" aria-label="Lịch sử làm bài gần đây">
+              <div class="tot-ed-head">
+                <div class="tot-ed-head-l">
+                  <svg class="tot-ed-ico is-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <div>
+                    <h2 class="tot-ed-title">Lịch sử làm bài gần đây</h2>
+                    <p class="tot-ed-sub">Task bài tập &amp; Đề Practice</p>
+                  </div>
                 </div>
               </div>
-              <div class="tot-list-stack" id="home-history-list"></div>
-              <div class="tot-panel-foot">
+              <div class="tot-list-stack tot-ed-feed" id="home-history-list"></div>
+              <div class="tot-panel-foot tot-ed-foot">
                 <span class="tot-foot-meta">Tổng <strong class="tabular" id="home-history-total">0 bài</strong> đã nộp</span>
                 <button type="button" class="tot-foot-btn" onclick="window.TotoroUI?.enterSkillMode('Reading', 'practice')">Kho đề →</button>
               </div>
@@ -2214,6 +2212,6 @@
   <script src="js/reading_practice.js?v=20261124s"></script>
   <script src="js/tasks.js?v=20261122j"></script>
   <script src="js/listening_tasks.js?v=20261124n"></script>
-  <script src="js/totoro_ui.js?v=20261124l"></script>
+  <script src="js/totoro_ui.js?v=20261124m"></script>
 </body>
 </html>
