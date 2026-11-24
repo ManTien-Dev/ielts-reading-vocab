@@ -1156,9 +1156,9 @@
     });
   }
 
-  // IELTS Reading Recent Actual Tests (30 Sets · 349 Verified Passages, 4 Tests per Set)
+  // IELTS Reading Recent Actual Tests (22 Sets · 253 QA-Verified Passages, 4 Tests per Set)
   const ACTUAL_SETS = [];
-  for (let s = 1; s <= 30; s++) {
+  for (let s = 1; s <= 22; s++) {
     ACTUAL_SETS.push({
       id: `act_${String(s).padStart(2, '0')}`,
       source: 'actual',
@@ -1171,15 +1171,15 @@
   }
 
   const BANK_SUMMARY = {
-    cambridge: { booksReady: 12, booksTotal: 20, passages: 123 },
-    volume: { booksReady: 10, booksTotal: 10, passages: 120 },
-    actual: { booksReady: 30, booksTotal: 30, passages: 349 }
+    cambridge: { booksReady: 12, booksTotal: 20, passages: 95 },
+    volume: { booksReady: 8, booksTotal: 10, passages: 85 },
+    actual: { booksReady: 22, booksTotal: 22, passages: 253 }
   };
 
   const SOURCES = [
-    { id: 'cambridge', label: 'Cambridge', bookTitle: 'Cambridge IELTS 1 – 20', desc: 'Đủ kệ 20 cuốn Cambridge University Press — đã nạp 12 cuốn đề gốc có đáp án chuẩn (Cam 1–12), tách Passage 1–3 & Full Test.' },
-    { id: 'volume', label: 'Volume', bookTitle: 'Real Reading Test — Volume 1–10', desc: 'Trọn bộ 10 tập Real Reading Test (40 Full Tests · 120 bài đọc học thuật có đáp án gốc) — chia rõ Test 1–4, Passage 1–3 & Full Test.' },
-    { id: 'actual', label: 'Recent Actual', bookTitle: 'IELTS Reading Recent Actual Tests', desc: 'Kho 349 bài đề thi thật gần đây có đáp án chuẩn chia 30 bộ (116 Full Tests) — luyện tốc độ & nhận diện bẫy Paraphrase.' },
+    { id: 'cambridge', label: 'Cambridge', bookTitle: 'Cambridge IELTS 1 – 20', desc: 'Đủ kệ 20 cuốn Cambridge University Press — đã kiểm định sạch 12 cuốn đề gốc (Cam 1–12 · 95 bài · 33 Full Tests).' },
+    { id: 'volume', label: 'Volume', bookTitle: 'Real Reading Test — Volume 1–10', desc: 'Kệ 10 tập Real Reading Test — đã kiểm định sạch 8/10 tập (85 bài đọc · 28 Full Tests, 0 lỗi đề/đáp án).' },
+    { id: 'actual', label: 'Recent Actual', bookTitle: 'IELTS Reading Recent Actual Tests', desc: 'Kho 253 bài đề thi thật đã kiểm định sạch chia 22 bộ (84 Full Tests) — 100% tách câu & đáp án chuẩn.' },
     { id: 'news', label: 'News', bookTitle: 'The Economist · Nature · BBC Future', desc: 'Đọc báo học thuật chọn lọc theo chủ đề — dịch song ngữ & bấm tra từ lưu thẳng về Flashcard.' }
   ];
 
