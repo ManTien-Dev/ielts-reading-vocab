@@ -547,8 +547,8 @@
 
     const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
     const subEl = document.getElementById('inline-task-sub');
-    if (titleEl) titleEl.textContent = 'Task bài tập · Listening';
-    if (subEl) subEl.textContent = `${doneInSuite} / ${filtered.length} bài đã hoàn thành trong bộ ${suiteLabel}.`;
+    if (titleEl) titleEl.textContent = 'LISTENING TASKS';
+    if (subEl) subEl.textContent = `${doneInSuite} / ${filtered.length} hoàn thành · ${suiteLabel}`;
 
     if (tabsEl) {
       tabsEl.innerHTML = suites.map((s) => {
@@ -642,9 +642,9 @@
     if (bodyEl) {
       const testDesc = hasFull3
         ? (task.isMapTask
-          ? 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong>:<br><strong>Test 1</strong> Nghe &amp; Viết → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Map Labelling.'
-          : 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong>:<br><strong>Test 1</strong> Nghe &amp; Viết → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Note Completion.')
-        : `<strong>Test 1</strong> Nghe &amp; Viết (${totalW}/${totalW} từ).`;
+          ? '<strong>Test 1</strong> Dictation → <strong>Test 2</strong> Short Conversations → <strong>Test 3</strong> Map Labelling.'
+          : '<strong>Test 1</strong> Dictation → <strong>Test 2</strong> Short Conversations → <strong>Test 3</strong> Note Completion.')
+        : `<strong>Test 1</strong> Dictation · ${totalW} từ.`;
 
       const scoreRow = rec
         ? `<div class="lt-score-strip" style="margin-bottom:14px;">
@@ -656,27 +656,27 @@
 
       const actionsHtml = teacher
         ? `
-          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Test</button>
-          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Học Flashcard</button>
+          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Quiz</button>
+          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Flashcard</button>
           ${hasFull3 ? `<button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 2)">Test 2</button>` : ''}
           ${hasFull3 ? `<button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 3)">Test 3</button>` : ''}
-          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 1)">${hasFull3 ? 'Bắt đầu 3 Test →' : 'Làm Test 1 →'}</button>
+          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 1)">${hasFull3 ? 'Bắt đầu Test →' : 'Làm Test 1 →'}</button>
         `
         : (allReady
           ? `
-            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Test</button>
-            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Ôn Flashcard</button>
-            <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 1)">${hasFull3 ? 'Bắt đầu làm Test →' : 'Làm Test 1 →'}</button>
+            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Quiz</button>
+            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Flashcard</button>
+            <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 1)">${hasFull3 ? 'Bắt đầu Test →' : 'Làm Test 1 →'}</button>
           `
           : `
-            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Test</button>
-            <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Bắt đầu học từ vựng →</button>
+            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Quiz</button>
+            <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Học từ vựng →</button>
           `);
 
       bodyEl.innerHTML = `
         <div class="task-notice-box" style="margin-bottom:14px;font-size:14px;line-height:1.6;">
-          <div><strong>Bước 1 — Học từ vựng:</strong> Học thuộc đủ <strong>${totalW}/${totalW} từ</strong> trên Flashcard hoặc Speed Test trước (hiện đã thuộc <strong>${mastered}/${totalW} từ</strong> — thuộc đủ mới mở được bài Test).</div>
-          <div style="margin-top:6px;"><strong>Bước 2 — Làm Test:</strong> ${testDesc}</div>
+          <div><strong>Bước 1 · Học từ vựng:</strong> Đã thuộc <strong>${mastered}/${totalW}</strong> từ. Thuộc đủ <strong>${totalW}/${totalW}</strong> trên Flashcard hoặc Speed Quiz để mở Test.</div>
+          <div style="margin-top:6px;"><strong>Bước 2 · Làm Test:</strong> ${testDesc}</div>
         </div>
         ${scoreRow}
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
@@ -919,16 +919,16 @@
     }
 
     if (examState.stage === 1) {
-      if (pill) pill.textContent = `TEST 1 · NGHE & VIẾT (${examState.words.length}/${examState.words.length} TỪ)`;
+      if (pill) pill.textContent = 'TEST 1 · DICTATION';
       renderTest1();
     } else if (examState.stage === 2) {
-      if (pill) pill.textContent = 'TEST 2 · SHORT CONVERSATIONS MCQ (12 CÂU)';
+      if (pill) pill.textContent = 'TEST 2 · SHORT CONVERSATIONS';
       renderTest2();
     } else {
       if (pill) {
         pill.textContent = examState.task.test3MapLabelling
-          ? 'TEST 3 · THỰC CHIẾN MAP LABELLING (A–H)'
-          : 'TEST 3 · THỰC CHIẾN NOTE COMPLETION';
+          ? 'TEST 3 · MAP LABELLING'
+          : 'TEST 3 · NOTE COMPLETION';
       }
       renderTest3();
     }

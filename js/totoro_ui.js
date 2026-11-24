@@ -1012,7 +1012,7 @@
                 <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.switchView('practice')">Vào kho đề Practice →</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('flashcard')">Học Flashcard</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('task')">110 Tasks</button>
-                <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">MY LIST (${mvTotalWords})</button>
+                <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">MY LIST</button>
               </div>
             </div>
           </div>
@@ -1053,7 +1053,7 @@
               </div>
               <button type="button" class="tot-foot-btn" onclick="window.MyVocabUI?.openModal()">Quản lý →</button>
             </div>
-            <div class="rh-subhead">Sổ MY LIST (cục bộ)</div>
+            <div class="rh-subhead">MY LIST</div>
             <div class="rh-hist-list">${mvDecksHtml}</div>
             <div class="rh-subhead" style="margin-top:12px;">Task Reading vừa xong</div>
             <div class="rh-hist-list">${taskHistHtml}</div>
@@ -1133,7 +1133,7 @@
         <div class="rh-hist-item lh-click-row" onclick="window.ListeningTasksModule?.openExam?.('${esc(t.id)}', 3, { fromPractice: true })">
           <div style="min-width:0;flex:1;">
             <div class="rh-hist-title">${esc(t.label)} · ${esc(shortTitle)}</div>
-            <div class="rh-hist-meta">${t.isMapTask ? 'Bản đồ SVG tương tác · Audio Neural' : 'Note Completion chuẩn Cambridge · Audio Neural'}</div>
+            <div class="rh-hist-meta">${t.isMapTask ? 'Map Labelling · Part 2' : 'Note Completion'}</div>
           </div>
           <div class="rh-hist-right">
             ${badge}
@@ -1173,15 +1173,15 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
                 </span>
                 <div>
-                  <h2 class="tot-shell-title" style="margin:0;">IELTS Listening</h2>
-                  <div class="tot-shell-sub tabular">${masteredTotal.toLocaleString('vi-VN')} / ${totalVocab.toLocaleString('vi-VN')} từ · ${doneTasks} / ${totalTasks} Tasks · Audio Neural</div>
+                  <h2 class="tot-shell-title" style="margin:0;">LISTENING</h2>
+                  <div class="tot-shell-sub tabular">${masteredTotal.toLocaleString('vi-VN')} / ${totalVocab.toLocaleString('vi-VN')} từ · ${doneTasks} / ${totalTasks} Tasks</div>
                 </div>
               </div>
               <div class="rh-decks-grid-4">${barsHtml}</div>
               <div class="rh-hero-actions" style="margin-top:12px;">
-                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">Vào kho đề Practice →</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Học Flashcard</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">139 Tasks</button>
+                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">PRACTICE →</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Flashcard</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">Tasks</button>
               </div>
             </div>
           </div>
@@ -1206,8 +1206,8 @@
           <div class="tot-home-panel ink-brackets">
             <div class="tot-panel-head">
               <div>
-                <div class="tot-panel-title">Bài thi Bản đồ &amp; Thực chiến nổi bật</div>
-                <div class="tot-panel-sub">Bản đồ SVG tương tác &amp; Note Completion</div>
+                <div class="tot-panel-title">Đề Listening nổi bật</div>
+                <div class="tot-panel-sub">Map Labelling &amp; Note Completion</div>
               </div>
               <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">Tất cả đề →</button>
             </div>

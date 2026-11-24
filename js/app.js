@@ -2434,7 +2434,7 @@
       if (mvDecks.length > 0) {
         html += `<optgroup label="MY LIST">${mvDecks.map((d) => {
           const sk = window.MyVocabStore.getScopeKey(d.id);
-          return `<option value="${escapeHtml(sk)}">${escapeHtml(d.name)} (${d.words.length} từ)</option>`;
+          return `<option value="${escapeHtml(sk)}">${escapeHtml(d.name)}</option>`;
         }).join('')}</optgroup>`;
       }
     }
@@ -2784,8 +2784,8 @@
       const finDesc = finishedBox?.querySelector('.fc-finished-desc');
       if (finTitle && finDesc) {
         if (isEmptyMyVocab) {
-          finTitle.textContent = 'Danh sách MY LIST đang trống';
-          finDesc.textContent = 'Bấm nút bên dưới để thêm từng từ hoặc dán/Import hàng loạt danh sách từ riêng của bạn (lưu hoàn toàn trên máy này).';
+          finTitle.textContent = 'MY LIST đang trống';
+          finDesc.textContent = 'Thêm từng từ hoặc Import danh sách từ vựng cá nhân để luyện Flashcard.';
         } else {
           finTitle.textContent = 'Bạn đã hoàn thành lượt thẻ này!';
           finDesc.textContent = 'Tất cả các thẻ trong danh sách đã được bạn xem qua. Bạn có thể ôn lại từ đầu hoặc lọc riêng các từ chưa thuộc.';
@@ -4072,16 +4072,16 @@
     const p2 = document.getElementById('recall-stage2-prompt');
     if (p1) {
       if (recallAttemptsLeft <= 0) {
-        p1.textContent = 'Đã hết lượt thử cho thẻ này.';
+        p1.textContent = 'Đã hết lượt thử.';
       } else {
         p1.textContent = rule.strict
-          ? 'Gõ chính xác từ tiếng Anh vừa học (Ôn tập · chỉ được nhập 1 lần).'
-          : `Gõ chính xác từ tiếng Anh vừa học (còn ${recallAttemptsLeft} lần thử).`;
+          ? 'Gõ chính xác từ tiếng Anh vừa học · còn 1 lần.'
+          : `Gõ chính xác từ tiếng Anh vừa học · còn ${recallAttemptsLeft} lần.`;
       }
     }
     if (p2) {
       if (recallMode === 'paraphrase_think') {
-        p2.innerHTML = 'Tự suy luận cách nói tương đương — cẩn thận bẫy trái nghĩa (sai chọn lại đến khi đúng):';
+        p2.innerHTML = 'Chọn cách diễn đạt tương đương — cẩn thận bẫy trái nghĩa:';
         return;
       }
       if (recallMode === 'quick_vi') {
@@ -4091,7 +4091,7 @@
       if (recallStage2Type === 'wordbox') {
         p2.innerHTML = recallAttemptsLeft <= 0
           ? 'Đã hết lượt thử.'
-          : `Chọn từ đúng điền vào chỗ trống (còn ${recallAttemptsLeft} lần):`;
+          : `Chọn từ điền vào chỗ trống · còn ${recallAttemptsLeft} lần:`;
         return;
       }
       const targetTotal = recallSynOptions.filter((o) => o.isCorrect).length;
@@ -4103,8 +4103,8 @@
           p2.innerHTML = 'Đã hết lượt thử.';
         } else {
           const baseText = rule.strict
-            ? 'Chọn các từ thuộc Word Family (còn 1 lần):'
-            : `Chọn các từ thuộc Word Family (còn ${recallAttemptsLeft} lần):`;
+            ? 'Chọn Word Family · còn 1 lần:'
+            : `Chọn Word Family · còn ${recallAttemptsLeft} lần:`;
           p2.innerHTML = escapeHtml(baseText) + selBadge;
         }
         return;
@@ -4114,8 +4114,8 @@
           p2.innerHTML = 'Đã hết lượt thử.';
         } else {
           const baseText = rule.strict
-            ? 'Chọn các từ trái nghĩa (còn 1 lần):'
-            : `Chọn các từ trái nghĩa (còn ${recallAttemptsLeft} lần):`;
+            ? 'Chọn từ trái nghĩa · còn 1 lần:'
+            : `Chọn từ trái nghĩa · còn ${recallAttemptsLeft} lần:`;
           p2.innerHTML = escapeHtml(baseText) + selBadge;
         }
         return;
@@ -4124,8 +4124,8 @@
         p2.innerHTML = 'Đã hết lượt thử.';
       } else {
         const baseText = rule.strict
-          ? 'Chọn các từ đồng nghĩa (còn 1 lần):'
-          : `Chọn các từ đồng nghĩa (còn ${recallAttemptsLeft} lần):`;
+          ? 'Chọn Synonyms · còn 1 lần:'
+          : `Chọn Synonyms · còn ${recallAttemptsLeft} lần:`;
         p2.innerHTML = escapeHtml(baseText) + selBadge;
       }
     }
@@ -4218,7 +4218,7 @@
       const fb = document.getElementById('recall-feedback');
 
       document.getElementById('recall-word-input')?.blur();
-      if (stageBadge) stageBadge.textContent = 'Test 2 · Tư duy Paraphrase';
+      if (stageBadge) stageBadge.textContent = 'Test 2 · Paraphrase';
       if (timerBadge) {
         timerBadge.textContent = `${limitSec}s`;
         timerBadge.classList.remove('is-urgent', 'is-speed-pulse');

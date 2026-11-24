@@ -638,18 +638,19 @@
       if (s.id === 'cambridge' || s.id === 'volume' || s.id === 'actual') {
         const bks = getBooksForSource(s.id);
         const readyBks = bks.filter((b) => countReadyTestsInBook(b.id) > 0).length;
-        badgeText = readyBks > 0 ? `${readyBks}/${bks.length} cuốn sẵn sàng` : `${bks.length} cuốn · Kệ 3×3`;
+        const unit = s.id === 'volume' ? 'Volumes' : (s.id === 'actual' ? 'Sets' : 'Books');
+        badgeText = readyBks > 0 ? `★ ${readyBks}/${bks.length} ${unit}` : `${bks.length} ${unit}`;
       } else if (s.id === 'map_studio') {
         const tasks = (window.APP_LISTENING_TASKS?.tasks || []).filter((t) => t.isMapTask || t.hasFullTests);
-        badgeText = `${tasks.length || 11} bài Audio Neural`;
+        badgeText = `★ ${tasks.length || 11} Ready`;
       }
 
       const secondaryBtn = s.id === 'map_studio'
-        ? `<button type="button" class="tot-demo-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('map_studio')">Xem tất cả bài</button>`
-        : `<button type="button" class="tot-demo-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('${esc(s.id)}')">Mở kệ 3×3</button>`;
+        ? `<button type="button" class="tot-demo-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('map_studio')">Xem danh sách</button>`
+        : `<button type="button" class="tot-demo-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('${esc(s.id)}')">Chọn bộ đề</button>`;
       const primaryBtn = s.id === 'map_studio'
         ? `<button type="button" class="btn btn-primary tot-demo-btn" onclick="event.stopPropagation(); ListeningPracticeApp.launchTaskExam('lmap_01')">Làm Map 01 →</button>`
-        : `<button type="button" class="btn btn-primary tot-demo-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('${esc(s.id)}', true)">Vào luyện ngay →</button>`;
+        : `<button type="button" class="btn btn-primary tot-demo-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('${esc(s.id)}', true)">Luyện ngay →</button>`;
 
       return `
         <article class="tot-exam-card lp-portal-card" data-lp-portal="${esc(s.id)}"
@@ -679,8 +680,8 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
             </span>
             <div>
-              <h2 class="tot-shell-title">Luyện nghe · Listening Practice</h2>
-              <p class="tot-shell-sub">Kệ sách Totoro 3×3 dành riêng cho IELTS Listening — chọn Cambridge 1–20, Real Volume 1–9, Recent Actual hoặc Map &amp; Note Studio.</p>
+              <h2 class="tot-shell-title">LISTENING PRACTICE</h2>
+              <p class="tot-shell-sub">Cambridge IELTS, Real Listening Tests, Recent Actual Tests và Map &amp; Note Studio.</p>
             </div>
           </div>
         </div>
@@ -697,11 +698,11 @@
      ========================================================= */
   function renderPartCard(item, isFull) {
     const prog = !isFull ? ListeningPracticeStore.getPartProgress(item) : null;
-    const partLabel = isFull ? 'FULL TEST · 4 PARTS' : `PART ${item.partNum || 1}`;
-    const types = Array.isArray(item.qTypes) ? item.qTypes : (isFull ? ['Part 1 → Part 4'] : ['Note Completion']);
+    const partLabel = isFull ? 'FULL TEST' : `Part ${item.partNum || 1}`;
+    const types = Array.isArray(item.qTypes) ? item.qTypes : (isFull ? ['Parts 1–4'] : ['Note Completion']);
     const scoreBadge = prog
       ? `<span class="lp-score-pill is-done tabular">✓ ${prog.score}/${prog.total}</span>`
-      : `<span class="lp-score-pill">${item.isMap ? 'Bản đồ SVG' : 'Audio Neural'}</span>`;
+      : (item.isMap ? `<span class="lp-score-pill">Map</span>` : '');
     const onClick = isFull
       ? `ListeningPracticeApp.startFullTest('${esc(item.id)}')`
       : `ListeningPracticeApp.startPart('${esc(item.id)}')`;
@@ -714,12 +715,11 @@
         </div>
         <h4 class="lp-part-title">${esc(item.title)}</h4>
         <p class="lp-part-sub">${esc(item.subtitle || '')}</p>
-        <div class="lp-part-meta">
-          ${types.map((t) => `<span class="lp-qtype-chip">${esc(t)}</span>`).join('')}
-          <span class="lp-qtype-chip tabular">${Number(item.questionsCount) || (isFull ? 40 : 10)} câu · ~${Number(item.durationMin) || (isFull ? 30 : 7)} phút</span>
-        </div>
         <div class="lp-part-foot">
-          <span class="lp-part-audio-note">Tự động phát 2 lượt (nghỉ 5s)</span>
+          <div class="lp-part-meta">
+            ${types.map((t) => `<span class="lp-qtype-chip">${esc(t)}</span>`).join('')}
+            <span class="lp-qtype-chip tabular">${Number(item.questionsCount) || (isFull ? 40 : 10)} câu · ${Number(item.durationMin) || (isFull ? 30 : 7)} phút</span>
+          </div>
           <button type="button" class="btn ${isFull ? 'btn-primary' : 'btn-subtle'} lp-part-go" onclick="event.stopPropagation(); ${onClick}">
             ${prog ? 'Làm lại →' : 'Làm bài →'}
           </button>
@@ -743,9 +743,9 @@
         partNum: pNum,
         title: shortFn ? shortFn(t) : (t.topicTitle || t.theme || `Bài ${idx + 1}`),
         subtitle: t.isMapTask
-          ? 'Bản đồ SVG tương tác — tự động phát 2 lượt, đối chiếu Transcript 3 màu và chấm vị trí trực tiếp.'
-          : 'Note Completion chuẩn Cambridge — 10s chuẩn bị đọc đề, tự động phát 2 lượt và chấm chính tả tự động.',
-        qTypes: [t.isMapTask ? 'Map Labelling (SVG)' : 'Note Completion', t.label || `Part ${pNum}`],
+          ? 'Định hướng vị trí trực tiếp trên bản đồ và đối chiếu Transcript từng câu.'
+          : 'Điền từ chuẩn chính tả Cambridge và mở khóa đối chiếu Transcript sau nộp bài.',
+        qTypes: [t.isMapTask ? 'Map Labelling' : 'Note Completion'],
         questionsCount: t.isMapTask ? 6 : 8,
         durationMin: 6,
         isMap: !!t.isMapTask
@@ -756,7 +756,7 @@
       <div class="tot-section-shell ink-brackets lp-hub-shell">
         <div class="lp-hub-head">
           <div class="lp-hub-head-left">
-            <button type="button" class="btn-subtle lp-btn-back" onclick="ListeningPracticeApp.openPortal()">← Practice</button>
+            <button type="button" class="btn-subtle lp-btn-back" onclick="ListeningPracticeApp.openPortal()">← PRACTICE</button>
             <div>
               <h2 class="tot-shell-title">${esc(curSourceObj?.bookTitle || 'Map & Note Studio')}</h2>
               <p class="tot-shell-sub">${esc(curSourceObj?.desc || '')}</p>
@@ -766,8 +766,8 @@
 
         <section class="lp-section-block">
           <div class="lp-section-head">
-            <h3 class="lp-section-title">Bản đồ SVG Tương tác · Part 2</h3>
-            <span class="lp-section-badge tabular">${mapTasks.length} bài sẵn sàng</span>
+            <h3 class="lp-section-title">Map Labelling</h3>
+            <span class="lp-section-badge tabular">Part 2 · ${mapTasks.length} bài</span>
           </div>
           <div class="lp-parts-grid is-three">
             ${mapTasks.map((t, i) => renderPartCard(toCardObj(t, i), false)).join('')}
@@ -776,8 +776,8 @@
 
         <section class="lp-section-block">
           <div class="lp-section-head">
-            <h3 class="lp-section-title">Note Completion Chuẩn Cambridge · Part 1–4</h3>
-            <span class="lp-section-badge tabular">${noteTasks.length} bài sẵn sàng</span>
+            <h3 class="lp-section-title">Note Completion</h3>
+            <span class="lp-section-badge tabular">Parts 1–4 · ${noteTasks.length} bài</span>
           </div>
           <div class="lp-parts-grid is-three">
             ${noteTasks.map((t, i) => renderPartCard(toCardObj(t, i), false)).join('')}
@@ -825,18 +825,18 @@
     const bookFulls = getFullTestsInBook(curBook?.id);
 
     const groupTabsHtml = state.source === 'cambridge' ? `
-      <div class="lp-range-tabs" role="tablist" aria-label="Chọn kệ Cambridge 3×3">
+      <div class="lp-range-tabs" role="tablist" aria-label="Chọn kệ Cambridge">
         <button type="button" role="tab" class="lp-range-tab ${state.camPage === 'recent' ? 'active' : ''}"
           aria-selected="${state.camPage === 'recent' ? 'true' : 'false'}"
-          onclick="ListeningPracticeApp.setCamPage('recent')">★ Cam 20 – 12 <span class="lp-grid-tag">3×3</span></button>
+          onclick="ListeningPracticeApp.setCamPage('recent')">★ Cam 20 – 12</button>
         <button type="button" role="tab" class="lp-range-tab ${state.camPage === 'mid' ? 'active' : ''}"
           aria-selected="${state.camPage === 'mid' ? 'true' : 'false'}"
-          onclick="ListeningPracticeApp.setCamPage('mid')">Cam 11 – 3 <span class="lp-grid-tag">3×3</span></button>
+          onclick="ListeningPracticeApp.setCamPage('mid')">Cam 11 – 3</button>
         <button type="button" role="tab" class="lp-range-tab ${state.camPage === 'classic' ? 'active' : ''}"
           aria-selected="${state.camPage === 'classic' ? 'true' : 'false'}"
           onclick="ListeningPracticeApp.setCamPage('classic')">Cam 2 – 1</button>
       </div>
-    ` : `<span class="lp-shelf-grid-badge">Lưới kệ Totoro 3×3 · ${visibleBooks.length} cuốn</span>`;
+    ` : '';
 
     const totoroGridHtml = visibleBooks.map((bk) => {
       const readyTests = countReadyTestsInBook(bk.id);
@@ -901,8 +901,7 @@
     if (state.loadingBank === state.source) {
       examListHtml = `
         <div class="lp-empty-slot" role="status">
-          <div class="lp-empty-title">Đang nạp ngân hàng đề Listening…</div>
-          <p class="lp-empty-desc">Hệ thống đang tải danh sách audio và câu hỏi cho kệ sách này.</p>
+          <div class="lp-empty-title">Đang mở kệ đề Listening…</div>
         </div>
       `;
     } else if (!testParts.length && !testFulls.length) {
@@ -910,14 +909,11 @@
         <div class="lp-empty-slot" role="status">
           <div class="lp-empty-mini-totoro">${renderTotoroBookSvg(curBook, { suffix: 'empty', readyCount: 0 })}</div>
           <div class="lp-empty-copy">
-            <div class="lp-empty-title">${esc(curBook?.title || '')} · Test ${state.selectedTestNum} sẵn sàng nạp đề</div>
-            <p class="lp-empty-desc">
-              Khung 4 phần (<strong>Part 1 → Part 2 → Part 3 → Part 4 &amp; FULL TEST</strong>) đã dựng sẵn cho cuốn này.
-              Import bộ đề vào <code>${esc(bankFile)}</code> với <code>bookId: '${esc(curBook?.id || '')}', testNum: ${state.selectedTestNum}</code> để mở khóa ngay.
-            </p>
+            <div class="lp-empty-title">${esc(curBook?.title || '')} · Test ${state.selectedTestNum}</div>
+            <p class="lp-empty-desc">Đề thi này đang được cập nhật.</p>
             <div class="lp-empty-actions">
-              <button type="button" class="btn btn-primary lp-btn-sm" onclick="ListeningPracticeApp.jumpToFirstReady()">Mở bộ đề đang sẵn sàng →</button>
-              <button type="button" class="btn-subtle lp-btn-sm" onclick="ListeningPracticeApp.openSource('map_studio')">Mở Map &amp; Note Studio</button>
+              <button type="button" class="btn btn-primary lp-btn-sm" onclick="ListeningPracticeApp.jumpToFirstReady()">Mở đề sẵn sàng →</button>
+              <button type="button" class="btn-subtle lp-btn-sm" onclick="ListeningPracticeApp.openSource('map_studio')">Map &amp; Note Studio</button>
             </div>
           </div>
         </div>
@@ -927,8 +923,8 @@
         ${testFulls.length ? `
           <div class="lp-section-block">
             <div class="lp-section-head">
-              <h3 class="lp-section-title">FULL TEST · Trọn bộ 4 Part</h3>
-              <span class="lp-section-badge">~30 phút · Chuẩn phòng thi Cambridge</span>
+              <h3 class="lp-section-title">FULL TEST</h3>
+              <span class="lp-section-badge">Parts 1–4</span>
             </div>
             <div class="lp-parts-grid is-single">
               ${testFulls.map((ft) => renderPartCard(ft, true)).join('')}
@@ -937,8 +933,8 @@
         ` : ''}
         <div class="lp-section-block">
           <div class="lp-section-head">
-            <h3 class="lp-section-title">Luyện từng phần · Part 1 – Part 4</h3>
-            <span class="lp-section-badge tabular">${testParts.length} phần sẵn sàng</span>
+            <h3 class="lp-section-title">Parts 1–4</h3>
+            <span class="lp-section-badge tabular">${testParts.length} parts</span>
           </div>
           <div class="lp-parts-grid">
             ${testParts.map((p) => renderPartCard(p, false)).join('')}
@@ -947,28 +943,33 @@
       `;
     }
 
+    const shelfHeading = state.source === 'cambridge'
+      ? 'Cambridge IELTS'
+      : (state.source === 'volume' ? 'Real Listening Tests' : 'Recent Actual Tests');
+
     root.innerHTML = `
       <div class="tot-section-shell ink-brackets lp-hub-shell">
         <div class="lp-hub-head">
           <div class="lp-hub-head-left">
-            <button type="button" class="btn-subtle lp-btn-back" id="lp-btn-back-portal" onclick="ListeningPracticeApp.openPortal()">← Practice</button>
+            <button type="button" class="btn-subtle lp-btn-back" id="lp-btn-back-portal" onclick="ListeningPracticeApp.openPortal()">← PRACTICE</button>
             <div>
-              <h2 class="tot-shell-title">${esc(curSourceObj?.bookTitle || 'Listening Practice')}</h2>
+              <h2 class="tot-shell-title">${esc(curSourceObj?.bookTitle || 'LISTENING PRACTICE')}</h2>
               <p class="tot-shell-sub">${esc(curSourceObj?.desc || '')}</p>
             </div>
           </div>
           <div class="lp-hub-head-right">
-            <span class="lp-shelf-stat tabular">${readyBooksCount}/${books.length} cuốn sẵn sàng</span>
+            <span class="lp-shelf-stat tabular">${readyBooksCount}/${books.length} ready</span>
           </div>
         </div>
 
-        <section class="lp-shelf-section" aria-label="Kệ sách Totoro 3×3">
+        <section class="lp-shelf-section" aria-label="${esc(shelfHeading)}">
+          ${groupTabsHtml ? `
           <div class="lp-shelf-toolbar">
-            <div class="lp-shelf-heading">Chọn cuốn sách Totoro của bạn</div>
+            <div class="lp-shelf-heading">${esc(shelfHeading)}</div>
             ${groupTabsHtml}
-          </div>
+          </div>` : ''}
 
-          <div class="lp-totoro-grid" id="lp-totoro-grid" role="group" aria-label="Danh sách cuốn Listening 3×3">
+          <div class="lp-totoro-grid" id="lp-totoro-grid" role="group" aria-label="${esc(shelfHeading)}">
             ${totoroGridHtml}
           </div>
         </section>

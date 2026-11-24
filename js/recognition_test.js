@@ -731,10 +731,8 @@
     const titleEl = document.getElementById('recog-modal-title');
     if (badge) {
       badge.textContent = session.mode === 'task_final'
-        ? 'TEST KẾT THÚC TASK'
-        : (session.mode === 'old_review'
-          ? 'SPEED QUIZ · ÔN TẬP TỪ CŨ'
-          : (session.mode === 'task_study_quiz' ? 'SPEED QUIZ · HỌC TỪ TASK' : 'SPEED QUIZ · 100% BỘ TỪ'));
+        ? 'TASK TEST'
+        : 'SPEED QUIZ';
     }
     if (titleEl) titleEl.textContent = session.title;
     if (!body) return;
@@ -752,27 +750,27 @@
     body.innerHTML = `
       <div class="recog-intro-card">
         <div class="recog-intro-title">${isList
-          ? (isListenMode ? `Nghe &amp; chọn nghĩa siêu tốc (${total.toLocaleString('vi-VN')} từ)` : `Kiểm chứng 100% mặt chữ &amp; nghĩa (${total.toLocaleString('vi-VN')} từ)`)
+          ? (isListenMode ? `Listening Speed Quiz · ${total.toLocaleString('vi-VN')} từ` : `Speed Quiz · ${total.toLocaleString('vi-VN')} từ`)
           : (isTaskStudy
-            ? `${isListenMode ? 'Speed Quiz Nghe' : 'Speed Quiz'} ${total} từ của ${esc(session.taskLabel)} — Đúng hết mở Test ngay!`
-            : (isOldReview ? `Ôn nhanh ${total} từ cũ qua Speed Quiz để mở ${esc(session.taskLabel)}` : `Kiểm tra phản xạ đọc hiểu (${total} từ)`))}</div>
+            ? `Speed Quiz · ${esc(session.taskLabel)} · ${total} từ`
+            : (isOldReview ? `Ôn nhanh ${total} từ cũ · ${esc(session.taskLabel)}` : `Speed Quiz · ${total} từ`))}</div>
         <div class="recog-rules-list">
           ${isListenMode
-            ? `<div><strong>1. Phản xạ Nghe thực chiến (Ẩn mặt chữ):</strong> Hệ thống tự động đọc từ chuẩn giọng IELTS (xoay vòng Anh / Úc / Mỹ · bấm nút loa hoặc phím <code>R</code> để nghe lại). Bạn có <strong>${limitSec} giây</strong> để chọn đúng <strong>nghĩa Tiếng Việt</strong> hoặc <strong>cụm Paraphrase tương đương trong băng nghe</strong> (cẩn thận <strong>bẫy trái nghĩa</strong> · phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>).</div>`
-            : `<div><strong>1. Tốc độ Reading thực chiến:</strong> Mỗi từ có <strong>${limitSec} giây</strong> để nhìn mặt chữ và chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>).</div>`}
-          <div><strong>2. Đảm bảo thuộc nằm lòng:</strong> ${(isOldReview || isTaskStudy) ? 'Hoàn tất lượt kiểm tra và vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.' : `Vòng 1 cần đạt <strong>&ge; ${PASS_THRESHOLD_PCT}%</strong>, sau đó vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.`}</div>
+            ? `<div><strong>1. Nghe phản xạ:</strong> Tự động đọc chuẩn giọng IELTS UK/AU/US, ẩn mặt chữ. Chọn đúng nghĩa hoặc cụm <strong>Paraphrase</strong> trong <strong>${limitSec} giây</strong> — cẩn thận bẫy trái nghĩa. Phím <code>R</code> nghe lại, <code>1–4</code> chọn nhanh.</div>`
+            : `<div><strong>1. Phản xạ đọc hiểu:</strong> Mỗi từ có <strong>${limitSec} giây</strong> để chọn đúng nghĩa. Phím <code>1–4</code> chọn nhanh, <code>Space</code> nếu chưa biết.</div>`}
+          <div><strong>2. Sửa sạch lỗi:</strong> ${(isOldReview || isTaskStudy) ? 'Hoàn tất lượt và vượt qua <strong>Vòng Sửa Lỗi 100%</strong>.' : `Đạt <strong>&ge; ${PASS_THRESHOLD_PCT}%</strong> vòng đầu và vượt qua <strong>Vòng Sửa Lỗi 100%</strong>.`}</div>
           ${isList
-            ? `<div><strong>3. Tự động phân loại Đã thuộc / Chưa thuộc:</strong> Trả lời đúng &le; ${limitSec} giây tự động đưa vào <strong>Đã thuộc</strong>; trả lời sai, hết giờ hoặc bấm <em>Chưa biết</em> tự động đưa vào <strong>Chưa thuộc</strong> (và <strong>Cần ôn</strong>) để lọc học lại ngay.</div>
-               <div><strong>4. Chia ${totalRounds} chặng &times; ${ROUND_SIZE} từ (Tự động lưu):</strong> Có thể bấm <strong>Tạm lưu &amp; Nghỉ</strong> bất cứ lúc nào, lần sau thi tiếp đúng vị trí đang dở.</div>`
+            ? `<div><strong>3. Phân loại tự động:</strong> Đúng &le; ${limitSec} giây đánh dấu <strong>Đã thuộc</strong>; sai hoặc hết giờ đưa vào <strong>Chưa thuộc</strong>.</div>
+               <div><strong>4. Chia ${totalRounds} chặng &times; ${ROUND_SIZE} từ:</strong> Tự động lưu tiến độ, có thể dừng và học tiếp bất cứ lúc nào.</div>`
             : (isTaskStudy
-              ? `<div><strong>3. Tự động cập nhật Đã thuộc &amp; mở Test Task:</strong> Trả lời đúng &le; ${limitSec} giây tự động đánh dấu <strong>Đã thuộc</strong> ngay lập tức. Hoàn thành đúng sạch 100% (${poolTotal}/${poolTotal} từ) là <strong>vào làm Test Task được luôn</strong>!</div>`
+              ? `<div><strong>3. Mở khóa Test:</strong> Đúng &le; ${limitSec} giây đánh dấu <strong>Đã thuộc</strong>. Thuộc đủ <strong>${poolTotal}/${poolTotal}</strong> từ mở ngay bài Test.</div>`
               : (isOldReview
-                ? `<div><strong>3. Tự động mở khóa Task:</strong> Ngay khi sửa sạch lỗi (100% từ vượt ngưỡng &le; ${limitSec} giây), các từ cũ được cập nhật <strong>Đã thuộc</strong> và bạn vào làm <strong>${esc(session.taskLabel)}</strong> ngay lập tức.</div>`
-                : `<div><strong>3. Kỷ luật phòng thi:</strong> Không chuyển tab / rời cửa sổ khi đang làm bài (rời quá 3 lần sẽ bị khóa bài).</div>`))}
+                ? `<div><strong>3. Mở khóa Task:</strong> Sửa sạch 100% lỗi để mở ngay <strong>${esc(session.taskLabel)}</strong>.</div>`
+                : `<div><strong>3. Kỷ luật phòng thi:</strong> Không chuyển tab hay rời cửa sổ khi đang làm bài.</div>`))}
         </div>
         ${session.resumed ? `
           <div class="recog-resume-banner">
-            Đã khôi phục tiến độ trước đó: <strong>${session.cursor} / ${total} từ</strong> (Chặng ${curRound} / ${totalRounds} · Đúng ${session.correctCount} từ).
+            Tiếp tục tiến độ: <strong>${session.cursor} / ${total} từ</strong> · Chặng ${curRound}/${totalRounds} · Đúng ${session.correctCount}.
           </div>` : ''}
         <div class="recog-intro-actions">
           <button type="button" class="btn-subtle" onclick="RecognitionTestModule.closeModal()">Để sau</button>

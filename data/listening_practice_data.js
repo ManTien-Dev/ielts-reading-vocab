@@ -15,34 +15,34 @@
   const SOURCES = [
     {
       id: 'cambridge',
-      label: 'CAMBRIDGE 1–20',
-      bookTitle: 'Cambridge IELTS Listening 1–20',
-      shortBadge: '20 cuốn · Kệ 3×3',
-      desc: 'Trọn bộ 20 cuốn Cambridge Listening chia theo kệ 3×3 trực quan. Mỗi cuốn là một Totoro riêng biệt — đủ Test 1–4, Part 1–4 & Full Test 30 phút.',
+      label: 'Cambridge IELTS',
+      bookTitle: 'Cambridge IELTS',
+      shortBadge: '★ 20 Books',
+      desc: 'Chuẩn đề Cambridge sát cấu trúc phòng thi thật — nổi bật bẫy Paraphrase Part 3–4 và Map Labelling.',
       scene: 'headphones'
     },
     {
       id: 'volume',
-      label: 'REAL VOLUME 1–9',
-      bookTitle: 'Real Listening Test Volume 1–9',
-      shortBadge: '9 tập · Kệ 3×3',
-      desc: 'Tuyển chọn 9 tập đề Listening thực chiến mật độ Distractor & Paraphrase cao — tối ưu luyện phản xạ bắt bẫy đổi ý Band 7.0–9.0.',
+      label: 'Real Listening',
+      bookTitle: 'Real Listening Tests',
+      shortBadge: '9 Volumes',
+      desc: 'Tuyển chọn đề tốc độ cao với mật độ Distractor dày — rèn phản xạ bắt bẫy đổi ý Band 7.0–9.0.',
       scene: 'umbrella'
     },
     {
       id: 'actual',
-      label: 'RECENT ACTUAL',
-      bookTitle: 'IELTS Listening Recent Actual',
-      shortBadge: '9 bộ · Kệ 3×3',
-      desc: 'Tổng hợp 9 bộ đề thi Listening thật gần đây theo đúng cấu trúc phòng thi máy — bám sát xu hướng Part 1–4 mới nhất.',
+      label: 'Recent Actual Tests',
+      bookTitle: 'Recent Actual Tests',
+      shortBadge: '9 Sets',
+      desc: 'Tổng hợp đề thi thật gần đây bám sát xu hướng Part 1–4 và giọng đọc đa vùng miền.',
       scene: 'studio'
     },
     {
       id: 'map_studio',
-      label: 'MAP & NOTE STUDIO',
-      bookTitle: 'Map Labelling & Note Studio',
-      shortBadge: '11 bài sẵn sàng',
-      desc: 'Phòng luyện chuyên sâu Bản đồ SVG tương tác (Part 2) và Note Completion Part 1–4 — Audio Neural 2 lượt tự động, mở làm ngay hôm nay.',
+      label: 'Map & Note Studio',
+      bookTitle: 'Map & Note Studio',
+      shortBadge: '★ 11 Ready',
+      desc: 'Chuyên đề Map Labelling Part 2 và Note Completion Part 1–4 — chấm đáp án và đối chiếu Transcript trực tiếp.',
       scene: 'compass'
     }
   ];
@@ -74,7 +74,7 @@
       persona: 'acorn', eyes: 'happy',
       palette: { fur: '#974E35', furDark: '#723824', spine: '#58291A', belly: '#FBF5E8', accent: '#F0C772', cheek: '#F0A490' },
       stars: 4, diff: 'Band 6.5–8.0', tag: 'Bẫy đổi ý Part 1',
-      review: 'Cân bằng đời sống & học thuật — tần suất cao bẫy sửa thông tin phút chót (self-correction) ở Part 1 và Part 2.'
+      review: 'Cân bằng đời sống & học thuật — tần suất cao bẫy sửa thông tin phút chót ở Part 1 và Part 2.'
     },
     {
       id: 'lcam_17', source: 'cambridge', num: 17, testsCount: 4,
@@ -389,7 +389,7 @@
       taskId: 'lmap_01',
       title: 'Botanical Park & Lakeside Map',
       subtitle: 'Bản đồ công viên thực vật & hồ di sản — định hướng lối vào, cầu gỗ và khu triển lãm.',
-      qTypes: ['Map Labelling (SVG)'], questionsCount: 6, durationMin: 6, isMap: true
+      qTypes: ['Map Labelling'], questionsCount: 6, durationMin: 6, isMap: true
     },
     lcam_20_t1_p3: {
       id: 'lcam_20_t1_p3', source: 'cambridge', bookId: 'lcam_20', testNum: 1, partNum: 3,
@@ -419,7 +419,7 @@
       taskId: 'lmap_02',
       title: 'Market Town & Roundabout Map',
       subtitle: 'Bản đồ quy hoạch trung tâm thị trấn có bùng binh — xác định vị trí các công trình mới.',
-      qTypes: ['Map Labelling (SVG)'], questionsCount: 6, durationMin: 6, isMap: true
+      qTypes: ['Map Labelling'], questionsCount: 6, durationMin: 6, isMap: true
     },
     lcam_20_t2_p3: {
       id: 'lcam_20_t2_p3', source: 'cambridge', bookId: 'lcam_20', testNum: 2, partNum: 3,
@@ -442,7 +442,7 @@
       taskId: 'lmap_03',
       title: 'University Arts Centre Floor Plan',
       subtitle: 'Mặt bằng trung tâm nghệ thuật đại học — chỉ đường sảnh chính, phòng thu & thư viện.',
-      qTypes: ['Floor Plan (SVG)'], questionsCount: 6, durationMin: 6, isMap: true
+      qTypes: ['Floor Plan'], questionsCount: 6, durationMin: 6, isMap: true
     },
     lcam_19_t1_p2b: {
       id: 'lcam_19_t1_p2b', source: 'cambridge', bookId: 'lcam_19', testNum: 1, partNum: 2,
@@ -466,8 +466,8 @@
       source: 'cambridge',
       bookId: 'lcam_20',
       testNum: 1,
-      title: 'Cambridge 20 · Test 1 (Full 4 Parts)',
-      subtitle: 'Trọn bộ 4 phần thi chuẩn Cambridge (Part 1 Note → Part 2 Map SVG → Part 3 Thảo luận → Part 4 Bài giảng).',
+      title: 'Cambridge 20 · Test 1',
+      subtitle: 'Trọn bộ Part 1 → Part 4 chuẩn phòng thi Cambridge — bao gồm Note Completion, Map Labelling và bài giảng học thuật.',
       partIds: ['lcam_20_t1_p1', 'lcam_20_t1_p2', 'lcam_20_t1_p3', 'lcam_20_t1_p4'],
       questionsCount: 30,
       durationMin: 27
@@ -477,8 +477,8 @@
       source: 'cambridge',
       bookId: 'lcam_20',
       testNum: 2,
-      title: 'Cambridge 20 · Test 2 (Full 4 Parts)',
-      subtitle: 'Trọn bộ 4 phần thi chuẩn Cambridge (Part 1 Phỏng vấn → Part 2 Map Thị trấn → Part 3 Luận văn → Part 4 Đô thị).',
+      title: 'Cambridge 20 · Test 2',
+      subtitle: 'Trọn bộ Part 1 → Part 4 chuẩn phòng thi Cambridge — nổi bật bản đồ thị trấn có bùng binh và thảo luận luận văn.',
       partIds: ['lcam_20_t2_p1', 'lcam_20_t2_p2', 'lcam_20_t2_p3', 'lcam_20_t2_p4'],
       questionsCount: 30,
       durationMin: 27
