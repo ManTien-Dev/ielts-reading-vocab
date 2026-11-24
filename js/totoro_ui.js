@@ -855,28 +855,41 @@
       setTxt('home-lb-myrank', snap.meWeek ? `#${snap.meWeek.rank} / ${entries.length || 1}` : 'Chưa xếp hạng');
     }
 
-    // Recent Tasks History (Exact demo_v3 .tot-hist-row + .tot-hist-badge)
+    // Unified Recent History (Merges BOTH Tasks & Reading Practice attempts chronologically!)
     const histEl = document.getElementById('home-history-list');
     if (histEl) {
-      const recent = snap.completedTasks.slice(0, 5);
-      histEl.innerHTML = recent.length
-        ? recent.map(([tid, info]) => {
-            const taskObj = (window.APP_TASKS_DATA?.tasks || []).find((t) => t.id === tid);
-            const label = taskObj ? `${taskObj.label} · ${taskObj.theme || ''}` : tid.toUpperCase();
-            const score = info.recognitionScore != null ? `${info.recognitionScore}% · Đạt` : `${info.translationScore ?? '--'} / 10`;
-            const dt = info.updatedAt ? new Date(info.updatedAt).toLocaleDateString('vi-VN') : 'Đã nộp';
-            return `
-              <div class="tot-hist-row">
-                <div style="min-width:0;overflow:hidden;">
-                  <div style="font-size:13px;font-weight:750;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(label)}</div>
-                  <div style="font-size:11px;color:var(--ink-3);font-weight:500;">${esc(dt)}</div>
-                </div>
-                <span class="tot-hist-badge tabular">${esc(score)}</span>
+      const rpHist = (window.ReadingPracticeStore?.getHistory?.() || []).map((h) => ({
+        ts: h.submittedAt || 0,
+        title: h.title || 'Reading Practice',
+        sub: `${h.source === 'cambridge' ? 'Cambridge' : (h.source === 'volume' ? 'Volume' : (h.source === 'actual' ? 'Actual' : 'Reading'))} · ${h.submittedAt ? new Date(h.submittedAt).toLocaleDateString('vi-VN') : 'Đã nộp'}`,
+        badge: `Band ${Number(h.band || 0).toFixed(1)} · ${h.score}/${h.total}`,
+        action: h.isFull
+          ? `window.TotoroUI.enterSkillMode('Reading', 'practice'); window.ReadingPracticeApp?.startFullTest('${esc(h.itemId)}', { openInReview: true });`
+          : `window.TotoroUI.enterSkillMode('Reading', 'practice'); window.ReadingPracticeApp?.startPassage('${esc(h.itemId)}', { openInReview: true });`,
+      }));
+      const taskHist = snap.completedTasks.map(([tid, info]) => {
+        const taskObj = (window.APP_TASKS_DATA?.tasks || []).find((t) => t.id === tid);
+        return {
+          ts: info.updatedAt || 0,
+          title: taskObj ? `${taskObj.label} · ${taskObj.theme || ''}` : tid.toUpperCase(),
+          sub: `Task Từ vựng · ${info.updatedAt ? new Date(info.updatedAt).toLocaleDateString('vi-VN') : 'Đã nộp'}`,
+          badge: info.recognitionScore != null ? `${info.recognitionScore}% · Đạt` : `${info.translationScore ?? '--'} / 10`,
+          action: "window.TotoroUI?.enterSkillMode('Reading', 'task')",
+        };
+      });
+      const merged = [...rpHist, ...taskHist].sort((a, b) => b.ts - a.ts).slice(0, 5);
+      histEl.innerHTML = merged.length
+        ? merged.map((row) => `
+            <button type="button" class="tot-hist-row tot-hist-row-btn" onclick="${row.action}">
+              <div style="min-width:0;overflow:hidden;text-align:left;">
+                <div style="font-size:13px;font-weight:750;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(row.title)}</div>
+                <div style="font-size:11px;color:var(--ink-3);font-weight:500;margin-top:1px;">${esc(row.sub)}</div>
               </div>
-            `;
-          }).join('')
-        : '<div style="font-size:12.5px;color:var(--ink-3);padding:12px 0;">Bạn chưa hoàn thành Task nào. Chọn tab Task để bắt đầu nhé!</div>';
-      setTxt('home-history-total', `${snap.completedTasks.length + (window.ReadingPracticeStore?.getHistory?.().length || 0)} bài`);
+              <span class="tot-hist-badge tabular">${esc(row.badge)}</span>
+            </button>
+          `).join('')
+        : '<div style="font-size:12.5px;color:var(--ink-3);padding:12px 0;">Chưa có bài làm nào. Chọn <strong>Reading</strong> hoặc <strong>Listening</strong> phía trên để bắt đầu nhé!</div>';
+      setTxt('home-history-total', `${snap.completedTasks.length + rpHist.length} bài`);
     }
 
     if (activeHomeScope === 'reading') {

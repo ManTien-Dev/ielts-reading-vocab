@@ -2498,26 +2498,53 @@ html[data-mode="calm"] #screen-study .study-controls .btn {
 }
 
 /* ==========================================================================
-   ZERO-SCROLL DESKTOP FIT FOR FLASHCARD (#screen-study) & HOME (#screen-home)
-   (Fits 100% inside 1280x720, 1366x768, 1536x740, 1440x900, 1920x920 with 0 scrollbar!)
+   BESPOKE ULTRA-SLIM TOTORO SCROLLBAR (6px warm-ink pill thumb across app)
+   ========================================================================== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(82, 77, 69, 0.26) transparent;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(82, 77, 69, 0.22);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(82, 77, 69, 0.42);
+}
+html[data-theme="dark"] * {
+  scrollbar-color: rgba(235, 230, 220, 0.24) transparent;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(235, 230, 220, 0.20);
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(235, 230, 220, 0.38);
+}
+
+/* ==========================================================================
+   ZERO-SCROLL DESKTOP FIT FOR FLASHCARD (#screen-study) ONLY
+   (Home #screen-home scrolls freely with slim custom scrollbar — zero clipping!)
    ========================================================================== */
 @media (min-width: 1200px) and (min-height: 660px) {
   html:has(#screen-study.active),
-  body:has(#screen-study.active),
-  html:has(#screen-home.active),
-  body:has(#screen-home.active) {
+  body:has(#screen-study.active) {
     height: 100dvh !important;
     max-height: 100dvh !important;
     overflow: hidden !important;
   }
-  body:has(#screen-study.active) #app-shell,
-  body:has(#screen-home.active) #app-shell {
+  body:has(#screen-study.active) #app-shell {
     height: 100dvh !important;
     max-height: 100dvh !important;
     overflow: hidden !important;
   }
-  body:has(#screen-study.active) main.app-main,
-  body:has(#screen-home.active) main.app-main {
+  body:has(#screen-study.active) main.app-main {
     min-height: 0 !important;
     height: calc(100dvh - 60px) !important;
     padding: 6px 20px 10px !important;
@@ -2618,43 +2645,38 @@ html[data-mode="calm"] #screen-study .study-controls .btn {
     font-size: 11.5px !important;
   }
 
-  /* Home zero-scroll exact 3-row fit (1 : 2 : 3 vertical proportion, ~0.5cm / 19px bottom margin) */
+  /* Home: Natural smooth vertical scrolling with generous breathing room & ZERO card clipping! */
   body:has(#screen-home.active) main.app-main {
-    height: calc(100dvh - 69px) !important;
-    padding: 8px 20px 19px !important;
+    height: auto !important;
+    min-height: calc(100dvh - 64px) !important;
+    padding: 12px 22px 32px !important;
+    overflow: visible !important;
   }
   #screen-home.active {
-    flex: 1 1 auto !important;
+    flex: 1 0 auto !important;
     min-height: 0 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
   #screen-home .tot-home-layout {
-    flex: 1 1 auto !important;
-    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
     min-height: 0 !important;
-    grid-template-rows: minmax(114px, 1fr) minmax(0, 2fr) minmax(0, 3fr) !important;
-    gap: 12px !important;
-    padding-bottom: 0 !important;
-    overflow: hidden !important;
+    gap: 16px !important;
+    padding-bottom: 12px !important;
+    overflow: visible !important;
   }
-  #screen-home .tot-home-top,
-  #screen-home .tot-skills-grid,
-  #screen-home .tot-home-bottom {
-    min-height: 0 !important;
-    align-items: stretch !important;
-    overflow: hidden !important;
+  #screen-home .tot-home-top {
+    overflow: visible !important;
   }
   #screen-home .tot-hero-card,
   #screen-home .tot-goal-card,
-  #screen-home .tot-skill-card,
   #screen-home .tot-home-panel {
-    min-height: 0 !important;
-    height: 100% !important;
-    max-height: none !important;
-    overflow: hidden !important;
+    height: auto !important;
+    overflow: visible !important;
   }
-  #screen-home .tot-chart-wrap { flex: 1 1 auto !important; min-height: 100px !important; max-height: none !important; padding-top: 14px !important; }
-  #screen-home .tot-chart-track { min-height: 60px !important; }
+  #screen-home .tot-chart-wrap { min-height: 196px !important; max-height: none !important; padding-top: 18px !important; }
+  #screen-home .tot-chart-track { min-height: 112px !important; }
 
   /* Task Hub zero-scroll exact viewport fit on desktop (~0.5cm / 19px bottom margin) */
   html:has(#screen-tasks-hub.active),
@@ -2757,7 +2779,6 @@ html[data-mode="calm"] #screen-study .study-controls .btn {
     gap: 7px !important;
   }
   #screen-study #widget-study-timer > .totoro-peeker { top: -18px !important; right: 26px !important; width: 48px !important; height: 27px !important; }
-  body:has(#screen-home.active) main.app-main,
   body:has(#screen-tasks-hub.active) main.app-main {
     height: calc(100dvh - 63px) !important;
     padding: 7px 20px 19px !important;
@@ -8099,14 +8120,86 @@ body.rp-exam-fullscreen .tot-skill-subbar {
 }
 
 /* =========================================================
-   HOME CHUNG — STUDY PLAN · TARGET BAND · PROGRESS MONITOR BENTO
+   HOME CHUNG — ASYMMETRIC 2-COLUMN EDITORIAL WORKSPACE
+   (Linear / Notion / Apple Health hierarchy — scrollable & zero clipping!)
    ========================================================= */
+.tot-home-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.tot-home-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.58fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.tot-home-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.58fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.tot-home-main-col,
+.tot-home-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.tot-home-workspace .tot-home-panel {
+  padding: 18px 20px;
+  gap: 14px;
+}
+.tot-chart-tall {
+  min-height: 214px;
+  padding-top: 20px;
+}
+.tot-mon-bars-2col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+.tot-mon-bars-2col .tot-mon-meter {
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--surface-item);
+  border: 1px solid var(--border);
+  gap: 7px;
+}
+.tot-hist-row-btn {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface-item);
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 130ms var(--ease-out), border-color 140ms ease, background-color 140ms ease;
+}
+.tot-hist-row-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+  background: var(--surface);
+}
+.tot-hist-row-btn:active {
+  transform: scale(0.985);
+}
 .tot-monitor-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
   min-height: 0;
   align-items: stretch;
+}
+@media (max-width: 1080px) {
+  .tot-home-top,
+  .tot-home-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 680px) {
+  .tot-mon-bars-2col {
+    grid-template-columns: 1fr;
+  }
 }
 .tot-monitor-card {
   background: var(--surface-panel);
@@ -8411,6 +8504,23 @@ body.rp-exam-fullscreen .tot-skill-subbar {
   gap: 8px;
   flex: 1 1 auto;
   justify-content: center;
+}
+.tot-mon-bars.tot-mon-bars-2col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+.tot-mon-bars.tot-mon-bars-2col .tot-mon-meter {
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--surface-item);
+  border: 1px solid var(--border);
+  gap: 7px;
+}
+@media (max-width: 680px) {
+  .tot-mon-bars.tot-mon-bars-2col {
+    grid-template-columns: 1fr;
+  }
 }
 .tot-mon-meter {
   display: flex;
