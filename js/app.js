@@ -2617,53 +2617,14 @@
     return item?.clean_meaning || splitCoreMeaning(item?.definition).core;
   }
 
-  let _crossLexMap = null;
-  function getCrossLexEntry(lemma) {
-    const key = String(lemma || '').trim().toLowerCase();
-    if (!key) return null;
-    if (!_crossLexMap && window.APP_DATA) {
-      const m = new Map();
-      const lists = [
-        ...(Array.isArray(APP_DATA.file1_paraphrase_1500) ? APP_DATA.file1_paraphrase_1500 : []),
-        ...(Array.isArray(APP_DATA.file2_families_3500) ? APP_DATA.file2_families_3500 : []),
-      ];
-      for (const w of lists) {
-        const k = String(w?.lemma || '').trim().toLowerCase();
-        if (!k) continue;
-        let rec = m.get(k);
-        if (!rec) { rec = { syn: new Set(), ant: new Set() }; m.set(k, rec); }
-        (Array.isArray(w.clean_synonyms) ? w.clean_synonyms : []).forEach((s) => { const t = String(s || '').trim(); if (t) rec.syn.add(t); });
-        (Array.isArray(w.clean_antonyms) ? w.clean_antonyms : []).forEach((a) => { const t = String(a || '').trim(); if (t) rec.ant.add(t); });
-      }
-      if (m.size > 0) _crossLexMap = m;
-    }
-    return _crossLexMap ? (_crossLexMap.get(key) || null) : null;
-  }
-
   function getEnrichedSynonyms(item) {
-    const own = getCleanSynonyms(item);
-    const cross = isListeningSkillActive() ? Array.from(getCrossLexEntry(item?.lemma)?.syn || []) : [];
-    const seen = new Set();
-    const out = [];
-    for (const s of [...own, ...cross]) {
-      const t = String(s || '').trim();
-      const k = t.toLowerCase();
-      if (t && !seen.has(k)) { seen.add(k); out.push(t); }
-    }
-    return out;
+    // Strictly test ONLY synonyms that actually exist on this card's own data (never ambush with hidden cross-skill data)
+    return getCleanSynonyms(item);
   }
 
   function getEnrichedAntonyms(item) {
-    const own = getCleanAntonyms(item);
-    const cross = isListeningSkillActive() ? Array.from(getCrossLexEntry(item?.lemma)?.ant || []) : [];
-    const seen = new Set();
-    const out = [];
-    for (const a of [...own, ...cross]) {
-      const t = String(a || '').trim();
-      const k = t.toLowerCase();
-      if (t && !seen.has(k)) { seen.add(k); out.push(t); }
-    }
-    return out;
+    // Strictly test ONLY antonyms that actually exist on this card's own data
+    return getCleanAntonyms(item);
   }
 
   function getCleanSynonyms(item) {
