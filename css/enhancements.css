@@ -8610,3 +8610,192 @@ html[data-skill="listening"] .fc-face-front.is-listening-revealed #fc-front-pron
   color: var(--ink-2, #4b5563);
 }
 
+/* 5. Cambridge IELTS Interactive SVG Map Labelling */
+.lt-map-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+.lt-map-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.38fr) minmax(240px, 0.85fr);
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .lt-map-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+.lt-map-frame {
+  padding: 12px 14px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border-strong, rgba(100, 116, 139, 0.28));
+  background: var(--surface, #ffffff);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lt-map-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.lt-map-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(100, 116, 139, 0.22));
+  user-select: none;
+}
+.lt-map-bg {
+  fill: #fbf8f1;
+}
+[data-theme="dark"] .lt-map-bg {
+  fill: #1c2026;
+}
+.lt-map-zone-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #4b5563;
+}
+.lt-map-road-lbl {
+  font-size: 10.5px;
+  font-weight: 750;
+  fill: #57534e;
+}
+.lt-map-lm rect {
+  fill: #ece7da;
+  stroke: #78716c;
+  stroke-width: 1.4;
+}
+.lt-map-lm text {
+  font-size: 10.5px;
+  font-weight: 750;
+  fill: #1f2937;
+}
+.lt-map-lm.is-start rect {
+  fill: #2f6b32;
+  stroke: #1b431e;
+}
+.lt-map-lm.is-start text {
+  fill: #ffffff;
+  font-weight: 800;
+}
+.lt-map-compass circle {
+  fill: rgba(255, 255, 255, 0.92);
+  stroke: #9ca3af;
+  stroke-width: 1.2;
+}
+.lt-comp-n {
+  font-size: 11px;
+  font-weight: 900;
+  fill: #2f6b32;
+}
+.lt-comp-s {
+  font-size: 9.5px;
+  font-weight: 750;
+  fill: #6b7280;
+}
+.lt-map-pin {
+  cursor: pointer;
+}
+.lt-map-pin circle {
+  fill: #ffffff;
+  stroke: #1d4ed8;
+  stroke-width: 2.3;
+  transition: fill 0.14s ease, stroke 0.14s ease;
+}
+.lt-map-pin text {
+  font-size: 14px;
+  font-weight: 850;
+  fill: #1d4ed8;
+}
+.lt-map-pin:hover circle {
+  fill: #eff6ff;
+}
+.lt-map-pin.is-picked circle {
+  fill: #1d4ed8;
+  stroke: #1e3a8a;
+}
+.lt-map-pin.is-picked text {
+  fill: #ffffff;
+}
+.lt-map-pin.is-ok circle {
+  fill: #16a34a;
+  stroke: #14532d;
+}
+.lt-map-pin.is-ok text {
+  fill: #ffffff;
+}
+.lt-map-pin.is-err circle {
+  fill: #dc2626;
+  stroke: #7f1d1d;
+}
+.lt-map-pin.is-err text {
+  fill: #ffffff;
+}
+.lt-pin-tag-bg {
+  fill: #1d4ed8;
+}
+.lt-pin-tag-bg.is-ok { fill: #166534; }
+.lt-pin-tag-bg.is-err { fill: #991b1b; }
+.lt-pin-tag-txt {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  fill: #ffffff !important;
+}
+.lt-map-q-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lt-map-q-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.lt-map-q-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: 11px;
+  border: 1.5px solid var(--border, rgba(100, 116, 139, 0.22));
+  background: var(--surface, #ffffff);
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+.lt-map-q-row.is-active {
+  border-color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.08);
+}
+.lt-map-q-place {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink, #111827);
+}
+.lt-map-select {
+  height: 32px;
+  min-width: 58px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-strong, rgba(100, 116, 139, 0.34));
+  background: var(--bg-soft, #f7f4ec);
+  color: var(--ink, #111827);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+

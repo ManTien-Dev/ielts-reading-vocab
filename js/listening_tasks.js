@@ -356,9 +356,11 @@
         <article class="tot-task-card lt-task-card ${rec?.completed ? 'is-done' : ''} ${hasFull3 ? 'is-flagship' : ''}">
           <div class="lt-card-top">
             <span class="lt-part-badge">${esc(t.partLabel || 'Listening')}</span>
-            ${hasFull3
-              ? '<span class="lt-flagship-tag">Đủ 3 Test Cambridge</span>'
-              : '<span class="lt-t1-tag">Test 1 (30/30)</span>'}
+            ${t.isMapTask
+              ? '<span class="lt-map-tag">🗺️ Map Labelling · 3 Test</span>'
+              : (hasFull3
+                ? '<span class="lt-flagship-tag">Đủ 3 Test Cambridge</span>'
+                : '<span class="lt-t1-tag">Test 1 (30/30)</span>')}
           </div>
           <div class="lt-card-title">${esc(t.label)} · ${esc(t.theme || t.topicTitle || '')}</div>
           <div class="lt-card-sub tabular">Đã thuộc ${mastered}/${totalW} từ (${pct}%)</div>
@@ -433,9 +435,10 @@
       t2Answers: {},
       t2Done: false,
       t2Phase: 'preread', // 'preread' | 'playing' | 'answer'
-      // Test 3 state (Note Completion + 2-Column Compare)
+      // Test 3 state (Note Completion OR Map Labelling + 2-Column Compare)
       t3Phase: 'preread', // 'preread' | 'playing' | 'submitted'
       t3Inputs: {},
+      t3MapActiveQ: 1,
       t3Score: 0,
       t3Details: [],
     };
@@ -455,7 +458,7 @@
     const t2Convs = examState.task.test2Conversations || [];
     const t2Score = t2Convs.reduce((acc, c, i) => acc + (examState.t2Answers[i] === c.answerIndex ? 1 : 0), 0);
     const t2Total = t2Convs.length;
-    const t3Blanks = examState.task.test3NoteCompletion?.blanks || [];
+    const t3Items = examState.task.test3MapLabelling?.questions || examState.task.test3NoteCompletion?.blanks || [];
 
     map[tid] = {
       ...prev,
@@ -464,7 +467,7 @@
       t2Score: examState.t2Done ? t2Score : prev.t2Score,
       t2Total: examState.t2Done ? t2Total : prev.t2Total,
       t3Score: examState.t3Phase === 'submitted' ? examState.t3Score : prev.t3Score,
-      t3Total: examState.t3Phase === 'submitted' ? t3Blanks.length : prev.t3Total,
+      t3Total: examState.t3Phase === 'submitted' ? t3Items.length : prev.t3Total,
       completed: Boolean(prev.completed || completedAll),
       updatedAt: Date.now(),
     };
@@ -484,7 +487,11 @@
       if (pill) pill.textContent = 'TEST 2 · SHORT CONVERSATIONS MCQ (12 CÂU)';
       renderTest2();
     } else {
-      if (pill) pill.textContent = 'TEST 3 · THỰC CHIẾN NOTE COMPLETION';
+      if (pill) {
+        pill.textContent = examState.task.test3MapLabelling
+          ? 'TEST 3 · THỰC CHIẾN MAP LABELLING (A–H)'
+          : 'TEST 3 · THỰC CHIẾN NOTE COMPLETION';
+      }
       renderTest3();
     }
   }
@@ -641,7 +648,10 @@
     if (examState.t2Done) {
       const score = convs.reduce((acc, c, i) => acc + (examState.t2Answers[i] === c.answerIndex ? 1 : 0), 0);
       const pct = Math.round((score / Math.max(1, convs.length)) * 100);
-      const hasT3 = Boolean(examState.task.test3NoteCompletion);
+      const hasT3 = Boolean(examState.task.test3MapLabelling || examState.task.test3NoteCompletion);
+      const t3BtnLabel = examState.task.test3MapLabelling
+        ? 'Sang Test 3 (Bản đồ Map Labelling) →'
+        : 'Sang Test 3 (Note Completion) →';
 
       body.innerHTML = `
         <div class="lt-summary-card">
@@ -652,7 +662,7 @@
             </div>
             <div class="lt-sum-actions">
               ${hasT3
-                ? `<button type="button" class="btn btn-primary" onclick="ListeningTasksModule.goToStage(3)">Sang Test 3 (Note Completion) →</button>`
+                ? `<button type="button" class="btn btn-primary" onclick="ListeningTasksModule.goToStage(3)">${t3BtnLabel}</button>`
                 : `<button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeExam()">Hoàn tất &amp; Quay lại</button>`}
             </div>
           </div>
@@ -778,7 +788,7 @@
     const convs = examState.task.test2Conversations || [];
     if (examState.t2Idx + 1 >= convs.length) {
       examState.t2Done = true;
-      const hasT3 = Boolean(examState.task.test3NoteCompletion);
+      const hasT3 = Boolean(examState.task.test3MapLabelling || examState.task.test3NoteCompletion);
       saveTaskStageScore(!hasT3);
     } else {
       examState.t2Idx += 1;
@@ -842,10 +852,342 @@
     `;
   }
 
+  /* ---------------------------------------------------------
+     CAMBRIDGE IELTS INTERACTIVE SVG MAP LABELLING ENGINE
+     --------------------------------------------------------- */
+  function renderSvgMapHtml(ml, isSubmitted) {
+    const spec = ml.mapSpec || {};
+    const W = Number(spec.width || 680);
+    const H = Number(spec.height || 440);
+    const questions = ml.questions || [];
+
+    // Map letter -> assigned question num (active) or official question detail (submitted)
+    const assignedByLetter = {};
+    questions.forEach((q) => {
+      const picked = String(examState?.t3Inputs?.[q.num] || '').toUpperCase();
+      if (picked) assignedByLetter[picked] = q.num;
+    });
+    const detailByLetter = {};
+    if (isSubmitted) {
+      (examState?.t3Details || []).forEach((d) => {
+        detailByLetter[String(d.expected || '').toUpperCase()] = d;
+      });
+    }
+
+    const zonesSvg = (spec.zones || []).map((z) => {
+      const fill = esc(z.fill || '#f3f1e8');
+      const stroke = esc(z.stroke || '#b7b19e');
+      if (z.kind === 'ellipse') {
+        const lbl = z.label ? `<text x="${z.cx}" y="${z.cy + 4}" text-anchor="middle" class="lt-map-zone-lbl">${esc(z.label)}</text>` : '';
+        return `<ellipse cx="${z.cx}" cy="${z.cy}" rx="${z.rx}" ry="${z.ry}" fill="${fill}" stroke="${stroke}" stroke-width="1.6"/>${lbl}`;
+      }
+      const rx = z.rx != null ? z.rx : 8;
+      const lbl = z.label
+        ? `<text x="${Number(z.x) + Number(z.w) / 2}" y="${Number(z.y) + 18}" text-anchor="middle" class="lt-map-zone-lbl">${esc(z.label)}</text>`
+        : '';
+      return `<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="${rx}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>${lbl}`;
+    }).join('');
+
+    const roadsSvg = (spec.roads || []).map((r) => {
+      const stroke = esc(r.stroke || '#d5cbb5');
+      const sw = Number(r.width || 16);
+      if (r.kind === 'circle') {
+        const lbl = r.label ? `<text x="${r.cx}" y="${Number(r.cy) + Number(r.r) + 15}" text-anchor="middle" class="lt-map-road-lbl">${esc(r.label)}</text>` : '';
+        return `<circle cx="${r.cx}" cy="${r.cy}" r="${r.r}" fill="${esc(r.fill || '#f8f5ec')}" stroke="${stroke}" stroke-width="${sw}"/>${lbl}`;
+      }
+      const lbl = r.label && r.lx != null && r.ly != null
+        ? `<text x="${r.lx}" y="${r.ly}" text-anchor="middle" class="lt-map-road-lbl">${esc(r.label)}</text>`
+        : '';
+      return `<path d="${esc(r.d || '')}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="${esc(r.d || '')}" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.4" stroke-dasharray="6 6" stroke-linecap="round"/>${lbl}`;
+    }).join('');
+
+    const landmarksSvg = (spec.landmarks || []).map((lm) => {
+      const isStart = Boolean(lm.isStart);
+      const cls = isStart ? 'lt-map-lm is-start' : 'lt-map-lm';
+      const cx = Number(lm.x) + Number(lm.w) / 2;
+      const cy = Number(lm.y) + Number(lm.h) / 2 + 4;
+      return `
+        <g class="${cls}">
+          <rect x="${lm.x}" y="${lm.y}" width="${lm.w}" height="${lm.h}" rx="6"/>
+          <text x="${cx}" y="${cy}" text-anchor="middle">${isStart ? '📍 ' : ''}${esc(lm.label)}</text>
+        </g>`;
+    }).join('');
+
+    const c = spec.compass || { x: W - 52, y: 52 };
+    const compassSvg = `
+      <g class="lt-map-compass" transform="translate(${c.x}, ${c.y})">
+        <circle cx="0" cy="0" r="24"/>
+        <path d="M0 -18 L5 -2 L0 -6 L-5 -2 Z" fill="#2f6b32"/>
+        <path d="M0 18 L4 3 L0 6 L-4 3 Z" fill="#9ca3af"/>
+        <line x1="-15" y1="0" x2="15" y2="0" stroke="#9ca3af" stroke-width="1.2"/>
+        <text x="0" y="-27" text-anchor="middle" class="lt-comp-n">N</text>
+        <text x="0" y="34" text-anchor="middle" class="lt-comp-s">S</text>
+        <text x="-31" y="4" text-anchor="middle" class="lt-comp-s">W</text>
+        <text x="31" y="4" text-anchor="middle" class="lt-comp-s">E</text>
+      </g>`;
+
+    const pinsSvg = (spec.pins || []).map((p) => {
+      const ltr = String(p.letter || '').toUpperCase();
+      let stateCls = '';
+      let subTag = '';
+      if (isSubmitted) {
+        const det = detailByLetter[ltr];
+        if (det) {
+          stateCls = det.correct ? 'is-ok' : 'is-err';
+          subTag = `<g transform="translate(${p.x}, ${Number(p.y) + 27})">
+            <rect x="-22" y="-9" width="44" height="17" rx="8" class="lt-pin-tag-bg ${stateCls}"/>
+            <text x="0" y="3" text-anchor="middle" class="lt-pin-tag-txt">${det.correct ? '✓' : '★'} #${det.num}</text>
+          </g>`;
+        }
+      } else if (assignedByLetter[ltr]) {
+        stateCls = 'is-picked';
+        subTag = `<g transform="translate(${p.x}, ${Number(p.y) + 26})">
+          <rect x="-15" y="-8" width="30" height="16" rx="8" class="lt-pin-tag-bg is-picked"/>
+          <text x="0" y="3" text-anchor="middle" class="lt-pin-tag-txt">#${assignedByLetter[ltr]}</text>
+        </g>`;
+      }
+      const clickAttr = !isSubmitted ? `onclick="ListeningTasksModule.assignMapPinClick('${ltr}')"` : '';
+      return `
+        <g class="lt-map-pin ${stateCls}" data-pin-letter="${ltr}" ${clickAttr}>
+          <circle cx="${p.x}" cy="${p.y}" r="18"/>
+          <text x="${p.x}" y="${Number(p.y) + 5}" text-anchor="middle">${ltr}</text>
+          ${subTag}
+        </g>`;
+    }).join('');
+
+    return `
+      <div class="lt-map-frame">
+        <div class="lt-map-head">
+          <div class="lt-note-title">${esc(ml.title || 'Site Map')}</div>
+          <div class="lt-note-limit">${esc(ml.instruction || 'Choose the correct letter, A–H')}</div>
+        </div>
+        <svg class="lt-map-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(ml.title || 'IELTS Listening Map')}">
+          <rect x="0" y="0" width="${W}" height="${H}" rx="12" class="lt-map-bg"/>
+          ${zonesSvg}
+          ${roadsSvg}
+          ${landmarksSvg}
+          ${compassSvg}
+          ${pinsSvg}
+        </svg>
+      </div>
+    `;
+  }
+
+  function renderTest3Map() {
+    const body = document.getElementById('lt-exam-body');
+    const ml = examState?.task?.test3MapLabelling;
+    if (!body || !ml) return;
+    const questions = ml.questions || [];
+    const letters = (ml.mapSpec?.pins || []).map((p) => String(p.letter || '').toUpperCase());
+
+    if (examState.t3Phase === 'submitted') {
+      const total = questions.length;
+      const pct = Math.round((examState.t3Score / Math.max(1, total)) * 100);
+      const t1Score = examState.t1Results.filter((r) => r.correct).length;
+      const t1Tot = examState.words.length;
+      const t2Convs = examState.task.test2Conversations || [];
+      const t2Score = t2Convs.reduce((a, c, i) => a + (examState.t2Answers[i] === c.answerIndex ? 1 : 0), 0);
+      const detailsByNum = {};
+      (examState.t3Details || []).forEach((d) => { detailsByNum[d.num] = d; });
+
+      // STRICT 2-COLUMN COMPARE RULE:
+      // LEFT = Full Transcript (3-Color Signpost / Trap / Key + per-line Replay)
+      // RIGHT = Marked Cambridge SVG Map + Question Results & Route Notes
+      body.innerHTML = `
+        <div class="lt-t3-compare-banner">
+          <div>
+            <div class="lt-sum-kicker">ĐÃ NỘP &amp; HOÀN THÀNH TASK MAP LABELLING</div>
+            <div class="lt-sum-score tabular">
+              Test 3 Map: ${examState.t3Score}/${total} (${pct}%)
+              <span class="lt-sum-sub-chips">· T1: ${t1Score}/${t1Tot} · T2: ${t2Score}/${t2Convs.length}</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeExam()">Hoàn tất &amp; Về danh sách Task</button>
+        </div>
+
+        <div class="lt-legend-row">
+          <span class="lt-leg"><mark class="lt-hl-signpost">Mốc chỉ đường (Signpost)</mark></span>
+          <span class="lt-leg"><mark class="lt-hl-trap">Vị trí bẫy (Distractor)</mark></span>
+          <span class="lt-leg"><mark class="lt-hl-key">Chốt vị trí A–H (Key)</mark></span>
+          <span class="lt-leg" style="color:var(--ink-3);">· Bấm 🔊 cạnh mỗi dòng để nghe lại sửa tai</span>
+        </div>
+
+        <div class="lt-compare-grid">
+          <div class="lt-compare-left">
+            <div class="lt-col-head">CỘT TRÁI · FULL TRANSCRIPT (3 MÀU DẪN CHỨNG)</div>
+            <div class="lt-transcript-box">
+              ${(ml.transcriptSegments || []).map((seg, si) => `
+                <div class="lt-tr-line">
+                  <button type="button" class="lt-mini-play" onclick="ListeningTasksModule.replayT3Segment(${si})" title="Nghe lại câu này">🔊</button>
+                  <div class="lt-tr-text">
+                    <strong class="lt-tr-spk">${esc(seg.speaker || 'Guide')}:</strong>
+                    ${highlightTranscriptSegment(seg)}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="lt-compare-right">
+            <div class="lt-col-head">CỘT PHẢI · BẢN ĐỒ MAP LABELLING &amp; KẾT QUẢ</div>
+            ${renderSvgMapHtml(ml, true)}
+            <div class="lt-trap-notes-box">
+              <div class="lt-trap-notes-title">Kết quả từng địa điểm &amp; đường đi chuẩn:</div>
+              ${questions.map((q) => {
+                const det = detailsByNum[q.num] || { correct: false, typed: '', expected: q.answer };
+                return `
+                  <div class="lt-trap-note-row">
+                    <span class="lt-blank-res ${det.correct ? 'is-ok' : 'is-err'}" style="margin-right:6px;">
+                      <strong>(${q.num}) ${det.correct ? `✓ ${esc(det.expected)}` : `✗ ${esc(det.typed || 'trống')} → ${esc(det.expected)}`}</strong>
+                    </span>
+                    <strong>${esc(q.place)}:</strong> ${esc(q.routeNote || '')}
+                  </div>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // Active Test 3 Map Labelling: 10s Orientation -> 1-Shot Continuous Audio (NO replay!)
+    const activeQ = examState.t3MapActiveQ || 1;
+    body.innerHTML = `
+      <div class="lt-t3-stage">
+        <div class="lt-progress-row">
+          <span><strong>${esc(ml.scenarioIntro || 'Quan sát bản đồ, nghe chỉ đường 1 lần duy nhất và chọn chữ cái A–H.')}</strong></span>
+          <span class="lt-timer-pill" id="lt-t3-status-pill">Đọc bản đồ: 10s</span>
+        </div>
+
+        <div class="lt-oneshot-strip" id="lt-t3-audio-strip">
+          <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          <span id="lt-t3-audio-text">Tìm lối vào (📍) và la bàn N–E–S–W trên bản đồ — Băng sẽ tự phát 1 lần duy nhất…</span>
+        </div>
+
+        <div class="lt-map-workspace">
+          <div class="lt-map-canvas-col" id="lt-map-canvas-col">
+            ${renderSvgMapHtml(ml, false)}
+          </div>
+          <div class="lt-map-q-col">
+            <div class="lt-col-head">CHỌN CHỮ CÁI A–H CHO TỪNG ĐỊA ĐIỂM (BẤM DÒNG HOẶC BẤM TRÊN BẢN ĐỒ)</div>
+            <div class="lt-map-q-list" id="lt-map-q-list">
+              ${questions.map((q) => {
+                const picked = String(examState.t3Inputs[q.num] || '').toUpperCase();
+                return `
+                  <div class="lt-map-q-row ${activeQ === q.num ? 'is-active' : ''}" data-map-q="${q.num}" onclick="ListeningTasksModule.selectMapQuestion(${q.num})">
+                    <span class="lt-blank-num">${q.num}</span>
+                    <span class="lt-map-q-place">${esc(q.place)}</span>
+                    <select class="lt-map-select" data-map-select="${q.num}" onclick="event.stopPropagation()" onchange="ListeningTasksModule.assignMapLetter(${q.num}, this.value)">
+                      <option value="">—</option>
+                      ${letters.map((l) => `<option value="${l}" ${picked === l ? 'selected' : ''}>${l}</option>`).join('')}
+                    </select>
+                  </div>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="lt-t3-footer">
+          <span class="lt-hint-quiet">Chọn trực tiếp trên danh sách hoặc bấm chữ cái A–H trên bản đồ · Không nút nghe lại khi thi</span>
+          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.submitTest3()">Nộp bài &amp; Đối chiếu Bản đồ →</button>
+        </div>
+      </div>
+    `;
+
+    let preSec = 10;
+    preReadTimer = setInterval(() => {
+      preSec -= 1;
+      const pill = document.getElementById('lt-t3-status-pill');
+      if (preSec > 0) {
+        if (pill) pill.textContent = `Đọc bản đồ: ${preSec}s`;
+      } else {
+        clearInterval(preReadTimer);
+        preReadTimer = null;
+        if (!examState || examState.stage !== 3 || examState.t3Phase === 'submitted') return;
+        examState.t3Phase = 'playing';
+        const strip = document.getElementById('lt-t3-audio-strip');
+        if (strip) strip.classList.add('is-playing');
+        if (pill) pill.textContent = 'Đang phát băng (1/1)';
+
+        const segs = ml.transcriptSegments || [];
+        const onT3Turn = (si, seg) => {
+          const txt = document.getElementById('lt-t3-audio-text');
+          if (txt) txt.textContent = `🎙️ ${seg.speaker || 'Guide'} đang chỉ đường… (Đoạn ${si + 1}/${segs.length} · Không phát lại)`;
+        };
+        const onT3Done = () => {
+          const st = document.getElementById('lt-t3-audio-strip');
+          const txt = document.getElementById('lt-t3-audio-text');
+          const pl = document.getElementById('lt-t3-status-pill');
+          if (st) st.classList.remove('is-playing');
+          if (txt) txt.textContent = '✓ Băng đã phát xong (1/1) — Kiểm tra lại các chữ cái A–H rồi bấm Nộp bài!';
+          if (pl) pl.textContent = 'Sẵn sàng nộp';
+        };
+        playStudioMp3(ml.audioFile, {
+          turns: segs,
+          timestamps: ml.segmentTimestamps || [],
+          onTurn: onT3Turn,
+          onDone: onT3Done,
+        }).then((usedMp3) => {
+          if (!usedMp3 && examState && examState.stage === 3 && examState.t3Phase !== 'submitted') {
+            playTurnsOneShot(segs, {
+              rate: 0.94,
+              gapMs: 420,
+              onTurn: onT3Turn,
+              onDone: onT3Done,
+            });
+          }
+        });
+      }
+    }, 1000);
+  }
+
+  function refreshActiveMapUiOnly() {
+    if (!examState || !examState.task.test3MapLabelling || examState.t3Phase === 'submitted') return;
+    const ml = examState.task.test3MapLabelling;
+    const canvasCol = document.getElementById('lt-map-canvas-col');
+    if (canvasCol) canvasCol.innerHTML = renderSvgMapHtml(ml, false);
+    const activeQ = examState.t3MapActiveQ || 1;
+    document.querySelectorAll('#lt-map-q-list .lt-map-q-row').forEach((row) => {
+      const qn = Number(row.dataset.mapQ);
+      row.classList.toggle('is-active', qn === activeQ);
+      const sel = row.querySelector('select');
+      if (sel) sel.value = String(examState.t3Inputs[qn] || '').toUpperCase();
+    });
+  }
+
+  function selectMapQuestion(qNum) {
+    if (!examState || examState.t3Phase === 'submitted') return;
+    examState.t3MapActiveQ = Number(qNum);
+    refreshActiveMapUiOnly();
+  }
+
+  function assignMapLetter(qNum, letter) {
+    if (!examState || examState.t3Phase === 'submitted') return;
+    const clean = String(letter || '').trim().toUpperCase();
+    examState.t3Inputs[qNum] = clean;
+    const totalQ = (examState.task.test3MapLabelling?.questions || []).length;
+    if (clean && Number(qNum) < totalQ) {
+      examState.t3MapActiveQ = Number(qNum) + 1;
+    }
+    refreshActiveMapUiOnly();
+  }
+
+  function assignMapPinClick(letter) {
+    if (!examState || examState.t3Phase === 'submitted') return;
+    const qNum = examState.t3MapActiveQ || 1;
+    assignMapLetter(qNum, letter);
+  }
+
   function renderTest3() {
     const body = document.getElementById('lt-exam-body');
     if (!body || !examState) return;
     stopAllAudio();
+
+    if (examState.task.test3MapLabelling) {
+      renderTest3Map();
+      return;
+    }
 
     const nc = examState.task.test3NoteCompletion;
     if (!nc) {
@@ -991,6 +1333,24 @@
   function submitTest3() {
     if (!examState || examState.stage !== 3 || examState.t3Phase === 'submitted') return;
     stopAllAudio();
+    const ml = examState.task.test3MapLabelling;
+    if (ml) {
+      const qs = ml.questions || [];
+      let right = 0;
+      const details = qs.map((q) => {
+        const typed = String(examState.t3Inputs[q.num] || '').trim().toUpperCase();
+        const expected = String(q.answer || '').trim().toUpperCase();
+        const ok = Boolean(typed && typed === expected);
+        if (ok) right += 1;
+        return { num: q.num, expected, typed, correct: ok, note: ok ? 'Đúng' : (typed ? 'Sai vị trí' : 'Bỏ trống') };
+      });
+      examState.t3Score = right;
+      examState.t3Details = details;
+      examState.t3Phase = 'submitted';
+      saveTaskStageScore(true);
+      renderTest3();
+      return;
+    }
     const nc = examState.task.test3NoteCompletion;
     const blanks = nc?.blanks || [];
     let right = 0;
@@ -1009,12 +1369,12 @@
 
   function replayT3Segment(idx) {
     if (!examState || examState.t3Phase !== 'submitted') return;
-    const nc = examState.task.test3NoteCompletion;
-    const seg = nc?.transcriptSegments?.[idx];
+    const src = examState.task.test3MapLabelling || examState.task.test3NoteCompletion;
+    const seg = src?.transcriptSegments?.[idx];
     if (!seg) return;
-    const ts = nc?.segmentTimestamps?.[idx];
-    if (nc?.audioFile && Array.isArray(ts) && ts.length === 2 && getAudioBaseUrl()) {
-      playStudioMp3(nc.audioFile, { startSec: ts[0], endSec: ts[1] }).then((ok) => {
+    const ts = src?.segmentTimestamps?.[idx];
+    if (src?.audioFile && Array.isArray(ts) && ts.length === 2 && getAudioBaseUrl()) {
+      playStudioMp3(src.audioFile, { startSec: ts[0], endSec: ts[1] }).then((ok) => {
         if (!ok) playTurnsOneShot([seg], { rate: 0.92 });
       });
       return;
@@ -1057,6 +1417,9 @@
     pickT2Option,
     nextT2Question,
     onT3Input,
+    selectMapQuestion,
+    assignMapLetter,
+    assignMapPinClick,
     submitTest3,
     replayT3Segment,
     replayAfterSubmit,
