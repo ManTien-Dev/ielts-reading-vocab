@@ -233,7 +233,7 @@
     selectedHeadingKey: null // for tap-to-assign Matching Headings on touch/click
   };
 
-  const BANK_VERSION = '20261124f';
+  const BANK_VERSION = '20261124g';
   const _loadedBanks = {};
   const _bankPromises = {};
 

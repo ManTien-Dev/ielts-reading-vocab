@@ -6873,6 +6873,9 @@ html[data-theme="dark"] .thw-remind-btn.is-copied {
   font-size: calc(15.5px * var(--rp-font-scale, 1));
   line-height: 1.78;
   color: var(--ink);
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
 }
 .rp-para-lbl {
   display: inline-flex;
@@ -6897,6 +6900,8 @@ html[data-theme="dark"] .thw-remind-btn.is-copied {
   font-size: calc(13.8px * var(--rp-font-scale, 1));
   line-height: 1.64;
   color: var(--ink-2);
+  text-align: justify;
+  text-justify: inter-word;
 }
 
 .rp-word {
@@ -9372,8 +9377,11 @@ body.rp-exam-fullscreen {
 .ins-para-en {
   margin: 0;
   font-size: var(--ins-fs, 15px);
-  line-height: 1.68;
+  line-height: 1.72;
   color: var(--ins-ink);
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
 }
 .ins-para-lbl {
   font-weight: 800;
