@@ -419,7 +419,11 @@
       btn.classList.toggle('active', btn.dataset.totView === activeView);
     });
 
-    if (activeView === 'home') renderHomeDashboard();
+    if (activeView === 'home') {
+      renderHomeDashboard();
+    } else if (typeof window.__TOTORO_ENSURE_SKILL_MODE__ === 'function') {
+      window.__TOTORO_ENSURE_SKILL_MODE__();
+    }
     if (activeView === 'task') renderInlineTaskHub();
     if (activeView === 'practice') window.ReadingPracticeApp?.render?.();
     if (activeView === 'flashcard' && opts.fromUser && prevView !== 'flashcard' && B?.getCurrentUser?.() && B?.isAutoSpeakOn?.()) {
@@ -492,8 +496,9 @@
     document.body.classList.toggle('is-teacher-mode', isTeacher && teacherVisible);
 
     const modeChip = document.getElementById('header-mode-chip-text');
-    if (modeChip && /95[,.]5%/.test(modeChip.textContent || '')) {
-      modeChip.textContent = modeChip.textContent.replace(/\s*95[,.]5%/g, '').trim() || 'Reading';
+    if (modeChip && !(isTeacher && teacherVisible)) {
+      const curMode = typeof window.__TOTORO_GET_MODE__ === 'function' ? window.__TOTORO_GET_MODE__() : 'Overview';
+      modeChip.textContent = curMode === 'Overview' ? 'Home chung' : curMode;
     }
     const snap = getRealStudentSnapshot();
     const u = snap.user;
@@ -517,8 +522,9 @@
 
   function renderHomeDashboard() {
     const modeChip = document.getElementById('header-mode-chip-text');
-    if (modeChip && /95[,.]5%/.test(modeChip.textContent || '')) {
-      modeChip.textContent = modeChip.textContent.replace(/\s*95[,.]5%/g, '').trim() || 'Reading';
+    if (modeChip && !document.body.classList.contains('is-teacher-mode')) {
+      const curMode = typeof window.__TOTORO_GET_MODE__ === 'function' ? window.__TOTORO_GET_MODE__() : 'Overview';
+      modeChip.textContent = curMode === 'Overview' ? 'Home chung' : curMode;
     }
     const snap = getRealStudentSnapshot();
     const esc = window.__VOCAB_BRIDGE__?.escapeHtml || ((x) => String(x));
@@ -789,7 +795,8 @@
             <p class="rh-sub">Tập trung toàn bộ từ vựng Reading, 110 Task bài tập và lịch sử luyện đề Cambridge · Volume · Actual · News.</p>
           </div>
           <div class="rh-hero-actions">
-            <button type="button" class="btn btn-primary tot-demo-btn" data-tot-view="practice" onclick="window.TotoroUI.switchView('practice')">Kho đề Practice →</button>
+            <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openGlobalHome()">← Home chung</button>
+            <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.switchView('practice')">Kho đề Practice →</button>
             <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('flashcard')">Flashcard</button>
             <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">Từ của tôi (${mvTotalWords})</button>
           </div>
@@ -885,8 +892,8 @@
         <h2 class="rh-title" style="margin-top:10px;">${meta.name}</h2>
         <p class="rh-sub" style="max-width:560px;margin:6px auto 18px;">${meta.desc}</p>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-          ${meta.cta}
-          <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchHomeScope('reading')">Chuyển sang Reading Home</button>
+          <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openGlobalHome()">← Về Home chung</button>
+          ${scope === 'listening' ? meta.cta : ''}
         </div>
       </div>
     `;
@@ -1183,30 +1190,49 @@
     // Active Skill persistence (Reading | Listening)
     const SKILL_STORAGE_KEY = 'totoro_active_skill_v1';
     let activeSkill = 'Reading';
+    let activeMode = 'Overview'; // 'Overview' (Home chung) | 'Reading' | 'Listening'
     try {
       const savedSkill = localStorage.getItem(SKILL_STORAGE_KEY);
       if (savedSkill === 'Listening' || savedSkill === 'Reading') activeSkill = savedSkill;
     } catch (_) {}
 
-    function setActiveSkill(skill, opts = {}) {
-      const next = (skill === 'Listening' || String(skill || '').toLowerCase() === 'listening') ? 'Listening' : 'Reading';
-      activeSkill = next;
-      html.setAttribute('data-skill', next.toLowerCase());
-      try { localStorage.setItem(SKILL_STORAGE_KEY, next); } catch (_) {}
-
+    function syncSkillDropdownUI(modeVal) {
       const chipTxt = document.getElementById('header-mode-chip-text');
-      if (chipTxt) chipTxt.textContent = next;
+      if (chipTxt) chipTxt.textContent = modeVal === 'Overview' ? 'Home chung' : modeVal;
 
       document.querySelectorAll('[data-tot-skill]').forEach((btn) => {
         const s = btn.dataset.totSkill;
-        const isCurrent = s === next;
+        const isCurrent = s === modeVal;
         btn.classList.toggle('active', isCurrent);
         const tag = btn.querySelector('.tot-tag');
-        if (tag && (s === 'Reading' || s === 'Listening')) {
+        if (tag && (s === 'Overview' || s === 'Reading' || s === 'Listening')) {
           tag.classList.remove('soon');
           tag.textContent = isCurrent ? 'Đang mở' : 'Sẵn sàng';
         }
       });
+    }
+
+    function setActiveSkill(skill, opts = {}) {
+      const isOverview = skill === 'Overview' || String(skill || '').toLowerCase() === 'overview';
+      if (isOverview) {
+        activeMode = 'Overview';
+        syncSkillDropdownUI('Overview');
+        switchHomeScope('global');
+        if (!opts.keepView) switchView('home', { fromUser: false });
+        if (!opts.silent) {
+          window.__VOCAB_BRIDGE__?.showToast?.('🏠 Đang ở Home chung — Tổng quan Plan, Xếp hạng & 4 kỹ năng');
+        }
+        return;
+      }
+
+      const next = (skill === 'Listening' || String(skill || '').toLowerCase() === 'listening') ? 'Listening' : 'Reading';
+      activeSkill = next;
+      activeMode = next;
+      html.setAttribute('data-skill', next.toLowerCase());
+      try { localStorage.setItem(SKILL_STORAGE_KEY, next); } catch (_) {}
+
+      syncSkillDropdownUI(next);
+      switchHomeScope(next.toLowerCase());
 
       const coreId = next.toLowerCase();
       if (window.AppCore?.skills && window.AppCore.skills.getActiveId?.() !== coreId) {
@@ -1217,29 +1243,48 @@
         if (next === 'Listening') {
           window.__VOCAB_BRIDGE__?.showToast?.('🎧 Đã chuyển sang IELTS Listening — Bấm "Đã thuộc" để kiểm tra Nghe → Nói lại từ!');
         } else {
-          window.__VOCAB_BRIDGE__?.showToast?.('📖 Đã chuyển sang IELTS Reading (4.489 họ từ · Test 1 gõ từ)');
+          window.__VOCAB_BRIDGE__?.showToast?.('📖 Đã chuyển sang IELTS Reading (Reading Home · Flashcard · Task · Practice)');
         }
       }
       document.dispatchEvent(new CustomEvent('totoro:skill-changed', { detail: { skill: next } }));
     }
 
-    // Skill options
+    function ensureSkillModeForWorkspace() {
+      if (activeMode === 'Overview') {
+        setActiveSkill(activeSkill, { silent: true });
+      }
+    }
+
+    // Skill / Mode options in Topbar dropdown
     document.querySelectorAll('[data-tot-skill]').forEach((b) => {
       b.addEventListener('click', () => {
         const s = b.dataset.totSkill;
         closePopovers();
-        if (s === 'Reading' || s === 'Listening') {
+        if (s === 'Overview') {
+          setActiveSkill('Overview', { silent: false });
+        } else if (s === 'Reading' || s === 'Listening') {
           setActiveSkill(s, { silent: false });
+          if (activeView === 'home') renderHomeDashboard();
         } else {
           window.__VOCAB_BRIDGE__?.showToast?.(`IELTS ${s} đang được hoàn thiện — sắp mở!`);
         }
       });
     });
 
-    // Apply persisted skill silently on boot
-    setActiveSkill(activeSkill, { silent: true });
+    // Boot: apply persisted skill engine silently, default Topbar Mode to Overview (Home chung) when on Home
+    html.setAttribute('data-skill', activeSkill.toLowerCase());
+    const initView = resolveInitialView();
+    if (initView === 'home') {
+      activeMode = 'Overview';
+      syncSkillDropdownUI('Overview');
+      switchHomeScope('global');
+    } else {
+      setActiveSkill(activeSkill, { silent: true });
+    }
     window.__TOTORO_SET_SKILL__ = setActiveSkill;
     window.__TOTORO_GET_SKILL__ = () => activeSkill;
+    window.__TOTORO_GET_MODE__ = () => activeMode;
+    window.__TOTORO_ENSURE_SKILL_MODE__ = ensureSkillModeForWorkspace;
 
     // Home chart & leaderboard period switches + Practice filter tabs
     document.querySelectorAll('[data-home-chart]').forEach((b) => {
@@ -1371,10 +1416,6 @@
     const artImg = document.getElementById('auth-art-img');
     if (artImg) artImg.addEventListener('load', positionLoginCardUnderUmbrella);
 
-    // Wire 5-Home Tier Bar (Home chung + 4 Home riêng theo kỹ năng)
-    document.querySelectorAll('#home-tier-bar [data-home-scope]').forEach((btn) => {
-      btn.addEventListener('click', () => switchHomeScope(btn.dataset.homeScope));
-    });
     window.addEventListener('reading-practice-updated', () => {
       if (activeView === 'home') renderHomeDashboard();
     });
@@ -1392,7 +1433,22 @@
   window.TotoroUI = {
     switchView,
     switchHomeScope,
+    openGlobalHome: () => {
+      if (typeof window.__TOTORO_SET_SKILL__ === 'function') {
+        window.__TOTORO_SET_SKILL__('Overview', { silent: true });
+      } else {
+        switchHomeScope('global');
+        switchView('home', { fromUser: false });
+      }
+    },
+    enterSkillMode: (skill, viewName = 'home') => {
+      if (typeof window.__TOTORO_SET_SKILL__ === 'function') {
+        window.__TOTORO_SET_SKILL__(skill, { silent: true });
+      }
+      switchView(viewName, { fromUser: true });
+    },
     getActiveHomeScope: () => activeHomeScope,
+    getActiveMode: () => (typeof window.__TOTORO_GET_MODE__ === 'function' ? window.__TOTORO_GET_MODE__() : 'Overview'),
     getActiveView: () => activeView,
     getActiveSkill: () => (typeof window.__TOTORO_GET_SKILL__ === 'function' ? window.__TOTORO_GET_SKILL__() : (html.getAttribute('data-skill') === 'listening' ? 'Listening' : 'Reading')),
     setActiveSkill: (skill, opts) => (typeof window.__TOTORO_SET_SKILL__ === 'function' ? window.__TOTORO_SET_SKILL__(skill, opts) : undefined),

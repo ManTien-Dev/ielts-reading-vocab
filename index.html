@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
   <link rel="stylesheet" href="css/enhancements.css?v=20261123c">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261123f">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261124a">
 </head>
 <body>
 
@@ -176,7 +176,7 @@
   <!-- Flagship 1-Row Header: Totoro Holding Umbrella Logo + 4 Big Nav Tabs + Popovers -->
   <header class="app-header">
     <div class="header-left">
-      <button type="button" class="brand-mark-btn" onclick="window.TotoroUI?.switchView('home')" title="Trang chủ Totoro IELTS Master">
+      <button type="button" class="brand-mark-btn" onclick="window.TotoroUI?.openGlobalHome()" title="Home chung · Tổng quan học tập">
         <svg class="brand-mark-svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
           <path d="M32 4V10" stroke="#362F4D" stroke-width="2.4" stroke-linecap="round"/>
           <path d="M9 22C13 11 21.5 8 32 8C42.5 8 51 11 55 22C49.5 19.5 44 19.5 39 21.5C34.5 19.3 29.5 19.3 25 21.5C20 19.5 14.5 19.5 9 22Z" fill="#3B3355" stroke="#231E33" stroke-width="1.6" stroke-linejoin="round"/>
@@ -201,11 +201,13 @@
       <div class="tot-pop-wrap tot-skill-wrap">
         <button type="button" class="tot-skill-trigger" id="btn-skill-trigger">
           <span class="tot-skill-dot"></span>
-          <span id="header-mode-chip-text">Reading</span>
+          <span id="header-mode-chip-text">Home chung</span>
           <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="tot-popover" id="skill-popover">
-          <button type="button" class="tot-skill-opt active" data-tot-skill="Reading"><div><div style="font-size:13px;font-weight:750;">IELTS Reading</div><div style="font-size:11px;color:var(--ink-3);">4.489 họ từ · 110 Tasks</div></div><span class="tot-tag">Đang mở</span></button>
+          <button type="button" class="tot-skill-opt active" data-tot-skill="Overview"><div><div style="font-size:13px;font-weight:750;">Home chung (Tổng quan)</div><div style="font-size:11px;color:var(--ink-3);">Plan · Xếp hạng · Ôn tập 4 kỹ năng</div></div><span class="tot-tag">Đang mở</span></button>
+          <div class="tot-pop-divider" style="margin:6px 0;"></div>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Reading"><div><div style="font-size:13px;font-weight:750;">IELTS Reading</div><div style="font-size:11px;color:var(--ink-3);">4.489 họ từ · 110 Tasks · Practice</div></div><span class="tot-tag">Sẵn sàng</span></button>
           <button type="button" class="tot-skill-opt" data-tot-skill="Listening"><div><div style="font-size:13px;font-weight:750;">IELTS Listening</div><div style="font-size:11px;color:var(--ink-3);">Nghe → Nói lại từ · Shadowing</div></div><span class="tot-tag">Sẵn sàng</span></button>
           <button type="button" class="tot-skill-opt" data-tot-skill="Writing"><div><div style="font-size:13px;font-weight:750;">IELTS Writing</div><div style="font-size:11px;color:var(--ink-3);">Flow Ideas · Task 1 &amp; 2</div></div><span class="tot-tag soon">Sắp mở</span></button>
           <button type="button" class="tot-skill-opt" data-tot-skill="Speaking"><div><div style="font-size:13px;font-weight:750;">IELTS Speaking</div><div style="font-size:11px;color:var(--ink-3);">Spoken Chunks · Part 1–3</div></div><span class="tot-tag soon">Sắp mở</span></button>
@@ -1181,35 +1183,10 @@
     </section>
 
     <!-- ==================================================================
-         TAB 1: 5-HOME ARCHITECTURE (Home chung + 4 Home riêng theo kỹ năng)
+         TAB 1: MODE-AWARE HOME (Home chung khi ở Tổng quan · Home riêng khi ở từng kỹ năng)
          ================================================================== -->
     <section class="tot-screen active" id="screen-home" aria-label="Trang chủ tiến độ học tập">
-      <div class="home-tier-bar" id="home-tier-bar" role="tablist" aria-label="Chọn trang chủ">
-        <button type="button" class="home-tier-btn active" data-home-scope="global">
-          <span class="home-tier-dot is-global"></span>
-          <span>Home chung</span>
-          <small>Plan · Xếp hạng · Ôn tập</small>
-        </button>
-        <button type="button" class="home-tier-btn" data-home-scope="reading">
-          <span class="home-tier-dot is-reading"></span>
-          <span>Reading Home</span>
-          <small>Từ vựng · Task · Luyện đề</small>
-        </button>
-        <button type="button" class="home-tier-btn" data-home-scope="listening">
-          <span class="home-tier-dot is-listening"></span>
-          <span>Listening Home</span>
-        </button>
-        <button type="button" class="home-tier-btn" data-home-scope="writing">
-          <span class="home-tier-dot is-soon"></span>
-          <span>Writing Home</span>
-        </button>
-        <button type="button" class="home-tier-btn" data-home-scope="speaking">
-          <span class="home-tier-dot is-soon"></span>
-          <span>Speaking Home</span>
-        </button>
-      </div>
-
-      <!-- HOME 5 (HOME CHUNG): Theo dõi học tập, Plan, Streak, Bảng xếp hạng, 4 kỹ năng -->
+      <!-- HOME CHUNG (Tổng quan 4 kỹ năng: Plan, Streak, Bảng thi đua lớp, Ôn tập) -->
       <div class="tot-home-layout home-scope-panel active" id="home-scope-global">
         <div class="tot-home-top">
           <div class="tot-hero-card ink-brackets has-stamp">
@@ -1290,7 +1267,7 @@
               <strong class="tabular" id="home-reading-pct" style="font-size:15.5px;color:var(--accent);flex-shrink:0;">0%</strong>
             </div>
             <div class="tot-mastery-bar"><div class="tot-seg-ok" id="home-reading-bar-ok" style="width:0%"></div><div class="tot-seg-warm" id="home-reading-bar-warm" style="width:0%"></div></div>
-            <div style="display:flex;gap:5px;flex-wrap:wrap;"><button type="button" class="tot-mini-chip is-accent" onclick="window.TotoroUI?.switchHomeScope('reading')">Reading Home</button><button type="button" class="tot-mini-chip" data-tot-view="flashcard">Flashcard</button><button type="button" class="tot-mini-chip" data-tot-view="task">Task</button><button type="button" class="tot-mini-chip" data-tot-view="practice">Practice</button></div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;"><button type="button" class="tot-mini-chip is-accent" onclick="window.TotoroUI?.enterSkillMode('Reading', 'home')">Reading Home</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.enterSkillMode('Reading', 'flashcard')">Flashcard</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.enterSkillMode('Reading', 'task')">Task</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.enterSkillMode('Reading', 'practice')">Practice</button></div>
           </div>
 
           <div class="tot-skill-card has-stamp">
@@ -1303,7 +1280,7 @@
               <span class="tot-tag soon">Sắp mở</span>
             </div>
             <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:0%"></div></div>
-            <div style="display:flex;gap:5px;"><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Listening')">Flashcard</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Listening')">Task</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Listening')">Practice</button></div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;"><button type="button" class="tot-mini-chip is-accent" onclick="window.TotoroUI?.enterSkillMode('Listening', 'home')">Listening Home</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.enterSkillMode('Listening', 'flashcard')">Shadowing</button><button type="button" class="tot-mini-chip" onclick="window.TotoroUI?.notifySkillSoon('Listening Practice')">Practice</button></div>
           </div>
 
           <div class="tot-skill-card has-stamp">
@@ -2142,6 +2119,6 @@
   <script src="data/reading_practice_data.js?v=20261123d"></script>
   <script src="js/reading_practice.js?v=20261123f"></script>
   <script src="js/tasks.js?v=20261122j"></script>
-  <script src="js/totoro_ui.js?v=20261123b"></script>
+  <script src="js/totoro_ui.js?v=20261124a"></script>
 </body>
 </html>
