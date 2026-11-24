@@ -11028,46 +11028,45 @@ body.rp-exam-fullscreen {
   margin: 0;
 }
 .ins-mode-practice .ins-group-inst {
-  margin: 0 0 16px;
-  padding: 10px 14px;
-  border-radius: 12px;
+  margin: 0 0 18px;
+  padding: 11px 14px;
+  border-radius: 11px;
   border: 1px solid var(--prac-bd);
-  border-left: 3px solid var(--prac-accent);
   background: var(--prac-sheet-sub);
   font-size: calc(var(--ins-fs, 15px) - 1.5px);
-  line-height: 1.56;
+  line-height: 1.58;
   color: var(--prac-ink-2);
 }
 
 .ins-mode-practice .ins-q-items {
-  gap: 6px;
+  gap: 16px;
 }
 .ins-mode-practice .ins-q-item {
-  padding: 13px 14px;
-  border-radius: 14px;
-  border: 1px solid transparent;
-  border-bottom-color: var(--prac-bd);
+  padding: 2px 4px;
+  border-radius: 10px;
+  border: 0;
   background: transparent;
-  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
-}
-.ins-mode-practice .ins-q-item:last-child {
-  border-bottom-color: transparent;
+  transition: background-color 140ms ease;
 }
 .ins-mode-practice .ins-q-item:hover {
-  background: var(--prac-sheet-sub);
+  background: transparent;
 }
 .ins-mode-practice .ins-q-item.is-current {
-  background: var(--prac-sheet-sub);
-  border-color: color-mix(in srgb, var(--prac-accent) 36%, transparent);
-  box-shadow: 0 2px 0 color-mix(in srgb, var(--prac-accent) 16%, transparent);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 .ins-mode-practice .ins-q-item.is-checked-ok {
-  background: color-mix(in srgb, var(--prac-accent-soft) 52%, var(--prac-sheet));
-  border-color: color-mix(in srgb, var(--prac-accent) 38%, transparent);
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--prac-accent-soft) 48%, var(--prac-sheet));
 }
 .ins-mode-practice .ins-q-item.is-checked-bad {
-  background: color-mix(in srgb, var(--prac-danger-soft) 55%, var(--prac-sheet));
-  border-color: color-mix(in srgb, var(--prac-danger) 34%, transparent);
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--prac-danger-soft) 50%, var(--prac-sheet));
+}
+.ins-mode-practice .ins-q-item.is-retry-edited {
+  padding: 10px 12px;
+  background: rgba(245, 158, 11, 0.08);
 }
 
 .ins-mode-practice .ins-q-num {

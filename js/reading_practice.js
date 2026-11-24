@@ -2138,7 +2138,8 @@
     if (q.type === 'gap') {
       const gapCls = isReview ? (ok ? 'is-ok' : 'is-bad') : (isLockedOk ? 'is-ok' : (isWrongRetry && wrongState !== 'edited' ? 'is-bad' : ''));
       const inlineBox = `<input type="text" class="ins-gap-input ${gapCls}" value="${esc(userVal)}" ${isReadOnly ? 'readonly' : ''} placeholder="${q.num}" aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off">`;
-      const stem = /_{3,}/.test(q.prompt) ? esc(q.prompt).replace(/_{3,}/, inlineBox) : `${esc(q.prompt)} ${inlineBox}`;
+      const cleanPrompt = String(q.prompt || '').replace(/^\s*(?:[•●▪▸◦·\-–—]\s*)+/, '');
+      const stem = /_{3,}/.test(cleanPrompt) ? esc(cleanPrompt).replace(/_{3,}/, inlineBox) : `${esc(cleanPrompt)} ${inlineBox}`;
       const correctDisplay = Array.isArray(q.answer) ? q.answer[0] : q.answer;
       return `
         <div class="ins-q-item ins-q-gap ${cardStateCls}" id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
