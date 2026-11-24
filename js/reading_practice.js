@@ -20,6 +20,8 @@
   'use strict';
 
   const STORAGE_KEY_BASE = 'ielts_reading_practice_v1_';
+  const LOCKOUT_KEY_BASE = 'ielts_rp_anticheat_lock_v1_';
+  const ANTI_CHEAT_LOCKOUT_MINS = 30;
 
   const PASTEL_PENS = [
     { id: 'yellow', name: 'Vàng nắng',     role: 'Ý chính',    swatch: '#FDE047' },
@@ -142,6 +144,45 @@
     getInProgress() { return null; },
     getHistory() { return this.load().history; },
 
+    _lockKey() { return `${LOCKOUT_KEY_BASE}${getUid()}`; },
+
+    getLockoutInfo() {
+      try {
+        const raw = localStorage.getItem(this._lockKey());
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        const until = Number(parsed?.until) || 0;
+        const remainingMs = until - Date.now();
+        if (remainingMs > 0) {
+          return { ...parsed, until, remainingMs };
+        }
+        localStorage.removeItem(this._lockKey());
+      } catch (_) {}
+      return null;
+    },
+
+    setLockout(minutes, meta = {}) {
+      const mins = Math.max(1, Number(minutes) || ANTI_CHEAT_LOCKOUT_MINS);
+      const payload = {
+        until: Date.now() + mins * 60 * 1000,
+        minutes: mins,
+        reason: meta.reason || 'Chuyển tab khi đang làm bài',
+        score: typeof meta.score === 'number' ? meta.score : null,
+        total: typeof meta.total === 'number' ? meta.total : null,
+        band: typeof meta.band === 'number' ? meta.band : null,
+        title: meta.title || '',
+        createdAt: Date.now()
+      };
+      try { localStorage.setItem(this._lockKey(), JSON.stringify(payload)); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('reading-practice-updated')); } catch (_) {}
+      return payload;
+    },
+
+    clearLockout() {
+      try { localStorage.removeItem(this._lockKey()); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('reading-practice-updated')); } catch (_) {}
+    },
+
     getBestAttempt(itemId) {
       const list = this.load().history.filter((h) => h.itemId === itemId);
       if (!list.length) return null;
@@ -225,7 +266,7 @@
   const state = {
     view: 'portal',         // 'portal' | 'source' | 'exam'
     source: 'cambridge',    // 'cambridge' | 'volume' | 'actual' | 'news'
-    camGroup: 'recent',     // 'recent' (Cam 10-20) | 'all' (Cam 1-20)
+    camGroup: 'recent',     // 'recent' (Cam 10-20) | 'classic' (Cam 1-9)
     actualGroup: 'recent',  // 'recent' (Bộ 1-10) | 'all' (Tất cả 30 bộ)
     selectedBookId: 'cam_20',
     selectedTestNum: 1,     // 1..4
@@ -246,40 +287,232 @@
   let _acGuard = null;
   let _acTabSession = null;
   let _acDomBound = false;
+  let _acCountdownId = null;
+
+  function isTeacherBypass() {
+    try {
+      if (B()?.isTeacherMode?.() && !B()?.isTeacherPreviewing?.()) return true;
+    } catch (_) {}
+    return false;
+  }
 
   function isReadingAntiCheatActive() {
     const s = state.session;
     if (state.view !== 'exam' || !s || s.mode !== 'exam' || s.isNews) return false;
-    try {
-      if (B()?.isTeacherMode?.() && !B()?.isTeacherPreviewing?.()) return false;
-    } catch (_) {}
+    if (isTeacherBypass()) return false;
     return true;
+  }
+
+  function formatClockHHMM(ts) {
+    try {
+      const dt = new Date(ts);
+      return `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+    } catch (_) {
+      return '--:--';
+    }
+  }
+
+  function formatLockCountdown(ms) {
+    const totalSec = Math.max(0, Math.ceil((Number(ms) || 0) / 1000));
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function stopAcLockCountdown() {
+    if (_acCountdownId) {
+      clearInterval(_acCountdownId);
+      _acCountdownId = null;
+    }
+  }
+
+  function startAcLockCountdown() {
+    stopAcLockCountdown();
+    const tick = () => {
+      const info = ReadingPracticeStore.getLockoutInfo();
+      const modalCd = document.getElementById('rp-ac-modal-countdown');
+      const bannerCd = document.getElementById('rp-lock-banner-countdown');
+      if (!info) {
+        stopAcLockCountdown();
+        if (modalCd) modalCd.textContent = '00:00';
+        const banner = document.getElementById('rp-lock-hub-banner');
+        if (banner) banner.remove();
+        return;
+      }
+      const txt = formatLockCountdown(info.remainingMs);
+      if (modalCd) modalCd.textContent = txt;
+      if (bannerCd) bannerCd.textContent = txt;
+    };
+    tick();
+    _acCountdownId = setInterval(tick, 1000);
+  }
+
+  function ensureAntiCheatModalEl() {
+    let el = document.getElementById('rp-ac-modal');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'rp-ac-modal';
+    el.className = 'rp-ac-modal-overlay';
+    el.setAttribute('role', 'alertdialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-labelledby', 'rp-ac-modal-title');
+    el.addEventListener('click', (ev) => {
+      if (ev.target === el) closeAntiCheatModal();
+    });
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function closeAntiCheatModal() {
+    const el = document.getElementById('rp-ac-modal');
+    if (el) {
+      el.classList.remove('open');
+    }
+  }
+
+  function showAntiCheatModal(opts = {}) {
+    if (typeof document === 'undefined') return;
+    const el = ensureAntiCheatModalEl();
+    const isLock = opts.level === 'lock';
+    const badgeText = opts.badge || (isLock ? 'VI PHẠM 2/2 · KHÓA 30 PHÚT' : 'CẢNH CÁO 1/2');
+    const titleText = opts.title || (isLock ? 'Bài làm đã kết thúc & Tạm khóa 30 phút' : 'Cảnh cáo chống gian lận');
+    const ctaText = opts.ctaLabel || (isLock ? 'Đã hiểu' : 'Tôi đã hiểu · Quay lại làm bài');
+    const reasonText = opts.reason || 'Chuyển tab khi đang làm bài';
+
+    const iconSvg = isLock
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1.3" fill="currentColor" stroke="none"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3L21 19H3L12 3Z"/><path d="M12 9.5V13.5"/><circle cx="12" cy="16.5" r="0.9" fill="currentColor" stroke="none"/></svg>`;
+
+    let metricsHtml = '';
+    if (isLock) {
+      const unlockClock = opts.until ? formatClockHHMM(opts.until) : '--:--';
+      const cdInit = opts.remainingMs ? formatLockCountdown(opts.remainingMs) : '30:00';
+      const hasScore = typeof opts.score === 'number' && typeof opts.total === 'number' && opts.total > 0;
+      const bandLabel = typeof opts.band === 'number' ? ` · Band ${opts.band.toFixed(1)}` : '';
+      metricsHtml = `
+        <div class="rp-ac-stats ${hasScore ? '' : 'is-single'}">
+          ${hasScore ? `
+            <div class="rp-ac-stat">
+              <span class="rp-ac-stat-label">Kết quả${esc(bandLabel)}</span>
+              <strong class="rp-ac-stat-val tabular" style="font-size:19px;">${opts.score} <span class="rp-exit-metric-total">/ ${opts.total} câu</span></strong>
+            </div>
+          ` : ''}
+          <div class="rp-ac-stat is-lock-time">
+            <span class="rp-ac-stat-label">Mở khóa lúc ${esc(unlockClock)}</span>
+            <strong class="rp-ac-stat-val tabular" id="rp-ac-modal-countdown">${esc(cdInit)}</strong>
+          </div>
+        </div>
+      `;
+    }
+
+    const bodyHtml = isLock
+      ? `
+        <p class="rp-ac-desc">
+          Hệ thống ghi nhận vi phạm <strong>2/2 (${esc(reasonText)})</strong>.
+          ${opts.isReblocked
+            ? 'Tính năng luyện đề Reading hiện đang bị tạm khóa và sẽ tự mở lại khi hết thời gian chờ.'
+            : 'Toàn bộ đáp án bạn đã điền được <strong>giữ nguyên để chấm điểm</strong> (không bị xóa), lượt làm đã kết thúc và khóa luyện đề trong <strong>30 phút</strong>.'}
+        </p>
+      `
+      : `
+        <p class="rp-ac-desc">
+          Hệ thống phát hiện bạn vừa rời khỏi màn hình làm bài (<strong>${esc(reasonText)}</strong>).
+        </p>
+        <div class="rp-ac-callout">
+          Đáp án hiện tại của bạn vẫn được giữ nguyên. Nếu vi phạm thêm <strong>1 lần nữa (2/2)</strong>, bài làm sẽ <strong>kết thúc, chấm điểm ngay</strong> và khóa luyện đề trong <strong>30 phút</strong>.
+        </div>
+      `;
+
+    el.innerHTML = `
+      <div class="rp-ac-modal-card ${isLock ? 'is-lock' : 'is-warn'}" onclick="event.stopPropagation()">
+        <div class="rp-ac-modal-top">
+          <div class="rp-ac-emblem ${isLock ? 'is-lock' : 'is-warn'}">${iconSvg}</div>
+          <div class="rp-ac-head-copy">
+            <span class="rp-ac-pill ${isLock ? 'is-lock' : 'is-warn'}">${esc(badgeText)}</span>
+            <h3 class="rp-ac-title" id="rp-ac-modal-title">${esc(titleText)}</h3>
+          </div>
+        </div>
+        <div class="rp-ac-modal-body">
+          ${metricsHtml}
+          ${bodyHtml}
+        </div>
+        <div class="rp-ac-modal-foot">
+          <button type="button" class="btn ${isLock ? 'btn-subtle' : 'btn-primary'} rp-ac-cta" id="rp-ac-modal-ok" onclick="ReadingPracticeApp.closeAntiCheatModal()">${esc(ctaText)}</button>
+        </div>
+      </div>
+    `;
+    el.classList.add('open');
+    if (isLock) startAcLockCountdown();
+    setTimeout(() => {
+      document.getElementById('rp-ac-modal-ok')?.focus?.();
+    }, 30);
   }
 
   function handleReadingAntiCheatStrike(strikeNum, reason) {
     const s = state.session;
     if (!s || !isReadingAntiCheatActive()) return;
+    const cleanReason = reason || 'Chuyển tab khi đang làm bài';
     s.antiCheatStrikes = strikeNum;
     if (strikeNum === 1) {
-      s.antiCheatNotice = `Cảnh báo chống gian lận (1/2): ${reason}. Nếu rời tab/cửa sổ thêm 1 lần nữa, toàn bộ bài làm sẽ bị xóa để làm lại từ đầu!`;
-      persistDraft();
+      s.antiCheatNotice = `Cảnh cáo chống gian lận (1/2 — ${cleanReason}): Vi phạm thêm 1 lần nữa sẽ kết thúc, chấm điểm ngay và khóa 30 phút.`;
       renderExamWorkspace();
-      toast('⚠ Cảnh báo chống gian lận (1/2): Không chuyển tab khi đang làm bài!');
+      showAntiCheatModal({
+        level: 'warn',
+        badge: 'CẢNH CÁO 1/2',
+        title: 'Không chuyển tab khi đang làm bài',
+        reason: cleanReason,
+        ctaLabel: 'Tôi đã hiểu · Quay lại làm bài'
+      });
     } else {
-      // Strike 2: Wipe all answers & retry progress to enforce discipline
-      s.answers = {};
-      s.lockedCorrect = {};
-      s.wrongSet = {};
-      s.attemptCount = 0;
-      s.firstAttemptResult = null;
-      s.antiCheatStrikes = 0;
-      s.antiCheatNotice = `Vi phạm chống gian lận (2/2 — ${reason}): Toàn bộ đáp án đã bị đặt lại. Vui lòng tự làm lại nghiêm túc!`;
-      persistDraft();
-      // Restart strike counter for fresh attempt
+      // Strike 2: DO NOT reset/wipe answers! End & grade immediately with current answers, then lock for 30 minutes.
+      const res = computeReviewResult();
+      const isMastered = res.total > 0 && res.score === res.total;
+      const itemTitle = s.title;
+
+      stopTimer();
       stopReadingAntiCheat();
-      startReadingAntiCheat();
-      renderExamWorkspace();
-      toast('✕ Vi phạm 2/2: Đã xóa toàn bộ đáp án — vui lòng làm lại từ đầu!');
+      ReadingPracticeStore.clearInProgress();
+
+      ReadingPracticeStore.recordAttempt({
+        itemId: s.itemId,
+        title: s.title,
+        source: s.source,
+        isFull: s.isFull,
+        score: res.score,
+        total: res.total,
+        band: res.band,
+        elapsedSec: res.elapsedSec,
+        mastered: isMastered,
+        terminatedByAntiCheat: true,
+        completedAt: Date.now()
+      });
+
+      const lockInfo = ReadingPracticeStore.setLockout(ANTI_CHEAT_LOCKOUT_MINS, {
+        reason: cleanReason,
+        score: res.score,
+        total: res.total,
+        band: res.band,
+        title: itemTitle
+      });
+
+      state.pendingSelection = null;
+      document.body.classList.remove('rp-exam-fullscreen');
+      state.view = 'source';
+      state.session = null;
+      renderHub();
+
+      showAntiCheatModal({
+        level: 'lock',
+        badge: 'VI PHẠM 2/2 · KHÓA 30 PHÚT',
+        title: 'Bài làm đã kết thúc · Khóa 30 phút',
+        reason: cleanReason,
+        score: res.score,
+        total: res.total,
+        band: res.band,
+        until: lockInfo.until,
+        remainingMs: ANTI_CHEAT_LOCKOUT_MINS * 60 * 1000,
+        ctaLabel: 'Đã hiểu'
+      });
     }
   }
 
@@ -612,7 +845,24 @@
 
   function buildResumeBannerHtml() {
     ReadingPracticeStore.clearInProgress();
-    return '';
+    if (isTeacherBypass()) return '';
+    const lock = ReadingPracticeStore.getLockoutInfo();
+    if (!lock) return '';
+    setTimeout(() => startAcLockCountdown(), 0);
+    const unlockAt = formatClockHHMM(lock.until);
+    return `
+      <div class="rp-lock-hub-banner" id="rp-lock-hub-banner" role="alert">
+        <div class="rp-lock-hub-left">
+          <span class="rp-lock-hub-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          </span>
+          <div>
+            <div class="rp-lock-hub-title">Đang tạm khóa luyện đề 30 phút do vi phạm chống gian lận (2/2)</div>
+            <div class="rp-lock-hub-sub">Tự động mở khóa lúc <strong>${esc(unlockAt)}</strong> · Còn <strong class="tabular" id="rp-lock-banner-countdown">${esc(formatLockCountdown(lock.remainingMs))}</strong></div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   /* =========================================================
@@ -738,28 +988,31 @@
 
     if (!isNews) {
       const books = getBooksForSource(state.source);
-      if (!books.some((b) => b.id === state.selectedBookId) && books.length) {
-        const firstReady = books.find((b) => countReadyTestsInBook(b.id) > 0) || books[0];
-        state.selectedBookId = firstReady.id;
-        state.selectedTestNum = 1;
-      }
 
-      const visibleBooks = (state.source === 'cambridge' && state.camGroup === 'recent')
-        ? books.filter((b) => b.group === 'recent')
+      const visibleBooks = state.source === 'cambridge'
+        ? (state.camGroup === 'classic'
+            ? books.filter((b) => Number(b.num) <= 9)
+            : books.filter((b) => Number(b.num) >= 10))
         : (state.source === 'actual' && state.actualGroup === 'recent' && books.length > 10)
           ? books.filter((b) => b.group === 'recent')
           : books;
+
+      if (!visibleBooks.some((b) => b.id === state.selectedBookId) && visibleBooks.length) {
+        const firstReady = visibleBooks.find((b) => countReadyTestsInBook(b.id) > 0) || visibleBooks[0];
+        state.selectedBookId = firstReady.id;
+        state.selectedTestNum = 1;
+      }
 
       const readyBooksCount = books.filter((b) => countReadyTestsInBook(b.id) > 0).length;
 
       const groupToggleHtml = state.source === 'cambridge' ? `
         <div class="rp-book-group-toggle" role="group" aria-label="Cambridge IELTS range">
-          <button type="button" class="rp-mini-tab ${state.camGroup === 'recent' ? 'active' : ''}"
-            aria-pressed="${state.camGroup === 'recent' ? 'true' : 'false'}"
+          <button type="button" class="rp-mini-tab ${state.camGroup !== 'classic' ? 'active' : ''}"
+            aria-pressed="${state.camGroup !== 'classic' ? 'true' : 'false'}"
             onclick="ReadingPracticeApp.setCamGroup('recent')"><span class="rp-star-mark" aria-hidden="true">★</span> Cam 10 – 20</button>
-          <button type="button" class="rp-mini-tab ${state.camGroup === 'all' ? 'active' : ''}"
-            aria-pressed="${state.camGroup === 'all' ? 'true' : 'false'}"
-            onclick="ReadingPracticeApp.setCamGroup('all')">Cam 1 – 20</button>
+          <button type="button" class="rp-mini-tab ${state.camGroup === 'classic' ? 'active' : ''}"
+            aria-pressed="${state.camGroup === 'classic' ? 'true' : 'false'}"
+            onclick="ReadingPracticeApp.setCamGroup('classic')">Cam 1 – 9</button>
         </div>
       ` : (state.source === 'actual' && books.length > 10 ? `
         <div class="rp-book-group-toggle" role="group" aria-label="Recent Actual Tests range">
@@ -810,12 +1063,9 @@
         `;
       };
 
-      // Organize books onto balanced wooden oak shelf tiers (10 per tier when > 11 books)
+      // Organize books onto balanced wooden oak shelf tiers
       const shelfTiers = [];
-      if (state.source === 'cambridge' && state.camGroup === 'all' && visibleBooks.length > 11) {
-        shelfTiers.push({ label: '★ Featured Shelf · Cam 20 – 11', items: visibleBooks.slice(0, 10), cols: 10, compact: false });
-        shelfTiers.push({ label: 'Archive Shelf · Cam 10 – 1', items: visibleBooks.slice(10), cols: 10, compact: false });
-      } else if (state.source === 'actual' && visibleBooks.length > 10) {
+      if (state.source === 'actual' && visibleBooks.length > 10) {
         for (let i = 0; i < visibleBooks.length; i += 10) {
           const chunk = visibleBooks.slice(i, i + 10);
           shelfTiers.push({
@@ -827,12 +1077,12 @@
         }
       } else {
         const tierLabel = state.source === 'cambridge'
-          ? 'Kệ trọng tâm · Cam 20 – 10'
-          : (state.source === 'volume' ? 'Kệ sách · Real Reading Test Vol 1 – 10' : 'Kệ hồ sơ · Recent Actual Tests Bộ 1 – 10');
+          ? (state.camGroup === 'classic' ? 'Cambridge IELTS 9 – 1' : 'Cambridge IELTS 20 – 10')
+          : (state.source === 'volume' ? 'Real Reading Test Vol 1 – 10' : 'Recent Actual Tests Set 1 – 10');
         shelfTiers.push({
           label: tierLabel,
           items: visibleBooks,
-          cols: Math.min(11, visibleBooks.length),
+          cols: Math.min(11, Math.max(9, visibleBooks.length)),
           compact: visibleBooks.length <= 6
         });
       }
@@ -1108,9 +1358,28 @@
      6. DUAL-MODE ENGINE: INSPERA CD-IELTS EXAM + PRACTICE PRO STUDIO
      ========================================================= */
   function startSession(config) {
+    const isNews = config.source === 'news';
+    if (!config.openInReview && !isNews && !isTeacherBypass()) {
+      const lock = ReadingPracticeStore.getLockoutInfo();
+      if (lock) {
+        showAntiCheatModal({
+          level: 'lock',
+          badge: 'ĐANG KHÓA 30 PHÚT · VI PHẠM 2/2',
+          title: 'Tạm khóa luyện đề Reading',
+          reason: lock.reason || 'Chuyển tab khi đang làm bài',
+          score: lock.score,
+          total: lock.total,
+          band: lock.band,
+          until: lock.until,
+          remainingMs: lock.remainingMs,
+          isReblocked: true,
+          ctaLabel: 'Đã hiểu'
+        });
+        return;
+      }
+    }
     stopTimer();
     const totalSec = (config.suggestedMins || 20) * 60;
-    const isNews = config.source === 'news';
     const studyMode = config.studyMode === 'practice' || (isNews && config.studyMode !== 'exam')
       ? 'practice'
       : 'exam';
@@ -2036,9 +2305,9 @@
         <!-- Pre-Submit Review Check Modal -->
         <div class="modal-overlay" id="rp-presubmit-modal" onclick="ReadingPracticeApp.closePreSubmitModal(event)">
           <div class="modal-card rp-presubmit-card" onclick="event.stopPropagation()">
-            <div class="modal-header">
-              <div class="modal-title">${isPractice ? 'Tổng kết trước khi chấm Band' : 'Review your answers before submitting'}</div>
-              <button type="button" class="btn-icon-glass" style="width:30px;height:30px;" onclick="ReadingPracticeApp.closePreSubmitModal()">✕</button>
+            <div class="modal-header rp-presubmit-header">
+              <div class="modal-title" id="rp-presubmit-title">${isPractice ? 'Tổng kết trước khi nộp bài' : 'Xác nhận nộp bài'}</div>
+              <button type="button" class="btn-icon-glass rp-modal-close-btn" onclick="ReadingPracticeApp.closePreSubmitModal()" aria-label="Đóng">✕</button>
             </div>
             <div class="modal-body" id="rp-presubmit-body"></div>
           </div>
@@ -2403,8 +2672,12 @@
     },
 
     setCamGroup(grp) {
-      state.camGroup = grp === 'all' ? 'all' : 'recent';
+      state.camGroup = grp === 'classic' ? 'classic' : 'recent';
       renderHub();
+    },
+
+    closeAntiCheatModal() {
+      closeAntiCheatModal();
     },
 
     setActualGroup(grp) {
@@ -2543,21 +2816,28 @@
       const allQ = getAllSessionQuestions();
       const answered = allQ.filter((q) => !!String(state.session.answers[q._qid] || '').trim()).length;
       const unanswered = allQ.length - answered;
-      const titleEl = modal.querySelector('.rp-modal-head h3');
-      if (titleEl) titleEl.textContent = 'Kết thúc & Chấm điểm bài đang làm?';
+      const titleEl = document.getElementById('rp-presubmit-title');
+      if (titleEl) titleEl.textContent = 'Kết thúc bài đang làm?';
 
       body.innerHTML = `
-        <div class="rp-ps-stats">
-          <div class="rp-ps-box"><span>Đã làm</span><strong class="tabular">${answered} / ${allQ.length}</strong></div>
-          <div class="rp-ps-box ${unanswered > 0 ? 'warn' : ''}"><span>Chưa làm</span><strong class="tabular">${unanswered}</strong></div>
-          <div class="rp-ps-box"><span>Chế độ</span><strong>Không lưu nháp</strong></div>
+        <div class="rp-exit-summary">
+          <div class="rp-exit-metrics">
+            <div class="rp-exit-metric">
+              <span class="rp-exit-metric-label">Đã làm</span>
+              <strong class="rp-exit-metric-val tabular">${answered} <span class="rp-exit-metric-total">/ ${allQ.length}</span></strong>
+            </div>
+            <div class="rp-exit-metric ${unanswered > 0 ? 'is-pending' : 'is-done'}">
+              <span class="rp-exit-metric-label">Chưa làm</span>
+              <strong class="rp-exit-metric-val tabular">${unanswered}</strong>
+            </div>
+          </div>
+          <p class="rp-exit-note">
+            Rời khỏi lúc này sẽ <strong>kết thúc lượt làm và chấm điểm ngay</strong> theo các câu bạn đã điền.
+          </p>
         </div>
-        <p style="margin:12px 0 16px;font-size:13.5px;line-height:1.58;color:var(--ink-2);">
-          Bài làm chỉ hoàn tất khi bạn nộp bài. Nếu rời khỏi lúc này, hệ thống sẽ <strong>kết thúc lượt làm và chấm điểm ngay</strong> theo các câu bạn đã điền (chỉ mở Solution &amp; Từ điển khi đạt 100%).
-        </p>
-        <div class="rp-ps-foot">
-          <button type="button" class="btn btn-primary" onclick="ReadingPracticeApp.closePreSubmitModal()">Ở lại làm tiếp</button>
-          <button type="button" class="btn-subtle" id="rp-btn-confirm-exit-grade" style="color:var(--danger,#b91c1c);border-color:color-mix(in srgb,var(--danger,#b91c1c) 38%,transparent);" onclick="ReadingPracticeApp.confirmFinishAndExit()">Kết thúc &amp; Chấm điểm</button>
+        <div class="rp-ps-foot rp-exit-foot">
+          <button type="button" class="rp-btn-exit-confirm" id="rp-btn-confirm-exit-grade" onclick="ReadingPracticeApp.confirmFinishAndExit()">Kết thúc &amp; Chấm điểm</button>
+          <button type="button" class="btn btn-primary rp-btn-stay" onclick="ReadingPracticeApp.closePreSubmitModal()">Ở lại làm tiếp</button>
         </div>
       `;
       modal.classList.add('open');
@@ -2924,14 +3204,14 @@
       const modal = document.getElementById('rp-presubmit-modal');
       const body = document.getElementById('rp-presubmit-body');
       if (!modal || !body) return;
-      const titleEl = modal.querySelector('.rp-modal-head h3');
+      const titleEl = document.getElementById('rp-presubmit-title');
       if (titleEl) titleEl.textContent = 'Xác nhận nộp bài';
 
       body.innerHTML = `
         <div class="rp-ps-stats">
-          <div class="rp-ps-box"><span>Answered</span><strong class="tabular">${answered} / ${allQ.length}</strong></div>
-          <div class="rp-ps-box ${unanswered > 0 ? 'warn' : ''}"><span>Unanswered</span><strong class="tabular">${unanswered}</strong></div>
-          <div class="rp-ps-box"><span>Bookmarked</span><strong class="tabular">${flaggedCnt}</strong></div>
+          <div class="rp-ps-box"><span>Đã làm</span><strong class="tabular">${answered} / ${allQ.length}</strong></div>
+          <div class="rp-ps-box ${unanswered > 0 ? 'warn' : ''}"><span>Chưa làm</span><strong class="tabular">${unanswered}</strong></div>
+          <div class="rp-ps-box"><span>Đánh dấu</span><strong class="tabular">${flaggedCnt}</strong></div>
         </div>
         <div class="rp-ps-grid">
           ${allQ.map((q) => {
@@ -2942,8 +3222,8 @@
           }).join('')}
         </div>
         <div class="rp-ps-foot">
-          <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal()">Back to test</button>
-          <button type="button" class="btn btn-primary" id="rp-btn-confirm-submit" onclick="ReadingPracticeApp.confirmSubmit()">Submit &amp; View Results →</button>
+          <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal()">Quay lại bài</button>
+          <button type="button" class="btn btn-primary" id="rp-btn-confirm-submit" onclick="ReadingPracticeApp.confirmSubmit()">Nộp bài &amp; Chấm điểm →</button>
         </div>
       `;
       modal.classList.add('open');

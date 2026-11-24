@@ -12724,3 +12724,398 @@ mark.rp-hl-preview {
     font-size: 12px;
   }
 }
+
+/* =========================================================
+   MUJI EDITORIAL EXIT MODAL & ANTI-CHEAT WARNING/LOCKOUT MODAL
+   ========================================================= */
+.rp-presubmit-card {
+  max-width: 440px;
+  width: min(440px, 92vw);
+  border-radius: 18px;
+  border: 1px solid rgba(44, 52, 46, 0.12);
+  background: var(--paper, #fbf9f4);
+  box-shadow: 0 24px 60px rgba(24, 30, 26, 0.22), 0 4px 14px rgba(24, 30, 26, 0.08);
+  overflow: hidden;
+}
+.rp-presubmit-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(44, 52, 46, 0.08);
+  background: transparent;
+}
+.rp-presubmit-header .modal-title {
+  font-size: 16.5px;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  color: var(--ink, #1f2421);
+}
+.rp-modal-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(44, 52, 46, 0.12);
+  background: transparent;
+  color: var(--ink-2, #5c635e);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.rp-modal-close-btn:hover {
+  background: rgba(44, 52, 46, 0.06);
+  color: var(--ink, #1f2421);
+}
+#rp-presubmit-body {
+  padding: 18px 20px 20px;
+}
+
+.rp-exit-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.rp-exit-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: 12px;
+  border: 1px solid rgba(44, 52, 46, 0.11);
+  background: rgba(44, 52, 46, 0.028);
+  overflow: hidden;
+}
+.rp-exit-metric {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.rp-exit-metric + .rp-exit-metric {
+  border-left: 1px solid rgba(44, 52, 46, 0.09);
+}
+.rp-exit-metric-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-3, #6d756f);
+}
+.rp-exit-metric-val {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--ink, #1f2421);
+  letter-spacing: -0.02em;
+}
+.rp-exit-metric-total {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-3, #7a817c);
+}
+.rp-exit-metric.is-pending .rp-exit-metric-val {
+  color: #b5452e;
+}
+.rp-exit-metric.is-done .rp-exit-metric-val {
+  color: #2f6b47;
+}
+.rp-exit-note {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.58;
+  color: var(--ink-2, #4d544f);
+}
+.rp-exit-note strong {
+  color: var(--ink, #1f2421);
+  font-weight: 700;
+}
+.rp-exit-foot {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(44, 52, 46, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rp-btn-exit-confirm {
+  height: 38px;
+  padding: 0 15px;
+  border-radius: 10px;
+  border: 1px solid rgba(185, 28, 28, 0.28);
+  background: rgba(185, 28, 28, 0.05);
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.14s ease;
+}
+.rp-btn-exit-confirm:hover {
+  background: rgba(185, 28, 28, 0.11);
+  border-color: rgba(185, 28, 28, 0.45);
+}
+.rp-btn-stay {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ---------- Centered Anti-Cheat Warning & 30-Minute Lockout Modal ---------- */
+.rp-ac-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(18, 22, 19, 0.56);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.rp-ac-modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.rp-ac-modal-card {
+  width: min(460px, 94vw);
+  border-radius: 18px;
+  background: var(--paper, #fbf9f4);
+  border: 1px solid rgba(44, 52, 46, 0.14);
+  box-shadow: 0 28px 68px rgba(16, 20, 18, 0.34), 0 4px 16px rgba(16, 20, 18, 0.12);
+  overflow: hidden;
+  transform: translateY(10px) scale(0.98);
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rp-ac-modal-overlay.open .rp-ac-modal-card {
+  transform: translateY(0) scale(1);
+}
+.rp-ac-modal-card.is-warn {
+  border-top: 4px solid #d97706;
+}
+.rp-ac-modal-card.is-lock {
+  border-top: 4px solid #b91c1c;
+}
+.rp-ac-modal-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 22px 14px;
+  border-bottom: 1px solid rgba(44, 52, 46, 0.08);
+}
+.rp-ac-emblem {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rp-ac-emblem svg {
+  width: 22px;
+  height: 22px;
+}
+.rp-ac-emblem.is-warn {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(217, 119, 6, 0.26);
+}
+.rp-ac-emblem.is-lock {
+  background: rgba(185, 28, 28, 0.1);
+  color: #b91c1c;
+  border: 1px solid rgba(185, 28, 28, 0.24);
+}
+.rp-ac-head-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.rp-ac-pill {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.rp-ac-pill.is-warn {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+}
+.rp-ac-pill.is-lock {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid rgba(185, 28, 28, 0.32);
+}
+.rp-ac-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  color: var(--ink, #1f2421);
+}
+.rp-ac-modal-body {
+  padding: 16px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rp-ac-desc {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2, #4b524d);
+}
+.rp-ac-desc strong {
+  color: var(--ink, #1f2421);
+}
+.rp-ac-callout {
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: rgba(217, 119, 6, 0.08);
+  border: 1px solid rgba(217, 119, 6, 0.24);
+  font-size: 13px;
+  line-height: 1.56;
+  color: #78350f;
+}
+.rp-ac-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: 12px;
+  border: 1px solid rgba(44, 52, 46, 0.11);
+  background: rgba(44, 52, 46, 0.03);
+  overflow: hidden;
+}
+.rp-ac-stats.is-single {
+  grid-template-columns: 1fr;
+}
+.rp-ac-stat {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+.rp-ac-stat + .rp-ac-stat {
+  border-left: 1px solid rgba(44, 52, 46, 0.09);
+}
+.rp-ac-stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3, #6d756f);
+}
+.rp-ac-stat-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink, #1f2421);
+}
+.rp-ac-stat.is-lock-time .rp-ac-stat-val {
+  color: #b91c1c;
+  font-size: 19px;
+}
+.rp-ac-modal-foot {
+  padding: 14px 22px 18px;
+  border-top: 1px solid rgba(44, 52, 46, 0.08);
+  display: flex;
+  justify-content: flex-end;
+}
+.rp-ac-cta {
+  height: 38px;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+/* ---------- Hub 30-Minute Lockout Status Banner ---------- */
+.rp-lock-hub-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  border-radius: 13px;
+  background: rgba(185, 28, 28, 0.06);
+  border: 1px solid rgba(185, 28, 28, 0.24);
+  color: #7f1d1d;
+}
+.rp-lock-hub-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rp-lock-hub-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(185, 28, 28, 0.11);
+  color: #b91c1c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rp-lock-hub-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.rp-lock-hub-title {
+  font-size: 13.5px;
+  font-weight: 750;
+  color: #991b1b;
+}
+.rp-lock-hub-sub {
+  font-size: 12.5px;
+  color: #7f1d1d;
+  margin-top: 2px;
+}
+
+[data-theme="dark"] .rp-presubmit-card,
+[data-theme="dark"] .rp-ac-modal-card {
+  background: #1c201d;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+[data-theme="dark"] .rp-presubmit-header,
+[data-theme="dark"] .rp-ac-modal-top,
+[data-theme="dark"] .rp-exit-foot,
+[data-theme="dark"] .rp-ac-modal-foot {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme="dark"] .rp-exit-metrics,
+[data-theme="dark"] .rp-ac-stats {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme="dark"] .rp-exit-metric + .rp-exit-metric,
+[data-theme="dark"] .rp-ac-stat + .rp-ac-stat {
+  border-left-color: rgba(255, 255, 255, 0.09);
+}
+[data-theme="dark"] .rp-ac-callout {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fde68a;
+}
+[data-theme="dark"] .rp-lock-hub-banner {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.32);
+  color: #fecaca;
+}
+[data-theme="dark"] .rp-lock-hub-title,
+[data-theme="dark"] .rp-lock-hub-sub {
+  color: #fecaca;
+}
