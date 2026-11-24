@@ -758,7 +758,7 @@
             : (isOldReview ? `Ôn nhanh ${total} từ cũ qua Speed Quiz để mở ${esc(session.taskLabel)}` : `Kiểm tra phản xạ đọc hiểu (${total} từ)`))}</div>
         <div class="recog-rules-list">
           ${isListenMode
-            ? `<div><strong>1. Phản xạ Nghe thực chiến (Ẩn mặt chữ):</strong> Hệ thống tự động đọc từ chuẩn giọng IELTS (xoay vòng Anh / Úc / Mỹ · bấm nút loa hoặc phím <code>R</code> để nghe lại). Bạn có <strong>${limitSec} giây</strong> nghe âm và chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>), sau đó mặt chữ &amp; IPA sẽ hiện ngay để đối chiếu.</div>`
+            ? `<div><strong>1. Phản xạ Nghe thực chiến (Ẩn mặt chữ):</strong> Hệ thống tự động đọc từ chuẩn giọng IELTS (xoay vòng Anh / Úc / Mỹ · bấm nút loa hoặc phím <code>R</code> để nghe lại). Bạn có <strong>${limitSec} giây</strong> để chọn đúng <strong>nghĩa Tiếng Việt</strong> hoặc <strong>cụm Paraphrase tương đương trong băng nghe</strong> (cẩn thận <strong>bẫy trái nghĩa</strong> · phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>).</div>`
             : `<div><strong>1. Tốc độ Reading thực chiến:</strong> Mỗi từ có <strong>${limitSec} giây</strong> để nhìn mặt chữ và chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>).</div>`}
           <div><strong>2. Đảm bảo thuộc nằm lòng:</strong> ${(isOldReview || isTaskStudy) ? 'Hoàn tất lượt kiểm tra và vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.' : `Vòng 1 cần đạt <strong>&ge; ${PASS_THRESHOLD_PCT}%</strong>, sau đó vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.`}</div>
           ${isList
@@ -874,13 +874,26 @@
     const item = session.itemById.get(itemId);
     if (!item) return;
     session.currentItem = item;
-    session.currentOptions = shuffleArr(buildMeaningDistractors(item, session.pool, 3));
+    const isListen = isListeningSession();
+    const paraQ = isListen ? window.APP_LISTENING_PARAPHRASES?.buildParaphraseQuestion?.(item.lemma) : null;
+    if (paraQ && Array.isArray(paraQ.options) && paraQ.options.length === 4) {
+      session.currentQuestionKind = 'paraphrase';
+      session.currentOptions = paraQ.options.map((o) => ({
+        id: item.id,
+        meaning: o.text,
+        isCorrect: Boolean(o.isCorrect),
+        isAntonymTrap: Boolean(o.isAntonymTrap),
+      }));
+    } else {
+      session.currentQuestionKind = 'meaning';
+      session.currentOptions = shuffleArr(buildMeaningDistractors(item, session.pool, 3));
+    }
     session.currentAccent = IELTS_LISTEN_ACCENTS[(session.cursor + session.errorAttempts) % IELTS_LISTEN_ACCENTS.length];
     session.locked = false;
     session._tickFlags = { t1500: false, t750: false };
 
     renderQuestionCard();
-    if (isListeningSession()) {
+    if (isListen) {
       pulseListenWave(950);
       speakWordAudio(item.lemma, session.currentAccent, 'auto');
     } else if (soundEnabled) {
@@ -905,10 +918,11 @@
     const ipaText = item.ipa || window.IPA_DICT?.[String(item.lemma || '').toLowerCase()] || '';
     const posText = item.clean_pos || item.pos || '';
     const isListenMode = isListeningSession();
+    const isParaQ = isListenMode && session.currentQuestionKind === 'paraphrase';
     const listenPosVi = formatListeningPosVi(posText);
 
     const optsHtml = session.currentOptions.map((opt, i) => `
-      <button type="button" class="recog-opt-btn" id="recog-opt-${i}" onclick="RecognitionTestModule.chooseOption(${i})">
+      <button type="button" class="recog-opt-btn ${isParaQ ? 'is-paraphrase-opt' : ''}" id="recog-opt-${i}" onclick="RecognitionTestModule.chooseOption(${i})">
         <span class="recog-opt-key">${i + 1}</span>
         <span class="recog-opt-text">${esc(opt.meaning)}</span>
       </button>
@@ -943,6 +957,7 @@
           </div>
           <div class="recog-l-meta">
             <span class="recog-pos-chip">${esc(listenPosVi)}</span>
+            ${isParaQ ? '<span class="recog-para-badge">Paraphrase · Bẫy trái nghĩa</span>' : ''}
             <span class="recog-l-replay-hint">Bấm loa hoặc <kbd>R</kbd> để nghe lại</span>
           </div>
         </div>
@@ -1066,6 +1081,9 @@
     const fb = document.getElementById('recog-feedback-line');
 
     const isListenMode = isListeningSession();
+    const isParaQ = isListenMode && session.currentQuestionKind === 'paraphrase';
+    const chosenOpt = chosenIdx >= 0 ? session.currentOptions[chosenIdx] : null;
+    const correctOpt = correctIdx >= 0 ? session.currentOptions[correctIdx] : null;
     if (isListenMode) {
       const slotsEl = document.getElementById('recog-l-slots');
       const revEl = document.getElementById('recog-listen-reveal');
@@ -1077,14 +1095,24 @@
 
     if (isCorrect) {
       if (chosenBtn) chosenBtn.classList.add('is-correct');
-      if (fb) { fb.textContent = isListenMode ? `✓ Chính xác! (${item.lemma})` : '✓ Chính xác!'; fb.className = 'recog-feedback-line is-ok'; }
+      if (fb) {
+        fb.textContent = isParaQ
+          ? `✓ Chuẩn Paraphrase! (${item.lemma})`
+          : (isListenMode ? `✓ Chính xác! (${item.lemma})` : '✓ Chính xác!');
+        fb.className = 'recog-feedback-line is-ok';
+      }
     } else {
       if (chosenBtn) chosenBtn.classList.add('is-wrong');
       if (correctBtn) correctBtn.classList.add('is-correct');
       if (fb) {
-        fb.textContent = isListenMode
-          ? `${noteText || 'Sai'} — ${item.lemma}: ${item.clean_meaning || item.meaning || ''}`
-          : `${noteText || 'Sai'} — Đáp án: ${item.clean_meaning || item.meaning || ''}`;
+        if (isParaQ) {
+          const prefix = chosenOpt?.isAntonymTrap ? 'Bẫy trái nghĩa!' : (noteText || 'Sai');
+          fb.textContent = `${prefix} ${item.lemma} ≈ "${correctOpt?.meaning || ''}" (${item.clean_meaning || item.meaning || ''})`;
+        } else {
+          fb.textContent = isListenMode
+            ? `${noteText || 'Sai'} — ${item.lemma}: ${item.clean_meaning || item.meaning || ''}`
+            : `${noteText || 'Sai'} — Đáp án: ${item.clean_meaning || item.meaning || ''}`;
+        }
         fb.className = 'recog-feedback-line is-err';
       }
     }

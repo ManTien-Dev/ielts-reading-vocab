@@ -9996,6 +9996,22 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   font-weight: 700;
   color: var(--ink, #24221F);
 }
+.recog-para-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #fef3c7;
+  border: 1px solid rgba(217, 119, 6, 0.36);
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 700;
+}
+[data-theme="dark"] .recog-para-badge {
+  background: rgba(217, 119, 6, 0.22);
+  border-color: rgba(251, 191, 36, 0.4);
+  color: #fde68a;
+}
 
 
 

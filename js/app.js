@@ -3895,12 +3895,13 @@
     const grid = document.getElementById('recall-syn-grid');
     if (!grid) return;
     grid.innerHTML = '';
-    grid.classList.toggle('is-quick-vi', recallMode === 'quick_vi');
+    const isListChoice = recallMode === 'quick_vi' || recallMode === 'paraphrase_think';
+    grid.classList.toggle('is-quick-vi', isListChoice);
     recallSynOptions.forEach((opt, idx) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'recall-syn-opt';
-      if (recallMode === 'quick_vi') btn.classList.add('is-vi-choice');
+      if (isListChoice) btn.classList.add('is-vi-choice');
       const isSelected = recallSynSelected.has(idx);
       if (revealAnswers) {
         btn.disabled = true;
@@ -3909,13 +3910,17 @@
           btn.textContent = `✓ ${opt.text}`;
         } else if (opt.isCorrect && !isSelected) {
           btn.classList.add('is-missed');
-          btn.textContent = recallMode === 'quick_vi' ? `✓ ${opt.text}` : `Thiếu: ${opt.text}`;
-        } else if (!opt.isCorrect && isSelected) {
+          btn.textContent = isListChoice ? `✓ ${opt.text}` : `Thiếu: ${opt.text}`;
+        } else if (!opt.isCorrect && (isSelected || opt.triedWrong)) {
           btn.classList.add('is-wrong');
-          btn.textContent = `✗ ${opt.text}`;
+          btn.textContent = `${opt.isAntonymTrap ? '✗ Bẫy trái nghĩa: ' : '✗ '}${opt.text}`;
         } else {
           btn.textContent = opt.text;
         }
+      } else if (opt.triedWrong) {
+        btn.disabled = true;
+        btn.classList.add('is-wrong');
+        btn.textContent = `${opt.isAntonymTrap ? '✗ Bẫy trái nghĩa: ' : '✗ '}${opt.text}`;
       } else {
         btn.textContent = opt.text;
         if (isSelected) btn.classList.add('is-selected');
@@ -3950,6 +3955,37 @@
 
   function toggleRecallSynOption(idx) {
     if (recallSubmitted) return;
+    // Active-Thinking Spoken Paraphrase check (Listening Test 2: retry until correct, catch Antonym Traps!)
+    if (recallMode === 'paraphrase_think') {
+      const opt = recallSynOptions[idx];
+      if (!opt || opt.triedWrong || !recallTargetItem) return;
+      const fb = document.getElementById('recall-feedback');
+      if (opt.isCorrect) {
+        stopRecallInputTimer();
+        recallSubmitted = true;
+        recallSynSelected = new Set([idx]);
+        renderRecallSynGrid(true);
+        if (fb) {
+          fb.style.display = 'block';
+          fb.className = 'recall-feedback ok';
+          fb.textContent = `✓ Chuẩn Paraphrase IELTS! "${recallTargetItem.lemma}" ≈ "${opt.text}"`;
+        }
+        const doneItem = recallTargetItem;
+        setTimeout(() => advanceRecallStage2Queue(doneItem), 420);
+      } else {
+        opt.triedWrong = true;
+        renderRecallSynGrid(false);
+        if (fb) {
+          fb.style.display = 'block';
+          fb.className = 'recall-feedback err';
+          fb.innerHTML = opt.isAntonymTrap
+            ? `Cẩn thận <strong>bẫy trái nghĩa</strong>! <em>"${escapeHtml(opt.text)}"</em> mang nghĩa NGƯỢC lại với <strong>${escapeHtml(recallTargetItem.lemma)}</strong> — suy nghĩ lại và chọn đáp án đúng nhé.`
+            : `Chưa khớp nghĩa với <strong>${escapeHtml(recallTargetItem.lemma)}</strong> — tự suy luận lại và chọn lại đến khi đúng nhé!`;
+        }
+      }
+      return;
+    }
+
     // Fast 1-Tap Vietnamese Meaning check
     if (recallMode === 'quick_vi') {
       const opt = recallSynOptions[idx];
@@ -4027,6 +4063,10 @@
       }
     }
     if (p2) {
+      if (recallMode === 'paraphrase_think') {
+        p2.innerHTML = 'Tự suy luận cách nói tương đương — cẩn thận bẫy trái nghĩa (sai chọn lại đến khi đúng):';
+        return;
+      }
       if (recallMode === 'quick_vi') {
         p2.innerHTML = 'Chọn nghĩa tiếng Việt đúng:';
         return;
@@ -4120,6 +4160,69 @@
         fb.innerHTML = '';
       }
       updateRecallPromptAttempts(item);
+      setRecallActiveSession(item, 2);
+      recallDeadlineTimer = setInterval(updateRecallCountdownBadge, 250);
+      return;
+    }
+
+    if (stepType === 'paraphrase_think') {
+      const pq = window.APP_LISTENING_PARAPHRASES?.buildParaphraseQuestion?.(item.lemma);
+      if (!pq || !Array.isArray(pq.options) || pq.options.length < 2) {
+        advanceRecallStage2Queue(item);
+        return;
+      }
+      stopRecallInputTimer();
+      resetRecallSpeedBarUI(false);
+      recallStage = 2;
+      recallSubmitted = false;
+      recallMode = 'paraphrase_think';
+      recallStage2Type = 'paraphrase_think';
+      recallAttemptsLeft = 99;
+      recallSynOptions = pq.options.map((o) => ({
+        text: o.text,
+        isCorrect: Boolean(o.isCorrect),
+        isAntonymTrap: Boolean(o.isAntonymTrap),
+        triedWrong: false,
+      }));
+      recallSynSelected = new Set();
+
+      const limitSec = 45;
+      recallDeadlineAt = Date.now() + limitSec * 1000;
+
+      const stageBadge = document.getElementById('recall-stage-badge');
+      const timerBadge = document.getElementById('recall-timer-badge');
+      const hintBox = document.getElementById('recall-hint-box');
+      const targetSubEl = document.querySelector('#recall-stage2-target .recall-stage-sub');
+      const targetWordEl = document.getElementById('recall-stage2-word');
+      const stage1Body = document.getElementById('recall-stage1-body');
+      const listenBodyEl = document.getElementById('recall-listening-body');
+      const stage2Body = document.getElementById('recall-stage2-body');
+      const btnSubmit = document.getElementById('btn-recall-submit');
+      const fb = document.getElementById('recall-feedback');
+
+      document.getElementById('recall-word-input')?.blur();
+      if (stageBadge) stageBadge.textContent = 'Test 2 · Tư duy Paraphrase';
+      if (timerBadge) {
+        timerBadge.textContent = `${limitSec}s`;
+        timerBadge.classList.remove('is-urgent', 'is-speed-pulse');
+      }
+      if (hintBox) hintBox.style.display = 'block';
+      if (targetSubEl) targetSubEl.textContent = 'Trong băng nghe IELTS, người nói sẽ diễn đạt từ này bằng cách nào?';
+      if (targetWordEl) {
+        targetWordEl.className = 'recall-stage-word';
+        targetWordEl.textContent = item.lemma || '';
+      }
+      if (stage1Body) stage1Body.style.display = 'none';
+      if (listenBodyEl) listenBodyEl.style.display = 'none';
+      if (stage2Body) stage2Body.style.display = 'block';
+      if (btnSubmit) btnSubmit.style.display = 'none';
+      if (fb) {
+        fb.style.display = 'none';
+        fb.className = 'recall-feedback';
+        fb.innerHTML = '';
+      }
+      updateRecallPromptAttempts(item);
+      renderRecallSynGrid(false);
       setRecallActiveSession(item, 2);
       recallDeadlineTimer = setInterval(updateRecallCountdownBadge, 250);
       return;
@@ -4458,6 +4561,7 @@
       const al = String(a || '').trim().toLowerCase();
       return al && al !== expected;
     });
+    const hasParaphraseBank = !isSignal && Boolean(window.APP_LISTENING_PARAPHRASES?.hasEntry?.(item.lemma));
     const hasMeaningChoices = !isSignal && Boolean(window.RecognitionTestModule?.buildMeaningDistractors) &&
       (window.RecognitionTestModule.buildMeaningDistractors(item, currentScopeList, 3)?.length >= 2);
 
@@ -4465,6 +4569,7 @@
     if (isSignal) {
       if (hasSynTargets) recallStage2Queue.push('signal_equiv');
     } else {
+      if (hasParaphraseBank) recallStage2Queue.push('paraphrase_think');
       if (hasSynTargets) recallStage2Queue.push('synonym');
       if (hasAntTargets) recallStage2Queue.push('antonym');
       if (hasMeaningChoices) recallStage2Queue.push('meaning_vi');
