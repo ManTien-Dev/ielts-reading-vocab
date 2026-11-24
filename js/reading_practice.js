@@ -888,10 +888,10 @@
     };
 
     const portalCoverById = {
-      cambridge: 'assets/images/reading_covers/portal_cambridge.webp',
-      volume: 'assets/images/reading_covers/portal_volume.webp',
-      actual: 'assets/images/reading_covers/portal_actual.webp',
-      news: 'assets/images/reading_covers/portal_news.webp'
+      cambridge: 'assets/images/reading_covers/portal_cambridge.webp?v=20261125c',
+      volume: 'assets/images/reading_covers/portal_volume.webp?v=20261125c',
+      actual: 'assets/images/reading_covers/portal_actual.webp?v=20261125c',
+      news: 'assets/images/reading_covers/portal_news.webp?v=20261125c'
     };
 
     const cardsHtml = sources.map((s) => {
@@ -1463,39 +1463,31 @@
   }
 
   function getReadingCardCover(item, isFull) {
-    let fallback = 'assets/images/reading_covers/fulltest.webp';
+    // Full Tests ALWAYS use our dedicated custom CD-IELTS Full Test cover (never random passage photos!)
     if (isFull) {
-      if (item.source === 'actual' && item._actualFullIdx) {
-        const key = COVER_THEMES_ORDER[(item._actualFullIdx - 1) % COVER_THEMES_ORDER.length];
-        fallback = `assets/images/reading_covers/${key}.webp`;
-      }
-    } else {
-      let matched = null;
-      const titleText = String(item.title || '');
-      for (const [key, re] of COVER_TOPIC_RULES) {
-        if (re.test(titleText)) { matched = key; break; }
-      }
-      if (!matched) {
-        const subText = `${item.subtitle || ''} ${item.topic || ''}`;
-        for (const [key, re] of COVER_TOPIC_RULES) {
-          if (re.test(subText)) { matched = key; break; }
-        }
-      }
-      if (!matched) {
-        const fallbackPool = COVER_THEMES_ORDER.slice(1);
-        matched = fallbackPool[hashStringIdx(item.id || item.title) % fallbackPool.length];
-      }
-      fallback = `assets/images/reading_covers/${matched}.webp`;
+      const ftSrc = 'assets/images/reading_covers/cover_fulltest.webp?v=20261125c';
+      return { primary: ftSrc, fallback: ftSrc };
     }
 
-    const photoMap = window.READING_PHOTO_MAP || {};
-    let realPhoto = null;
-    if (isFull) {
-      const leadPid = Array.isArray(item.passageIds) ? item.passageIds[0] : null;
-      realPhoto = (leadPid && photoMap[leadPid]) || photoMap[item.id] || null;
-    } else {
-      realPhoto = photoMap[item.id] || null;
+    let matched = null;
+    const titleText = String(item.title || '');
+    for (const [key, re] of COVER_TOPIC_RULES) {
+      if (re.test(titleText)) { matched = key; break; }
     }
+    if (!matched) {
+      const subText = `${item.subtitle || ''} ${item.topic || ''}`;
+      for (const [key, re] of COVER_TOPIC_RULES) {
+        if (re.test(subText)) { matched = key; break; }
+      }
+    }
+    if (!matched) {
+      const fallbackPool = COVER_THEMES_ORDER.slice(1);
+      matched = fallbackPool[hashStringIdx(item.id || item.title) % fallbackPool.length];
+    }
+    const fallback = `assets/images/reading_covers/${matched}.webp`;
+
+    const photoMap = window.READING_PHOTO_MAP || {};
+    const realPhoto = photoMap[item.id] || null;
 
     return {
       primary: realPhoto || fallback,
