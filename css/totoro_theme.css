@@ -1665,14 +1665,72 @@ html[data-motion="morph"] #screen-study .fc-motion-wrap.in-prev  { animation: mo
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 6%, transparent), var(--shadow-card) !important;
 }
 
-/* Shared real 3D geometry for Mode 1 (Lật 3D / pro) & Mode 2 (Cổ điển / classic) */
-html[data-motion="pro"] #screen-study #fc-scene,
-html[data-motion="classic"] #screen-study #fc-scene {
+/* Shared real 3D geometry for Mode 1 (Lật 3D / pro) & Mode 2 (Cổ điển / classic)
+   Razor-sharp ClearType fix: only promote to 3D GPU layer while #fc-scene.is-3d-flipping!
+   When settled, both front & back render flat (transform: none) with 100% native subpixel sharpness. */
+html[data-motion="pro"] #screen-study #fc-scene:not(.is-3d-flipping),
+html[data-motion="classic"] #screen-study #fc-scene:not(.is-3d-flipping) {
+  perspective: none !important;
+  -webkit-perspective: none !important;
+}
+html[data-motion="pro"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card,
+html[data-motion="classic"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card,
+html[data-motion="pro"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card.flipped,
+html[data-motion="classic"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card.flipped {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform-style: flat !important;
+  -webkit-transform-style: flat !important;
+  transform: none !important;
+  transition: none !important;
+  will-change: auto !important;
+}
+html[data-motion="pro"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card .fc-face,
+html[data-motion="classic"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card .fc-face {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+  transition: none !important;
+}
+html[data-motion="pro"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card:not(.flipped) .fc-face-front,
+html[data-motion="classic"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card:not(.flipped) .fc-face-front {
+  display: flex !important;
+  opacity: 1 !important;
+  z-index: 2;
+  pointer-events: auto;
+}
+html[data-motion="pro"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card:not(.flipped) .fc-face-back,
+html[data-motion="classic"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card:not(.flipped) .fc-face-back {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none;
+}
+html[data-motion="pro"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card.flipped .fc-face-front,
+html[data-motion="classic"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card.flipped .fc-face-front {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none;
+}
+html[data-motion="pro"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card.flipped .fc-face-back,
+html[data-motion="classic"] #screen-study #fc-scene:not(.is-3d-flipping) #fc-card.flipped .fc-face-back {
+  display: flex !important;
+  opacity: 1 !important;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+html[data-motion="pro"] #screen-study #fc-scene.is-3d-flipping,
+html[data-motion="classic"] #screen-study #fc-scene.is-3d-flipping {
   perspective: 1400px !important;
   -webkit-perspective: 1400px !important;
 }
-html[data-motion="pro"] #screen-study #fc-card,
-html[data-motion="classic"] #screen-study #fc-card {
+html[data-motion="pro"] #screen-study #fc-scene.is-3d-flipping #fc-card,
+html[data-motion="classic"] #screen-study #fc-scene.is-3d-flipping #fc-card {
   position: relative !important;
   width: 100% !important;
   height: 100% !important;
@@ -1681,12 +1739,12 @@ html[data-motion="classic"] #screen-study #fc-card {
   transform: rotateY(0deg) !important;
   will-change: transform;
 }
-html[data-motion="pro"] #screen-study #fc-card.flipped,
-html[data-motion="classic"] #screen-study #fc-card.flipped {
+html[data-motion="pro"] #screen-study #fc-scene.is-3d-flipping #fc-card.flipped,
+html[data-motion="classic"] #screen-study #fc-scene.is-3d-flipping #fc-card.flipped {
   transform: rotateY(180deg) !important;
 }
-html[data-motion="pro"] #screen-study #fc-card .fc-face,
-html[data-motion="classic"] #screen-study #fc-card .fc-face {
+html[data-motion="pro"] #screen-study #fc-scene.is-3d-flipping #fc-card .fc-face,
+html[data-motion="classic"] #screen-study #fc-scene.is-3d-flipping #fc-card .fc-face {
   position: absolute !important;
   inset: 0 !important;
   width: 100% !important;
@@ -1695,40 +1753,40 @@ html[data-motion="classic"] #screen-study #fc-card .fc-face {
   backface-visibility: hidden !important;
   -webkit-backface-visibility: hidden !important;
 }
-html[data-motion="pro"] #screen-study #fc-card .fc-face-front,
-html[data-motion="classic"] #screen-study #fc-card .fc-face-front {
-  transform: rotateY(0deg) translateZ(1px) !important;
+html[data-motion="pro"] #screen-study #fc-scene.is-3d-flipping #fc-card .fc-face-front,
+html[data-motion="classic"] #screen-study #fc-scene.is-3d-flipping #fc-card .fc-face-front {
+  transform: rotateY(0deg) !important;
   z-index: 2;
   opacity: 1;
   pointer-events: auto;
   transition: opacity 0s linear 190ms;
 }
-html[data-motion="pro"] #screen-study #fc-card .fc-face-back,
-html[data-motion="classic"] #screen-study #fc-card .fc-face-back {
-  transform: rotateY(180deg) translateZ(0px) !important;
+html[data-motion="pro"] #screen-study #fc-scene.is-3d-flipping #fc-card .fc-face-back,
+html[data-motion="classic"] #screen-study #fc-scene.is-3d-flipping #fc-card .fc-face-back {
+  transform: rotateY(180deg) !important;
   z-index: 1;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0s linear 190ms;
 }
-html[data-mode="calm"][data-motion="pro"] #screen-study #fc-card .fc-face-front,
-html[data-mode="calm"][data-motion="pro"] #screen-study #fc-card .fc-face-back {
+html[data-mode="calm"][data-motion="pro"] #screen-study #fc-scene.is-3d-flipping #fc-card .fc-face-front,
+html[data-mode="calm"][data-motion="pro"] #screen-study #fc-scene.is-3d-flipping #fc-card .fc-face-back {
   transition-delay: 335ms;
 }
-html[data-motion="classic"] #screen-study #fc-card .fc-face-front,
-html[data-motion="classic"] #screen-study #fc-card .fc-face-back {
+html[data-motion="classic"] #screen-study #fc-scene.is-3d-flipping #fc-card .fc-face-front,
+html[data-motion="classic"] #screen-study #fc-scene.is-3d-flipping #fc-card .fc-face-back {
   transition-delay: 250ms;
 }
-html[data-motion="pro"] #screen-study #fc-card.flipped .fc-face-front,
-html[data-motion="classic"] #screen-study #fc-card.flipped .fc-face-front {
-  transform: rotateY(0deg) translateZ(0px) !important;
+html[data-motion="pro"] #screen-study #fc-scene.is-3d-flipping #fc-card.flipped .fc-face-front,
+html[data-motion="classic"] #screen-study #fc-scene.is-3d-flipping #fc-card.flipped .fc-face-front {
+  transform: rotateY(0deg) !important;
   z-index: 1;
   opacity: 0;
   pointer-events: none;
 }
-html[data-motion="pro"] #screen-study #fc-card.flipped .fc-face-back,
-html[data-motion="classic"] #screen-study #fc-card.flipped .fc-face-back {
-  transform: rotateY(180deg) translateZ(1px) !important;
+html[data-motion="pro"] #screen-study #fc-scene.is-3d-flipping #fc-card.flipped .fc-face-back,
+html[data-motion="classic"] #screen-study #fc-scene.is-3d-flipping #fc-card.flipped .fc-face-back {
+  transform: rotateY(180deg) !important;
   z-index: 2;
   opacity: 1;
   pointer-events: auto;

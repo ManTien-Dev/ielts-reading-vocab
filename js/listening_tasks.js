@@ -807,27 +807,26 @@
     body.innerHTML = `
       <div class="lt-t1-stage">
         <div class="lt-progress-row">
-          <span class="tabular"><strong>Câu ${idx + 1} / ${total}</strong> (Nghe đủ 100% từ của Task)</span>
-          <span class="lt-timer-pill tabular" id="lt-t1-timer">10s</span>
+          <span class="tabular"><strong>Câu ${idx + 1} / ${total}</strong></span>
+          <div class="lt-row-right">
+            <div class="lt-oneshot-strip is-playing" id="lt-t1-audio-strip">
+              <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+              <span id="lt-t1-audio-text">Đang phát…</span>
+            </div>
+            <span class="lt-timer-pill tabular" id="lt-t1-timer">10s</span>
+          </div>
         </div>
         <div class="lt-prog-track"><div class="lt-prog-fill" style="width:${pct}%"></div></div>
-
-        <div class="lt-oneshot-strip is-playing" id="lt-t1-audio-strip">
-          <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-          <span id="lt-t1-audio-text">🔊 Đang phát âm (1 lần duy nhất — không phát lại)…</span>
-        </div>
 
         <div class="lt-t1-cue">
           <span class="rl-cue-pos">${esc(formatListeningPos(item.pos))}</span>
           <span class="lt-t1-meaning">${esc(item.clean_meaning || item.meaning || '')}</span>
-          ${item.spelling_trap ? `<span class="lt-trap-pill">${esc(item.spelling_trap)}</span>` : ''}
         </div>
 
         <form class="lt-t1-form" onsubmit="ListeningTasksModule.submitT1Word(event)">
-          <input type="text" class="recall-word-input lt-t1-input" id="lt-t1-input" placeholder="Gõ chính tả từ vừa nghe..." autocomplete="off" autocapitalize="none" spellcheck="false" />
-          <div class="lt-t1-footer">
-            <span class="lt-hint-quiet">Gõ xong bấm <strong>Enter</strong> · Không phát lại âm thanh</span>
-            <button type="submit" class="btn btn-primary">Xác nhận &amp; Câu tiếp →</button>
+          <input type="text" class="recall-word-input lt-t1-input" id="lt-t1-input" placeholder="Nhập từ vừa nghe..." autocomplete="off" autocapitalize="none" spellcheck="false" />
+          <div class="lt-t1-footer is-end">
+            <button type="submit" class="btn btn-primary">Tiếp theo →</button>
           </div>
         </form>
       </div>
@@ -843,7 +842,7 @@
       const strip = document.getElementById('lt-t1-audio-strip');
       const txt = document.getElementById('lt-t1-audio-text');
       if (strip) strip.classList.remove('is-playing');
-      if (txt) txt.textContent = '✓ Đã phát xong (1/1) — Hãy gõ chính tả ngay!';
+      if (txt) txt.textContent = '✓ Đã phát';
       t1DeadlineAt = Date.now() + 10000;
       t1CountdownTimer = setInterval(() => {
         const rem = Math.max(0, Math.ceil((t1DeadlineAt - Date.now()) / 1000));
@@ -952,15 +951,16 @@
     body.innerHTML = `
       <div class="lt-t2-stage">
         <div class="lt-progress-row">
-          <span class="tabular"><strong>Hội thoại ${idx + 1} / ${convs.length}</strong> · <span class="lt-part-badge">${esc(c.level || 'Part 1')}</span></span>
-          <span class="lt-timer-pill" id="lt-t2-status-pill">Đọc đề: 5s</span>
+          <span class="tabular"><strong>Hội thoại ${idx + 1} / ${convs.length}</strong></span>
+          <div class="lt-row-right">
+            <div class="lt-oneshot-strip" id="lt-t2-audio-strip">
+              <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+              <span id="lt-t2-audio-text">Chuẩn bị…</span>
+            </div>
+            <span class="lt-timer-pill tabular" id="lt-t2-status-pill">5s</span>
+          </div>
         </div>
         <div class="lt-prog-track"><div class="lt-prog-fill" style="width:${Math.round((idx / convs.length) * 100)}%"></div></div>
-
-        <div class="lt-oneshot-strip" id="lt-t2-audio-strip">
-          <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-          <span id="lt-t2-audio-text">Đọc nhanh câu hỏi &amp; 3 phương án trước khi hội thoại tự phát (1 lần duy nhất)…</span>
-        </div>
 
         <div class="lt-t2-question">${esc(c.question)}</div>
         <div class="lt-t2-options" id="lt-t2-options">
@@ -972,10 +972,9 @@
           `).join('')}
         </div>
 
-        <div class="lt-t2-footer">
-          <span class="lt-hint-quiet">Hội thoại 2 người chỉ phát 1 lần · Chọn A, B hoặc C rồi bấm Tiếp tục</span>
+        <div class="lt-t2-footer is-end">
           <button type="button" class="btn btn-primary" id="btn-lt-t2-next" onclick="ListeningTasksModule.nextT2Question()" ${picked == null ? 'disabled' : ''}>
-            ${idx + 1 === convs.length ? 'Nộp & Chấm Test 2 →' : 'Câu tiếp theo →'}
+            ${idx + 1 === convs.length ? 'Nộp Test 2 →' : 'Tiếp theo →'}
           </button>
         </div>
       </div>
@@ -987,25 +986,25 @@
       preSec -= 1;
       const pill = document.getElementById('lt-t2-status-pill');
       if (preSec > 0) {
-        if (pill) pill.textContent = `Đọc đề: ${preSec}s`;
+        if (pill) pill.textContent = `${preSec}s`;
       } else {
         clearInterval(preReadTimer);
         preReadTimer = null;
         if (!examState || examState.stage !== 2 || examState.t2Idx !== idx) return;
         const strip = document.getElementById('lt-t2-audio-strip');
         if (strip) strip.classList.add('is-playing');
-        if (pill) pill.textContent = 'Đang phát (1/1)';
+        if (pill) pill.textContent = 'Đang phát';
 
         const onT2Turn = (ti, turn) => {
           const txt = document.getElementById('lt-t2-audio-text');
-          if (txt) txt.textContent = `🎙️ ${turn.speaker || 'Speaker'} (${turn.accent || 'en-GB'}) đang nói… (Lượt ${ti + 1}/${(c.turns || []).length})`;
+          if (txt) txt.textContent = `${turn.speaker || 'Speaker'} (${ti + 1}/${(c.turns || []).length})`;
         };
         const onT2Done = () => {
           const st = document.getElementById('lt-t2-audio-strip');
           const txt = document.getElementById('lt-t2-audio-text');
           const pl = document.getElementById('lt-t2-status-pill');
           if (st) st.classList.remove('is-playing');
-          if (txt) txt.textContent = '✓ Hội thoại đã phát xong (1/1) — Hãy chọn đáp án A, B hoặc C!';
+          if (txt) txt.textContent = '✓ Đã phát';
           if (pl) pl.textContent = 'Chọn đáp án';
         };
         playStudioMp3(c.audioFile, {
@@ -1312,13 +1311,14 @@
     body.innerHTML = `
       <div class="lt-t3-stage">
         <div class="lt-progress-row">
-          <span><strong>${esc(ml.scenarioIntro || 'Quan sát bản đồ, nghe chỉ đường 1 lần duy nhất và chọn chữ cái A–H.')}</strong></span>
-          <span class="lt-timer-pill" id="lt-t3-status-pill">Đọc bản đồ: 10s</span>
-        </div>
-
-        <div class="lt-oneshot-strip" id="lt-t3-audio-strip">
-          <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-          <span id="lt-t3-audio-text">Tìm lối vào (📍) và la bàn N–E–S–W trên bản đồ — Băng sẽ tự phát 1 lần duy nhất…</span>
+          <span><strong>${esc(ml.title || 'Map Labelling')}</strong></span>
+          <div class="lt-row-right">
+            <div class="lt-oneshot-strip" id="lt-t3-audio-strip">
+              <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+              <span id="lt-t3-audio-text">Đọc bản đồ…</span>
+            </div>
+            <span class="lt-timer-pill tabular" id="lt-t3-status-pill">10s</span>
+          </div>
         </div>
 
         <div class="lt-map-workspace">
@@ -1326,7 +1326,7 @@
             ${renderSvgMapHtml(ml, false)}
           </div>
           <div class="lt-map-q-col">
-            <div class="lt-col-head">CHỌN CHỮ CÁI A–H CHO TỪNG ĐỊA ĐIỂM (BẤM DÒNG HOẶC BẤM TRÊN BẢN ĐỒ)</div>
+            <div class="lt-col-head">ĐỊA ĐIỂM (A–H)</div>
             <div class="lt-map-q-list" id="lt-map-q-list">
               ${questions.map((q) => {
                 const picked = String(examState.t3Inputs[q.num] || '').toUpperCase();
@@ -1344,9 +1344,8 @@
           </div>
         </div>
 
-        <div class="lt-t3-footer">
-          <span class="lt-hint-quiet">Chọn trực tiếp trên danh sách hoặc bấm chữ cái A–H trên bản đồ · Không nút nghe lại khi thi</span>
-          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.submitTest3()">Nộp bài &amp; Đối chiếu Bản đồ →</button>
+        <div class="lt-t3-footer is-end">
+          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.submitTest3()">Nộp bài &amp; Chấm điểm →</button>
         </div>
       </div>
     `;
@@ -1356,7 +1355,7 @@
       preSec -= 1;
       const pill = document.getElementById('lt-t3-status-pill');
       if (preSec > 0) {
-        if (pill) pill.textContent = `Đọc bản đồ: ${preSec}s`;
+        if (pill) pill.textContent = `${preSec}s`;
       } else {
         clearInterval(preReadTimer);
         preReadTimer = null;
@@ -1364,19 +1363,19 @@
         examState.t3Phase = 'playing';
         const strip = document.getElementById('lt-t3-audio-strip');
         if (strip) strip.classList.add('is-playing');
-        if (pill) pill.textContent = 'Đang phát băng (1/1)';
+        if (pill) pill.textContent = 'Đang phát';
 
         const segs = ml.transcriptSegments || [];
         const onT3Turn = (si, seg) => {
           const txt = document.getElementById('lt-t3-audio-text');
-          if (txt) txt.textContent = `🎙️ ${seg.speaker || 'Guide'} đang chỉ đường… (Đoạn ${si + 1}/${segs.length} · Không phát lại)`;
+          if (txt) txt.textContent = `${seg.speaker || 'Guide'} (${si + 1}/${segs.length})`;
         };
         const onT3Done = () => {
           const st = document.getElementById('lt-t3-audio-strip');
           const txt = document.getElementById('lt-t3-audio-text');
           const pl = document.getElementById('lt-t3-status-pill');
           if (st) st.classList.remove('is-playing');
-          if (txt) txt.textContent = '✓ Băng đã phát xong (1/1) — Kiểm tra lại các chữ cái A–H rồi bấm Nộp bài!';
+          if (txt) txt.textContent = '✓ Đã phát';
           if (pl) pl.textContent = 'Sẵn sàng nộp';
         };
         playStudioMp3(ml.audioFile, {
@@ -1517,19 +1516,19 @@
     body.innerHTML = `
       <div class="lt-t3-stage">
         <div class="lt-progress-row">
-          <span><strong>${esc(nc.scenarioIntro || 'Nghe 1 lần duy nhất và điền vào tờ Ghi chú bên dưới.')}</strong></span>
-          <span class="lt-timer-pill" id="lt-t3-status-pill">Đọc trước: 10s</span>
-        </div>
-
-        <div class="lt-oneshot-strip" id="lt-t3-audio-strip">
-          <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-          <span id="lt-t3-audio-text">Đọc lướt tờ Note để đoán từ loại (Prediction) — Băng sẽ tự phát 1 lần duy nhất…</span>
+          <span><strong>${esc(nc.scenarioIntro || 'Note Completion')}</strong></span>
+          <div class="lt-row-right">
+            <div class="lt-oneshot-strip" id="lt-t3-audio-strip">
+              <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+              <span id="lt-t3-audio-text">Đọc đề…</span>
+            </div>
+            <span class="lt-timer-pill tabular" id="lt-t3-status-pill">10s</span>
+          </div>
         </div>
 
         ${renderNoteSheetHtml(nc, false)}
 
-        <div class="lt-t3-footer">
-          <span class="lt-hint-quiet">Điền trực tiếp trong khi nghe · Làm xong bấm Nộp để chấm &amp; đối chiếu Transcript 3 màu</span>
+        <div class="lt-t3-footer is-end">
           <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.submitTest3()">Nộp bài &amp; Chấm điểm →</button>
         </div>
       </div>
@@ -1540,7 +1539,7 @@
       preSec -= 1;
       const pill = document.getElementById('lt-t3-status-pill');
       if (preSec > 0) {
-        if (pill) pill.textContent = `Đọc trước: ${preSec}s`;
+        if (pill) pill.textContent = `${preSec}s`;
       } else {
         clearInterval(preReadTimer);
         preReadTimer = null;
@@ -1548,19 +1547,19 @@
         examState.t3Phase = 'playing';
         const strip = document.getElementById('lt-t3-audio-strip');
         if (strip) strip.classList.add('is-playing');
-        if (pill) pill.textContent = 'Đang phát băng (1/1)';
+        if (pill) pill.textContent = 'Đang phát';
 
         const segs = nc.transcriptSegments || [];
         const onT3Turn = (si, seg) => {
           const txt = document.getElementById('lt-t3-audio-text');
-          if (txt) txt.textContent = `🎙️ ${seg.speaker || 'Speaker'} đang nói… (Đoạn ${si + 1}/${segs.length} · Không phát lại)`;
+          if (txt) txt.textContent = `${seg.speaker || 'Speaker'} (${si + 1}/${segs.length})`;
         };
         const onT3Done = () => {
           const st = document.getElementById('lt-t3-audio-strip');
           const txt = document.getElementById('lt-t3-audio-text');
           const pl = document.getElementById('lt-t3-status-pill');
           if (st) st.classList.remove('is-playing');
-          if (txt) txt.textContent = '✓ Băng đã phát xong (1/1) — Kiểm tra lại chính tả rồi bấm Nộp bài!';
+          if (txt) txt.textContent = '✓ Đã phát';
           if (pl) pl.textContent = 'Sẵn sàng nộp';
         };
         playStudioMp3(nc.audioFile, {

@@ -2712,7 +2712,7 @@
     if (!frontFace) return;
     const revealed = frontFace.classList.toggle('is-listening-revealed');
     const txtEl = document.getElementById('fc-l-reveal-txt');
-    if (txtEl) txtEl.textContent = revealed ? '🙈 Ẩn chữ' : '👁️ Hé chữ';
+    if (txtEl) txtEl.textContent = revealed ? 'Ẩn chữ' : 'Hé chữ';
   }
 
   function renderCurrentCard(direction = 0, options = {}) {
@@ -2789,8 +2789,9 @@
     // Mặt trước (Tối giản: chỉ POS + Từ + IPA + UK/US; riêng Listening ẩn chữ mặc định + hiện audio stage & cảnh báo bẫy)
     const frontFaceEl = document.querySelector('#fc-card .fc-face-front');
     if (frontFaceEl) frontFaceEl.classList.remove('is-listening-revealed');
+    document.getElementById('fc-scene')?.classList.remove('is-3d-flipping');
     const lRevealTxt = document.getElementById('fc-l-reveal-txt');
-    if (lRevealTxt) lRevealTxt.textContent = '👁️ Hé chữ';
+    if (lRevealTxt) lRevealTxt.textContent = 'Hé chữ';
     const lPartBadge = document.getElementById('fc-l-part-badge');
     if (lPartBadge) {
       const partNameMap = {
@@ -4438,9 +4439,9 @@
       const oneShotStrip = document.getElementById('rl-oneshot-strip');
       const oneShotText = document.getElementById('rl-oneshot-text');
       if (oneShotStrip) oneShotStrip.classList.add('is-playing');
-      if (oneShotText) oneShotText.textContent = '🔊 Đang phát âm (1 lần duy nhất — không phát lại)…';
+      if (oneShotText) oneShotText.textContent = 'Đang phát…';
       if (posEl) posEl.textContent = getCleanPos(item) || 'vocab';
-      if (meanEl) meanEl.textContent = item.clean_meaning || item.meaning || item.vi || item.definition || 'Nghe 1 lần duy nhất rồi nói lại từ này';
+      if (meanEl) meanEl.textContent = item.clean_meaning || item.meaning || item.vi || item.definition || '';
       if (heardBox) {
         heardBox.style.display = 'none';
         heardBox.className = 'rl-heard-box';
@@ -4448,7 +4449,7 @@
       }
       setListeningMicUI(
         'idle',
-        `Nghe 1 lần duy nhất · nhấn <strong>Space</strong> hoặc bấm nút để nói lại từ (còn <strong>${recallAttemptsLeft}</strong> lần)`
+        `Nhấn <strong>Space</strong> hoặc bấm Mic để nói (còn <strong>${recallAttemptsLeft}</strong> lần)`
       );
       listeningAutoPlayTimer = setTimeout(() => {
         if (recallTargetItem && recallTargetItem.id === item.id && recallMode === 'listening_shadow' && !recallSubmitted) {
@@ -4458,7 +4459,7 @@
               const st = document.getElementById('rl-oneshot-strip');
               const tx = document.getElementById('rl-oneshot-text');
               if (st) st.classList.remove('is-playing');
-              if (tx) tx.textContent = '✓ Đã phát xong (1/1) — Bấm Mic nói lại từ ngay!';
+              if (tx) tx.textContent = '✓ Đã phát xong';
             }
           }, 1150);
         }
@@ -4735,6 +4736,7 @@
     });
   }
 
+  let flipSettleTimer = null;
   function flipCurrentCard(event) {
     bindBackScrollFlipGuard();
     if (event && event.currentTarget?.id === 'fc-scene' && Date.now() < suppressSwipeClickUntil) return;
@@ -4753,7 +4755,20 @@
       const backScrollEl = document.querySelector('#fc-card .fc-back-scrollable');
       if (backScrollEl) backScrollEl.scrollTop = 0;
     }
-    document.getElementById('fc-card')?.classList.toggle('flipped', isCardFlipped);
+    const sceneEl = document.getElementById('fc-scene');
+    const cardEl = document.getElementById('fc-card');
+    if (sceneEl && cardEl) {
+      if (flipSettleTimer) clearTimeout(flipSettleTimer);
+      sceneEl.classList.add('is-3d-flipping');
+      void cardEl.offsetWidth;
+      cardEl.classList.toggle('flipped', isCardFlipped);
+      flipSettleTimer = setTimeout(() => {
+        sceneEl.classList.remove('is-3d-flipping');
+        flipSettleTimer = null;
+      }, 620);
+    } else if (cardEl) {
+      cardEl.classList.toggle('flipped', isCardFlipped);
+    }
     document.getElementById('btn-flip-action').textContent = isCardFlipped ? 'Mặt trước' : 'Xem nghĩa';
     if (isCardFlipped && autoSpeak) {
       pendingInitialSpeak = false;
