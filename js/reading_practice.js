@@ -838,29 +838,12 @@
                     ${curReadyCount > 0 ? `${curReadyCount}/${curBook?.testsCount || 4} Tests sẵn sàng` : 'Chưa nạp đề'}
                   </span>
                 </div>
-                <span class="rp-cur-book-sub">Chọn từng Passage 1–3 hoặc FULL TEST — có 2 chế độ: <strong>Luyện tập</strong> (highlight pastel 5 màu, làm lại tới khi đúng 100% mới mở giải &amp; tra từ) &amp; <strong>Thi thật</strong> (chuẩn Inspera CD-IELTS)</span>
+                <span class="rp-cur-book-sub">Passage 1–3 &amp; FULL TEST · 2 chế độ: <strong>Luyện tập</strong> &amp; <strong>Thi thật</strong></span>
               </div>
             </div>
             <div class="rp-test-tabs" id="rp-test-tabs" role="group" aria-label="Chọn bộ Test trong sách">${testTabsHtml}</div>
           </div>
         </section>
-      `;
-
-      // Exact order required by user: Passage 1 -> Passage 2 -> Passage 3 -> FULL TEST
-      const parts = [
-        { id: 'all', label: 'Tất cả' },
-        { id: 'p1', label: 'Passage 1' },
-        { id: 'p2', label: 'Passage 2' },
-        { id: 'p3', label: 'Passage 3' },
-        { id: 'full', label: 'FULL TEST' }
-      ];
-      subBarHtml = `
-        <div class="rp-part-tabs" role="tablist" aria-label="Chọn phần bài đọc">
-          ${parts.map((pt) => `
-            <button type="button" class="rp-part-pill ${state.partFilter === pt.id ? 'active' : ''} ${pt.id === 'full' ? 'is-full' : ''}"
-              data-rp-part="${pt.id}" onclick="ReadingPracticeApp.setPartFilter('${pt.id}')">${pt.label}</button>
-          `).join('')}
-        </div>
       `;
 
       const testPassages = bookPassages.filter((p) => (p.testNum || 1) === state.selectedTestNum);
@@ -873,7 +856,7 @@
             <p class="rp-unloaded-desc">Hệ thống đang nạp toàn bộ đề thi, câu hỏi và bảng đáp án chuẩn cho kho này.</p>
           </div>
         `;
-      } else if (!testPassages.length && !testFulls.length && !q) {
+      } else if (!testPassages.length && !testFulls.length) {
         contentHtml = `
           <div class="rp-unloaded-box" role="status">
             <div class="rp-unloaded-icon" aria-hidden="true">
@@ -890,11 +873,11 @@
         `;
       } else {
         const sections = [
-          { key: 'p1', title: 'Passage 1', badge: '20 phút · Dễ → Trung bình', items: testPassages.filter((p) => p.passageNum === 1 && matchesSearch(p)), isFull: false },
-          { key: 'p2', title: 'Passage 2', badge: '20 phút · Trung bình → Khá', items: testPassages.filter((p) => p.passageNum === 2 && matchesSearch(p)), isFull: false },
-          { key: 'p3', title: 'Passage 3', badge: '20 phút · Nâng cao Band 7.5+', items: testPassages.filter((p) => p.passageNum === 3 && matchesSearch(p)), isFull: false },
-          { key: 'full', title: 'FULL TEST', badge: '60 phút · Trọn bộ 3 Passage', items: testFulls.filter(matchesSearch), isFull: true }
-        ].filter((sec) => state.partFilter === 'all' || state.partFilter === sec.key);
+          { key: 'p1', title: 'Passage 1', badge: '20 phút · Dễ → Trung bình', items: testPassages.filter((p) => p.passageNum === 1), isFull: false },
+          { key: 'p2', title: 'Passage 2', badge: '20 phút · Trung bình → Khá', items: testPassages.filter((p) => p.passageNum === 2), isFull: false },
+          { key: 'p3', title: 'Passage 3', badge: '20 phút · Nâng cao Band 7.5+', items: testPassages.filter((p) => p.passageNum === 3), isFull: false },
+          { key: 'full', title: 'FULL TEST', badge: '60 phút · Trọn bộ 3 Passage', items: testFulls, isFull: true }
+        ];
 
         contentHtml = sections.map((sec) => `
           <div class="rp-section-block" data-rp-section="${sec.key}">
@@ -950,13 +933,15 @@
         ${buildResumeBannerHtml()}
         ${shelfHtml}
 
-        <div class="rp-filter-toolbar">
-          ${subBarHtml}
-          <input type="search" class="rp-search-input" id="rp-hub-search"
-            value="${esc(state.searchQuery)}"
-            placeholder="Tìm theo tên bài, chủ đề..."
-            oninput="ReadingPracticeApp.onSearch(this.value)" autocomplete="off">
-        </div>
+        ${state.source === 'news' ? `
+          <div class="rp-filter-toolbar">
+            ${subBarHtml}
+            <input type="search" class="rp-search-input" id="rp-hub-search"
+              value="${esc(state.searchQuery)}"
+              placeholder="Tìm theo tên bài, chủ đề..."
+              oninput="ReadingPracticeApp.onSearch(this.value)" autocomplete="off">
+          </div>
+        ` : ''}
 
         <div class="rp-sections-stack">
           ${contentHtml}
