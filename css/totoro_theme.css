@@ -13858,3 +13858,274 @@ mark.rp-hl-preview {
     min-width: 96px;
   }
 }
+
+/* =========================================================
+   POST-SUBMIT RESULT PREVIEW MODAL & EXAM-MODE WRONG/RIGHT FEEDBACK
+   ========================================================= */
+.ins-mode-exam .ins-q-item.is-checked-ok {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+.ins-mode-exam .ins-q-item.is-checked-bad {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+.ins-mode-exam .ins-q-item.is-retry-edited {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+.ins-mode-exam .ins-qbox.is-correct {
+  background: #dcfce7;
+  border-color: #16a34a;
+  color: #15803d;
+}
+.ins-mode-exam .ins-qbox.is-wrong {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #b91c1c;
+}
+.ins-mode-practice .ins-q-item.is-checked-ok {
+  border-radius: 10px;
+  border: 1px solid rgba(22, 163, 74, 0.25);
+}
+.ins-mode-practice .ins-q-item.is-checked-bad {
+  border-radius: 10px;
+  border: 1px solid rgba(220, 38, 38, 0.28);
+}
+
+.rp-retry-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rp-retry-result-btn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(44, 52, 46, 0.18);
+  background: var(--ins-bg, #ffffff);
+  color: var(--ink, #1f2421);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.rp-retry-result-btn:hover {
+  background: rgba(44, 52, 46, 0.06);
+  border-color: rgba(44, 52, 46, 0.3);
+}
+
+.rp-presubmit-card.is-result-view {
+  max-width: 660px;
+  width: min(660px, 94vw);
+}
+.rp-res-head-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-2, #5c635e);
+  background: rgba(44, 52, 46, 0.06);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.rp-res-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.rp-res-kpi {
+  padding: 13px 14px;
+  border-radius: 13px;
+  border: 1px solid rgba(44, 52, 46, 0.1);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rp-res-kpi.is-score {
+  background: linear-gradient(180deg, #f3faf5 0%, #ffffff 100%);
+  border-color: rgba(47, 107, 71, 0.24);
+}
+.rp-res-kpi.is-band {
+  background: linear-gradient(180deg, #fdf8ec 0%, #ffffff 100%);
+  border-color: rgba(180, 130, 45, 0.28);
+}
+.rp-res-kpi-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-3, #6d746f);
+}
+.rp-res-kpi-val {
+  font-size: 24px;
+  font-weight: 850;
+  line-height: 1.15;
+  color: var(--ink, #1f2421);
+  letter-spacing: -0.02em;
+}
+.rp-res-kpi.is-score .rp-res-kpi-val { color: #245739; }
+.rp-res-kpi.is-band .rp-res-kpi-val { color: #8c5a14; }
+.rp-res-kpi-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-2, #5b635e);
+}
+.rp-res-sheet {
+  border: 1px solid rgba(44, 52, 46, 0.11);
+  border-radius: 14px;
+  background: #ffffff;
+  overflow: hidden;
+}
+.rp-res-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(44, 52, 46, 0.035);
+  border-bottom: 1px solid rgba(44, 52, 46, 0.08);
+}
+.rp-res-sheet-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink, #1f2421);
+}
+.rp-res-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.rp-res-leg-ok { color: #15803d; }
+.rp-res-leg-bad { color: #b91c1c; }
+.rp-res-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 11px;
+  max-height: 310px;
+  overflow-y: auto;
+}
+.rp-res-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(44, 52, 46, 0.09);
+  background: #fafaf8;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 120ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+.rp-res-row:hover {
+  transform: translateY(-1px);
+}
+.rp-res-row.is-ok {
+  background: #f0fdf4;
+  border-color: rgba(22, 163, 74, 0.28);
+}
+.rp-res-row.is-bad {
+  background: #fef2f2;
+  border-color: rgba(220, 38, 38, 0.28);
+}
+.rp-res-row.is-bad:hover {
+  border-color: rgba(220, 38, 38, 0.55);
+  background: #fee2e2;
+}
+.rp-res-qnum {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.rp-res-row.is-ok .rp-res-qnum {
+  background: #dcfce7;
+  color: #166534;
+}
+.rp-res-row.is-bad .rp-res-qnum {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.rp-res-ans {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink, #1f2421);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-res-ans.is-blank {
+  font-weight: 500;
+  font-style: italic;
+  color: #8b918c;
+}
+.rp-res-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.rp-res-mark.is-ok {
+  background: #16a34a;
+  color: #ffffff;
+}
+.rp-res-mark.is-bad {
+  background: #dc2626;
+  color: #ffffff;
+}
+.rp-res-note {
+  margin-top: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(44, 52, 46, 0.045);
+  font-size: 12px;
+  color: var(--ink-2, #525954);
+  line-height: 1.45;
+}
+.rp-res-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .rp-res-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rp-res-kpis .rp-res-kpi:last-child {
+    grid-column: 1 / -1;
+  }
+  .rp-res-grid {
+    grid-template-columns: 1fr;
+    max-height: 260px;
+  }
+}

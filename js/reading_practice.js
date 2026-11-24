@@ -2084,6 +2084,7 @@
           <span class="rp-type-chip is-unlocked">✓ Solution &amp; Từ điển đã mở khóa</span>
         </div>
         <div class="rp-rev-actions">
+          <button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.openResultModal()">Bảng kết quả</button>
           <button type="button" class="btn-subtle rp-btn-sm ${s.showBilingual ? 'is-on' : ''}" id="rp-btn-bilingual"
             onclick="ReadingPracticeApp.toggleBilingual()">
             ${s.showBilingual ? '✓ Đang hiện Song ngữ' : 'Dịch song ngữ'}
@@ -2099,9 +2100,12 @@
       <div class="rp-retry-banner" id="rp-retry-banner" role="status">
         <div class="rp-retry-copy">
           <span class="rp-retry-pill tabular">Lần nộp #${s.attemptCount}</span>
-          <span>Đã đúng <strong>${lockedCount}/${allQ.length}</strong> câu · Còn <strong>${wrongCount} câu chưa đúng</strong> — hãy làm lại các câu báo đỏ cho tới khi đúng 100% để mở khóa Solution &amp; Từ điển.</span>
+          <span>Đã đúng <strong>${lockedCount}/${allQ.length}</strong> câu · Còn <strong>${wrongCount} câu sai</strong> — sửa các câu báo đỏ rồi bấm <strong>Nộp lại</strong>.</span>
         </div>
-        <button type="button" class="rp-retry-jump-btn" onclick="ReadingPracticeApp.jumpToNextWrong()">Câu sai tiếp theo →</button>
+        <div class="rp-retry-actions">
+          <button type="button" class="rp-retry-result-btn" onclick="ReadingPracticeApp.openResultModal()">Xem bảng kết quả</button>
+          <button type="button" class="rp-retry-jump-btn" onclick="ReadingPracticeApp.jumpToNextWrong()">Câu sai tiếp theo →</button>
+        </div>
       </div>
     ` : '';
 
@@ -2520,12 +2524,12 @@
             <div class="ins-footer-parts">${bottomPartsHtml}</div>
             ${!isReview ? (isPractice ? `
               <button type="button" class="ins-submit-check-btn prac-submit-pill" id="rp-btn-open-submit"
-                onclick="ReadingPracticeApp.openPreSubmitModal()" title="${isRetryPhase ? 'Nộp lại các câu đã sửa' : 'Nộp bài kiểm tra kết quả'}" aria-label="Nộp bài">
-                <span>${isRetryPhase ? `Nộp lại (${wrongCount} câu) →` : 'Nộp bài →'}</span>
+                onclick="ReadingPracticeApp.openPreSubmitModal()" title="${isRetryPhase ? 'Nộp lại' : 'Nộp bài kiểm tra kết quả'}" aria-label="${isRetryPhase ? 'Nộp lại' : 'Nộp bài'}">
+                <span>${isRetryPhase ? 'Nộp lại' : 'Nộp bài →'}</span>
               </button>
             ` : `
               <button type="button" class="ins-submit-check-btn" id="rp-btn-open-submit"
-                onclick="ReadingPracticeApp.openPreSubmitModal()" title="${isRetryPhase ? `Nộp lại (${wrongCount} câu sai)` : 'Review &amp; Submit your answers'}" aria-label="Review and Submit">✓</button>
+                onclick="ReadingPracticeApp.openPreSubmitModal()" title="${isRetryPhase ? 'Nộp lại' : 'Review &amp; Submit your answers'}" aria-label="Review and Submit">✓</button>
             `) : `
               <button type="button" class="ins-submit-check-btn is-done" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề">←</button>
             `}
@@ -3200,6 +3204,7 @@
       const modal = document.getElementById('rp-presubmit-modal');
       const body = document.getElementById('rp-presubmit-body');
       if (!modal || !body) return;
+      modal.querySelector('.rp-presubmit-card')?.classList.remove('is-result-view');
       const allQ = getAllSessionQuestions();
       const answered = allQ.filter((q) => !!String(state.session.answers[q._qid] || '').trim()).length;
       const unanswered = allQ.length - answered;
@@ -3591,6 +3596,7 @@
       const modal = document.getElementById('rp-presubmit-modal');
       const body = document.getElementById('rp-presubmit-body');
       if (!modal || !body) return;
+      modal.querySelector('.rp-presubmit-card')?.classList.remove('is-result-view');
       const titleEl = document.getElementById('rp-presubmit-title');
       if (titleEl) titleEl.textContent = 'Xác nhận nộp bài';
 
@@ -3639,8 +3645,30 @@
         };
       }
 
+      // Build full graded answer sheet report for immediate post-submit Result Preview!
+      const reportRows = allQ.map((q) => {
+        const val = String(s.answers[q._qid] ?? '').trim();
+        return {
+          num: q.num,
+          pIdx: q._pIdx,
+          qid: q._qid,
+          answer: val,
+          ok: isAnswerCorrect(q, val)
+        };
+      });
+
       // News articles do not gate on 100%; IELTS Practice & Exam BOTH enforce 100% Mastery Gate!
       const mustAchieve100 = !s.isNews && res.score < res.total;
+      s.lastSubmitReport = {
+        attempt: s.attemptCount,
+        score: res.score,
+        total: res.total,
+        band: res.band,
+        elapsedSec: res.elapsedSec,
+        isMastered: !mustAchieve100,
+        rows: reportRows
+      };
+
       if (mustAchieve100) {
         const nextLocked = { ...(s.lockedCorrect || {}) };
         const nextWrong = {};
@@ -3673,14 +3701,7 @@
         }
         persistDraft();
         renderExamWorkspace();
-        if (firstWrong) {
-          setTimeout(() => {
-            const el = document.getElementById(`rp-qcard-${firstWrong._qid}`) || document.querySelector(`[data-mh-qid="${firstWrong._qid}"]`);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 50);
-        }
-        const rem = res.total - res.score;
-        toast(`Lần nộp #${s.attemptCount}: Đúng ${res.score}/${res.total} · Còn ${rem} câu sai — làm lại đúng 100% để mở khóa Solution & Từ điển!`);
+        this.openResultModal();
         return;
       }
 
@@ -3701,7 +3722,123 @@
       });
 
       renderExamWorkspace();
-      toast(`Xuất sắc! Đúng 100% (${s.attemptCount} lần nộp · Band lần đầu ${first.band.toFixed(1)}) — Solution & Từ điển đã mở khóa!`);
+      this.openResultModal();
+    },
+
+    openResultModal() {
+      if (!state.session) return;
+      const s = state.session;
+      const allQ = getAllSessionQuestions();
+      const report = s.lastSubmitReport || (() => {
+        const res = s.reviewResult || computeReviewResult();
+        return {
+          attempt: Math.max(1, s.attemptCount || 1),
+          score: res.score,
+          total: res.total,
+          band: res.band,
+          elapsedSec: res.elapsedSec,
+          isMastered: res.total > 0 && res.score === res.total,
+          rows: allQ.map((q) => {
+            const val = String(s.answers[q._qid] ?? '').trim();
+            return { num: q.num, pIdx: q._pIdx, qid: q._qid, answer: val, ok: isAnswerCorrect(q, val) };
+          })
+        };
+      })();
+
+      const modal = document.getElementById('rp-presubmit-modal');
+      const body = document.getElementById('rp-presubmit-body');
+      if (!modal || !body) return;
+      modal.querySelector('.rp-presubmit-card')?.classList.add('is-result-view');
+
+      const titleEl = document.getElementById('rp-presubmit-title');
+      const pct = report.total > 0 ? Math.round((report.score / report.total) * 100) : 0;
+      const wrongCnt = Math.max(0, report.total - report.score);
+      if (titleEl) {
+        titleEl.innerHTML = `${report.isMastered ? 'Hoàn thành 100%' : 'Kết quả chấm điểm'}<span class="rp-res-head-meta tabular">Lần nộp #${report.attempt} · ${formatDuration(report.elapsedSec)}</span>`;
+      }
+
+      const rowsHtml = (report.rows || []).map((r) => {
+        const displayAns = r.answer ? esc(r.answer) : 'Chưa làm';
+        return `
+          <button type="button" class="rp-res-row ${r.ok ? 'is-ok' : 'is-bad'}"
+            onclick="ReadingPracticeApp.jumpFromResult(${r.pIdx}, '${esc(r.qid)}')"
+            title="${r.ok ? `Câu ${r.num}: Đúng` : `Câu ${r.num}: Sai — bấm để đi tới câu này`}">
+            <span class="rp-res-qnum tabular">${r.num}</span>
+            <span class="rp-res-ans ${r.answer ? '' : 'is-blank'}">${displayAns}</span>
+            <span class="rp-res-mark ${r.ok ? 'is-ok' : 'is-bad'}" aria-label="${r.ok ? 'Đúng' : 'Sai'}">${r.ok ? '✓' : '✕'}</span>
+          </button>
+        `;
+      }).join('');
+
+      const noteHtml = report.isMastered
+        ? `<div class="rp-res-note">Xuất sắc! Bạn đã hoàn thành đúng <strong>100%</strong>. Toàn bộ <strong>Solution, Paraphrase Mapping &amp; Từ điển</strong> đã được mở khóa.</div>`
+        : `<div class="rp-res-note">Các câu đúng (<strong>✓</strong>) đã được giữ lại. Bấm trực tiếp vào câu sai (<strong>✕</strong>) hoặc nút <strong>Làm lại câu sai</strong> để sửa rồi bấm <strong>Nộp lại</strong>.</div>`;
+
+      const footHtml = report.isMastered
+        ? `
+          <div class="rp-res-foot">
+            <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal(); ReadingPracticeApp.exitToHub();">← Về kho đề</button>
+            <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.closePreSubmitModal()">Xem lời giải chi tiết →</button>
+          </div>
+        `
+        : `
+          <div class="rp-res-foot">
+            <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal()">Đóng</button>
+            <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.focusFirstWrongFromResult()">Làm lại câu sai →</button>
+          </div>
+        `;
+
+      body.innerHTML = `
+        <div class="rp-res-kpis">
+          <div class="rp-res-kpi is-score">
+            <span class="rp-res-kpi-lbl">Số câu đúng</span>
+            <strong class="rp-res-kpi-val tabular">${report.score} / ${report.total}</strong>
+            <span class="rp-res-kpi-sub tabular">${pct}% chính xác · ${wrongCnt} câu sai</span>
+          </div>
+          <div class="rp-res-kpi is-band">
+            <span class="rp-res-kpi-lbl">Điểm quy đổi</span>
+            <strong class="rp-res-kpi-val tabular">${Number(report.band || 0).toFixed(1)}</strong>
+            <span class="rp-res-kpi-sub">Band IELTS Reading</span>
+          </div>
+          <div class="rp-res-kpi">
+            <span class="rp-res-kpi-lbl">Trạng thái</span>
+            <strong class="rp-res-kpi-val tabular" style="font-size:18px;padding-top:4px;color:${report.isMastered ? '#15803d' : '#b91c1c'};">${report.isMastered ? '✓ Đạt 100%' : `Còn ${wrongCnt} câu`}</strong>
+            <span class="rp-res-kpi-sub">${report.isMastered ? 'Đã mở Solution' : 'Chưa mở đáp án gốc'}</span>
+          </div>
+        </div>
+
+        <div class="rp-res-sheet">
+          <div class="rp-res-sheet-head">
+            <span class="rp-res-sheet-title">Bảng đáp án của học sinh</span>
+            <span class="rp-res-legend">
+              <span class="rp-res-leg-ok">✓ Đúng (${report.score})</span>
+              <span class="rp-res-leg-bad">✕ Sai (${wrongCnt})</span>
+            </span>
+          </div>
+          <div class="rp-res-grid" id="rp-res-answer-grid">
+            ${rowsHtml}
+          </div>
+        </div>
+
+        ${noteHtml}
+        ${footHtml}
+      `;
+      modal.classList.add('open');
+    },
+
+    jumpFromResult(pIdx, qid) {
+      this.closePreSubmitModal();
+      this.jumpToQuestion(pIdx, qid);
+    },
+
+    focusFirstWrongFromResult() {
+      this.closePreSubmitModal();
+      if (!state.session) return;
+      const allQ = getAllSessionQuestions();
+      const firstWrong = allQ.find((q) => !!state.session.wrongSet?.[q._qid]);
+      if (firstWrong) {
+        this.jumpToQuestion(firstWrong._pIdx, firstWrong._qid);
+      }
     },
 
     jumpToNextWrong() {
