@@ -1124,13 +1124,13 @@
     ];
     const featuredHtml = featuredExams.map((t) => {
       const r = prog[t.id];
-      const rawTitle = String(t.topicTitle || t.theme || '').replace(/^🗺️\s*MAP\s*·\s*/i, '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
-      const shortTitle = rawTitle.includes('·') ? rawTitle.split('·').pop().trim() : rawTitle;
+      const shortTitle = window.ListeningTasksModule?.shortTopicTitle?.(t)
+        || String(t.topicTitle || t.theme || '').replace(/^🗺️\s*MAP\s*·\s*/i, '').replace(/\s*\([^)]*\)\s*$/g, '').trim();
       const badge = r?.t3Total
         ? `<span class="tot-hist-badge tabular">${r.t3Score}/${r.t3Total}</span>`
         : `<span class="lt-inline-pill ${t.isMapTask ? 'is-map' : ''}">${t.isMapTask ? 'Map' : '3 Test'}</span>`;
       return `
-        <div class="rh-hist-item lh-click-row" onclick="window.ListeningTasksModule?.openExam?.('${esc(t.id)}', 3)">
+        <div class="rh-hist-item lh-click-row" onclick="window.ListeningTasksModule?.openExam?.('${esc(t.id)}', 3, { fromPractice: true })">
           <div style="min-width:0;flex:1;">
             <div class="rh-hist-title">${esc(t.label)} · ${esc(shortTitle)}</div>
             <div class="rh-hist-meta">${t.isMapTask ? 'Bản đồ SVG tương tác · Audio Neural' : 'Note Completion chuẩn Cambridge · Audio Neural'}</div>

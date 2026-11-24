@@ -485,12 +485,50 @@
     core_found: 'Nền tảng & Cốt lõi',
   };
 
+  const SHORT_LISTENING_TOPICS = {
+    lp1_01: 'Coastal Cycling Tour',
+    lp1_02: 'Seaside Hostel Job',
+    lmap_01: 'Botanical Park Map',
+    lmap_02: 'Market Town Map',
+    lmap_03: 'Arts Centre Plan',
+    lp2_01: 'Heritage Park Guide',
+    lp2_02: 'Autumn Craft Festival',
+    lp3_01: 'Sustainable Materials',
+    lp3_02: 'Recycling Dissertation',
+    lp4_01: 'River Estuaries',
+    lp4_02: 'Historic Port Renewal',
+  };
+
+  const SHORT_THEME_REPLACERS = [
+    ['Bản đồ, Địa điểm & Công trình', 'Địa điểm & Công trình'],
+    ['Du lịch, Giao thông & Kỳ nghỉ', 'Du lịch & Giao thông'],
+    ['Việc làm, Tuyển dụng & Công sở', 'Việc làm & Công sở'],
+    ['Tài chính, Mua sắm & Dịch vụ', 'Tài chính & Dịch vụ'],
+    ['Giáo dục, Đại học & Nghiên cứu', 'Giáo dục & Nghiên cứu'],
+    ['Sức khỏe, Y tế & Lối sống', 'Sức khỏe & Y tế'],
+    ['Ẩm thực, Nấu nướng & Nông nghiệp', 'Ẩm thực & Nông nghiệp'],
+    ['Môi trường, Thiên nhiên & Động vật', 'Môi trường & Tự nhiên'],
+    ['Khoa học, Công nghệ & Kỹ thuật số', 'Khoa học & Công nghệ'],
+    ['Nghệ thuật, Văn hóa, Giải trí & Thể thao', 'Văn hóa & Giải trí'],
+    ['Lịch sử, Xã hội & Chính sách', 'Lịch sử & Xã hội'],
+    ['Thời gian, Lịch trình & Sinh hoạt', 'Thời gian & Lịch trình'],
+    ['Động từ cốt lõi, Tư duy & Biểu đạt', 'Động từ & Biểu đạt'],
+  ];
+
   function shortTopicTitle(t) {
+    if (!t) return '';
+    if (t.id && SHORT_LISTENING_TOPICS[t.id]) return SHORT_LISTENING_TOPICS[t.id];
     const raw = String(t.topicTitle || t.theme || '').replace(/^🗺️\s*MAP\s*·\s*/i, '').trim();
-    // Strip parenthetical English duplicate so cards stay crisp 1-line just like Reading!
     const noParen = raw.replace(/\s*\([^)]*\)\s*$/g, '').trim();
     const parts = noParen.split('·');
-    return (parts.length > 1 ? parts[parts.length - 1] : noParen).trim();
+    let out = (parts.length > 1 ? parts[parts.length - 1] : noParen).trim();
+    for (const [longStr, shortStr] of SHORT_THEME_REPLACERS) {
+      if (out.includes(longStr)) {
+        out = out.replace(longStr, shortStr);
+        break;
+      }
+    }
+    return out;
   }
 
   function renderHub(tabsEl, gridEl) {
@@ -1995,6 +2033,7 @@
   window.ListeningTasksModule = {
     renderHub,
     renderPracticeScreen,
+    shortTopicTitle,
     openPracticePicker,
     openTaskBrief,
     closeTaskBrief,
