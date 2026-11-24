@@ -887,10 +887,10 @@
     };
 
     const portalCoverById = {
-      cambridge: 'assets/images/reading_covers/fulltest.webp',
-      volume: 'assets/images/reading_covers/architecture.webp',
-      actual: 'assets/images/reading_covers/ocean.webp',
-      news: 'assets/images/reading_covers/society.webp'
+      cambridge: 'assets/images/reading_covers/portal_cambridge.webp',
+      volume: 'assets/images/reading_covers/portal_volume.webp',
+      actual: 'assets/images/reading_covers/portal_actual.webp',
+      news: 'assets/images/reading_covers/portal_news.webp'
     };
 
     const cardsHtml = sources.map((s) => {
@@ -1423,24 +1423,44 @@
   }
 
   function getReadingCardCover(item, isFull) {
+    let fallback = 'assets/images/reading_covers/fulltest.webp';
     if (isFull) {
       if (item.source === 'actual' && item._actualFullIdx) {
         const key = COVER_THEMES_ORDER[(item._actualFullIdx - 1) % COVER_THEMES_ORDER.length];
-        return `assets/images/reading_covers/${key}.webp`;
+        fallback = `assets/images/reading_covers/${key}.webp`;
       }
-      return 'assets/images/reading_covers/fulltest.webp';
+    } else {
+      let matched = null;
+      const titleText = String(item.title || '');
+      for (const [key, re] of COVER_TOPIC_RULES) {
+        if (re.test(titleText)) { matched = key; break; }
+      }
+      if (!matched) {
+        const subText = `${item.subtitle || ''} ${item.topic || ''}`;
+        for (const [key, re] of COVER_TOPIC_RULES) {
+          if (re.test(subText)) { matched = key; break; }
+        }
+      }
+      if (!matched) {
+        const fallbackPool = COVER_THEMES_ORDER.slice(1);
+        matched = fallbackPool[hashStringIdx(item.id || item.title) % fallbackPool.length];
+      }
+      fallback = `assets/images/reading_covers/${matched}.webp`;
     }
-    const titleText = String(item.title || '');
-    for (const [key, re] of COVER_TOPIC_RULES) {
-      if (re.test(titleText)) return `assets/images/reading_covers/${key}.webp`;
+
+    const photoMap = window.READING_PHOTO_MAP || {};
+    let realPhoto = null;
+    if (isFull) {
+      const leadPid = Array.isArray(item.passageIds) ? item.passageIds[0] : null;
+      realPhoto = (leadPid && photoMap[leadPid]) || photoMap[item.id] || null;
+    } else {
+      realPhoto = photoMap[item.id] || null;
     }
-    const subText = `${item.subtitle || ''} ${item.topic || ''}`;
-    for (const [key, re] of COVER_TOPIC_RULES) {
-      if (re.test(subText)) return `assets/images/reading_covers/${key}.webp`;
-    }
-    const fallbackPool = COVER_THEMES_ORDER.slice(1);
-    const key = fallbackPool[hashStringIdx(item.id || item.title) % fallbackPool.length];
-    return `assets/images/reading_covers/${key}.webp`;
+
+    return {
+      primary: realPhoto || fallback,
+      fallback
+    };
   }
 
   function renderHubCard(item, isFull, isNews = false) {
@@ -1459,7 +1479,7 @@
       : `<span class="rp-cover-pill is-band">${esc(item.targetBand || 'IELTS')}</span>`;
 
     const qTypes = isFull ? ['Passage 1–3', 'Full 60 phút'] : getPassageTypes(item);
-    const coverSrc = getReadingCardCover(item, isFull);
+    const cover = getReadingCardCover(item, isFull);
 
     const startExamCall = isFull
       ? `ReadingPracticeApp.startFullTest('${esc(item.id)}', { studyMode: 'exam' })`
@@ -1502,7 +1522,8 @@
     return `
       <article class="rp-card has-cover ${isFull ? 'rp-card-full' : ''}" data-rp-item="${esc(item.id)}">
         <div class="rp-card-cover">
-          <img class="rp-card-cover-img" src="${esc(coverSrc)}" alt="" loading="lazy" decoding="async">
+          <img class="rp-card-cover-img" src="${esc(cover.primary)}" data-fb="${esc(cover.fallback)}" referrerpolicy="no-referrer"
+            onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.removeAttribute('data-fb');}" alt="" loading="lazy" decoding="async">
           <div class="rp-card-cover-scrim" aria-hidden="true"></div>
           <div class="rp-card-cover-top">
             <span class="rp-cover-pill ${isFull ? 'is-full' : isNews ? 'is-news' : 'is-pass'}">${esc(pillLabel)}</span>

@@ -13280,6 +13280,21 @@ mark.rp-hl-preview {
 /* =========================================================
    GHIBLI EDITORIAL ILLUSTRATED COVER CARDS (PORTAL + HUB)
    ========================================================= */
+#rp-portal-grid.tot-practice-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 1180px) {
+  #rp-portal-grid.tot-practice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  #rp-portal-grid.tot-practice-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .rp-portal-card.has-cover {
   padding: 0;
   overflow: hidden;
@@ -13288,11 +13303,22 @@ mark.rp-hl-preview {
 }
 .rp-portal-cover {
   position: relative;
-  height: 128px;
+  aspect-ratio: 16 / 9;
   width: 100%;
   overflow: hidden;
-  background: #233329;
+  background: #f5f2ea;
   flex-shrink: 0;
+}
+.rp-portal-cover-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(16, 22, 18, 0.12) 0%,
+    rgba(16, 22, 18, 0) 32%,
+    rgba(16, 22, 18, 0.04) 100%
+  );
+  pointer-events: none;
 }
 .rp-portal-cover-img,
 .rp-card-cover-img {
@@ -13398,7 +13424,7 @@ mark.rp-hl-preview {
 }
 .rp-card-cover {
   position: relative;
-  height: 132px;
+  aspect-ratio: 16 / 10;
   width: 100%;
   overflow: hidden;
   background: #223027;
