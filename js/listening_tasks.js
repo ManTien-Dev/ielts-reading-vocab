@@ -15,8 +15,8 @@
   const PROGRESS_KEY_BASE = 'totoro_listening_task_progress_v1_';
   // Nguồn phát 143 file .mp3 giọng Neural AI (có thể đổi sang Cloudflare R2 URL khi mở rộng hàng nghìn file)
   const DEFAULT_AUDIO_BASE_URL = 'audio';
-  // Tốc độ phát chuẩn phòng thi (1.25x ép tai quen nói nhanh & nối âm/nuốt âm)
-  const EXAM_PLAYBACK_RATE = 1.25;
+  // Tốc độ phát chuẩn tự nhiên (1.0x)
+  const EXAM_PLAYBACK_RATE = 1.0;
 
   let activeSuiteKey = 'part1';
   let examState = null;
@@ -446,9 +446,9 @@
     if (bodyEl) {
       const testDesc = hasFull3
         ? (task.isMapTask
-          ? 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong> (tốc độ 1.25×, nghe 1 lần duy nhất): <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Bản đồ SVG Map Labelling (A–H).'
-          : 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong> (tốc độ 1.25×, nghe 1 lần duy nhất): <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Note Completion (8 chỗ trống).')
-        : `Gồm <strong>Test 1 · Nghe &amp; Viết chính tả (${totalW}/${totalW} từ)</strong> tốc độ 1.25×, nghe 1 lần duy nhất và chấm điểm ngay khi nộp.`;
+          ? 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong> (nghe 1 lần duy nhất): <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Bản đồ SVG Map Labelling (A–H).'
+          : 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong> (nghe 1 lần duy nhất): <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Note Completion (8 chỗ trống).')
+        : `Gồm <strong>Test 1 · Nghe &amp; Viết chính tả (${totalW}/${totalW} từ)</strong>, nghe 1 lần duy nhất và chấm điểm ngay khi nộp.`;
 
       const scoreRow = rec
         ? `<div class="lt-score-strip" style="margin-bottom:14px;">
@@ -545,7 +545,7 @@
         <div class="lt-picker-list">
           ${list.map((t) => {
             const r = progress[t.id];
-            const scoreTxt = r?.t3Total ? `Điểm: ${r.t3Score}/${r.t3Total}` : 'Audio Neural 1.25×';
+            const scoreTxt = r?.t3Total ? `Điểm: ${r.t3Score}/${r.t3Total}` : 'Audio Neural';
             return `
               <button type="button" class="lt-prac-row" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(t.id)}', 3)">
                 <span><strong>${esc(t.label)}</strong> · ${esc(shortTopicTitle(t))}</span>
@@ -591,7 +591,7 @@
               <span class="rp-count-pill">${mapTasks.length} bài bản đồ</span>
             </div>
             <h3 class="rp-card-title">Bản đồ &amp; Sơ đồ · Part 2</h3>
-            <p class="rp-card-desc">Bản đồ công viên, thị trấn có bùng binh và mặt bằng tòa nhà — nghe 1 lần 1.25×, đối chiếu Transcript 3 màu và Map chấm trực tiếp.</p>
+            <p class="rp-card-desc">Bản đồ công viên, thị trấn có bùng binh và mặt bằng tòa nhà — nghe 1 lần, đối chiếu Transcript 3 màu và Map chấm trực tiếp.</p>
             <div class="lt-prac-card-foot">
               <button type="button" class="tot-demo-btn" onclick="ListeningTasksModule.openPracticePicker('map')">Chọn bài Map</button>
               <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstMapId)}', 3)">Làm Map 01</button>
@@ -604,7 +604,7 @@
               <span class="rp-count-pill">${noteTasks.length} bài Part 1–4</span>
             </div>
             <h3 class="rp-card-title">Thực chiến · Note Completion</h3>
-            <p class="rp-card-desc">10 giây đoán từ loại trước khi nghe, băng Neural 1.25× không phát lại, chấm chính tả chuẩn Cambridge và mở khóa nghe lại từng câu.</p>
+            <p class="rp-card-desc">10 giây đoán từ loại trước khi nghe, băng Neural không phát lại, chấm chính tả chuẩn Cambridge và mở khóa nghe lại từng câu.</p>
             <div class="lt-prac-card-foot">
               <button type="button" class="tot-demo-btn" onclick="ListeningTasksModule.openPracticePicker('note')">Chọn bài nghe</button>
               <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstNoteId)}', 3)">Làm Part 1</button>
@@ -617,7 +617,7 @@
               <span class="rp-count-pill">139 Tasks</span>
             </div>
             <h3 class="rp-card-title">Luyện Nghe &amp; Viết Chính Tả</h3>
-            <p class="rp-card-desc">139 bài Task phủ kín 3.864 từ cốt lõi theo từng chủ đề thực tế — nghe 1 lần 1.25×, gõ chính tả chống mất điểm số ít/số nhiều và chữ đôi.</p>
+            <p class="rp-card-desc">139 bài Task phủ kín 3.864 từ cốt lõi theo từng chủ đề thực tế — nghe 1 lần, gõ chính tả và chọn nghĩa Tiếng Việt chuẩn xác.</p>
             <div class="lt-prac-card-foot">
               <button type="button" class="tot-demo-btn" onclick="window.TotoroUI?.enterSkillMode?.('Listening', 'flashcard')">Học Flashcard</button>
               <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI?.switchView?.('task', {fromUser:true})">Mở 139 Task</button>

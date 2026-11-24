@@ -1133,7 +1133,7 @@
         <div class="rh-hist-item lh-click-row" onclick="window.ListeningTasksModule?.openExam?.('${esc(t.id)}', 3)">
           <div style="min-width:0;flex:1;">
             <div class="rh-hist-title">${esc(t.label)} · ${esc(shortTitle)}</div>
-            <div class="rh-hist-meta">${t.isMapTask ? 'Bản đồ SVG tương tác · Nghe 1 lần 1.25×' : 'Note Completion chuẩn Cambridge · Audio Neural 1.25×'}</div>
+            <div class="rh-hist-meta">${t.isMapTask ? 'Bản đồ SVG tương tác · Audio Neural' : 'Note Completion chuẩn Cambridge · Audio Neural'}</div>
           </div>
           <div class="rh-hist-right">
             ${badge}
@@ -1174,7 +1174,7 @@
                 </span>
                 <div>
                   <h2 class="tot-shell-title" style="margin:0;">IELTS Listening</h2>
-                  <div class="tot-shell-sub tabular">${masteredTotal.toLocaleString('vi-VN')} / ${totalVocab.toLocaleString('vi-VN')} từ · ${doneTasks} / ${totalTasks} Tasks · Audio Neural 1.25×</div>
+                  <div class="tot-shell-sub tabular">${masteredTotal.toLocaleString('vi-VN')} / ${totalVocab.toLocaleString('vi-VN')} từ · ${doneTasks} / ${totalTasks} Tasks · Audio Neural</div>
                 </div>
               </div>
               <div class="rh-decks-grid-4">${barsHtml}</div>
@@ -1207,7 +1207,7 @@
             <div class="tot-panel-head">
               <div>
                 <div class="tot-panel-title">Bài thi Bản đồ &amp; Thực chiến nổi bật</div>
-                <div class="tot-panel-sub">Bản đồ SVG tương tác &amp; Note Completion 1.25×</div>
+                <div class="tot-panel-sub">Bản đồ SVG tương tác &amp; Note Completion</div>
               </div>
               <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">Tất cả đề →</button>
             </div>
