@@ -886,6 +886,13 @@
       news: `<svg class="ghibli-stamp info" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.12;" viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M12 48C17 31 28 20 48 13C43 30 32 41 12 48Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".08"/><path d="M12 48L36 24M24 36L32 34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`
     };
 
+    const portalCoverById = {
+      cambridge: 'assets/images/reading_covers/fulltest.webp',
+      volume: 'assets/images/reading_covers/architecture.webp',
+      actual: 'assets/images/reading_covers/ocean.webp',
+      news: 'assets/images/reading_covers/society.webp'
+    };
+
     const cardsHtml = sources.map((s) => {
       const srcHist = hist.filter((h) => h.source === s.id);
       const avgBand = srcHist.length
@@ -916,20 +923,27 @@
             <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'full')">Làm Full Test</button>
           `;
 
+      const coverUrl = portalCoverById[s.id] || portalCoverById.cambridge;
+
       return `
-        <div class="tot-exam-card ink-brackets has-stamp rp-portal-card" data-rp-portal="${esc(s.id)}"
+        <div class="tot-exam-card rp-portal-card has-cover" data-rp-portal="${esc(s.id)}"
           onclick="ReadingPracticeApp.openSource('${esc(s.id)}')" role="button" tabindex="0">
-          ${stampById[s.id] || stampById.cambridge}
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-              <span class="tot-pos-badge">${esc(s.label)}</span>
-              <span class="tot-hist-badge ${s.id === 'news' ? 'info' : 'tabular'}">${esc(rightBadge)}</span>
+          <div class="rp-portal-cover">
+            <img class="rp-portal-cover-img" src="${esc(coverUrl)}" alt="" loading="lazy" decoding="async">
+            <div class="rp-portal-cover-scrim" aria-hidden="true"></div>
+            <div class="rp-portal-cover-badges">
+              <span class="rp-cover-pill is-source">${esc(s.label)}</span>
+              <span class="rp-cover-pill is-meta">${esc(rightBadge)}</span>
             </div>
-            <div class="rp-portal-title" style="font-size:15px;font-weight:750;margin-top:8px;color:var(--ink);">${esc(s.bookTitle || s.label)}</div>
-            <div style="font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5;">${esc(s.desc)}</div>
           </div>
-          <div style="display:flex;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid var(--border);position:relative;z-index:1;">
-            ${actionsHtml}
+          <div class="rp-portal-body">
+            <div>
+              <div class="rp-portal-title" style="font-size:15.5px;font-weight:750;color:var(--ink);">${esc(s.bookTitle || s.label)}</div>
+              <div style="font-size:12.5px;color:var(--ink-2);margin-top:5px;line-height:1.52;">${esc(s.desc)}</div>
+            </div>
+            <div class="rp-portal-foot">
+              ${actionsHtml}
+            </div>
           </div>
         </div>
       `;
@@ -1378,6 +1392,57 @@
     `;
   }
 
+  const COVER_THEMES_ORDER = [
+    'fulltest', 'ocean', 'wildlife', 'ancient', 'architecture', 'music_art',
+    'botany', 'mind', 'space', 'tech', 'medicine', 'society', 'agriculture'
+  ];
+
+  const COVER_TOPIC_RULES = [
+    ['music_art', /\b(music|musical|violin|stradivarius|art|arts|artist|paint|painting|sculpt|sculpture|film|cinema|photo|photograph|literature|novel|poem|dance|song|concert|theatre|theater|fashion|craft|pottery|colour|color|dye|dyes|composer|orchestra|earworm|museum)\b/i],
+    ['ancient', /\b(ancient|roman|palace|egypt|egyptian|greek|archaeolog\w*|civilis\w*|civiliz\w*|empire|medieval|temple|pyramid|dynasty|heritage|maori|aborigin\w*|viking|prehistor\w*|burial|treasure|monument|ruins|bronze|antiquit\w*|century)\b/i],
+    ['agriculture', /\b(food|seed|seeds|crop|crops|farm|farming|agricult\w*|coffee|tea|chocolate|spice|wheat|rice|sugar|honey|olive|wine|bread|cocoa|harvest|soil|orchard|famine|grain|dairy)\b/i],
+    ['wildlife', /\b(bird|birds|parrot|parrots|kakapo|kākāpō|dingo|bee|bees|insect|insects|animal|animals|species|wolf|wolves|bear|monkey|ant|ants|spider|mammal|fauna|zoo|dinosaur|habitat|wildlife|predator|dog|dogs|cat|cats|horse|elephant|butterfly|turtle|frog|penguin|penguins|whale|whales|dolphin)\b/i],
+    ['ocean', /\b(ocean|oceans|sea|seas|pacific|atlantic|island|islands|voyag\w*|ship|ships|coral|river|rivers|marine|boat|boats|sail|sailing|coastal|arctic|antarct\w*|flood|canal|harbour|harbor|algae|aqua|navigation|maritime)\b/i],
+    ['botany', /\b(plant|plants|tree|trees|forest|forests|flower|flowers|garden|wood|timber|botan\w*|jungle|rainforest|fruit|leaf|leaves|autumn|megafire|ecosystem|elm|elms|bamboo)\b/i],
+    ['architecture', /\b(architect\w*|building|buildings|city|cities|urban|bridge|tower|street|road|tunnel|underground|subway|rail|train|transport|skyscrap\w*|village|library|stadium|greenhouse|housing)\b/i],
+    ['space', /\b(space|planet|planets|star|stars|moon|mars|universe|galaxy|astron\w*|extraterrestrial|extra-terrestrial|cosmos|geolog\w*|volcan\w*|earthquake|climate|weather|atmosphere|solar|comet|asteroid|observatory)\b/i],
+    ['medicine', /\b(health|medic\w*|disease|diseases|virus|bacteria|doctor|hospital|drug|drugs|gene|genes|genetic|dna|cell|cells|heart|blood|ageing|aging|longev\w*|diet|nutrition|sport|sports|exercis\w*|fluorid\w*|cure|therap\w*|vaccin\w*|pain|oxytocin|stress|sleep)\b/i],
+    ['tech', /\b(robot|robots|ai|computer|digital|internet|machine|engine|invent\w*|tech\w*|electr\w*|energy|power|battery|laser|quantum|micro|nano|phone|screen|algorithm|data|cyber|factory|automat\w*|plane|flight|aviation|vehicle|telegraph|decibel|noisy|noise)\b/i],
+    ['mind', /\b(brain|mind|psycholog\w*|dream|yawn|yawning|memory|emotion|fear|happy|happiness|cognit\w*|mental|child|children|adolescen\w*|parent|behaviour|behavior|language|linguistic|speech|learning|education|school|teach|teaching|decision|trust|touch|stranger|strangers|handshake|lie|lying|creativ\w*|intellig\w*|persuas\w*)\b/i],
+    ['society', /\b(econom\w*|work|job|employee|employees|motivat\w*|company|business|market|money|trade|shop|consumer|media|news|social|communit\w*|law|crime|govern\w*|politic\w*|peace|bank|tax|office|team|leader|career|touris\w*|travel|masses|history)\b/i]
+  ];
+
+  function hashStringIdx(str) {
+    let h = 2166136261;
+    const s = String(str || '');
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return Math.abs(h);
+  }
+
+  function getReadingCardCover(item, isFull) {
+    if (isFull) {
+      if (item.source === 'actual' && item._actualFullIdx) {
+        const key = COVER_THEMES_ORDER[(item._actualFullIdx - 1) % COVER_THEMES_ORDER.length];
+        return `assets/images/reading_covers/${key}.webp`;
+      }
+      return 'assets/images/reading_covers/fulltest.webp';
+    }
+    const titleText = String(item.title || '');
+    for (const [key, re] of COVER_TOPIC_RULES) {
+      if (re.test(titleText)) return `assets/images/reading_covers/${key}.webp`;
+    }
+    const subText = `${item.subtitle || ''} ${item.topic || ''}`;
+    for (const [key, re] of COVER_TOPIC_RULES) {
+      if (re.test(subText)) return `assets/images/reading_covers/${key}.webp`;
+    }
+    const fallbackPool = COVER_THEMES_ORDER.slice(1);
+    const key = fallbackPool[hashStringIdx(item.id || item.title) % fallbackPool.length];
+    return `assets/images/reading_covers/${key}.webp`;
+  }
+
   function renderHubCard(item, isFull, isNews = false) {
     const best = ReadingPracticeStore.getBestAttempt(item.id);
     const totalQ = isFull
@@ -1390,10 +1455,11 @@
 
     const isMastered = !!(best && (best.mastered || (best.total > 0 && best.score === best.total)));
     const scoreBadge = best
-      ? `<span class="rp-done-badge">${isMastered ? '✓ 100% · ' : ''}Band ${best.band.toFixed(1)} · ${best.score}/${best.total}</span>`
-      : `<span class="rp-meta-pill">${esc(item.targetBand || 'IELTS')}</span>`;
+      ? `<span class="rp-cover-pill is-done">${isMastered ? '✓ 100% · ' : ''}Band ${best.band.toFixed(1)} · ${best.score}/${best.total}</span>`
+      : `<span class="rp-cover-pill is-band">${esc(item.targetBand || 'IELTS')}</span>`;
 
     const qTypes = isFull ? ['Passage 1–3', 'Full 60 phút'] : getPassageTypes(item);
+    const coverSrc = getReadingCardCover(item, isFull);
 
     const startExamCall = isFull
       ? `ReadingPracticeApp.startFullTest('${esc(item.id)}', { studyMode: 'exam' })`
@@ -1434,24 +1500,30 @@
       : item.title;
 
     return `
-      <article class="rp-card ${isFull ? 'rp-card-full' : ''}" data-rp-item="${esc(item.id)}">
-        <div class="rp-card-top">
-          <span class="rp-tag ${isFull ? 'is-full' : isNews ? 'is-news' : ''}">${esc(pillLabel)}</span>
-          ${scoreBadge}
+      <article class="rp-card has-cover ${isFull ? 'rp-card-full' : ''}" data-rp-item="${esc(item.id)}">
+        <div class="rp-card-cover">
+          <img class="rp-card-cover-img" src="${esc(coverSrc)}" alt="" loading="lazy" decoding="async">
+          <div class="rp-card-cover-scrim" aria-hidden="true"></div>
+          <div class="rp-card-cover-top">
+            <span class="rp-cover-pill ${isFull ? 'is-full' : isNews ? 'is-news' : 'is-pass'}">${esc(pillLabel)}</span>
+            ${scoreBadge}
+          </div>
+          <div class="rp-card-cover-meta tabular">
+            <span>${totalQ} câu hỏi</span>
+            <span>·</span>
+            <span>${item.suggestedMins || 20} phút</span>
+          </div>
         </div>
-        ${displaySeries ? `<div class="rp-card-series">${esc(displaySeries)}</div>` : ''}
-        <h4 class="rp-card-title">${esc(displayTitle)}</h4>
-        <p class="rp-card-sub">${esc(item.subtitle || '')}</p>
-        <div class="rp-card-tags">
-          ${qTypes.map((qt) => `<span class="rp-qtype-tag">${esc(qt)}</span>`).join('')}
-        </div>
-        <div class="rp-card-meta">
-          <span>${totalQ} câu hỏi</span>
-          <span>·</span>
-          <span>${item.suggestedMins || 20} phút</span>
-        </div>
-        <div class="rp-card-foot">
-          ${footHtml}
+        <div class="rp-card-body">
+          ${displaySeries ? `<div class="rp-card-series">${esc(displaySeries)}</div>` : ''}
+          <h4 class="rp-card-title">${esc(displayTitle)}</h4>
+          <p class="rp-card-sub">${esc(item.subtitle || '')}</p>
+          <div class="rp-card-tags">
+            ${qTypes.map((qt) => `<span class="rp-qtype-tag">${esc(qt)}</span>`).join('')}
+          </div>
+          <div class="rp-card-foot">
+            ${footHtml}
+          </div>
         </div>
       </article>
     `;

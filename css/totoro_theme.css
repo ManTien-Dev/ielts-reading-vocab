@@ -13276,3 +13276,231 @@ mark.rp-hl-preview {
     width: 100%;
   }
 }
+
+/* =========================================================
+   GHIBLI EDITORIAL ILLUSTRATED COVER CARDS (PORTAL + HUB)
+   ========================================================= */
+.rp-portal-card.has-cover {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.rp-portal-cover {
+  position: relative;
+  height: 128px;
+  width: 100%;
+  overflow: hidden;
+  background: #233329;
+  flex-shrink: 0;
+}
+.rp-portal-cover-img,
+.rp-card-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.rp-portal-card.has-cover:hover .rp-portal-cover-img,
+.rp-card.has-cover:hover .rp-card-cover-img {
+  transform: scale(1.05);
+}
+.rp-portal-cover-scrim,
+.rp-card-cover-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(16, 22, 18, 0.36) 0%,
+    rgba(16, 22, 18, 0.04) 46%,
+    rgba(16, 22, 18, 0.56) 100%
+  );
+  pointer-events: none;
+}
+.rp-portal-cover-badges,
+.rp-card-cover-top {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  z-index: 2;
+}
+.rp-cover-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+.rp-cover-pill.is-source,
+.rp-cover-pill.is-pass {
+  background: rgba(251, 249, 244, 0.92);
+  color: #24452b;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  text-transform: uppercase;
+}
+.rp-cover-pill.is-full {
+  background: rgba(180, 95, 28, 0.9);
+  color: #fffaf2;
+  border: 1px solid rgba(255, 232, 198, 0.4);
+  text-transform: uppercase;
+}
+.rp-cover-pill.is-news {
+  background: rgba(34, 78, 114, 0.9);
+  color: #f4faff;
+  border: 1px solid rgba(214, 236, 255, 0.35);
+  text-transform: uppercase;
+}
+.rp-cover-pill.is-meta,
+.rp-cover-pill.is-band {
+  background: rgba(18, 24, 20, 0.58);
+  color: #f8f6f0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.rp-cover-pill.is-done {
+  background: rgba(31, 108, 59, 0.92);
+  color: #ffffff;
+  border: 1px solid rgba(209, 250, 229, 0.4);
+}
+.rp-portal-body {
+  padding: 14px 16px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+.rp-portal-foot {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* Illustrated Passage & Full Test Cards */
+.rp-card.has-cover {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  border-radius: 16px;
+}
+.rp-card-cover {
+  position: relative;
+  height: 132px;
+  width: 100%;
+  overflow: hidden;
+  background: #223027;
+  flex-shrink: 0;
+}
+.rp-card-cover-meta {
+  position: absolute;
+  left: 11px;
+  bottom: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 252, 245, 0.95);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+.rp-card.has-cover .rp-card-body {
+  padding: 13px 15px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.rp-card.has-cover .rp-card-title {
+  font-size: 14.8px;
+  line-height: 1.36;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rp-card.has-cover .rp-card-sub {
+  font-size: 12.2px;
+  line-height: 1.46;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.rp-card.has-cover .rp-card-tags {
+  margin-top: 4px;
+}
+.rp-card.has-cover .rp-card-foot {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(44, 52, 46, 0.08);
+}
+[data-theme="dark"] .rp-card.has-cover .rp-card-foot {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Horizontal Editorial Layout for Cambridge / Volume Single-Card Rows */
+@media (min-width: 820px) {
+  .rp-cards-grid.is-single .rp-card.has-cover {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    padding: 0;
+  }
+  .rp-cards-grid.is-single .rp-card.has-cover .rp-card-cover {
+    width: 248px;
+    height: auto;
+    min-height: 138px;
+  }
+  .rp-cards-grid.is-single .rp-card.has-cover .rp-card-body {
+    padding: 15px 18px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "series foot"
+      "title foot"
+      "sub foot"
+      "tags foot";
+    column-gap: 18px;
+    row-gap: 4px;
+    align-items: center;
+  }
+  .rp-cards-grid.is-single .rp-card.has-cover .rp-card-series {
+    grid-area: series;
+    margin: 0;
+  }
+  .rp-cards-grid.is-single .rp-card.has-cover .rp-card-title {
+    grid-area: title;
+    font-size: 16px;
+  }
+  .rp-cards-grid.is-single .rp-card.has-cover .rp-card-sub {
+    grid-area: sub;
+  }
+  .rp-cards-grid.is-single .rp-card.has-cover .rp-card-tags {
+    grid-area: tags;
+    margin-top: 5px;
+  }
+  .rp-cards-grid.is-single .rp-card.has-cover .rp-card-foot {
+    grid-area: foot;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+    align-self: center;
+  }
+}
