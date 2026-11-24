@@ -2617,6 +2617,55 @@
     return item?.clean_meaning || splitCoreMeaning(item?.definition).core;
   }
 
+  let _crossLexMap = null;
+  function getCrossLexEntry(lemma) {
+    const key = String(lemma || '').trim().toLowerCase();
+    if (!key) return null;
+    if (!_crossLexMap && window.APP_DATA) {
+      const m = new Map();
+      const lists = [
+        ...(Array.isArray(APP_DATA.file1_paraphrase_1500) ? APP_DATA.file1_paraphrase_1500 : []),
+        ...(Array.isArray(APP_DATA.file2_families_3500) ? APP_DATA.file2_families_3500 : []),
+      ];
+      for (const w of lists) {
+        const k = String(w?.lemma || '').trim().toLowerCase();
+        if (!k) continue;
+        let rec = m.get(k);
+        if (!rec) { rec = { syn: new Set(), ant: new Set() }; m.set(k, rec); }
+        (Array.isArray(w.clean_synonyms) ? w.clean_synonyms : []).forEach((s) => { const t = String(s || '').trim(); if (t) rec.syn.add(t); });
+        (Array.isArray(w.clean_antonyms) ? w.clean_antonyms : []).forEach((a) => { const t = String(a || '').trim(); if (t) rec.ant.add(t); });
+      }
+      if (m.size > 0) _crossLexMap = m;
+    }
+    return _crossLexMap ? (_crossLexMap.get(key) || null) : null;
+  }
+
+  function getEnrichedSynonyms(item) {
+    const own = getCleanSynonyms(item);
+    const cross = isListeningSkillActive() ? Array.from(getCrossLexEntry(item?.lemma)?.syn || []) : [];
+    const seen = new Set();
+    const out = [];
+    for (const s of [...own, ...cross]) {
+      const t = String(s || '').trim();
+      const k = t.toLowerCase();
+      if (t && !seen.has(k)) { seen.add(k); out.push(t); }
+    }
+    return out;
+  }
+
+  function getEnrichedAntonyms(item) {
+    const own = getCleanAntonyms(item);
+    const cross = isListeningSkillActive() ? Array.from(getCrossLexEntry(item?.lemma)?.ant || []) : [];
+    const seen = new Set();
+    const out = [];
+    for (const a of [...own, ...cross]) {
+      const t = String(a || '').trim();
+      const k = t.toLowerCase();
+      if (t && !seen.has(k)) { seen.add(k); out.push(t); }
+    }
+    return out;
+  }
+
   function getCleanSynonyms(item) {
     if (Array.isArray(item?.clean_synonyms)) return item.clean_synonyms;
     return splitCsvItems(cleanSynonyms(item?.synonyms));
@@ -3605,7 +3654,7 @@
     }
 
     const cleanSyns = shuffleArray(
-      (Array.isArray(item?.clean_synonyms) ? item.clean_synonyms : [])
+      getEnrichedSynonyms(item)
         .map((s) => String(s || '').trim())
         .filter((s) => s && s.toLowerCase() !== lemmaNorm)
     );
@@ -3621,7 +3670,7 @@
     });
 
     const cleanAnts = shuffleArray(
-      (Array.isArray(item?.clean_antonyms) ? item.clean_antonyms : [])
+      getEnrichedAntonyms(item)
         .map((s) => String(s || '').trim())
         .filter(Boolean)
     );
@@ -3667,6 +3716,74 @@
       addOption(cand.lemma, false);
     }
 
+    return shuffleArray(options);
+  }
+
+  function buildRecallAntonymOptions(item) {
+    const lemmaNorm = String(item?.lemma || '').trim().toLowerCase();
+    const used = new Set([lemmaNorm]);
+    const options = [];
+    const stemOf = (w) => String(w || '').trim().toLowerCase().replace(/[^a-z]/g, '').slice(0, 5);
+    const forbiddenStems = new Set();
+    const ls = stemOf(lemmaNorm);
+    if (ls.length >= 4) forbiddenStems.add(ls);
+
+    const addOption = (rawText, isCorrect) => {
+      const text = String(rawText || '').trim();
+      const norm = text.toLowerCase();
+      if (!text || used.has(norm)) return false;
+      used.add(norm);
+      options.push({ text, isCorrect });
+      return true;
+    };
+
+    const cleanAnts = shuffleArray(
+      getEnrichedAntonyms(item)
+        .map((s) => String(s || '').trim())
+        .filter((s) => s && s.toLowerCase() !== lemmaNorm)
+    );
+    const chosenAnts = cleanAnts.slice(0, 4);
+    chosenAnts.forEach((a) => {
+      addOption(a, true);
+      const st = stemOf(a);
+      if (st.length >= 4) forbiddenStems.add(st);
+    });
+    cleanAnts.forEach((a) => used.add(a.toLowerCase()));
+
+    // Synonyms make great realistic distractors in Antonym check!
+    const cleanSyns = shuffleArray(
+      getEnrichedSynonyms(item)
+        .map((s) => String(s || '').trim())
+        .filter(Boolean)
+    );
+    for (const s of cleanSyns) {
+      if (options.length >= 6) break;
+      addOption(s, false);
+    }
+
+    const pool = (currentScopeList && currentScopeList.length >= 30)
+      ? currentScopeList
+      : [...(APP_DATA?.file1_paraphrase_1500 || []), ...(APP_DATA?.file2_families_3500 || [])];
+    const targetPos = getCleanPos(item);
+    const samePos = [];
+    const diffPos = [];
+    const step = Math.max(1, Math.floor(pool.length / 120));
+    const offset = Math.floor(Math.random() * pool.length);
+    for (let k = 0; k < pool.length && options.length < 8; k++) {
+      const idx = (offset + k * step + Math.floor(k / 40)) % pool.length;
+      const cand = pool[idx];
+      if (!cand || cand.id === item.id) continue;
+      const cLem = String(cand.lemma || '').trim();
+      const cNorm = cLem.toLowerCase();
+      if (!cLem || used.has(cNorm) || forbiddenStems.has(stemOf(cNorm))) continue;
+      if (getCleanPos(cand) === targetPos) samePos.push(cLem);
+      else diffPos.push(cLem);
+      if (samePos.length >= 10) break;
+    }
+    for (const w of [...samePos, ...diffPos]) {
+      if (options.length >= 8) break;
+      addOption(w, false);
+    }
     return shuffleArray(options);
   }
 
@@ -3974,6 +4091,17 @@
         }
         return;
       }
+      if (recallStage2Type === 'antonym') {
+        if (recallAttemptsLeft <= 0) {
+          p2.innerHTML = 'Đã hết lượt thử.';
+        } else {
+          const baseText = rule.strict
+            ? 'Chọn các từ trái nghĩa (còn 1 lần):'
+            : `Chọn các từ trái nghĩa (còn ${recallAttemptsLeft} lần):`;
+          p2.innerHTML = escapeHtml(baseText) + selBadge;
+        }
+        return;
+      }
       if (recallAttemptsLeft <= 0) {
         p2.innerHTML = 'Đã hết lượt thử.';
       } else {
@@ -3986,6 +4114,56 @@
   }
 
   function enterRecallStage2Step(item, stepType) {
+    if (stepType === 'type_word') {
+      stopRecallInputTimer();
+      resetRecallSpeedBarUI(false);
+      recallStage = 2;
+      recallSubmitted = false;
+      recallMode = 'standard';
+      recallStage2Type = 'type_word';
+      recallAttemptsLeft = getRecallRule(item).maxAttempts;
+      recallSynOptions = [];
+      recallSynSelected = new Set();
+
+      const limitSec = getRecallTimeLimitSec(item, 1);
+      recallDeadlineAt = Date.now() + limitSec * 1000;
+
+      const stageBadge = document.getElementById('recall-stage-badge');
+      const timerBadge = document.getElementById('recall-timer-badge');
+      const hintBox = document.getElementById('recall-hint-box');
+      const stage1Body = document.getElementById('recall-stage1-body');
+      const listenBodyEl = document.getElementById('recall-listening-body');
+      const stage2Body = document.getElementById('recall-stage2-body');
+      const inp = document.getElementById('recall-word-input');
+      const btnSubmit = document.getElementById('btn-recall-submit');
+      const fb = document.getElementById('recall-feedback');
+
+      if (stageBadge) stageBadge.textContent = 'Test 2 · Ghi lại từ';
+      if (timerBadge) {
+        timerBadge.textContent = `${limitSec}s`;
+        timerBadge.classList.remove('is-urgent', 'is-speed-pulse');
+      }
+      if (hintBox) hintBox.style.display = 'none';
+      if (listenBodyEl) listenBodyEl.style.display = 'none';
+      if (stage2Body) stage2Body.style.display = 'none';
+      if (stage1Body) stage1Body.style.display = 'block';
+      if (inp) {
+        inp.value = '';
+        inp.disabled = false;
+        setTimeout(() => inp.focus(), 40);
+      }
+      if (btnSubmit) btnSubmit.style.display = 'inline-flex';
+      if (fb) {
+        fb.style.display = 'none';
+        fb.className = 'recall-feedback';
+        fb.innerHTML = '';
+      }
+      updateRecallPromptAttempts(item);
+      setRecallActiveSession(item, 2);
+      recallDeadlineTimer = setInterval(updateRecallCountdownBadge, 250);
+      return;
+    }
+
     if (stepType === 'meaning_vi') {
       const choices = window.RecognitionTestModule?.buildMeaningDistractors?.(item, currentScopeList, 3) || [];
       if (choices.length < 2) {
@@ -4051,7 +4229,7 @@
     recallWbTitle = '';
     recallSynOptions = stepType === 'wordfamily'
       ? buildRecallWordFamilyOptions(item)
-      : buildRecallSynonymOptions(item);
+      : (stepType === 'antonym' ? buildRecallAntonymOptions(item) : buildRecallSynonymOptions(item));
     recallSynSelected = new Set();
 
     const limitSec = getRecallTimeLimitSec(item, 2);
@@ -4068,7 +4246,11 @@
     const fb = document.getElementById('recall-feedback');
 
     document.getElementById('recall-word-input')?.blur();
-    if (stageBadge) stageBadge.textContent = stepType === 'wordfamily' ? 'Test 2 · Word Family' : 'Test 2 · Synonyms';
+    if (stageBadge) {
+      stageBadge.textContent = stepType === 'wordfamily'
+        ? 'Test 2 · Word Family'
+        : (stepType === 'antonym' ? 'Test 2 · Trái nghĩa' : 'Test 2 · Đồng nghĩa');
+    }
     if (timerBadge) {
       timerBadge.textContent = `${limitSec}s`;
       timerBadge.classList.remove('is-urgent');
@@ -4077,7 +4259,9 @@
     if (targetSubEl) {
       targetSubEl.textContent = stepType === 'wordfamily'
         ? 'Click các từ cùng gia đình từ (Word Family) của'
-        : (stepType === 'signal_equiv' ? 'Click các từ nối tương đương của' : 'Click các từ đồng nghĩa (Synonyms) của');
+        : (stepType === 'antonym'
+          ? 'Click các từ trái nghĩa (Antonyms) của'
+          : (stepType === 'signal_equiv' ? 'Click các từ nối tương đương của' : 'Click các từ đồng nghĩa (Synonyms) của'));
     }
     if (targetWordEl) {
       targetWordEl.className = 'recall-stage-word';
@@ -4192,7 +4376,7 @@
       }
     }
     if (inp) inp.disabled = true;
-    if (recallStage === 2 || recallMode === 'quick_vi') {
+    if ((recallStage === 2 && recallStage2Type !== 'type_word') || recallMode === 'quick_vi') {
       renderRecallSynGrid(true);
     }
     syncExamLock(false);
@@ -4211,12 +4395,17 @@
       if (recallMode === 'quick_vi') {
         const rightMean = item.clean_meaning || item.meaning || item.definition || '';
         fb.innerHTML = `${escapeHtml(reasonPrefix)} Nghĩa đúng của <strong>${escapeHtml(item.lemma)}</strong> là: <strong>${escapeHtml(rightMean)}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
+      } else if (recallStage === 2 && recallStage2Type === 'type_word') {
+        fb.innerHTML = `${escapeHtml(reasonPrefix)} Chính tả đúng là: <strong>${escapeHtml(item.lemma)}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
       } else if (recallStage === 2 && recallStage2Type === 'wordbox') {
         const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
         fb.innerHTML = `${escapeHtml(reasonPrefix)} Đáp án Word Box đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
       } else if (recallStage === 2 && recallStage2Type === 'wordfamily') {
         const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
         fb.innerHTML = `${escapeHtml(reasonPrefix)} Các gia đình từ đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
+      } else if (recallStage === 2 && recallStage2Type === 'antonym') {
+        const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
+        fb.innerHTML = `${escapeHtml(reasonPrefix)} Các từ trái nghĩa đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
       } else if (recallStage === 2) {
         const rightWords = recallSynOptions.filter((o) => o.isCorrect).map((o) => o.text);
         fb.innerHTML = `${escapeHtml(reasonPrefix)} Các từ đồng nghĩa đúng là: <strong>${escapeHtml(rightWords.join(', '))}</strong>.<br>Hãy xem lại thẻ và thử bấm Đã thuộc lại sau ${rule.cooldownSec} giây.`;
@@ -4300,23 +4489,23 @@
     const isSignal = currentScopeKey === 'signal_words' || Boolean(item?.strategy);
     const hasSynTargets = isSignal
       ? splitCsvItems(item?.word_forms).length > 0
-      : getCleanSynonyms(item).some((s) => {
+      : getEnrichedSynonyms(item).some((s) => {
           const sl = String(s || '').trim().toLowerCase();
           return sl && sl !== expected;
         });
-    const hasFormTargets = !isSignal && (Array.isArray(item?.clean_forms) ? item.clean_forms : []).some((f) => {
-      const fl = String(f || '').trim().toLowerCase();
-      return fl && fl !== expected;
+    const hasAntTargets = !isSignal && getEnrichedAntonyms(item).some((a) => {
+      const al = String(a || '').trim().toLowerCase();
+      return al && al !== expected;
     });
     const hasMeaningChoices = !isSignal && Boolean(window.RecognitionTestModule?.buildMeaningDistractors) &&
       (window.RecognitionTestModule.buildMeaningDistractors(item, currentScopeList, 3)?.length >= 2);
 
-    recallStage2Queue = [];
+    recallStage2Queue = ['type_word'];
     if (isSignal) {
       if (hasSynTargets) recallStage2Queue.push('signal_equiv');
     } else {
       if (hasSynTargets) recallStage2Queue.push('synonym');
-      if (hasFormTargets) recallStage2Queue.push('wordfamily');
+      if (hasAntTargets) recallStage2Queue.push('antonym');
       if (hasMeaningChoices) recallStage2Queue.push('meaning_vi');
     }
     advanceRecallStage2Queue(item);
@@ -4413,7 +4602,7 @@
 
         if (check.matched) {
           stopRecallInputTimer();
-          setListeningMicUI('passed', '✓ Chuẩn phát âm! Đang chấm Đã thuộc ngay…');
+          setListeningMicUI('passed', '✓ Chuẩn phát âm! Đang chuyển sang Test 2…');
           if (heardBox) {
             heardBox.style.display = 'block';
             heardBox.className = 'rl-heard-box is-pass';
@@ -4421,8 +4610,8 @@
           }
           setTimeout(() => {
             if (!recallTargetItem || recallTargetItem.id !== item.id || recallSubmitted) return;
-            finalizeRecallMastery(item);
-          }, 520);
+            advanceFromListeningStage1Pass(item);
+          }, 420);
           return;
         }
 
@@ -4580,11 +4769,13 @@
       if (listenBody) listenBody.style.display = 'block';
       if (btnSubmit) btnSubmit.style.display = 'none';
 
+      const cueBox = document.getElementById('rl-cue-box');
       const posEl = document.getElementById('rl-cue-pos');
       const meanEl = document.getElementById('rl-cue-meaning');
       const heardBox = document.getElementById('rl-heard-box');
-      if (posEl) posEl.textContent = getCleanPos(item) || 'vocab';
-      if (meanEl) meanEl.textContent = item.clean_meaning || item.meaning || item.vi || item.definition || '';
+      if (cueBox) cueBox.style.display = 'none';
+      if (posEl) posEl.textContent = '';
+      if (meanEl) meanEl.textContent = '';
       if (heardBox) {
         heardBox.style.display = 'none';
         heardBox.className = 'rl-heard-box';
@@ -4747,7 +4938,7 @@
     const item = recallTargetItem;
     const fb = document.getElementById('recall-feedback');
 
-    if (recallStage === 1) {
+    if (recallStage === 1 || (recallStage === 2 && recallStage2Type === 'type_word')) {
       const inp = document.getElementById('recall-word-input');
       const typed = String(inp?.value || '').trim().replace(/\s+/g, ' ').toLowerCase();
       const expected = String(item.lemma || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -4766,6 +4957,10 @@
       }
 
       if (acceptedVariants.includes(typed)) {
+        if (recallStage === 2 && recallStage2Type === 'type_word') {
+          advanceRecallStage2Queue(item);
+          return;
+        }
         const isSignal = currentScopeKey === 'signal_words' || Boolean(item?.strategy);
         const hasSynTargets = isSignal
           ? splitCsvItems(item?.word_forms).length > 0
@@ -4818,7 +5013,9 @@
           ? 'Vui lòng click chọn 1 từ trong Word Box để điền vào câu trước khi xác nhận.'
           : (recallStage2Type === 'wordfamily'
             ? 'Vui lòng click chọn ít nhất 1 từ cùng gia đình từ (Word Family) trước khi xác nhận.'
-            : 'Vui lòng click chọn ít nhất 1 từ đồng nghĩa trước khi xác nhận.');
+            : (recallStage2Type === 'antonym'
+              ? 'Vui lòng click chọn ít nhất 1 từ trái nghĩa trước khi xác nhận.'
+              : 'Vui lòng click chọn ít nhất 1 từ đồng nghĩa trước khi xác nhận.'));
       }
       return;
     }
