@@ -1121,33 +1121,10 @@
     }
   };
 
-  const FULL_TESTS = [
-    {
-      id: 'cam_s1_full',
-      source: 'cambridge',
-      bookId: 'cam_20',
-      testNum: 1,
-      series: 'Cambridge IELTS 20 · Test 1',
-      title: 'Cambridge IELTS 20 · Test 1 · FULL TEST',
-      subtitle: 'Vertical Farming · Ancient Amphitheatres · Cognitive Offloading',
-      targetBand: '6.5 – 8.5',
-      suggestedMins: 60,
-      deckDefaultName: 'Cambridge 20 · Test 1',
-      passageIds: ['cam_s1_p1', 'cam_s1_p2', 'cam_s1_p3']
-    }
-  ];
+  const FULL_TESTS = [];
 
-  // Attach bookId + testNum cleanly to curated Cam 20 Test 1 showcase passages
-  ['cam_s1_p1', 'cam_s1_p2', 'cam_s1_p3'].forEach((id) => {
-    if (PASSAGES[id]) {
-      PASSAGES[id].bookId = 'cam_20';
-      PASSAGES[id].testNum = 1;
-      PASSAGES[id].series = 'Cambridge IELTS 20 · Test 1';
-      PASSAGES[id].deckDefaultName = `Cambridge 20 · T1 P${PASSAGES[id].passageNum}`;
-    }
-  });
-  // Drop legacy placeholder vol_s1 / act_s1 entries now that full verified banks load from bank_volume.js & bank_actual.js
-  ['vol_s1_p1', 'vol_s1_p2', 'vol_s1_p3', 'act_s1_p1', 'act_s1_p2', 'act_s1_p3'].forEach((id) => {
+  // Keep ONLY News editorial articles inline; all exam shelves load 100% real verified exams from bank_*.js
+  ['cam_s1_p1', 'cam_s1_p2', 'cam_s1_p3', 'vol_s1_p1', 'vol_s1_p2', 'vol_s1_p3', 'act_s1_p1', 'act_s1_p2', 'act_s1_p3'].forEach((id) => {
     delete PASSAGES[id];
   });
 
@@ -1194,15 +1171,15 @@
   }
 
   const BANK_SUMMARY = {
-    cambridge: { booksReady: 13, booksTotal: 20, passages: 126 },
+    cambridge: { booksReady: 12, booksTotal: 20, passages: 123 },
     volume: { booksReady: 10, booksTotal: 10, passages: 120 },
     actual: { booksReady: 30, booksTotal: 30, passages: 349 }
   };
 
   const SOURCES = [
-    { id: 'cambridge', label: 'Cambridge', bookTitle: 'Cambridge IELTS 1 – 20', desc: 'Đủ kệ 20 cuốn Cambridge University Press — đã nạp 13 cuốn (Cam 1–12 & Cam 20), tách Passage 1–3 & Full Test.' },
-    { id: 'volume', label: 'Volume', bookTitle: 'Real Reading Test — Volume 1–10', desc: 'Trọn bộ 10 tập Real Reading Test (40 Full Tests · 120 bài đọc học thuật) — chia rõ Test 1–4, Passage 1–3 & Full Test.' },
-    { id: 'actual', label: 'Recent Actual', bookTitle: 'IELTS Reading Recent Actual Tests', desc: 'Kho 349 bài đề thi thật gần đây chia 30 bộ (116 Full Tests) — luyện tốc độ & nhận diện bẫy Paraphrase chuẩn phòng thi.' },
+    { id: 'cambridge', label: 'Cambridge', bookTitle: 'Cambridge IELTS 1 – 20', desc: 'Đủ kệ 20 cuốn Cambridge University Press — đã nạp 12 cuốn đề gốc có đáp án chuẩn (Cam 1–12), tách Passage 1–3 & Full Test.' },
+    { id: 'volume', label: 'Volume', bookTitle: 'Real Reading Test — Volume 1–10', desc: 'Trọn bộ 10 tập Real Reading Test (40 Full Tests · 120 bài đọc học thuật có đáp án gốc) — chia rõ Test 1–4, Passage 1–3 & Full Test.' },
+    { id: 'actual', label: 'Recent Actual', bookTitle: 'IELTS Reading Recent Actual Tests', desc: 'Kho 349 bài đề thi thật gần đây có đáp án chuẩn chia 30 bộ (116 Full Tests) — luyện tốc độ & nhận diện bẫy Paraphrase.' },
     { id: 'news', label: 'News', bookTitle: 'The Economist · Nature · BBC Future', desc: 'Đọc báo học thuật chọn lọc theo chủ đề — dịch song ngữ & bấm tra từ lưu thẳng về Flashcard.' }
   ];
 

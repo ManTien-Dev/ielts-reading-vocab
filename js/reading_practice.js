@@ -233,7 +233,7 @@
     selectedHeadingKey: null // for tap-to-assign Matching Headings on touch/click
   };
 
-  const BANK_VERSION = '20261124e';
+  const BANK_VERSION = '20261124f';
   const _loadedBanks = {};
   const _bankPromises = {};
 
@@ -443,7 +443,7 @@
       const summary = d.BANK_SUMMARY || {};
       let rightBadge = avgBand ? `Band ${avgBand}` : '';
       if (!rightBadge) {
-        if (s.id === 'cambridge') rightBadge = `${summary.cambridge?.booksReady || 13}/20 cuốn · ${summary.cambridge?.passages || 126} bài`;
+        if (s.id === 'cambridge') rightBadge = `${summary.cambridge?.booksReady || 12}/20 cuốn · ${summary.cambridge?.passages || 123} bài`;
         else if (s.id === 'volume') rightBadge = `10 tập · ${summary.volume?.passages || 120} bài`;
         else if (s.id === 'actual') rightBadge = `${summary.actual?.booksTotal || 30} bộ · ${summary.actual?.passages || 349} bài`;
         else rightBadge = `${allPassages.filter((p) => p.source === 'news').length} bài báo`;
