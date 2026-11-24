@@ -28,70 +28,47 @@
   let t1DeadlineAt = 0;
 
   const DIRECTOR_SVG = {
-    clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>',
-    pause: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="14" y1="9" x2="14" y2="15"/></svg>',
-    check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12.5 11 15 16 9.5"/></svg>',
-    wave: '<span class="lt-dir-eq" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></span>',
+    clock: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>',
+    speaker: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
+    check: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12.5 11 15 16 9.5"/></svg>',
+    wave: '<span class="lt-dir-eq" aria-hidden="true"><span></span><span></span><span></span><span></span></span>',
   };
 
-  function renderDirectorBarHtml(id, prepTitle, prepSeconds) {
+  function renderAudioPillHtml(id, prepSeconds) {
     return `
-      <div class="lt-director-bar is-prep" id="${id}" role="status" aria-live="polite">
-        <div class="lt-dir-main">
-          <div class="lt-dir-icon" id="${id}-icon">${DIRECTOR_SVG.clock}</div>
-          <div class="lt-dir-copy">
-            <span class="lt-dir-title" id="${id}-title">${esc(prepTitle)}</span>
-            <span class="lt-dir-sep" aria-hidden="true">·</span>
-            <span class="lt-dir-sub tabular" id="${id}-sub">Tự động phát lượt 1 sau ${prepSeconds}s</span>
-          </div>
-        </div>
-        <div class="lt-dir-right">
-          <div class="lt-dir-passes" id="${id}-passes">
-            <span class="lt-pass-chip" data-pass="1">Lượt 1</span>
-            <span class="lt-pass-chip" data-pass="2">Lượt 2</span>
-          </div>
-          <span class="lt-dir-badge tabular" id="${id}-badge">${prepSeconds}s</span>
-        </div>
-        <div class="lt-dir-track" aria-hidden="true"><div class="lt-dir-fill" id="${id}-fill" style="transform:scaleX(1)"></div></div>
+      <div class="lt-audio-pill is-prep" id="${id}" role="status" aria-live="polite">
+        <span class="lt-ap-icon" id="${id}-icon">${DIRECTOR_SVG.clock}</span>
+        <span class="lt-ap-label" id="${id}-label">Chuẩn bị</span>
+        <span class="lt-ap-wave" id="${id}-wave" style="display:none;">${DIRECTOR_SVG.wave}</span>
+        <span class="lt-ap-sec tabular" id="${id}-sec">${prepSeconds}s</span>
+        <span class="lt-ap-track" aria-hidden="true"><span class="lt-ap-fill" id="${id}-fill" style="transform:scaleX(1)"></span></span>
       </div>
     `;
   }
 
-  function setDirectorState(id, cfg) {
-    const bar = document.getElementById(id);
-    if (!bar) return;
-    bar.classList.remove('is-prep', 'is-playing', 'is-gap', 'is-done');
-    if (cfg.state) bar.classList.add(cfg.state);
+  function setAudioPillState(id, cfg) {
+    const pill = document.getElementById(id);
+    if (!pill) return;
+    pill.classList.remove('is-prep', 'is-playing', 'is-gap', 'is-done');
+    if (cfg.state) pill.classList.add(cfg.state);
 
     const iconEl = document.getElementById(`${id}-icon`);
-    const titleEl = document.getElementById(`${id}-title`);
-    const subEl = document.getElementById(`${id}-sub`);
-    const badgeEl = document.getElementById(`${id}-badge`);
-    const passesEl = document.getElementById(`${id}-passes`);
+    const lblEl = document.getElementById(`${id}-label`);
+    const waveEl = document.getElementById(`${id}-wave`);
+    const secEl = document.getElementById(`${id}-sec`);
     const fillEl = document.getElementById(`${id}-fill`);
 
     if (iconEl && cfg.icon !== undefined) iconEl.innerHTML = cfg.icon;
-    if (titleEl && cfg.title !== undefined) titleEl.textContent = cfg.title;
-    if (subEl && cfg.sub !== undefined) {
-      subEl.textContent = cfg.sub;
-      const sep = bar.querySelector('.lt-dir-sep');
-      if (sep) sep.style.display = cfg.sub ? '' : 'none';
+    if (lblEl && cfg.label !== undefined) {
+      lblEl.textContent = cfg.label;
+      lblEl.style.display = cfg.label ? '' : 'none';
     }
-    if (badgeEl && cfg.badge !== undefined) {
-      badgeEl.textContent = cfg.badge;
-      badgeEl.style.display = cfg.badge ? '' : 'none';
+    if (waveEl && cfg.showWave !== undefined) {
+      waveEl.style.display = cfg.showWave ? 'inline-flex' : 'none';
     }
-    if (passesEl && cfg.passes) {
-      const p1 = passesEl.querySelector('[data-pass="1"]');
-      const p2 = passesEl.querySelector('[data-pass="2"]');
-      if (p1) {
-        p1.className = `lt-pass-chip ${cfg.passes[0] || ''}`.trim();
-        p1.textContent = cfg.passes[0] === 'is-complete' ? '✓ Lượt 1' : 'Lượt 1';
-      }
-      if (p2) {
-        p2.className = `lt-pass-chip ${cfg.passes[1] || ''}`.trim();
-        p2.textContent = cfg.passes[1] === 'is-complete' ? '✓ Lượt 2' : 'Lượt 2';
-      }
+    if (secEl && cfg.sec !== undefined) {
+      secEl.textContent = cfg.sec;
+      secEl.style.display = cfg.sec ? '' : 'none';
     }
     if (fillEl && cfg.progress !== undefined) {
       const clamped = Math.max(0, Math.min(1, Number(cfg.progress)));
@@ -104,13 +81,10 @@
       directorId,
       prepSeconds = 5,
       gapSeconds = 5,
-      prepTitle = 'Chuẩn bị đọc đề',
-      doneActionText = 'Chọn đáp án',
       audioFile = '',
       turns = [],
       timestamps = [],
       gapMs = 260,
-      defaultSpeaker = 'Speaker',
       isStillActive,
       onStartPlaying,
     } = opts;
@@ -139,21 +113,14 @@
       if (!isStillActive()) return;
       if (typeof onStartPlaying === 'function') onStartPlaying(passNum);
 
-      setDirectorState(directorId, {
+      setAudioPillState(directorId, {
         state: 'is-playing',
-        icon: DIRECTOR_SVG.wave,
-        title: `Đang phát lượt ${passNum} / 2`,
-        sub: turns.length ? `${turns[0]?.speaker || defaultSpeaker} · 1/${turns.length}` : 'Audio tự động',
-        badge: '',
-        passes: passNum === 1 ? ['is-live', ''] : ['is-complete', 'is-live'],
+        icon: DIRECTOR_SVG.speaker,
+        label: '',
+        showWave: true,
+        sec: `${passNum}/2`,
         progress: passNum === 1 ? 0.5 : 1,
       });
-
-      const onTurn = (ti, turn) => {
-        if (!isStillActive()) return;
-        const subEl = document.getElementById(`${directorId}-sub`);
-        if (subEl) subEl.textContent = `${turn.speaker || defaultSpeaker} · ${ti + 1}/${turns.length}`;
-      };
 
       const onPassDone = () => {
         if (!isStillActive()) return;
@@ -161,26 +128,24 @@
           startCountdown(
             gapSeconds,
             (rem, total) => {
-              setDirectorState(directorId, {
+              setAudioPillState(directorId, {
                 state: 'is-gap',
-                icon: DIRECTOR_SVG.pause,
-                title: 'Hết lượt 1 · Chờ làm bài',
-                sub: `Tự động phát lượt 2 sau ${rem}s`,
-                badge: `${rem}s`,
-                passes: ['is-complete', ''],
+                icon: DIRECTOR_SVG.clock,
+                label: 'Lượt 2 sau',
+                showWave: false,
+                sec: `${rem}s`,
                 progress: rem / Math.max(1, total),
               });
             },
             () => playPass(2)
           );
         } else {
-          setDirectorState(directorId, {
+          setAudioPillState(directorId, {
             state: 'is-done',
             icon: DIRECTOR_SVG.check,
-            title: 'Đã phát xong 2 lượt',
-            sub: '',
-            badge: doneActionText,
-            passes: ['is-complete', 'is-complete'],
+            label: 'Đã phát',
+            showWave: false,
+            sec: '',
             progress: 1,
           });
         }
@@ -190,14 +155,12 @@
         turns,
         timestamps,
         rate: EXAM_PLAYBACK_RATE,
-        onTurn,
         onDone: onPassDone,
       }).then((usedMp3) => {
         if (!usedMp3 && isStillActive()) {
           playTurnsOneShot(turns, {
             rate: EXAM_PLAYBACK_RATE,
             gapMs,
-            onTurn,
             onDone: onPassDone,
           });
         }
@@ -207,13 +170,12 @@
     startCountdown(
       prepSeconds,
       (rem, total) => {
-        setDirectorState(directorId, {
+        setAudioPillState(directorId, {
           state: 'is-prep',
           icon: DIRECTOR_SVG.clock,
-          title: prepTitle,
-          sub: `Tự động phát lượt 1 sau ${rem}s`,
-          badge: `${rem}s`,
-          passes: ['', ''],
+          label: 'Chuẩn bị',
+          showWave: false,
+          sec: `${rem}s`,
           progress: rem / Math.max(1, total),
         });
       },
@@ -1296,11 +1258,9 @@
       <div class="lt-t2-stage">
         <div class="lt-progress-row">
           <span class="tabular"><strong>Hội thoại ${idx + 1} / ${convs.length}</strong></span>
-          <span class="lt-stage-meta-pill tabular">${Math.round(((idx + 1) / convs.length) * 100)}%</span>
+          ${renderAudioPillHtml('lt-t2-director', 5)}
         </div>
         <div class="lt-prog-track"><div class="lt-prog-fill" style="width:${Math.round((idx / convs.length) * 100)}%"></div></div>
-
-        ${renderDirectorBarHtml('lt-t2-director', 'Chuẩn bị đọc câu hỏi', 5)}
 
         <div class="lt-t2-question">${esc(c.question)}</div>
         <div class="lt-t2-options" id="lt-t2-options">
@@ -1619,7 +1579,10 @@
     const activeQ = examState.t3MapActiveQ || 1;
     body.innerHTML = `
       <div class="lt-t3-stage">
-        ${renderDirectorBarHtml('lt-t3-director', 'Chuẩn bị xem bản đồ', 10)}
+        <div class="lt-progress-row">
+          <span><strong>${esc(ml.title || 'Map Labelling')}</strong></span>
+          ${renderAudioPillHtml('lt-t3-director', 10)}
+        </div>
 
         <div class="lt-map-workspace">
           <div class="lt-map-canvas-col" id="lt-map-canvas-col">
@@ -1784,8 +1747,10 @@
     // Active Test 3 Note Completion: 10s Prediction -> Auto-play Pass 1 -> 5s Rest -> Auto-play Pass 2 (ZERO manual controls!)
     body.innerHTML = `
       <div class="lt-t3-stage">
-        ${renderDirectorBarHtml('lt-t3-director', 'Chuẩn bị đọc đề', 10)}
-        ${nc.scenarioIntro ? `<div class="lt-t3-scenario">${esc(nc.scenarioIntro)}</div>` : ''}
+        <div class="lt-progress-row">
+          <span><strong>${esc(nc.scenarioIntro || 'Note Completion')}</strong></span>
+          ${renderAudioPillHtml('lt-t3-director', 10)}
+        </div>
 
         ${renderNoteSheetHtml(nc, false)}
 
