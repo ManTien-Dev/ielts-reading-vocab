@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
   <link rel="stylesheet" href="css/enhancements.css?v=20261124m">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261124u">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261124v">
 </head>
 <body>
 
@@ -1285,202 +1285,195 @@
           </div>
         </div>
 
-        <!-- STUDY PLAN · TARGET BAND · PROGRESS MONITOR (Replaces duplicate 4-skill cards!) -->
-        <div class="tot-monitor-grid" id="home-monitor-grid">
-          <!-- Card 1: Target Band & Exam Countdown -->
-          <div class="tot-monitor-card ink-brackets has-stamp" id="home-plan-target-card">
-            <div class="tot-mon-head">
-              <div class="tot-mon-title-wrap">
-                <span class="tot-icon-tile" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
-                </span>
-                <div>
-                  <div class="tot-mon-title">Mục tiêu &amp; Ngày thi</div>
-                  <div class="tot-mon-sub tabular" id="home-target-countdown">Đặt ngày thi để tính nhịp học</div>
+        <!-- ASYMMETRIC 2-COLUMN EDITORIAL WORKSPACE (Scrollable, breathable, zero clipping!) -->
+        <div class="tot-home-workspace" id="home-workspace-grid">
+          <!-- LEFT PRIMARY COLUMN (61%): Action Today · Rhythm Analytics · Roadmap Progress -->
+          <div class="tot-home-main-col">
+            <!-- 1. Daily Study Plan Checklist -->
+            <section class="tot-home-panel tot-monitor-card ink-brackets has-stamp" id="home-daily-plan-card" aria-label="Kế hoạch hôm nay">
+              <div class="tot-panel-head">
+                <div class="tot-panel-title-wrap">
+                  <span class="tot-icon-tile warm" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  </span>
+                  <div>
+                    <div class="tot-panel-title">Kế hoạch học hôm nay</div>
+                    <div class="tot-panel-sub">Tự động cập nhật theo tiến độ thực học — bấm từng mục để vào học ngay</div>
+                  </div>
                 </div>
+                <span class="tot-tag" id="home-daily-plan-badge">0/3 xong</span>
               </div>
-              <button type="button" class="tot-mon-edit-btn" id="btn-toggle-plan-edit" onclick="window.TotoroUI?.togglePlanEditor()">Chỉnh mục tiêu</button>
-            </div>
+              <div class="tot-plan-checklist" id="home-plan-checklist"></div>
+            </section>
 
-            <!-- View Mode -->
-            <div class="tot-target-view" id="home-target-view">
-              <div class="tot-target-kpi-row">
-                <div class="tot-target-band-box">
-                  <span class="tot-target-k-lbl">Mục tiêu</span>
-                  <strong class="tot-target-k-val tabular" id="home-target-band-val">7.5</strong>
+            <!-- 2. Study Rhythm Chart (Wide, breathable analytics!) -->
+            <section class="tot-home-panel ink-brackets has-stamp" aria-label="Biểu đồ nhịp học">
+              <svg class="ghibli-stamp warm" style="left:54%;bottom:7px;width:30px;height:30px;opacity:0.2;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                <path d="M24 38V18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+                <path d="M24 24C16 23 11 17 11 11C18 11 23 16 24 24Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".12"/>
+                <path d="M24 20C32 19 37 13 37 7C30 7 25 12 24 20Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".12"/>
+                <path d="M14 38H34" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+              <div class="tot-panel-head">
+                <div class="tot-panel-title-wrap">
+                  <span class="tot-icon-tile warm"><svg viewBox="2 2 20 20" fill="none"><rect x="3.5" y="13" width="3.8" height="7" rx="1.6" fill="#D99B58"/><rect x="10.1" y="9" width="3.8" height="11" rx="1.6" fill="#4E9460"/><rect x="16.7" y="5.5" width="3.8" height="14.5" rx="1.6" fill="#E67E35"/><path d="M12 9C12 6 14.2 4 16.5 4.2C15.8 6.8 14 8.5 12 9Z" fill="#4E9460"/></svg></span>
+                  <div><div class="tot-panel-title">Biểu đồ nhịp học</div><div class="tot-panel-sub tabular" id="home-chart-sub">0 / 7 ngày · 0 phút tuần này</div></div>
                 </div>
-                <div class="tot-target-band-box is-current">
-                  <span class="tot-target-k-lbl">Ước tính hiện tại</span>
-                  <strong class="tot-target-k-val tabular" id="home-current-band-val">—</strong>
-                </div>
-                <div class="tot-target-band-box is-days">
-                  <span class="tot-target-k-lbl">Đếm ngược</span>
-                  <strong class="tot-target-k-val tabular" id="home-days-left-val">—</strong>
+                <div class="tot-seg" id="home-chart-period-tabs" style="padding:2px;">
+                  <button type="button" class="tot-seg-btn active" data-home-chart="week" style="height:24px;padding:0 9px;font-size:11px;">Tuần</button>
+                  <button type="button" class="tot-seg-btn" data-home-chart="month" style="height:24px;padding:0 9px;font-size:11px;">Tháng</button>
+                  <button type="button" class="tot-seg-btn" data-home-chart="year" style="height:24px;padding:0 9px;font-size:11px;">Năm</button>
                 </div>
               </div>
-              <div class="tot-target-meter">
-                <div class="tot-target-meter-top">
-                  <span>Tiến tới mục tiêu Band</span>
-                  <strong class="tabular" id="home-target-readiness">0%</strong>
-                </div>
-                <div class="tot-mastery-bar"><div class="tot-seg-ok" id="home-target-bar" style="width:0%"></div></div>
+              <div class="tot-chart-wrap tot-chart-tall" id="home-chart-bars"></div>
+              <div class="tot-panel-foot">
+                <span class="tot-foot-meta">Trung bình <strong class="tabular" id="home-chart-avg">0 phút / ngày</strong></span>
+                <span class="tot-foot-pill tabular" id="home-chart-badge">Thực học</span>
               </div>
-              <div class="tot-target-pace" id="home-target-pace">Nhịp đề xuất: 30 phút · 20 từ / ngày</div>
-            </div>
+            </section>
 
-            <!-- Compact Inline Editor (hidden until user clicks "Chỉnh mục tiêu") -->
-            <form class="tot-plan-editor hidden" id="home-plan-editor" onsubmit="window.TotoroUI?.saveStudyPlan(event)">
-              <div class="tot-plan-fields">
-                <label class="tot-plan-field">
-                  <span>Target Band</span>
-                  <select id="plan-input-band">
-                    <option value="6.0">6.0</option>
-                    <option value="6.5">6.5</option>
-                    <option value="7.0">7.0</option>
-                    <option value="7.5" selected>7.5</option>
-                    <option value="8.0">8.0</option>
-                    <option value="8.5">8.5</option>
-                  </select>
-                </label>
-                <label class="tot-plan-field">
-                  <span>Ngày dự thi</span>
-                  <input type="date" id="plan-input-date">
-                </label>
-                <label class="tot-plan-field">
-                  <span>Phút / ngày</span>
-                  <select id="plan-input-mins">
-                    <option value="15">15 phút</option>
-                    <option value="30" selected>30 phút</option>
-                    <option value="45">45 phút</option>
-                    <option value="60">60 phút</option>
-                  </select>
-                </label>
-                <label class="tot-plan-field">
-                  <span>Từ mới / ngày</span>
-                  <select id="plan-input-words">
-                    <option value="10">10 từ</option>
-                    <option value="20" selected>20 từ</option>
-                    <option value="30">30 từ</option>
-                    <option value="50">50 từ</option>
-                  </select>
-                </label>
+            <!-- 3. Cross-Skill Progress Monitor (Clean 2x2 grid — zero cramping!) -->
+            <section class="tot-home-panel tot-monitor-card ink-brackets has-stamp" id="home-progress-monitor-card" aria-label="Theo dõi tiến độ học">
+              <div class="tot-panel-head">
+                <div class="tot-panel-title-wrap">
+                  <span class="tot-icon-tile info" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
+                  </span>
+                  <div>
+                    <div class="tot-panel-title">Theo dõi tiến độ lộ trình</div>
+                    <div class="tot-panel-sub tabular" id="home-monitor-summary">Tổng hợp Reading &amp; Listening</div>
+                  </div>
+                </div>
+                <strong class="tabular tot-mon-pct" id="home-monitor-overall-pct">0%</strong>
               </div>
-              <div class="tot-plan-editor-acts">
-                <button type="button" class="tot-mon-edit-btn" onclick="window.TotoroUI?.togglePlanEditor(false)">Hủy</button>
-                <button type="submit" class="tot-mon-save-btn">Lưu mục tiêu</button>
-              </div>
-            </form>
+              <div class="tot-mon-bars tot-mon-bars-2col" id="home-monitor-bars"></div>
+            </section>
           </div>
 
-          <!-- Card 2: Daily Study Plan Checklist (Live auto-checked from real progress!) -->
-          <div class="tot-monitor-card ink-brackets has-stamp" id="home-daily-plan-card">
-            <div class="tot-mon-head">
-              <div class="tot-mon-title-wrap">
-                <span class="tot-icon-tile warm" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                </span>
-                <div>
-                  <div class="tot-mon-title">Kế hoạch hôm nay</div>
-                  <div class="tot-mon-sub">Tự động cập nhật theo tiến độ thực học</div>
+          <!-- RIGHT SIDEBAR COLUMN (39%): Target & Countdown · Leaderboard · Recent History -->
+          <aside class="tot-home-side-col">
+            <!-- 1. Target Band & Exam Countdown -->
+            <section class="tot-home-panel tot-monitor-card ink-brackets has-stamp" id="home-plan-target-card" aria-label="Mục tiêu và ngày thi">
+              <div class="tot-panel-head">
+                <div class="tot-panel-title-wrap">
+                  <span class="tot-icon-tile" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+                  </span>
+                  <div>
+                    <div class="tot-panel-title">Mục tiêu &amp; Ngày thi</div>
+                    <div class="tot-panel-sub tabular" id="home-target-countdown">Đặt ngày thi để tính nhịp học</div>
+                  </div>
+                </div>
+                <button type="button" class="tot-mon-edit-btn" id="btn-toggle-plan-edit" onclick="window.TotoroUI?.togglePlanEditor()">Chỉnh mục tiêu</button>
+              </div>
+
+              <div class="tot-target-view" id="home-target-view">
+                <div class="tot-target-kpi-row">
+                  <div class="tot-target-band-box">
+                    <span class="tot-target-k-lbl">Mục tiêu</span>
+                    <strong class="tot-target-k-val tabular" id="home-target-band-val">7.5</strong>
+                  </div>
+                  <div class="tot-target-band-box is-current">
+                    <span class="tot-target-k-lbl">Ước tính</span>
+                    <strong class="tot-target-k-val tabular" id="home-current-band-val">—</strong>
+                  </div>
+                  <div class="tot-target-band-box is-days">
+                    <span class="tot-target-k-lbl">Đếm ngược</span>
+                    <strong class="tot-target-k-val tabular" id="home-days-left-val">—</strong>
+                  </div>
+                </div>
+                <div class="tot-target-meter">
+                  <div class="tot-target-meter-top">
+                    <span>Tiến tới mục tiêu Band</span>
+                    <strong class="tabular" id="home-target-readiness">0%</strong>
+                  </div>
+                  <div class="tot-mastery-bar"><div class="tot-seg-ok" id="home-target-bar" style="width:0%"></div></div>
+                </div>
+                <div class="tot-target-pace" id="home-target-pace">Nhịp đề xuất: 30 phút · 20 từ / ngày</div>
+              </div>
+
+              <form class="tot-plan-editor hidden" id="home-plan-editor" onsubmit="window.TotoroUI?.saveStudyPlan(event)">
+                <div class="tot-plan-fields">
+                  <label class="tot-plan-field">
+                    <span>Target Band</span>
+                    <select id="plan-input-band">
+                      <option value="6.0">6.0</option>
+                      <option value="6.5">6.5</option>
+                      <option value="7.0">7.0</option>
+                      <option value="7.5" selected>7.5</option>
+                      <option value="8.0">8.0</option>
+                      <option value="8.5">8.5</option>
+                    </select>
+                  </label>
+                  <label class="tot-plan-field">
+                    <span>Ngày dự thi</span>
+                    <input type="date" id="plan-input-date">
+                  </label>
+                  <label class="tot-plan-field">
+                    <span>Phút / ngày</span>
+                    <select id="plan-input-mins">
+                      <option value="15">15 phút</option>
+                      <option value="30" selected>30 phút</option>
+                      <option value="45">45 phút</option>
+                      <option value="60">60 phút</option>
+                    </select>
+                  </label>
+                  <label class="tot-plan-field">
+                    <span>Từ mới / ngày</span>
+                    <select id="plan-input-words">
+                      <option value="10">10 từ</option>
+                      <option value="20" selected>20 từ</option>
+                      <option value="30">30 từ</option>
+                      <option value="50">50 từ</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="tot-plan-editor-acts">
+                  <button type="button" class="tot-mon-edit-btn" onclick="window.TotoroUI?.togglePlanEditor(false)">Hủy</button>
+                  <button type="submit" class="tot-mon-save-btn">Lưu mục tiêu</button>
+                </div>
+              </form>
+            </section>
+
+            <!-- 2. Class Leaderboard -->
+            <section class="tot-home-panel ink-brackets has-stamp" aria-label="Bảng thi đua lớp">
+              <svg class="ghibli-stamp" style="left:52%;bottom:7px;width:30px;height:30px;opacity:0.2;" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+                <circle cx="28" cy="28" r="22" stroke="currentColor" stroke-width="2.2" stroke-dasharray="4 3"/>
+                <circle cx="28" cy="28" r="16.5" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M28 16L31 23L38.5 24L33 29L34.5 36.5L28 33L21.5 36.5L23 29L17.5 24L25 23L28 16Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+              <div class="tot-panel-head">
+                <div class="tot-panel-title-wrap">
+                  <span class="tot-icon-tile"><svg viewBox="2 2 20 20" fill="none"><path d="M7 6.5H4.2C4.2 9.4 5.4 11 7.2 11.2M17 6.5H19.8C19.8 9.4 18.6 11 16.8 11.2" stroke="#C78A20" stroke-width="1.8" stroke-linecap="round"/><path d="M7 4.2H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4.2Z" fill="#F2BE54" stroke="#B67B14" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 15V18.8M8.5 19.5H15.5" stroke="#B67B14" stroke-width="2" stroke-linecap="round"/><path d="M12 6.8L12.7 8.4L14.4 8.6L13.1 9.7L13.5 11.4L12 10.5L10.5 11.4L10.9 9.7L9.6 8.6L11.3 8.4L12 6.8Z" fill="#FFF8E2"/></svg></span>
+                  <div><div class="tot-panel-title">Bảng thi đua lớp</div><div class="tot-panel-sub">Điểm thực học · Chống treo máy</div></div>
+                </div>
+                <div class="tot-seg" style="padding:2px;">
+                  <button type="button" class="tot-seg-btn active" data-home-lb="week" style="height:24px;padding:0 8px;font-size:11px;">Tuần</button>
+                  <button type="button" class="tot-seg-btn" data-home-lb="month" style="height:24px;padding:0 8px;font-size:11px;">Tháng</button>
                 </div>
               </div>
-              <span class="tot-tag" id="home-daily-plan-badge">0/3 xong</span>
-            </div>
+              <div class="tot-list-stack" id="home-lb-list"></div>
+              <div class="tot-panel-foot">
+                <span class="tot-foot-meta">Hạng của bạn <strong class="tabular" id="home-lb-myrank">—</strong></span>
+                <button type="button" class="tot-foot-btn" onclick="openClassReportModal()">Xem cả lớp →</button>
+              </div>
+            </section>
 
-            <div class="tot-plan-checklist" id="home-plan-checklist">
-              <!-- Populated live by totoro_ui.js -->
-            </div>
-          </div>
-
-          <!-- Card 3: Learning Progress Monitor (Real cross-skill telemetry, zero nav duplication!) -->
-          <div class="tot-monitor-card ink-brackets has-stamp" id="home-progress-monitor-card">
-            <div class="tot-mon-head">
-              <div class="tot-mon-title-wrap">
-                <span class="tot-icon-tile info" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
-                </span>
-                <div>
-                  <div class="tot-mon-title">Theo dõi tiến độ học</div>
-                  <div class="tot-mon-sub tabular" id="home-monitor-summary">Tổng hợp Reading &amp; Listening</div>
+            <!-- 3. Unified Recent History (Tasks + Reading Practice) -->
+            <section class="tot-home-panel ink-brackets has-stamp" aria-label="Lịch sử làm bài gần đây">
+              <div class="tot-panel-head">
+                <div class="tot-panel-title-wrap">
+                  <span class="tot-icon-tile info"><svg viewBox="2 2 20 20" fill="none"><circle cx="12" cy="12" r="8.2" fill="#FFFFFF" stroke="#6658AD" stroke-width="1.8"/><circle cx="12" cy="12" r="6" fill="#EBE8FA"/><path d="M12 7.8V12L15.2 13.8" stroke="#53469E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="1.2" fill="#E67E35"/></svg></span>
+                  <div><div class="tot-panel-title">Lịch sử làm bài gần đây</div><div class="tot-panel-sub">Task bài tập &amp; Đề Practice</div></div>
                 </div>
               </div>
-              <strong class="tabular tot-mon-pct" id="home-monitor-overall-pct">0%</strong>
-            </div>
-
-            <div class="tot-mon-bars" id="home-monitor-bars">
-              <!-- Populated live by totoro_ui.js -->
-            </div>
-          </div>
-        </div>
-
-        <!-- BOTTOM 3 DATA-RICH PANELS (EXACT demo_v3: Tuần/Tháng/Năm Chart + Medal Leaderboard + History) -->
-        <div class="tot-home-bottom">
-          <div class="tot-home-panel ink-brackets has-stamp">
-            <svg class="ghibli-stamp warm" style="left:54%;bottom:7px;width:30px;height:30px;opacity:0.2;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-              <path d="M24 38V18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
-              <path d="M24 24C16 23 11 17 11 11C18 11 23 16 24 24Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".12"/>
-              <path d="M24 20C32 19 37 13 37 7C30 7 25 12 24 20Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".12"/>
-              <path d="M14 38H34" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-            </svg>
-            <div class="tot-panel-head">
-              <div class="tot-panel-title-wrap">
-                <span class="tot-icon-tile warm"><svg viewBox="2 2 20 20" fill="none"><rect x="3.5" y="13" width="3.8" height="7" rx="1.6" fill="#D99B58"/><rect x="10.1" y="9" width="3.8" height="11" rx="1.6" fill="#4E9460"/><rect x="16.7" y="5.5" width="3.8" height="14.5" rx="1.6" fill="#E67E35"/><path d="M12 9C12 6 14.2 4 16.5 4.2C15.8 6.8 14 8.5 12 9Z" fill="#4E9460"/></svg></span>
-                <div><div class="tot-panel-title">Biểu đồ nhịp học</div><div class="tot-panel-sub tabular" id="home-chart-sub">0 / 7 ngày · 0 phút tuần này</div></div>
+              <div class="tot-list-stack" id="home-history-list"></div>
+              <div class="tot-panel-foot">
+                <span class="tot-foot-meta">Tổng <strong class="tabular" id="home-history-total">0 bài</strong> đã nộp</span>
+                <button type="button" class="tot-foot-btn" onclick="window.TotoroUI?.enterSkillMode('Reading', 'practice')">Kho đề →</button>
               </div>
-              <div class="tot-seg" id="home-chart-period-tabs" style="padding:2px;">
-                <button type="button" class="tot-seg-btn active" data-home-chart="week" style="height:23px;padding:0 7px;font-size:10.5px;">Tuần</button>
-                <button type="button" class="tot-seg-btn" data-home-chart="month" style="height:23px;padding:0 7px;font-size:10.5px;">Tháng</button>
-                <button type="button" class="tot-seg-btn" data-home-chart="year" style="height:23px;padding:0 7px;font-size:10.5px;">Năm</button>
-              </div>
-            </div>
-            <div class="tot-chart-wrap" id="home-chart-bars"></div>
-            <div class="tot-panel-foot">
-              <span class="tot-foot-meta">Trung bình <strong class="tabular" id="home-chart-avg">0 phút / ngày</strong></span>
-              <span class="tot-foot-pill tabular" id="home-chart-badge">Thực học</span>
-            </div>
-          </div>
-
-          <div class="tot-home-panel ink-brackets has-stamp">
-            <svg class="ghibli-stamp" style="left:52%;bottom:7px;width:30px;height:30px;opacity:0.2;" viewBox="0 0 56 56" fill="none" aria-hidden="true">
-              <circle cx="28" cy="28" r="22" stroke="currentColor" stroke-width="2.2" stroke-dasharray="4 3"/>
-              <circle cx="28" cy="28" r="16.5" stroke="currentColor" stroke-width="1.8"/>
-              <path d="M28 16L31 23L38.5 24L33 29L34.5 36.5L28 33L21.5 36.5L23 29L17.5 24L25 23L28 16Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-            </svg>
-            <div class="tot-panel-head">
-              <div class="tot-panel-title-wrap">
-                <span class="tot-icon-tile"><svg viewBox="2 2 20 20" fill="none"><path d="M7 6.5H4.2C4.2 9.4 5.4 11 7.2 11.2M17 6.5H19.8C19.8 9.4 18.6 11 16.8 11.2" stroke="#C78A20" stroke-width="1.8" stroke-linecap="round"/><path d="M7 4.2H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4.2Z" fill="#F2BE54" stroke="#B67B14" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 15V18.8M8.5 19.5H15.5" stroke="#B67B14" stroke-width="2" stroke-linecap="round"/><path d="M12 6.8L12.7 8.4L14.4 8.6L13.1 9.7L13.5 11.4L12 10.5L10.5 11.4L10.9 9.7L9.6 8.6L11.3 8.4L12 6.8Z" fill="#FFF8E2"/></svg></span>
-                <div><div class="tot-panel-title">Bảng thi đua lớp</div><div class="tot-panel-sub">Điểm thực học · Chống treo máy</div></div>
-              </div>
-              <div class="tot-seg" style="padding:2px;">
-                <button type="button" class="tot-seg-btn active" data-home-lb="week" style="height:23px;padding:0 7px;font-size:10.5px;">Tuần</button>
-                <button type="button" class="tot-seg-btn" data-home-lb="month" style="height:23px;padding:0 7px;font-size:10.5px;">Tháng</button>
-              </div>
-            </div>
-            <div class="tot-list-stack" id="home-lb-list"></div>
-            <div class="tot-panel-foot">
-              <span class="tot-foot-meta">Hạng của bạn <strong class="tabular" id="home-lb-myrank">—</strong></span>
-              <button type="button" class="tot-foot-btn" onclick="openClassReportModal()">Xem cả lớp →</button>
-            </div>
-          </div>
-
-          <div class="tot-home-panel ink-brackets has-stamp">
-            <svg class="ghibli-stamp info" style="top:11px;right:15px;width:42px;height:42px;opacity:0.16;" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-              <path d="M18 10H30M18 38H30M24 6V10M24 38V42" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
-              <rect x="14" y="13" width="20" height="22" rx="8" stroke="currentColor" stroke-width="2.1"/>
-              <path d="M14 20H34M14 28H34" stroke="currentColor" stroke-width="1.6"/>
-            </svg>
-            <div class="tot-panel-head">
-              <div class="tot-panel-title-wrap">
-                <span class="tot-icon-tile info"><svg viewBox="2 2 20 20" fill="none"><circle cx="12" cy="12" r="8.2" fill="#FFFFFF" stroke="#6658AD" stroke-width="1.8"/><circle cx="12" cy="12" r="6" fill="#EBE8FA"/><path d="M12 7.8V12L15.2 13.8" stroke="#53469E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="1.2" fill="#E67E35"/></svg></span>
-                <div><div class="tot-panel-title">Lịch sử làm bài gần đây</div><div class="tot-panel-sub">Task bài tập &amp; Đề Practice</div></div>
-              </div>
-            </div>
-            <div class="tot-list-stack" id="home-history-list"></div>
-            <div class="tot-panel-foot">
-              <span class="tot-foot-meta">Tổng <strong class="tabular" id="home-history-total">0 bài</strong> đã nộp</span>
-              <button type="button" class="tot-foot-btn" data-tot-view="task">Xem tất cả →</button>
-            </div>
-          </div>
+            </section>
+          </aside>
         </div>
       </div>
 
@@ -2195,7 +2188,7 @@
   <script src="js/motion.js?v=20261121c"></script>
   <script src="js/core/EventBus.js?v=20261119t"></script>
   <script src="js/core/LazyDataLoader.js?v=20261119t"></script>
-  <script src="js/core/AudioEngine.js?v=20261124l"></script>
+  <script src="js/core/AudioEngine.js?v=20261124n"></script>
   <script src="js/core/MyVocabStore.js?v=20261123c"></script>
   <script src="js/core/AntiCheatGuard.js?v=20261124m"></script>
   <script src="js/core/BaseSkillMode.js?v=20261119t"></script>
@@ -2205,7 +2198,7 @@
   <script src="js/recognition_test.js?v=20261123a"></script>
   <script src="js/speech_stt.js?v=20261123e"></script>
   <script src="js/voice_lab.js?v=20261123c"></script>
-  <script src="js/app.js?v=20261124m"></script>
+  <script src="js/app.js?v=20261124n"></script>
   <script src="data/v2_paraphrase.js?v=20261122e"></script>
   <script src="data/v2_foundation.js?v=20261122e"></script>
   <script src="data/v2_academic.js?v=20261122e"></script>
@@ -2213,7 +2206,7 @@
   <script src="data/reading_practice_data.js?v=20261124i"></script>
   <script src="js/reading_practice.js?v=20261124s"></script>
   <script src="js/tasks.js?v=20261122j"></script>
-  <script src="js/listening_tasks.js?v=20261124j"></script>
-  <script src="js/totoro_ui.js?v=20261124j"></script>
+  <script src="js/listening_tasks.js?v=20261124n"></script>
+  <script src="js/totoro_ui.js?v=20261124k"></script>
 </body>
 </html>

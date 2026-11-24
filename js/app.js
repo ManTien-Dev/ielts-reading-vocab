@@ -4596,7 +4596,9 @@
       );
       listeningAutoPlayTimer = setTimeout(() => {
         if (recallTargetItem && recallTargetItem.id === item.id && recallMode === 'listening_shadow' && !recallSubmitted) {
-          playListeningRecallAudio('en-GB', 0.92);
+          const recallAccents = ['en-GB', 'en-AU', 'en-US', 'en-NZ'];
+          const pickedAccent = recallAccents[(currentCardIndex || 0) % recallAccents.length];
+          playListeningRecallAudio(pickedAccent, 0.92);
         }
       }, 220);
     } else if (useQuickVi) {
@@ -5257,9 +5259,7 @@
     if (event && typeof event.stopPropagation === 'function') {
       event.stopPropagation();
     }
-    const defaultSideAccent = isListeningSkillActive()
-      ? (preferredAccent === 'en-US' ? 'en-US' : 'en-GB')
-      : (isCardFlipped ? 'en-GB' : 'en-US');
+    const defaultSideAccent = isCardFlipped ? 'en-GB' : 'en-US';
     const targetAccent = (accent === 'en-GB' || accent === 'en-US') ? accent : defaultSideAccent;
     const item = currentScopeList[currentCardIndex];
     if (!item || !currentUser) return;

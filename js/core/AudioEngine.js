@@ -296,7 +296,13 @@
       const normAccent = String(accent || 'en-US').toLowerCase().replace('_', '-');
       const langPrefix = normAccent.startsWith('en-gb')
         ? 'en-gb'
-        : (normAccent.startsWith('en-au') ? 'en-au' : 'en-us');
+        : (normAccent.startsWith('en-au')
+          ? 'en-au'
+          : (normAccent.startsWith('en-nz')
+            ? 'en-nz'
+            : (normAccent.startsWith('en-ca')
+              ? 'en-ca'
+              : (normAccent.startsWith('en-ie') ? 'en-ie' : 'en-us'))));
 
       if (respectCustom && this._preferredVoiceName) {
         const pinned = this._voices.find((v) => v.name === this._preferredVoiceName);
@@ -320,6 +326,9 @@
       const preferredMap = {
         'en-gb': ['microsoft sonia', 'microsoft libby', 'microsoft maisie', 'google uk english female', 'martha', 'serena', 'kate', 'hazel'],
         'en-au': ['microsoft natasha', 'karen', 'catherine', 'hayley'],
+        'en-nz': ['microsoft molly', 'hayley', 'mitchell'],
+        'en-ca': ['microsoft clara', 'heather', 'linda'],
+        'en-ie': ['microsoft emily', 'moira'],
         'en-us': ['microsoft ava', 'microsoft emma', 'microsoft aria', 'microsoft jenny', 'samantha', 'ava', 'allison', 'google us english', 'microsoft zira'],
       };
       const preferred = preferredMap[langPrefix] || preferredMap['en-us'];
@@ -345,6 +354,18 @@
       if (this._synthWatchdog) {
         clearTimeout(this._synthWatchdog);
         this._synthWatchdog = null;
+      }
+    }
+
+    hasNativeAccentVoice(accent = '') {
+      try {
+        if (!('speechSynthesis' in window)) return false;
+        if (!this._voices.length) this.refreshVoices();
+        const norm = String(accent || '').toLowerCase().replace('_', '-');
+        const prefix = norm.slice(0, 5);
+        return this._voices.some((v) => String(v.lang || '').toLowerCase().replace('_', '-').startsWith(prefix));
+      } catch (_) {
+        return false;
       }
     }
 
@@ -600,13 +621,23 @@
         }
       } catch (_) {}
 
-      // Always prefer Youdao voice (RMS-normalized via /api/youdao-tts + Web Audio API so every word has identical volume!)
-      // Only use browser voice if user explicitly pinned a custom voice in Settings or engine === 'browser'.
+      // Always prefer Youdao voice (RMS-normalized via /api/youdao-tts) for UK & US.
+      // For extra IELTS accents Youdao lacks (AU / NZ / CA / IE), use real native AU/NZ/CA/IE browser voice when installed,
+      // otherwise fall back seamlessly to Youdao UK (for AU/NZ/IE) or Youdao US (for CA).
       const hasPinnedBrowserVoice = Boolean(respectCustom && this._preferredVoiceName);
+      const normAcc = String(accent || 'en-US').toLowerCase().replace('_', '-');
+      const isExtraIeltsAccent = /^(en-au|en-nz|en-ca|en-ie)/.test(normAcc);
+      if (engine === 'auto' && !hasPinnedBrowserVoice && isExtraIeltsAccent && this.hasNativeAccentVoice(normAcc)) {
+        return this.speakViaBrowser(clean, accent, rate, seq, false, true);
+      }
+
+      const youdaoAccent = normAcc.startsWith('en-ca')
+        ? 'en-US'
+        : (/^(en-gb|en-au|en-nz|en-ie)/.test(normAcc) ? 'en-GB' : 'en-US');
       const preferYoudao = (engine === 'youdao') || (engine === 'auto' && !hasPinnedBrowserVoice);
 
       if (preferYoudao) {
-        if (this.playYoudaoAudio(clean, accent, rate, seq, true)) {
+        if (this.playYoudaoAudio(clean, youdaoAccent, rate, seq, true)) {
           return true;
         }
         return this.speakViaBrowser(clean, accent, rate, seq, respectCustom, false);

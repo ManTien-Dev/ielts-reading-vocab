@@ -835,8 +835,9 @@
     const inp = document.getElementById('lt-t1-input');
     setTimeout(() => inp?.focus(), 40);
 
-    // Play word ONCE (no replay button!), start 10s timer right after audio finishes
-    const accent = idx % 3 === 0 ? 'en-AU' : (idx % 2 === 0 ? 'en-GB' : 'en-US');
+    // Play word ONCE (no replay button!), rotating across authentic IELTS accents (UK / AU / US / NZ / CA)
+    const ieltsAccentCycle = ['en-GB', 'en-AU', 'en-US', 'en-GB', 'en-AU', 'en-NZ', 'en-GB', 'en-CA'];
+    const accent = ieltsAccentCycle[idx % ieltsAccentCycle.length];
     speakSingleWordOneShot(item.lemma, accent, () => {
       if (!examState || examState.stage !== 1 || examState.t1Idx !== idx) return;
       const strip = document.getElementById('lt-t1-audio-strip');
