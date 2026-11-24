@@ -2758,6 +2758,10 @@
   }
 
   function updateTaskStudyBar() {
+    if (window.ListeningTasksModule?.isListeningTaskScope?.()) {
+      window.ListeningTasksModule.updateStudyBar();
+      return;
+    }
     const bar = document.getElementById('task-study-bar');
     const finWarnEl = document.getElementById('fc-finished-task-warn');
     if (!bar) return;
@@ -2886,6 +2890,10 @@
   }
 
   function onClickStartTaskExam() {
+    if (window.ListeningTasksModule?.isListeningTaskScope?.()) {
+      window.ListeningTasksModule.onClickStartTaskExam();
+      return;
+    }
     const scopeKey = B()?.getCurrentScopeKey?.() || '';
     const task = getTaskById(scopeKey) || activeTask;
     if (!task) return;
@@ -3205,6 +3213,10 @@
   }
 
   function exitTaskWorkspace(confirmExit = false, forceStudyExit = false) {
+    if (window.ListeningTasksModule?.isListeningTaskScope?.()) {
+      window.ListeningTasksModule.exitTaskStudy();
+      return;
+    }
     const wasInExam = activeStage >= 1;
     if (wasInExam && !taskTestPassed && confirmExit && !isTeacherOrBypassed()) {
       if (openTaskExitWarnModal('exam')) return;

@@ -2508,7 +2508,7 @@
     cancelPendingAdvance();
     currentScopeKey = nextDef.key;
     if (isListeningScopeKey(currentScopeKey)) {
-      lastListeningScopeKey = currentScopeKey;
+      if (!/^ltask_/i.test(currentScopeKey)) lastListeningScopeKey = currentScopeKey;
     } else if (!isTaskScopeKey(currentScopeKey) && !isMyVocabScopeKey(currentScopeKey) && currentScopeKey !== REVIEW_OLD_SCOPE_KEY) {
       lastReadingScopeKey = currentScopeKey;
     }
@@ -2749,7 +2749,7 @@
       const btnPrev = document.getElementById('btn-prev-card');
       if (btnPrev) btnPrev.disabled = (currentCardIndex <= 0);
       const finExamBtn = document.getElementById('btn-finished-task-exam');
-      if (finExamBtn) finExamBtn.style.display = isTaskScopeKey(currentScopeKey) ? 'inline-flex' : 'none';
+      if (finExamBtn) finExamBtn.style.display = (isTaskScopeKey(currentScopeKey) || /^ltask_/i.test(currentScopeKey)) ? 'inline-flex' : 'none';
       const finMvBtn = document.getElementById('btn-finished-myvocab-add');
       const isEmptyMyVocab = isMyVocabScopeKey(currentScopeKey) && fullScopeList.length === 0;
       if (finMvBtn) finMvBtn.style.display = isEmptyMyVocab ? 'inline-flex' : 'none';
@@ -6094,7 +6094,7 @@
       }
     } else if (nextSkill === 'reading') {
       if (isListeningScopeKey(currentScopeKey)) {
-        lastListeningScopeKey = currentScopeKey;
+        if (!/^ltask_/i.test(currentScopeKey)) lastListeningScopeKey = currentScopeKey;
         currentScopeKey = lastReadingScopeKey || 'paraphrase';
       }
     }
@@ -6102,6 +6102,7 @@
     const sel = document.getElementById('study-scope-select');
     if (sel) sel.value = currentScopeKey;
     window.TotoroUI?.syncScopeDropdown?.();
+    window.TasksModule?.updateTaskStudyBar?.();
     const isFlashcardOpen = window.TotoroUI?.getActiveView?.() === 'flashcard';
     applyFilterAndBuildDeck(null, { speak: isFlashcardOpen });
   });
@@ -6576,6 +6577,10 @@
       onlyUnmastered = false;
       onlyDueReview = false;
       loadScope(activeListeningTaskScope.key);
+    },
+    clearListeningTaskScope: () => {
+      activeListeningTaskScope = null;
+      loadScope(lastListeningScopeKey || 'l_part1');
     },
     getSrsMap: () => srsData,
     isWordDueNow,

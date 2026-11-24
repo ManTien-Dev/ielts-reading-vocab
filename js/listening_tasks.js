@@ -629,8 +629,10 @@
     const modal = ensureBriefModal();
     const totalW = (task.wordIds || []).length;
     const mastered = getMasteredCount(task);
+    const allReady = totalW > 0 && mastered >= totalW;
     const rec = loadProgress()[task.id] || null;
     const hasFull3 = Boolean(task.hasFullTests);
+    const teacher = isTeacherMode();
 
     const pillEl = document.getElementById('lt-brief-pill');
     const titleEl = document.getElementById('lt-brief-title');
@@ -640,9 +642,9 @@
     if (bodyEl) {
       const testDesc = hasFull3
         ? (task.isMapTask
-          ? 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong>: <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C (2 lượt tự động) → <strong>Test 3</strong> Bản đồ SVG Map Labelling A–H (2 lượt tự động).'
-          : 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong>: <strong>Test 1</strong> Nghe &amp; Viết (30/30 từ) → <strong>Test 2</strong> 12 Hội thoại A/B/C (2 lượt tự động) → <strong>Test 3</strong> Note Completion 8 chỗ trống (2 lượt tự động).')
-        : `Gồm <strong>Test 1 · Nghe &amp; Viết chính tả (${totalW}/${totalW} từ)</strong>, tự động phát và chấm điểm ngay khi nộp.`;
+          ? 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong>:<br><strong>Test 1</strong> Nghe &amp; Viết → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Map Labelling.'
+          : 'Gồm đủ <strong>3 bài thi chuẩn Cambridge</strong>:<br><strong>Test 1</strong> Nghe &amp; Viết → <strong>Test 2</strong> 12 Hội thoại A/B/C → <strong>Test 3</strong> Note Completion.')
+        : `<strong>Test 1</strong> Nghe &amp; Viết (${totalW}/${totalW} từ).`;
 
       const scoreRow = rec
         ? `<div class="lt-score-strip" style="margin-bottom:14px;">
@@ -652,24 +654,33 @@
            </div>`
         : '';
 
-      const teacherQuickBtns = (isTeacherMode() && hasFull3)
+      const actionsHtml = teacher
         ? `
-          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 2)">Test 2</button>
-          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 3)">Test 3</button>
+          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Test</button>
+          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Học Flashcard</button>
+          ${hasFull3 ? `<button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 2)">Test 2</button>` : ''}
+          ${hasFull3 ? `<button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 3)">Test 3</button>` : ''}
+          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 1)">${hasFull3 ? 'Bắt đầu 3 Test →' : 'Làm Test 1 →'}</button>
         `
-        : '';
+        : (allReady
+          ? `
+            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Test</button>
+            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Ôn Flashcard</button>
+            <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 1)">${hasFull3 ? 'Bắt đầu làm Test →' : 'Làm Test 1 →'}</button>
+          `
+          : `
+            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Test</button>
+            <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Bắt đầu học từ vựng →</button>
+          `);
 
       bodyEl.innerHTML = `
         <div class="task-notice-box" style="margin-bottom:14px;font-size:14px;line-height:1.6;">
-          <div><strong>Chủ đề:</strong> ${esc(task.topicTitle || task.theme || '')}</div>
-          <div style="margin-top:4px;"><strong>Từ vựng đã thuộc:</strong> ${mastered} / ${totalW} từ</div>
-          <div style="margin-top:6px;">${testDesc}</div>
+          <div><strong>Bước 1 — Học từ vựng:</strong> Học thuộc đủ <strong>${totalW}/${totalW} từ</strong> trên Flashcard hoặc Speed Test trước (hiện đã thuộc <strong>${mastered}/${totalW} từ</strong> — thuộc đủ mới mở được bài Test).</div>
+          <div style="margin-top:6px;"><strong>Bước 2 — Làm Test:</strong> ${testDesc}</div>
         </div>
         ${scoreRow}
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
-          <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Học Flashcard (${totalW} từ)</button>
-          ${teacherQuickBtns}
-          <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}')">${hasFull3 ? 'Bắt đầu 3 Test →' : 'Làm Test 1 →'}</button>
+          ${actionsHtml}
         </div>
       `;
     }
@@ -741,7 +752,7 @@
             const r = progress[t.id];
             const scoreTxt = r?.t3Total ? `Điểm: ${r.t3Score}/${r.t3Total}` : 'Audio Neural';
             return `
-              <button type="button" class="lt-prac-row" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(t.id)}', 3)">
+              <button type="button" class="lt-prac-row" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(t.id)}', 3, { fromPractice: true })">
                 <span><strong>${esc(t.label)}</strong> · ${esc(shortTopicTitle(t))}</span>
                 <span class="lt-prac-go">${esc(scoreTxt)} →</span>
               </button>`;
@@ -788,7 +799,7 @@
             <p class="rp-card-desc">Bản đồ công viên, thị trấn có bùng binh và mặt bằng tòa nhà — tự động phát 2 lượt (nghỉ 5s), đối chiếu Transcript 3 màu và Map chấm trực tiếp.</p>
             <div class="lt-prac-card-foot">
               <button type="button" class="tot-demo-btn" onclick="ListeningTasksModule.openPracticePicker('map')">Chọn bài Map</button>
-              <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstMapId)}', 3)">Làm Map 01</button>
+              <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstMapId)}', 3, { fromPractice: true })">Làm Map 01</button>
             </div>
           </article>
 
@@ -801,7 +812,7 @@
             <p class="rp-card-desc">10 giây chuẩn bị đọc đề, băng Neural tự động phát 2 lượt (nghỉ 5s), chấm chính tả chuẩn Cambridge và mở khóa nghe lại từng câu.</p>
             <div class="lt-prac-card-foot">
               <button type="button" class="tot-demo-btn" onclick="ListeningTasksModule.openPracticePicker('note')">Chọn bài nghe</button>
-              <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstNoteId)}', 3)">Làm Part 1</button>
+              <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstNoteId)}', 3, { fromPractice: true })">Làm Part 1</button>
             </div>
           </article>
 
@@ -858,13 +869,24 @@
     window.TotoroUI?.renderInlineTaskHub?.();
   }
 
-  function openExam(taskId, startStage = 1) {
+  function openExam(taskId, startStage = 1, opts = {}) {
     const task = (getTasksData().tasks || []).find((t) => t.id === taskId);
     if (!task) return;
     const words = resolveTaskWords(task);
     if (!words.length) {
       window.__VOCAB_BRIDGE__?.showToast?.('Chưa nạp được danh sách từ của Task này.');
       return;
+    }
+
+    // Reading-parity mastery gate: students must master 100% (e.g. 30/30) task words via Flashcard or Speed Test first
+    if (!isTeacherMode() && !opts?.fromPractice) {
+      const totalW = (task.wordIds || []).length;
+      const mastered = getMasteredCount(task);
+      if (totalW > 0 && mastered < totalW) {
+        window.__VOCAB_BRIDGE__?.showToast?.(`Hãy học và thuộc đủ ${totalW}/${totalW} từ của ${task.label} trước khi làm Test (hiện ${mastered}/${totalW}).`);
+        openTaskBrief(task.id);
+        return;
+      }
     }
 
     stopAllAudio();
@@ -1863,14 +1885,146 @@
     renderExamStage();
   }
 
+  let readyToastShownForId = null;
+
+  function isListeningTaskScope(scopeKey) {
+    const sk = String(scopeKey || window.__VOCAB_BRIDGE__?.getCurrentScopeKey?.() || '');
+    return /^ltask_/i.test(sk);
+  }
+
+  function getTaskByScopeKey(scopeKey) {
+    const sk = String(scopeKey || window.__VOCAB_BRIDGE__?.getCurrentScopeKey?.() || '');
+    if (!/^ltask_/i.test(sk)) return null;
+    const tid = sk.replace(/^ltask_/i, '');
+    return (getTasksData().tasks || []).find((t) => t.id === tid) || null;
+  }
+
+  function getTaskScopeInfo(scopeKey) {
+    const task = getTaskByScopeKey(scopeKey);
+    if (!task) return null;
+    const words = resolveTaskWords(task);
+    if (!words.length) return null;
+    return {
+      key: `ltask_${task.id}`,
+      name: task.label || task.id,
+      list: words,
+      isTask: true,
+      isListeningTask: true,
+      taskObj: task,
+    };
+  }
+
+  function updateStudyBar() {
+    const bar = document.getElementById('task-study-bar');
+    const finWarnEl = document.getElementById('fc-finished-task-warn');
+    if (!bar) return;
+    const task = getTaskByScopeKey();
+    if (!task) {
+      bar.style.display = 'none';
+      if (finWarnEl) finWarnEl.style.display = 'none';
+      return;
+    }
+
+    const total = (task.wordIds || []).length || 30;
+    const mastered = getMasteredCount(task);
+    const allReady = total > 0 && mastered >= total;
+    const prog = loadProgress()[task.id];
+    const isCompleted = Boolean(prog?.completed);
+    const examDesc = task.hasFullTests
+      ? (task.isMapTask ? 'Test 1 + Test 2 + Test 3 (Map)' : 'Test 1 + Test 2 + Test 3 (Note)')
+      : 'Test 1 (Nghe & Viết)';
+
+    if (finWarnEl) {
+      if (!isCompleted && !isTeacherMode()) {
+        finWarnEl.style.display = 'block';
+        if (allReady) {
+          finWarnEl.innerHTML = `<strong>Đã thuộc đủ ${total}/${total} từ (${esc(task.label)})!</strong> Hãy bấm <strong>"Làm Test →"</strong> để vào <strong>${examDesc}</strong> và hoàn thành Task.`;
+        } else {
+          finWarnEl.innerHTML = `<strong>Chưa hoàn thành ${esc(task.label)}!</strong> Bạn mới thuộc <strong>${mastered}/${total} từ</strong> (còn ${total - mastered} từ) — cần học thuộc đủ ${total}/${total} từ trên Flashcard hoặc Speed Test rồi mới mở được <strong>${examDesc}</strong>.`;
+        }
+      } else {
+        finWarnEl.style.display = 'none';
+      }
+    }
+
+    bar.style.display = 'flex';
+    const pill = document.getElementById('task-study-pill');
+    if (pill) pill.textContent = String(task.label || 'TASK').toUpperCase();
+    const statusEl = document.getElementById('task-study-status');
+    if (statusEl) {
+      statusEl.style.display = '';
+      statusEl.textContent = allReady
+        ? `✓ Đã thuộc ${mastered} / ${total} từ!`
+        : `Đã thuộc ${mastered} / ${total} từ`;
+    }
+    const idleBadge = document.getElementById('task-study-idle-badge');
+    if (idleBadge) idleBadge.style.display = 'none';
+    const dlBadge = document.getElementById('task-study-deadline-badge');
+    if (dlBadge) dlBadge.style.display = 'none';
+
+    const testBtn = document.getElementById('btn-task-to-test1');
+    if (testBtn) {
+      testBtn.disabled = false;
+      testBtn.classList.toggle('btn-primary', allReady);
+      testBtn.classList.toggle('btn-subtle', !allReady);
+      testBtn.classList.toggle('is-test-ready', allReady);
+      testBtn.textContent = allReady ? 'Làm Test →' : `TEST (${mastered}/${total})`;
+    }
+
+    if (allReady && !isTeacherMode() && readyToastShownForId !== task.id) {
+      readyToastShownForId = task.id;
+      window.__VOCAB_BRIDGE__?.showToast?.(`✓ Đã thuộc đủ ${total}/${total} từ ${task.label}! Bấm "Làm Test →" để bắt đầu.`);
+    }
+    window.RecognitionTestModule?.updateScopeListTestButton?.();
+  }
+
+  function onClickStartTaskExam() {
+    const task = getTaskByScopeKey();
+    if (!task) return;
+    const total = (task.wordIds || []).length || 30;
+    const mastered = getMasteredCount(task);
+    if (!isTeacherMode() && mastered < total) {
+      window.__VOCAB_BRIDGE__?.showToast?.(`Hãy học và bấm '3 - Đã thuộc' cho đủ ${total}/${total} từ của ${task.label} trước khi làm Test (hiện ${mastered}/${total}).`);
+      return;
+    }
+    openExam(task.id, 1);
+  }
+
+  function exitTaskStudy() {
+    window.__VOCAB_BRIDGE__?.clearListeningTaskScope?.();
+    const bar = document.getElementById('task-study-bar');
+    if (bar) bar.style.display = 'none';
+    const finWarnEl = document.getElementById('fc-finished-task-warn');
+    if (finWarnEl) finWarnEl.style.display = 'none';
+    window.TotoroUI?.switchView?.('task', { fromUser: true });
+  }
+
   function studyTaskWords(taskId) {
     const task = (getTasksData().tasks || []).find((t) => t.id === taskId);
     if (!task) return;
+    readyToastShownForId = null;
     if (window.TotoroUI?.getActiveSkill?.() !== 'Listening') {
       window.TotoroUI?.setActiveSkill?.('Listening', { silent: true });
     }
     window.__VOCAB_BRIDGE__?.openListeningTaskScope?.(task);
     window.TotoroUI?.switchView?.('flashcard', { fromUser: true });
+    updateStudyBar();
+  }
+
+  function startTaskSpeedQuiz(taskId) {
+    const task = (getTasksData().tasks || []).find((t) => t.id === taskId);
+    if (!task) return;
+    readyToastShownForId = null;
+    if (window.TotoroUI?.getActiveSkill?.() !== 'Listening') {
+      window.TotoroUI?.setActiveSkill?.('Listening', { silent: true });
+    }
+    window.__VOCAB_BRIDGE__?.openListeningTaskScope?.(task);
+    window.TotoroUI?.switchView?.('flashcard', { fromUser: true });
+    updateStudyBar();
+    window.AppCore?.audio?.stop?.();
+    if (window.RecognitionTestModule?.startListFinalExam) {
+      window.RecognitionTestModule.startListFinalExam(`ltask_${task.id}`);
+    }
   }
 
   window.ListeningTasksModule = {
@@ -1884,7 +2038,14 @@
       activeSuiteKey = suiteKey;
       window.TotoroUI?.renderInlineTaskHub?.();
     },
+    isListeningTaskScope,
+    getTaskByScopeKey,
+    getTaskScopeInfo,
+    updateStudyBar,
+    onClickStartTaskExam,
+    exitTaskStudy,
     studyTaskWords,
+    startTaskSpeedQuiz,
     openExam,
     closeExam,
     goToStage,

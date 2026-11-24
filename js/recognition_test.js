@@ -284,6 +284,10 @@
         taskObj,
       };
     }
+    const ltInfo = window.ListeningTasksModule?.getTaskScopeInfo?.(scopeKey);
+    if (ltInfo && Array.isArray(ltInfo.list) && ltInfo.list.length) {
+      return ltInfo;
+    }
     return null;
   }
 
@@ -541,6 +545,7 @@
         taskLabel: info.name,
         scopeKey: info.key,
         scopeName: info.name,
+        isListeningTask: Boolean(info.isListeningTask),
         title: `Speed Quiz · ${info.name}`,
         pool: info.list,
         itemById,
@@ -680,18 +685,20 @@
     const isOldReview = session.mode === 'old_review';
     const isTaskStudy = session.mode === 'task_study_quiz';
     const limitSec = Math.round(getWordTimeLimitMs() / 1000);
+    const poolTotal = Array.isArray(session.pool) && session.pool.length ? session.pool.length : total;
+    const isListenMode = Boolean(session.isListeningTask || /^ltask_/i.test(String(session.scopeKey || '')));
 
     body.innerHTML = `
       <div class="recog-intro-card">
         <div class="recog-intro-title">${isList ? `Kiểm chứng 100% mặt chữ &amp; nghĩa (${total.toLocaleString('vi-VN')} từ)` : (isTaskStudy ? `Speed Quiz ${total} từ của ${esc(session.taskLabel)} — Đúng hết mở Test ngay!` : (isOldReview ? `Ôn nhanh ${total} từ cũ qua Speed Quiz để mở ${esc(session.taskLabel)}` : `Kiểm tra phản xạ đọc hiểu (${total} từ)`))}</div>
         <div class="recog-rules-list">
-          <div><strong>1. Tốc độ Reading thực chiến:</strong> Mỗi từ có <strong>${limitSec} giây</strong> để nhìn mặt chữ và chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>).</div>
+          <div><strong>1. Tốc độ ${isListenMode ? 'Listening' : 'Reading'} thực chiến:</strong> Mỗi từ có <strong>${limitSec} giây</strong> để ${isListenMode ? 'nghe/nhìn từ' : 'nhìn mặt chữ'} và chọn đúng nghĩa tiếng Việt (phím <code>1–4</code> hoặc <code>Space</code> nếu <em>Chưa biết</em>).</div>
           <div><strong>2. Đảm bảo thuộc nằm lòng:</strong> ${(isOldReview || isTaskStudy) ? 'Hoàn tất lượt kiểm tra và vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.' : `Vòng 1 cần đạt <strong>&ge; ${PASS_THRESHOLD_PCT}%</strong>, sau đó vượt qua <strong>Vòng Sửa Lỗi 100%</strong> cho các từ sai/chậm.`}</div>
           ${isList
             ? `<div><strong>3. Tự động phân loại Đã thuộc / Chưa thuộc:</strong> Trả lời đúng &le; ${limitSec} giây tự động đưa vào <strong>Đã thuộc</strong>; trả lời sai, hết giờ hoặc bấm <em>Chưa biết</em> tự động đưa vào <strong>Chưa thuộc</strong> (và <strong>Cần ôn</strong>) để lọc học lại ngay.</div>
                <div><strong>4. Chia ${totalRounds} chặng &times; ${ROUND_SIZE} từ (Tự động lưu):</strong> Có thể bấm <strong>Tạm lưu &amp; Nghỉ</strong> bất cứ lúc nào, lần sau thi tiếp đúng vị trí đang dở.</div>`
             : (isTaskStudy
-              ? `<div><strong>3. Tự động cập nhật Đã thuộc &amp; mở Test Task:</strong> Trả lời đúng &le; ${limitSec} giây tự động đánh dấu <strong>Đã thuộc</strong> ngay lập tức. Hoàn thành đúng sạch 100% (50/50 từ) là <strong>vào làm Test Task được luôn</strong>!</div>`
+              ? `<div><strong>3. Tự động cập nhật Đã thuộc &amp; mở Test Task:</strong> Trả lời đúng &le; ${limitSec} giây tự động đánh dấu <strong>Đã thuộc</strong> ngay lập tức. Hoàn thành đúng sạch 100% (${poolTotal}/${poolTotal} từ) là <strong>vào làm Test Task được luôn</strong>!</div>`
               : (isOldReview
                 ? `<div><strong>3. Tự động mở khóa Task:</strong> Ngay khi sửa sạch lỗi (100% từ vượt ngưỡng &le; ${limitSec} giây), các từ cũ được cập nhật <strong>Đã thuộc</strong> và bạn vào làm <strong>${esc(session.taskLabel)}</strong> ngay lập tức.</div>`
                 : `<div><strong>3. Kỷ luật phòng thi:</strong> Không chuyển tab / rời cửa sổ khi đang làm bài (rời quá 3 lần sẽ bị khóa bài).</div>`))}
