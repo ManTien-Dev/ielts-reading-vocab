@@ -928,7 +928,8 @@
       ? 'practice'
       : 'exam';
     const isPractice = studyMode === 'practice';
-    const defaultContrast = config.contrast || (isPractice ? 'totoro' : 'cd');
+    const practiceContrast = config.practiceContrast || (isPractice && config.contrast ? config.contrast : 'totoro');
+    const defaultContrast = isPractice ? practiceContrast : 'cd';
 
     state.session = {
       itemId: config.itemId,
@@ -946,8 +947,9 @@
       passageIds: config.passageIds,
       activePassageIdx: 0,
       mode: config.openInReview ? 'review' : 'exam',
-      // Exam defaults to CD-IELTS Black-on-White ('cd'); Practice PRO defaults to warm Totoro Washi ('totoro')
+      // Exam mode ALWAYS locks to official bright CD-IELTS ('cd'); Practice mode allows custom theme/contrast
       contrast: defaultContrast,          // 'cd' | 'totoro' | 'dark' | 'yellow'
+      practiceContrast,
       textSize: config.textSize || 'regular',
       optionsOpen: false,
       showBilingual: !!config.openInReview && isNews,
@@ -1006,6 +1008,7 @@
       isFull: state.session.isFull,
       studyMode: state.session.studyMode,
       contrast: state.session.contrast,
+      practiceContrast: state.session.practiceContrast,
       textSize: state.session.textSize,
       activePenColor: state.session.activePenColor,
       brushAuto: state.session.brushAuto,
@@ -1322,7 +1325,8 @@
     const curCheckedCorrect = curCheckedQs.filter((q) => isAnswerCorrect(q, s.answers[q._qid])).length;
     const curHlCount = getPassageHighlights(curPassage.id).length;
 
-    const contrastCls = `ins-contrast-${s.contrast || (isPractice ? 'totoro' : 'cd')}`;
+    const effectiveContrast = isPractice ? (s.contrast || 'totoro') : 'cd';
+    const contrastCls = `ins-contrast-${effectiveContrast}`;
     const sizeCls = `ins-size-${s.textSize || 'regular'}`;
     const modeCls = isPractice ? 'ins-mode-practice' : 'ins-mode-exam';
     const timerUrgency = !isPractice && s.remainingSec <= 300 ? ' is-critical' : (!isPractice && s.remainingSec <= 600 ? ' is-warn' : '');
@@ -1482,35 +1486,37 @@
             </div>
           ` : ''}
 
-          <div class="ins-opt-card">
-            <div class="ins-opt-sec-title">Nền giấy đọc bài</div>
-            <div class="ins-opt-choices">
-              <button type="button" class="ins-opt-row ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('totoro')">
-                <span>Totoro Washi <small>(Đồng bộ giao diện chính)</small></span><span>${s.contrast === 'totoro' ? '✓' : ''}</span>
-              </button>
-              <button type="button" class="ins-opt-row ${s.contrast === 'cd' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('cd')">
-                <span>Trắng thuần <small>(Chuẩn thi máy CD-IELTS)</small></span><span>${s.contrast === 'cd' ? '✓' : ''}</span>
-              </button>
-              <button type="button" class="ins-opt-row ${s.contrast === 'dark' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('dark')">
-                <span>Chế độ tối <small>(Dịu mắt ban đêm)</small></span><span>${s.contrast === 'dark' ? '✓' : ''}</span>
-              </button>
-              <button type="button" class="ins-opt-row ${s.contrast === 'yellow' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('yellow')">
-                <span>Yellow on black <small>(Tương phản cao)</small></span><span>${s.contrast === 'yellow' ? '✓' : ''}</span>
-              </button>
+          ${isPractice ? `
+            <div class="ins-opt-card" id="prac-opt-contrast-card">
+              <div class="ins-opt-sec-title">Nền giấy đọc bài (Sáng / Tối)</div>
+              <div class="ins-opt-choices">
+                <button type="button" class="ins-opt-row ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('totoro')">
+                  <span>Totoro Washi <small>(Đồng bộ giao diện chính)</small></span><span>${s.contrast === 'totoro' ? '✓' : ''}</span>
+                </button>
+                <button type="button" class="ins-opt-row ${s.contrast === 'cd' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('cd')">
+                  <span>Trắng thuần <small>(Nền trắng sáng)</small></span><span>${s.contrast === 'cd' ? '✓' : ''}</span>
+                </button>
+                <button type="button" class="ins-opt-row ${s.contrast === 'dark' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('dark')">
+                  <span>Chế độ tối <small>(Dịu mắt ban đêm)</small></span><span>${s.contrast === 'dark' ? '✓' : ''}</span>
+                </button>
+                <button type="button" class="ins-opt-row ${s.contrast === 'yellow' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('yellow')">
+                  <span>Yellow on black <small>(Tương phản cao)</small></span><span>${s.contrast === 'yellow' ? '✓' : ''}</span>
+                </button>
+              </div>
             </div>
-          </div>
+          ` : ''}
 
           <div class="ins-opt-card">
-            <div class="ins-opt-sec-title">Cỡ chữ</div>
+            <div class="ins-opt-sec-title">${isPractice ? 'Cỡ chữ' : 'Text size (Cỡ chữ phòng thi)'}</div>
             <div class="ins-opt-choices">
               <button type="button" class="ins-opt-row ${s.textSize === 'regular' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('regular')">
-                <span>Vừa (Regular)</span><span>${s.textSize === 'regular' ? '✓' : ''}</span>
+                <span>${isPractice ? 'Vừa (Regular)' : 'Regular'}</span><span>${s.textSize === 'regular' ? '✓' : ''}</span>
               </button>
               <button type="button" class="ins-opt-row ${s.textSize === 'large' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('large')">
-                <span>Lớn (Large)</span><span>${s.textSize === 'large' ? '✓' : ''}</span>
+                <span>${isPractice ? 'Lớn (Large)' : 'Large'}</span><span>${s.textSize === 'large' ? '✓' : ''}</span>
               </button>
               <button type="button" class="ins-opt-row ${s.textSize === 'xlarge' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('xlarge')">
-                <span>Rất lớn (Extra large)</span><span>${s.textSize === 'xlarge' ? '✓' : ''}</span>
+                <span>${isPractice ? 'Rất lớn (Extra large)' : 'Extra large'}</span><span>${s.textSize === 'xlarge' ? '✓' : ''}</span>
               </button>
             </div>
           </div>
@@ -2226,7 +2232,7 @@
       startSession({
         itemId: d.itemId, title: d.title, source: d.source, isFull: !!d.isFull,
         studyMode: d.studyMode || (d.source === 'news' ? 'practice' : 'exam'),
-        contrast: d.contrast, textSize: d.textSize,
+        contrast: d.contrast, practiceContrast: d.practiceContrast, textSize: d.textSize,
         activePenColor: d.activePenColor, brushAuto: !!d.brushAuto,
         showTimer: d.showTimer !== false,
         checkedMap: d.checkedMap || {},
@@ -2273,22 +2279,23 @@
       if (!state.session) return;
       const target = mode === 'practice' ? 'practice' : 'exam';
       if (state.session.studyMode === target) return;
-      state.session.studyMode = target;
-      // Switch between warm Totoro Washi and crisp CD-IELTS automatically if still on the default surface
-      if (target === 'practice' && state.session.contrast === 'cd') {
-        state.session.contrast = 'totoro';
-      } else if (target === 'exam' && state.session.contrast === 'totoro') {
-        state.session.contrast = 'cd';
+      if (state.session.studyMode === 'practice') {
+        state.session.practiceContrast = state.session.contrast || 'totoro';
       }
+      state.session.studyMode = target;
       if (target === 'exam') {
+        // Exam mode ALWAYS locks to official bright CD-IELTS white screen
+        state.session.contrast = 'cd';
         state.session.showTimer = true;
         this.closeDictPopover();
+      } else {
+        state.session.contrast = state.session.practiceContrast || 'totoro';
       }
       persistDraft();
       renderExamWorkspace();
       toast(target === 'practice'
-        ? 'Đã chuyển sang Luyện tập PRO (5 màu pastel · Tra từ · Check đáp án)'
-        : 'Đã chuyển sang Thi thật CD-IELTS Inspera');
+        ? 'Đã chuyển sang Luyện tập (highlight pastel · tra từ · tùy chỉnh nền)'
+        : 'Đã chuyển sang Thi thật (mặc định nền sáng chuẩn phòng thi)');
     },
 
     setPenColor(color) {
@@ -2376,7 +2383,13 @@
 
     setContrast(mode) {
       if (!state.session) return;
-      state.session.contrast = ['cd', 'totoro', 'dark', 'yellow'].includes(mode) ? mode : 'cd';
+      if (state.session.studyMode !== 'practice') {
+        state.session.contrast = 'cd';
+        return;
+      }
+      const next = ['cd', 'totoro', 'dark', 'yellow'].includes(mode) ? mode : 'totoro';
+      state.session.contrast = next;
+      state.session.practiceContrast = next;
       persistDraft();
       renderExamWorkspace();
     },
