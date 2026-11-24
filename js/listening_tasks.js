@@ -751,8 +751,54 @@
     }
   }
 
+  function syncExamCardWidth(mode) {
+    const card = document.querySelector('#modal-listening-exam .lt-exam-card');
+    if (!card) return;
+    card.classList.toggle('is-compact-stage', mode === 'compact');
+    card.classList.toggle('is-review-stage', mode === 'review');
+  }
+
+  function trimShortMeaning(raw) {
+    const clean = String(raw || '').trim();
+    if (!clean) return '—';
+    if (clean.length <= 54) return clean;
+    const bySemi = clean.split(';')[0].trim();
+    if (bySemi.length >= 8 && bySemi.length <= 56) return bySemi;
+    return clean.slice(0, 52).replace(/\s+\S*$/, '') + '…';
+  }
+
+  function buildT1MeaningChoices(targetItem, taskWords) {
+    const correctText = trimShortMeaning(targetItem.clean_meaning || targetItem.meaning || '');
+    const seen = new Set([correctText.toLowerCase()]);
+    const lv = window.APP_LISTENING_VOCAB || {};
+    const pool = [...(taskWords || []), ...(lv.target_all || []).slice(0, 120)];
+    const distractors = [];
+    // Shuffle candidate indices deterministically-randomly
+    const cands = pool
+      .filter((w) => w && w.id !== targetItem.id && (w.clean_meaning || w.meaning))
+      .sort(() => Math.random() - 0.5);
+    for (const w of cands) {
+      const m = trimShortMeaning(w.clean_meaning || w.meaning || '');
+      const k = m.toLowerCase();
+      if (!m || m === '—' || seen.has(k)) continue;
+      seen.add(k);
+      distractors.push({ text: m, isCorrect: false });
+      if (distractors.length >= 3) break;
+    }
+    const choices = [{ text: correctText, isCorrect: true }, ...distractors];
+    return choices.sort(() => Math.random() - 0.5);
+  }
+
+  function pickT1Meaning(optIdx) {
+    if (!examState || examState.stage !== 1 || examState.t1Done) return;
+    examState.t1PickedMeaning = Number(optIdx);
+    document.querySelectorAll('#lt-t1-meaning-grid .lt-t1-mopt').forEach((btn, i) => {
+      btn.classList.toggle('is-selected', i === Number(optIdx));
+    });
+  }
+
   /* ---------------------------------------------------------
-     TEST 1: 100% TASK WORDS ONE-SHOT DICTATION (NO REPLAY!)
+     TEST 1: 100% TASK WORDS ONE-SHOT DICTATION + MEANING (NO REPLAY!)
      --------------------------------------------------------- */
   function renderTest1() {
     const body = document.getElementById('lt-exam-body');
@@ -760,6 +806,7 @@
     stopAllAudio();
 
     if (examState.t1Done) {
+      syncExamCardWidth('review');
       const score = examState.t1Results.filter((r) => r.correct).length;
       const total = examState.words.length;
       const pct = Math.round((score / Math.max(1, total)) * 100);
@@ -770,7 +817,7 @@
           <div class="lt-sum-top">
             <div>
               <div class="lt-sum-kicker">HOÀN THÀNH TEST 1 — ĐÃ CHẤM &amp; LƯU ĐIỂM</div>
-              <div class="lt-sum-score tabular">${score} / ${total} từ đúng (${pct}%)</div>
+              <div class="lt-sum-score tabular">${score} / ${total} từ đạt chuẩn (${pct}%)</div>
             </div>
             <div class="lt-sum-actions">
               ${hasT2
@@ -780,12 +827,13 @@
           </div>
           <div class="lt-review-table-wrap">
             <table class="lt-review-table">
-              <thead><tr><th>#</th><th>Từ chuẩn</th><th>Bạn viết</th><th>Kết quả</th><th>Nghe lại</th></tr></thead>
+              <thead><tr><th>#</th><th>Từ chuẩn</th><th>Nghĩa</th><th>Bạn viết</th><th>Kết quả</th><th>Nghe</th></tr></thead>
               <tbody>
                 ${examState.t1Results.map((r, i) => `
                   <tr class="${r.correct ? 'is-ok' : 'is-err'}">
                     <td>${i + 1}</td>
                     <td><strong>${esc(r.expected)}</strong> <small style="color:var(--ink-2);">${esc(r.ipa || '')}</small></td>
+                    <td>${esc(r.meaning || '')}</td>
                     <td>${esc(r.typed || '—')}</td>
                     <td>${r.correct ? '<span class="lt-tag-ok">✓ Đúng</span>' : `<span class="lt-tag-err">✗ ${esc(r.note)}</span>`}</td>
                     <td><button type="button" class="lt-mini-play" onclick="ListeningTasksModule.replayAfterSubmit('${esc(r.expected)}','en-GB')">🔊</button></td>
@@ -799,10 +847,15 @@
       return;
     }
 
+    syncExamCardWidth('compact');
     const idx = examState.t1Idx;
     const total = examState.words.length;
     const item = examState.words[idx];
     const pct = Math.round((idx / Math.max(1, total)) * 100);
+    const letters = ['A', 'B', 'C', 'D'];
+    const choices = buildT1MeaningChoices(item, examState.words);
+    examState.t1Choices = choices;
+    examState.t1PickedMeaning = null;
 
     body.innerHTML = `
       <div class="lt-t1-stage">
@@ -813,18 +866,48 @@
               <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span></span>
               <span id="lt-t1-audio-text">Đang phát…</span>
             </div>
-            <span class="lt-timer-pill tabular" id="lt-t1-timer">10s</span>
+            <span class="lt-timer-pill tabular" id="lt-t1-timer">15s</span>
           </div>
         </div>
         <div class="lt-prog-track"><div class="lt-prog-fill" style="width:${pct}%"></div></div>
 
-        <div class="lt-t1-cue">
+        <div class="lt-t1-hero is-playing" id="lt-t1-hero">
+          <div class="lt-t1-wave-visual" aria-hidden="true">
+            <span style="--h:10px;--d:0.05s"></span>
+            <span style="--h:18px;--d:0.18s"></span>
+            <span style="--h:26px;--d:0.30s"></span>
+            <span style="--h:14px;--d:0.12s"></span>
+            <span style="--h:22px;--d:0.24s"></span>
+            <div class="lt-t1-orb-ind">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            </div>
+            <span style="--h:22px;--d:0.24s"></span>
+            <span style="--h:14px;--d:0.12s"></span>
+            <span style="--h:26px;--d:0.30s"></span>
+            <span style="--h:18px;--d:0.18s"></span>
+            <span style="--h:10px;--d:0.05s"></span>
+          </div>
           <span class="rl-cue-pos">${esc(formatListeningPos(item.pos))}</span>
-          <span class="lt-t1-meaning">${esc(item.clean_meaning || item.meaning || '')}</span>
         </div>
 
         <form class="lt-t1-form" onsubmit="ListeningTasksModule.submitT1Word(event)">
-          <input type="text" class="recall-word-input lt-t1-input" id="lt-t1-input" placeholder="Nhập từ vừa nghe..." autocomplete="off" autocapitalize="none" spellcheck="false" />
+          <div class="lt-t1-block">
+            <label class="lt-t1-lbl" for="lt-t1-input">1. Gõ chính tả</label>
+            <input type="text" class="recall-word-input lt-t1-input" id="lt-t1-input" placeholder="Nhập từ vừa nghe..." autocomplete="off" autocapitalize="none" spellcheck="false" />
+          </div>
+
+          <div class="lt-t1-block">
+            <div class="lt-t1-lbl">2. Chọn nghĩa Tiếng Việt</div>
+            <div class="lt-t1-meaning-grid" id="lt-t1-meaning-grid">
+              ${choices.map((ch, ci) => `
+                <button type="button" class="lt-t1-mopt" onclick="ListeningTasksModule.pickT1Meaning(${ci})">
+                  <span class="lt-mcq-key">${letters[ci]}</span>
+                  <span class="lt-t1-mopt-txt">${esc(ch.text)}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+
           <div class="lt-t1-footer is-end">
             <button type="submit" class="btn btn-primary">Tiếp theo →</button>
           </div>
@@ -841,16 +924,18 @@
     speakSingleWordOneShot(item.lemma, accent, () => {
       if (!examState || examState.stage !== 1 || examState.t1Idx !== idx) return;
       const strip = document.getElementById('lt-t1-audio-strip');
+      const hero = document.getElementById('lt-t1-hero');
       const txt = document.getElementById('lt-t1-audio-text');
       if (strip) strip.classList.remove('is-playing');
+      if (hero) hero.classList.remove('is-playing');
       if (txt) txt.textContent = '✓ Đã phát';
-      t1DeadlineAt = Date.now() + 10000;
+      t1DeadlineAt = Date.now() + 15000;
       t1CountdownTimer = setInterval(() => {
         const rem = Math.max(0, Math.ceil((t1DeadlineAt - Date.now()) / 1000));
         const el = document.getElementById('lt-t1-timer');
         if (el) {
           el.textContent = `${rem}s`;
-          el.classList.toggle('is-urgent', rem <= 3);
+          el.classList.toggle('is-urgent', rem <= 4);
         }
         if (rem <= 0) {
           submitT1Word(null, true);
@@ -868,12 +953,28 @@
     const inp = document.getElementById('lt-t1-input');
     const typed = String(inp?.value || '').trim();
     const diag = diagnoseSpellingError(typed, item.lemma, item.clean_forms ? [] : []);
+    const pickedIdx = examState.t1PickedMeaning;
+    const choices = examState.t1Choices || [];
+    const meaningOk = pickedIdx != null && Boolean(choices[pickedIdx]?.isCorrect);
+    const fullOk = Boolean(diag.correct && meaningOk);
+
+    let note = '';
+    if (!fullOk) {
+      if (isTimeout && !typed && pickedIdx == null) note = 'Hết 15 giây';
+      else if (diag.correct && !meaningOk) note = pickedIdx == null ? 'Chưa chọn nghĩa' : 'Sai nghĩa';
+      else if (!diag.correct && meaningOk) note = diag.note;
+      else note = `${diag.note} + Sai nghĩa`;
+    }
+
     examState.t1Results.push({
       expected: item.lemma,
       ipa: item.ipa || '',
+      meaning: trimShortMeaning(item.clean_meaning || item.meaning || ''),
       typed,
-      correct: diag.correct,
-      note: isTimeout && !typed ? 'Hết 10 giây' : diag.note,
+      spellOk: diag.correct,
+      meaningOk,
+      correct: fullOk,
+      note,
     });
 
     if (examState.t1Idx + 1 >= examState.words.length) {
@@ -901,6 +1002,7 @@
     }
 
     if (examState.t2Done) {
+      syncExamCardWidth('review');
       const score = convs.reduce((acc, c, i) => acc + (examState.t2Answers[i] === c.answerIndex ? 1 : 0), 0);
       const pct = Math.round((score / Math.max(1, convs.length)) * 100);
       const hasT3 = Boolean(examState.task.test3MapLabelling || examState.task.test3NoteCompletion);
@@ -944,6 +1046,7 @@
       return;
     }
 
+    syncExamCardWidth('compact');
     const idx = examState.t2Idx;
     const c = convs[idx];
     const letters = ['A', 'B', 'C'];
@@ -1440,6 +1543,7 @@
     const body = document.getElementById('lt-exam-body');
     if (!body || !examState) return;
     stopAllAudio();
+    syncExamCardWidth('full');
 
     if (examState.task.test3MapLabelling) {
       renderTest3Map();
@@ -1676,6 +1780,7 @@
     openExam,
     closeExam,
     goToStage,
+    pickT1Meaning,
     submitT1Word,
     pickT2Option,
     nextT2Question,
