@@ -1472,20 +1472,6 @@
             </button>
           ` : ''}
 
-          ${!s.isNews ? `
-            <div class="ins-opt-card">
-              <div class="ins-opt-sec-title">Chế độ học</div>
-              <div class="ins-opt-choices">
-                <button type="button" class="ins-opt-row ${isPractice ? 'active' : ''}" onclick="ReadingPracticeApp.setStudyMode('practice')">
-                  <span>Luyện tập <small>(Bôi đen chọn 5 màu pastel · Bấm từ để tra · Check đáp án)</small></span><span>${isPractice ? '✓' : ''}</span>
-                </button>
-                <button type="button" class="ins-opt-row ${!isPractice ? 'active' : ''}" onclick="ReadingPracticeApp.setStudyMode('exam')">
-                  <span>Thi thật CD-IELTS <small>(Chuẩn phòng thi máy Inspera 1:1)</small></span><span>${!isPractice ? '✓' : ''}</span>
-                </button>
-              </div>
-            </div>
-          ` : ''}
-
           ${isPractice ? `
             <div class="ins-opt-card" id="prac-opt-contrast-card">
               <div class="ins-opt-sec-title">Nền giấy đọc bài (Sáng / Tối)</div>
@@ -1568,16 +1554,6 @@
         `)
       : `<div class="ins-hdr-review-lbl">Review Mode · Paraphrase &amp; Dictionary Unlocked</div>`;
 
-    // Header Mode Switcher (Luyện tập <-> Thi thật)
-    const modeSwitcherHtml = !s.isNews ? `
-      <div class="rp-mode-switch" role="group" aria-label="Chuyển chế độ học">
-        <button type="button" class="rp-ms-btn ${isPractice ? 'active' : ''}" data-rp-mode-btn="practice"
-          onclick="ReadingPracticeApp.setStudyMode('practice')">Luyện tập</button>
-        <button type="button" class="rp-ms-btn ${!isPractice ? 'active' : ''}" data-rp-mode-btn="exam"
-          onclick="ReadingPracticeApp.setStudyMode('exam')">Thi thật</button>
-      </div>
-    ` : '';
-
     // Single compact Check button in Practice Header (replaces bulky right toolbar!)
     const practiceHeaderCheckHtml = (isPractice && !isReview) ? `
       <div class="prac-hdr-check-wrap">
@@ -1644,10 +1620,7 @@
               </div>
             </div>
 
-            ${isPractice ? `<div class="ins-hdr-center">${modeSwitcherHtml}</div>` : ''}
-
             <div class="ins-hdr-right">
-              ${!isPractice ? modeSwitcherHtml : ''}
               ${practiceHeaderCheckHtml}
               ${s.isNews && !isReview ? `
                 <button type="button" class="ins-hdr-pill ${s.showBilingual ? 'active' : ''}" id="rp-btn-bilingual" onclick="ReadingPracticeApp.toggleBilingual()">

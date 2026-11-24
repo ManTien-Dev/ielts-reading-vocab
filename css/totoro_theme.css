@@ -10410,18 +10410,15 @@ body.rp-exam-fullscreen {
   padding: 0 18px;
   background: var(--prac-sheet);
   border-bottom: 1px solid var(--prac-bd);
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
 .ins-mode-practice .ins-hdr-left {
   gap: 10px;
   min-width: 0;
-}
-.ins-mode-practice .ins-hdr-center {
-  display: flex;
-  justify-content: center;
+  flex: 1 1 auto;
 }
 .ins-mode-practice .ins-hdr-right {
   justify-content: flex-end;
