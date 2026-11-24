@@ -2657,7 +2657,7 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
     min-height: 0 !important;
     overflow: visible !important;
   }
-  #screen-home .tot-home-layout {
+  #screen-home .tot-home-layout.active {
     display: flex !important;
     flex-direction: column !important;
     height: auto !important;
@@ -8045,7 +8045,7 @@ body:not(.is-global-home):not(.is-teacher-mode) .tot-skill-wrap {
    HOME CHUNG — ASYMMETRIC 2-COLUMN EDITORIAL WORKSPACE
    (Linear / Notion / Apple Health hierarchy — scrollable & zero clipping!)
    ========================================================= */
-.tot-home-layout {
+.tot-home-layout.active {
   display: flex;
   flex-direction: column;
   gap: 16px;
