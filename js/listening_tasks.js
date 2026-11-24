@@ -764,73 +764,17 @@
   }
 
   /* ---------------------------------------------------------
-     DEDICATED LISTENING PRACTICE SCREEN (#lp-app-root) — 1:1 Match to Reading Practice
+     DEDICATED LISTENING PRACTICE SCREEN (#lp-app-root)
+     Delegates to ListeningPracticeApp (3x3 Totoro-Shaped Bookshelf)
      --------------------------------------------------------- */
   function renderPracticeScreen() {
+    if (window.ListeningPracticeApp && typeof window.ListeningPracticeApp.render === 'function') {
+      window.ListeningPracticeApp.render();
+      return;
+    }
     const root = document.getElementById('lp-app-root');
     if (!root) return;
-    const tasks = getTasksData().tasks || [];
-    const mapTasks = tasks.filter((t) => t.isMapTask);
-    const noteTasks = tasks.filter((t) => t.hasFullTests && !t.isMapTask);
-    const firstMapId = mapTasks[0]?.id || 'lmap_01';
-    const firstNoteId = noteTasks[0]?.id || 'lp1_01';
-
-    root.innerHTML = `
-      <div class="tot-section-shell ink-brackets has-stamp">
-        <div class="tot-shell-head">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
-            </span>
-            <div>
-              <h2 class="tot-shell-title">Luyện nghe · Practice</h2>
-              <p class="tot-shell-sub">Chọn luyện Bản đồ Map Labelling, Note Completion Part 1–4 hoặc mở lộ trình Task theo chủ đề.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="lt-prac-grid">
-          <article class="tot-exam-card lt-prac-card ink-brackets">
-            <div class="lt-prac-card-top">
-              <span class="rp-tag">MAP LABELLING</span>
-              <span class="rp-count-pill">${mapTasks.length} bài bản đồ</span>
-            </div>
-            <h3 class="rp-card-title">Bản đồ &amp; Sơ đồ · Part 2</h3>
-            <p class="rp-card-desc">Bản đồ công viên, thị trấn có bùng binh và mặt bằng tòa nhà — tự động phát 2 lượt (nghỉ 5s), đối chiếu Transcript 3 màu và Map chấm trực tiếp.</p>
-            <div class="lt-prac-card-foot">
-              <button type="button" class="tot-demo-btn" onclick="ListeningTasksModule.openPracticePicker('map')">Chọn bài Map</button>
-              <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstMapId)}', 3, { fromPractice: true })">Làm Map 01</button>
-            </div>
-          </article>
-
-          <article class="tot-exam-card lt-prac-card ink-brackets">
-            <div class="lt-prac-card-top">
-              <span class="rp-tag">NOTE COMPLETION</span>
-              <span class="rp-count-pill">${noteTasks.length} bài Part 1–4</span>
-            </div>
-            <h3 class="rp-card-title">Thực chiến · Note Completion</h3>
-            <p class="rp-card-desc">10 giây chuẩn bị đọc đề, băng Neural tự động phát 2 lượt (nghỉ 5s), chấm chính tả chuẩn Cambridge và mở khóa nghe lại từng câu.</p>
-            <div class="lt-prac-card-foot">
-              <button type="button" class="tot-demo-btn" onclick="ListeningTasksModule.openPracticePicker('note')">Chọn bài nghe</button>
-              <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstNoteId)}', 3, { fromPractice: true })">Làm Part 1</button>
-            </div>
-          </article>
-
-          <article class="tot-exam-card lt-prac-card ink-brackets">
-            <div class="lt-prac-card-top">
-              <span class="rp-tag">LỘ TRÌNH CHỦ ĐỀ</span>
-              <span class="rp-count-pill">139 Tasks</span>
-            </div>
-            <h3 class="rp-card-title">Luyện Nghe &amp; Viết Chính Tả</h3>
-            <p class="rp-card-desc">139 bài Task phủ kín 3.864 từ cốt lõi theo từng chủ đề thực tế — nghe 1 lần, gõ chính tả và chọn nghĩa Tiếng Việt chuẩn xác.</p>
-            <div class="lt-prac-card-foot">
-              <button type="button" class="tot-demo-btn" onclick="window.TotoroUI?.enterSkillMode?.('Listening', 'flashcard')">Học Flashcard</button>
-              <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI?.switchView?.('task', {fromUser:true})">Mở 139 Task</button>
-            </div>
-          </article>
-        </div>
-      </div>
-    `;
+    root.innerHTML = `<div class="tot-section-shell"><p class="tot-shell-sub">Đang nạp kho đề Listening Practice…</p></div>`;
   }
 
   /* ---------------------------------------------------------

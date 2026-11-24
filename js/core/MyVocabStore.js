@@ -10,7 +10,7 @@
 
   const STORAGE_KEY_BASE = 'ielts_my_vocab_v1_';
   const DEFAULT_DECK_ID = 'mv_default';
-  const DEFAULT_DECK_NAME = 'Từ của tôi';
+  const DEFAULT_DECK_NAME = 'MY LIST';
 
   let activeModalDeckId = DEFAULT_DECK_ID;
   let modalSearchQuery = '';
@@ -117,7 +117,7 @@
     try {
       localStorage.setItem(storageKey(uid), JSON.stringify(clean));
     } catch (_) {
-      B()?.showToast?.('Bộ nhớ trình duyệt đầy, không thể lưu thêm vào Từ của tôi!');
+      B()?.showToast?.('Bộ nhớ trình duyệt đầy, không thể lưu thêm vào MY LIST!');
     }
     try {
       window.dispatchEvent(new CustomEvent('app:myvocab-updated', { detail: { uid: getScopedUid(uid) } }));
@@ -524,7 +524,7 @@
       event?.stopPropagation?.();
       const decks = Store.getDecks();
       if (decks.length <= 1) {
-        B()?.showToast?.('Cần giữ lại ít nhất 1 danh sách Từ của tôi.');
+        B()?.showToast?.('Cần giữ lại ít nhất 1 danh sách MY LIST.');
         return;
       }
       const deck = Store.getDeck(deckId);
@@ -622,7 +622,7 @@
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      B()?.showToast?.('Đã tải xuống file sao lưu Từ của tôi (.json)!');
+      B()?.showToast?.('Đã tải xuống file sao lưu MY LIST (.json)!');
     },
 
     deleteWord(wordId) {

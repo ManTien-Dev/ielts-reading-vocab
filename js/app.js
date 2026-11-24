@@ -323,7 +323,7 @@
       if (deck) {
         return {
           key: window.MyVocabStore.getScopeKey(deck.id),
-          name: `Từ của tôi · ${deck.name}`,
+          name: `MY LIST · ${deck.name}`,
           isMyVocab: true,
           myVocabDeckId: deck.id,
           getList: () => window.MyVocabStore.getFlashcardItems(deck.id),
@@ -2383,7 +2383,7 @@
       if (window.MyVocabStore && !isTeacherUser()) {
         const mvDecks = window.MyVocabStore.getDecks() || [];
         if (mvDecks.length > 0) {
-          lHtml += `<optgroup label="Từ của tôi (Lưu trên máy)">${mvDecks.map((d) => {
+          lHtml += `<optgroup label="MY LIST">${mvDecks.map((d) => {
             const sk = window.MyVocabStore.getScopeKey(d.id);
             return `<option value="${escapeHtml(sk)}">${escapeHtml(d.name)}</option>`;
           }).join('')}</optgroup>`;
@@ -2432,7 +2432,7 @@
     if (window.MyVocabStore && !isTeacherUser()) {
       const mvDecks = window.MyVocabStore.getDecks() || [];
       if (mvDecks.length > 0) {
-        html += `<optgroup label="Từ của tôi (Lưu trên máy)">${mvDecks.map((d) => {
+        html += `<optgroup label="MY LIST">${mvDecks.map((d) => {
           const sk = window.MyVocabStore.getScopeKey(d.id);
           return `<option value="${escapeHtml(sk)}">${escapeHtml(d.name)} (${d.words.length} từ)</option>`;
         }).join('')}</optgroup>`;
@@ -2784,7 +2784,7 @@
       const finDesc = finishedBox?.querySelector('.fc-finished-desc');
       if (finTitle && finDesc) {
         if (isEmptyMyVocab) {
-          finTitle.textContent = 'Danh sách Từ của tôi đang trống';
+          finTitle.textContent = 'Danh sách MY LIST đang trống';
           finDesc.textContent = 'Bấm nút bên dưới để thêm từng từ hoặc dán/Import hàng loạt danh sách từ riêng của bạn (lưu hoàn toàn trên máy này).';
         } else {
           finTitle.textContent = 'Bạn đã hoàn thành lượt thẻ này!';

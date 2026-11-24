@@ -1012,7 +1012,7 @@
                 <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.switchView('practice')">Vào kho đề Practice →</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('flashcard')">Học Flashcard</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('task')">110 Tasks</button>
-                <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">Từ của tôi (${mvTotalWords})</button>
+                <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">MY LIST (${mvTotalWords})</button>
               </div>
             </div>
           </div>
@@ -1048,12 +1048,12 @@
           <div class="tot-home-panel ink-brackets">
             <div class="tot-panel-head">
               <div>
-                <div class="tot-panel-title">Từ của tôi &amp; Task gần đây</div>
+                <div class="tot-panel-title">MY LIST &amp; Task gần đây</div>
                 <div class="tot-panel-sub">Ôn nhanh bộ từ cá nhân rút từ bài đọc</div>
               </div>
               <button type="button" class="tot-foot-btn" onclick="window.MyVocabUI?.openModal()">Quản lý →</button>
             </div>
-            <div class="rh-subhead">Sổ Từ của tôi (cục bộ)</div>
+            <div class="rh-subhead">Sổ MY LIST (cục bộ)</div>
             <div class="rh-hist-list">${mvDecksHtml}</div>
             <div class="rh-subhead" style="margin-top:12px;">Task Reading vừa xong</div>
             <div class="rh-hist-list">${taskHistHtml}</div>

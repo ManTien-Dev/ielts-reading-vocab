@@ -41,7 +41,7 @@
   <meta http-equiv="Expires" content="0">
   <link rel="stylesheet" href="css/style.css?v=20261121y">
   <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261124y">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261125a">
   <link rel="stylesheet" href="css/totoro_theme.css?v=20261125b">
 </head>
 <body>
@@ -450,9 +450,9 @@
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg>
             <span>Từ vựng</span>
           </button>
-          <button type="button" class="btn-deck-tool tot-tool-quiet" id="btn-top-my-vocab" onclick="MyVocabUI.openModal()" title="Quản lý &amp; Import danh sách Từ của tôi (lưu cục bộ trên máy này)">
+          <button type="button" class="btn-deck-tool tot-tool-quiet" id="btn-top-my-vocab" onclick="MyVocabUI.openModal()" title="Quản lý &amp; Import danh sách MY LIST (lưu cục bộ trên máy này)">
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
-            <span>Từ của tôi</span>
+            <span>MY LIST</span>
           </button>
           <button type="button" class="btn-deck-tool tot-tool-quiet" id="btn-top-shuffle" onclick="shuffleCurrentScope()" title="Trộn ngẫu nhiên thứ tự">
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="16 3 21 3 21 8"/><line x1="4" x2="21" y1="20" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" x2="21" y1="15" y2="21"/></svg>
@@ -1677,7 +1677,7 @@
     <div class="modal-card modal-card-wide mv-modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div>
-          <div class="modal-title">Từ của tôi (My Vocab)</div>
+          <div class="modal-title">MY LIST</div>
           <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">Tự tạo &amp; Import danh sách từ riêng để học Flashcard — lưu 100% cục bộ trên máy này.</div>
         </div>
         <button type="button" class="btn-icon-glass" style="width:32px; height:32px; font-size:1rem;" onclick="MyVocabUI.closeModal()" aria-label="Đóng">✕</button>
@@ -1702,7 +1702,7 @@
 
           <div class="mv-main">
             <div class="mv-toolbar">
-              <div class="mv-toolbar-title" id="mv-active-deck-title">Từ của tôi (0 từ)</div>
+              <div class="mv-toolbar-title" id="mv-active-deck-title">MY LIST (0 từ)</div>
               <div class="mv-toolbar-actions">
                 <button type="button" class="btn-subtle mv-act-btn" onclick="MyVocabUI.togglePanel('add')">+ Thêm 1 từ</button>
                 <button type="button" class="btn-subtle mv-act-btn" onclick="MyVocabUI.togglePanel('import')">+ Import danh sách</button>
@@ -2195,7 +2195,7 @@
   <script src="js/core/EventBus.js?v=20261119t"></script>
   <script src="js/core/LazyDataLoader.js?v=20261119t"></script>
   <script src="js/core/AudioEngine.js?v=20261124n"></script>
-  <script src="js/core/MyVocabStore.js?v=20261123c"></script>
+  <script src="js/core/MyVocabStore.js?v=20261125a"></script>
   <script src="js/core/AntiCheatGuard.js?v=20261124m"></script>
   <script src="js/core/BaseSkillMode.js?v=20261119t"></script>
   <script src="js/skills/reading/ReadingMode.js?v=20261119t"></script>
@@ -2204,7 +2204,7 @@
   <script src="js/recognition_test.js?v=20261124y"></script>
   <script src="js/speech_stt.js?v=20261123e"></script>
   <script src="js/voice_lab.js?v=20261123c"></script>
-  <script src="js/app.js?v=20261124z"></script>
+  <script src="js/app.js?v=20261125a"></script>
   <script src="data/v2_paraphrase.js?v=20261122e"></script>
   <script src="data/v2_foundation.js?v=20261122e"></script>
   <script src="data/v2_academic.js?v=20261122e"></script>
@@ -2213,7 +2213,9 @@
   <script src="data/reading_photo_map.js?v=20261125d"></script>
   <script src="js/reading_practice.js?v=20261125e"></script>
   <script src="js/tasks.js?v=20261124s"></script>
-  <script src="js/listening_tasks.js?v=20261124u"></script>
-  <script src="js/totoro_ui.js?v=20261124u"></script>
+  <script src="data/listening_practice_data.js?v=20261125a"></script>
+  <script src="js/listening_practice.js?v=20261125a"></script>
+  <script src="js/listening_tasks.js?v=20261125a"></script>
+  <script src="js/totoro_ui.js?v=20261125a"></script>
 </body>
 </html>
