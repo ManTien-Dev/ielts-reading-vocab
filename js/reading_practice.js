@@ -331,13 +331,6 @@
       news: `<svg class="ghibli-stamp info" style="right:14px;bottom:52px;width:62px;height:62px;opacity:0.12;" viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M12 48C17 31 28 20 48 13C43 30 32 41 12 48Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" fill="currentColor" fill-opacity=".08"/><path d="M12 48L36 24M24 36L32 34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`
     };
 
-    const titlesById = {
-      cambridge: 'Academic Reading · Cambridge',
-      volume: 'Academic Reading · Volume',
-      actual: 'Academic Reading · Actual Tests',
-      news: 'Đọc báo học thuật · Bilingual News'
-    };
-
     const cardsHtml = sources.map((s) => {
       const pCount = allPassages.filter((p) => p.source === s.id).length;
       const fCount = allFull.filter((f) => f.source === s.id).length;
@@ -369,7 +362,7 @@
               <span class="tot-pos-badge">${esc(s.label)}</span>
               <span class="tot-hist-badge ${s.id === 'news' ? 'info' : 'tabular'}">${esc(rightBadge)}</span>
             </div>
-            <div class="rp-portal-title" style="font-size:15px;font-weight:750;margin-top:8px;color:var(--ink);">${esc(titlesById[s.id] || s.label)}</div>
+            <div class="rp-portal-title" style="font-size:15px;font-weight:750;margin-top:8px;color:var(--ink);">${esc(s.bookTitle || s.label)}</div>
             <div style="font-size:12.5px;color:var(--ink-2);margin-top:4px;line-height:1.5;">${esc(s.desc)}</div>
           </div>
           <div style="display:flex;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid var(--border);position:relative;z-index:1;">
@@ -615,7 +608,7 @@
       passageIds: config.passageIds,
       activePassageIdx: 0,
       mode: config.openInReview ? 'review' : 'exam', // 'exam' | 'review'
-      examTheme: 'ghibli', // 'ghibli' | 'cd' (Thi máy)
+      examTheme: 'totoro', // 'totoro' (Totoro CD-IELTS) | 'cd' (Thi máy Trắng) | 'night' (Nền tối)
       fontScale: 1,
       showBilingual: !!config.openInReview && isNews,
       totalSec,
@@ -626,6 +619,9 @@
       flagged: config.flagged ? { ...config.flagged } : {},
       struck: config.struck ? { ...config.struck } : {},
       highlights: config.highlights ? { ...config.highlights } : {},
+      notes: Array.isArray(config.notes) ? config.notes.slice() : [],
+      notesOpen: false,
+      activeQid: null,
       activeEvidenceId: null,
       reviewResult: null
     };
@@ -755,7 +751,7 @@
     `;
   }
 
-  /* ---------- EXAM WORKSPACE RENDERER ---------- */
+  /* ---------- EXAM WORKSPACE RENDERER (CD-IELTS Authentic x Totoro Custom) ---------- */
   function renderExamWorkspace() {
     const root = getRoot();
     if (!root || !state.session) return;
@@ -767,15 +763,18 @@
     const isReview = s.mode === 'review';
     const enableDict = isReview || s.isNews;
     const allQ = getAllSessionQuestions();
+    if (!s.activeQid && allQ.length) {
+      const firstInP = allQ.find((q) => q._pIdx === s.activePassageIdx) || allQ[0];
+      s.activeQid = firstInP?._qid || null;
+    }
 
-    const passageTabsHtml = passages.length > 1 ? `
-      <div class="rp-exam-ptabs" role="tablist">
-        ${passages.map((p, idx) => `
-          <button type="button" class="rp-exam-ptab ${idx === s.activePassageIdx ? 'active' : ''}"
-            onclick="ReadingPracticeApp.switchExamPassage(${idx})">Passage ${p.passageNum || (idx + 1)}</button>
-        `).join('')}
-      </div>
-    ` : '';
+    const curQs = allQ.filter((q) => q._pIdx === s.activePassageIdx);
+    const qMin = curQs.length ? curQs[0].num : 1;
+    const qMax = curQs.length ? curQs[curQs.length - 1].num : curQs.length;
+    const minsAlloc = curPassage.suggestedMins || 20;
+
+    const timerUrgency = s.remainingSec <= 300 ? ' is-critical' : (s.remainingSec <= 600 ? ' is-warn' : '');
+    const themeCls = s.examTheme === 'cd' ? 'rp-theme-cd' : (s.examTheme === 'night' ? 'rp-theme-night' : 'rp-theme-totoro');
 
     const reviewStripHtml = isReview && s.reviewResult ? `
       <div class="rp-review-strip">
@@ -808,7 +807,7 @@
 
     const newsToolbarHtml = (!isReview && s.isNews) ? `
       <div class="rp-news-bar">
-        <span>Chế độ Đọc báo: Bấm trực tiếp vào bất kỳ từ nào để tra nghĩa &amp; lưu vào <strong>Từ của tôi</strong></span>
+        <span>Đọc báo song ngữ: Bấm vào bất kỳ từ nào trong bài để tra nghĩa &amp; lưu vào <strong>Từ của tôi</strong></span>
         <button type="button" class="btn-subtle rp-btn-sm ${s.showBilingual ? 'is-on' : ''}" id="rp-btn-bilingual"
           onclick="ReadingPracticeApp.toggleBilingual()">
           ${s.showBilingual ? '✓ Đang hiện Song ngữ' : 'Bật dịch song ngữ'}
@@ -818,51 +817,109 @@
 
     const groupsHtml = (curPassage.groups || []).map((g) => `
       <div class="rp-q-group">
-        <div class="rp-q-group-title">${esc(g.title)}</div>
-        ${g.instruction ? `<div class="rp-q-group-inst">${esc(g.instruction)}</div>` : ''}
+        <div class="rp-q-group-banner">
+          <div class="rp-q-group-title">${esc(g.title)}</div>
+          ${g.instruction ? `<div class="rp-q-group-inst">${esc(g.instruction)}</div>` : ''}
+        </div>
         <div class="rp-q-list">
           ${(g.questions || []).map((q) => renderQuestionCard(q, curPassage, isReview)).join('')}
         </div>
       </div>
     `).join('');
 
+    // Official CD-IELTS Inspera bottom bar: Part tabs + Square/Circle numbered buttons
+    const partSummariesHtml = passages.length > 1 ? `
+      <div class="rp-cd-parts" role="tablist">
+        ${passages.map((p, idx) => {
+          const pQs = allQ.filter((q) => q._pIdx === idx);
+          const pDone = pQs.filter((q) => String(s.answers[q._qid] || '').trim()).length;
+          return `
+            <button type="button" class="rp-exam-ptab ${idx === s.activePassageIdx ? 'active' : ''}"
+              onclick="ReadingPracticeApp.switchExamPassage(${idx})">
+              <span>Passage ${p.passageNum || (idx + 1)}</span>
+              <small class="tabular">${pDone}/${pQs.length}</small>
+            </button>
+          `;
+        }).join('')}
+      </div>
+    ` : '';
+
     const navPillsHtml = allQ.map((q) => {
       const val = String(s.answers[q._qid] || '').trim();
       const flagged = !!s.flagged[q._qid];
+      const isCur = s.activeQid === q._qid;
       let cls = 'rp-nav-dot';
+      if (isCur) cls += ' is-current';
       if (isReview) {
         cls += isAnswerCorrect(q, val) ? ' is-correct' : ' is-wrong';
       } else {
         if (val) cls += ' is-answered';
-        if (flagged) cls += ' is-flagged';
+        if (flagged) cls += ' is-review-circle';
       }
-      return `<button type="button" class="${cls}" onclick="ReadingPracticeApp.jumpToQuestion(${q._pIdx}, '${esc(q._qid)}')" title="Câu ${q.num}">${q.num}</button>`;
+      return `<button type="button" class="${cls}" onclick="ReadingPracticeApp.jumpToQuestion(${q._pIdx}, '${esc(q._qid)}')" title="Question ${q.num}${flagged ? ' (Review)' : ''}">${q.num}</button>`;
     }).join('');
 
+    const notesCount = (s.notes || []).length;
+    const notesDrawerHtml = `
+      <aside class="rp-notes-drawer ${s.notesOpen ? 'open' : ''}" id="rp-notes-drawer" aria-label="Ghi chú bài thi">
+        <div class="rp-notes-head">
+          <strong>Ghi chú (Notes · ${notesCount})</strong>
+          <button type="button" class="rp-icon-btn" onclick="ReadingPracticeApp.toggleNotesDrawer(false)">✕</button>
+        </div>
+        <form class="rp-notes-form" onsubmit="ReadingPracticeApp.addManualNote(event)">
+          <textarea id="rp-note-input" rows="2" placeholder="Viết ghi chú nhanh cho bài đọc..."></textarea>
+          <button type="submit" class="btn btn-primary rp-btn-sm">+ Lưu ghi chú</button>
+        </form>
+        <div class="rp-notes-list">
+          ${notesCount ? s.notes.map((n) => `
+            <div class="rp-note-item">
+              ${n.quote ? `<div class="rp-note-quote">“${esc(n.quote)}”</div>` : ''}
+              <div class="rp-note-text">${esc(n.text)}</div>
+              <button type="button" class="rp-note-del" onclick="ReadingPracticeApp.deleteNote('${esc(n.id)}')">Xóa</button>
+            </div>
+          `).join('') : '<div class="rp-notes-empty">Chưa có ghi chú nào. Bạn có thể bôi đen đoạn văn bên trái rồi bấm <strong>+ Ghi chú</strong> giống phòng thi máy IELTS.</div>'}
+        </div>
+      </aside>
+    `;
+
+    const passageInstruction = s.isNews
+      ? `${esc(curPassage.newsSource || 'Academic News')} · ${esc(curPassage.topic || '')}`
+      : `READING PASSAGE ${curPassage.passageNum || (s.activePassageIdx + 1)} · You should spend about ${minsAlloc} minutes on Questions ${qMin}–${qMax}, which are based on the passage below.`;
+
     root.innerHTML = `
-      <div class="rp-workspace ${s.examTheme === 'cd' ? 'rp-theme-cd' : 'rp-theme-ghibli'}" id="rp-workspace" style="--rp-font-scale:${s.fontScale};">
-        <header class="rp-exam-topbar">
+      <div class="rp-workspace ${themeCls}" id="rp-workspace" style="--rp-font-scale:${s.fontScale};">
+        <header class="rp-exam-topbar rp-cd-topbar">
           <div class="rp-top-left">
             <button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.exitToHub()">← Kho đề</button>
             <div class="rp-exam-title-wrap">
               <div class="rp-exam-title">${esc(s.title)}</div>
-              ${passageTabsHtml}
+              <span class="rp-cd-qrange tabular">Questions ${qMin}–${qMax}</span>
             </div>
           </div>
 
-          <div class="rp-top-right">
+          <div class="rp-top-center">
             ${!isReview ? `
-              <button type="button" class="rp-timer-pill" onclick="ReadingPracticeApp.togglePauseTimer()" title="Tạm dừng / tiếp tục đồng hồ">
-                <span class="rp-timer-ico">${s.paused ? '▶' : '⏱'}</span>
+              <button type="button" class="rp-cd-clock${timerUrgency}" onclick="ReadingPracticeApp.togglePauseTimer()" title="Bấm để tạm dừng / tiếp tục đồng hồ">
+                <svg class="rp-clock-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg>
                 <span id="rp-timer-display" class="tabular">${formatDuration(s.remainingSec)}</span>
+                <span class="rp-clock-lbl">${s.paused ? 'tạm dừng' : 'còn lại'}</span>
               </button>
-            ` : `<span class="rp-mode-pill">Chế độ xem giải &amp; tra từ</span>`}
+            ` : `<span class="rp-mode-pill">Chế độ xem giải · Paraphrase &amp; Tra từ</span>`}
+          </div>
 
-            <div class="rp-theme-switch" role="group" aria-label="Giao diện làm bài">
-              <button type="button" class="rp-theme-btn ${s.examTheme === 'ghibli' ? 'active' : ''}"
-                onclick="ReadingPracticeApp.setExamTheme('ghibli')">Ghibli</button>
+          <div class="rp-top-right">
+            <button type="button" class="rp-tool-btn ${s.notesOpen ? 'active' : ''}" id="rp-btn-notes"
+              onclick="ReadingPracticeApp.toggleNotesDrawer()" title="Mở sổ ghi chú giống phòng thi CD-IELTS">
+              Ghi chú${notesCount ? ` (${notesCount})` : ''}
+            </button>
+
+            <div class="rp-theme-switch" role="group" aria-label="Màu nền phòng thi">
+              <button type="button" class="rp-theme-btn ${s.examTheme === 'totoro' ? 'active' : ''}"
+                onclick="ReadingPracticeApp.setExamTheme('totoro')">Totoro</button>
               <button type="button" class="rp-theme-btn ${s.examTheme === 'cd' ? 'active' : ''}"
                 onclick="ReadingPracticeApp.setExamTheme('cd')">Thi máy</button>
+              <button type="button" class="rp-theme-btn ${s.examTheme === 'night' ? 'active' : ''}"
+                onclick="ReadingPracticeApp.setExamTheme('night')">Đêm</button>
             </div>
 
             <div class="rp-font-btns">
@@ -892,12 +949,11 @@
             id="rp-passage-pane" style="flex: 0 0 ${state.splitRatio}%;"
             onmouseup="ReadingPracticeApp.handlePassageSelection(event)"
             onclick="ReadingPracticeApp.handlePassageWordClick(event)">
+            <div class="rp-cd-part-banner">
+              <span>${passageInstruction}</span>
+              <span class="rp-dict-hint">${enableDict ? 'Bấm từ bất kỳ để tra &amp; lưu' : 'Bôi đen để Highlight / Ghi chú'}</span>
+            </div>
             <div class="rp-passage-inner">
-              <div class="rp-passage-kicker">
-                <span>${esc(curPassage.series || '')}</span>
-                ${curPassage.topic ? `<span>· ${esc(curPassage.topic)}</span>` : ''}
-                ${enableDict ? '<span class="rp-dict-hint">💡 Bấm bất kỳ từ nào để tra &amp; lưu vào Từ của tôi</span>' : '<span class="rp-dict-hint">🖍 Bôi đen văn bản để Highlight</span>'}
-              </div>
               <h2 class="rp-passage-title">${esc(curPassage.title)}</h2>
               ${curPassage.subtitle ? `<p class="rp-passage-sub">${esc(curPassage.subtitle)}</p>` : ''}
               <div class="rp-passage-content" id="rp-passage-content">
@@ -906,9 +962,9 @@
             </div>
           </section>
 
-          <div class="rp-resizer" id="rp-resizer" title="Kéo để chia lại tỷ lệ bài đọc / câu hỏi"
+          <div class="rp-resizer" id="rp-resizer" title="Kéo trái/phải để chỉnh tỷ lệ bài đọc và câu hỏi"
             onmousedown="ReadingPracticeApp.startResize(event)">
-            <span class="rp-resizer-grip"></span>
+            <span class="rp-resizer-handle" aria-hidden="true">⇄</span>
           </div>
 
           <section class="rp-pane rp-pane-right ${state.mobilePane === 'questions' ? 'mob-active' : ''}" id="rp-questions-pane">
@@ -916,22 +972,34 @@
               ${groupsHtml}
             </div>
           </section>
+
+          ${notesDrawerHtml}
         </div>
 
-        <footer class="rp-exam-footer">
-          <div class="rp-nav-dots">${navPillsHtml}</div>
-          <div class="rp-footer-legend">
-            ${!isReview
-              ? '<span><i class="rp-dot-key ans"></i>Đã làm</span><span><i class="rp-dot-key flg"></i>Đặt cờ</span>'
-              : '<span><i class="rp-dot-key ok"></i>Đúng</span><span><i class="rp-dot-key bad"></i>Sai</span>'}
+        <footer class="rp-exam-footer rp-cd-footer">
+          <div class="rp-cd-footer-left">
+            ${partSummariesHtml}
+            <div class="rp-nav-dots">${navPillsHtml}</div>
+          </div>
+          <div class="rp-cd-footer-right">
+            <div class="rp-footer-legend">
+              ${!isReview
+                ? '<span><i class="rp-dot-key ans"></i>Đã làm</span><span><i class="rp-dot-key rev"></i>Review</span>'
+                : '<span><i class="rp-dot-key ok"></i>Đúng</span><span><i class="rp-dot-key bad"></i>Sai</span>'}
+            </div>
+            <div class="rp-cd-step-btns">
+              <button type="button" class="rp-step-btn" onclick="ReadingPracticeApp.stepQuestion(-1)" title="Câu trước">←</button>
+              <button type="button" class="rp-step-btn" onclick="ReadingPracticeApp.stepQuestion(1)" title="Câu kế tiếp">→</button>
+            </div>
           </div>
         </footer>
 
-        <!-- Floating Selection Highlight Toolbar -->
+        <!-- Floating Selection Highlight & Note Toolbar (CD-IELTS Inspera style) -->
         <div class="rp-hl-toolbar hidden" id="rp-hl-toolbar">
-          <button type="button" class="rp-hl-btn yl" onclick="ReadingPracticeApp.applyHighlight('yellow')" title="Highlight vàng"></button>
+          <button type="button" class="rp-hl-btn yl" onclick="ReadingPracticeApp.applyHighlight('yellow')" title="Highlight vàng (CD-IELTS)"></button>
           <button type="button" class="rp-hl-btn gn" onclick="ReadingPracticeApp.applyHighlight('green')" title="Highlight xanh"></button>
           <button type="button" class="rp-hl-btn pk" onclick="ReadingPracticeApp.applyHighlight('pink')" title="Highlight hồng"></button>
+          <button type="button" class="rp-hl-txt" onclick="ReadingPracticeApp.addNoteFromSelection()">+ Ghi chú</button>
           <button type="button" class="rp-hl-txt" onclick="ReadingPracticeApp.clearSelectionHighlight()">Xóa</button>
           ${enableDict ? '<button type="button" class="rp-hl-txt is-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra từ</button>' : ''}
         </div>
@@ -939,7 +1007,7 @@
         <!-- YouPass Click-to-Dictionary Popover -->
         <div class="rp-dict-popover hidden" id="rp-dict-popover" onclick="event.stopPropagation()"></div>
 
-        <!-- Bluebook Pre-Submit Review Check Modal -->
+        <!-- Pre-Submit Review Check Modal -->
         <div class="modal-overlay" id="rp-presubmit-modal" onclick="ReadingPracticeApp.closePreSubmitModal(event)">
           <div class="modal-card rp-presubmit-card" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -958,8 +1026,10 @@
     const qid = `${passage.id}__q${q.num}`;
     const userVal = String(s.answers[qid] ?? '');
     const flagged = !!s.flagged[qid];
+    const isCur = s.activeQid === qid;
     const ok = isReview ? isAnswerCorrect(q, userVal) : false;
 
+    let promptHtml = esc(q.prompt);
     let inputHtml = '';
     if (q.type === 'tfng' || q.type === 'ynng') {
       const opts = q.type === 'tfng' ? ['TRUE', 'FALSE', 'NOT GIVEN'] : ['YES', 'NO', 'NOT GIVEN'];
@@ -976,14 +1046,12 @@
         </div>
       `;
     } else if (q.type === 'gap') {
-      inputHtml = `
-        <div class="rp-gap-wrap">
-          <input type="text" class="rp-gap-input ${isReview ? (ok ? 'is-ok' : 'is-bad') : ''}"
-            value="${esc(userVal)}" ${isReview ? 'readonly' : ''}
-            placeholder="Nhập đáp án từ bài đọc..."
-            oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off">
-        </div>
-      `;
+      const inlineBox = `<input type="text" class="rp-gap-input rp-gap-inline ${isReview ? (ok ? 'is-ok' : 'is-bad') : ''}" value="${esc(userVal)}" ${isReview ? 'readonly' : ''} placeholder="${q.num}" aria-label="Câu ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off">`;
+      if (/_{3,}/.test(q.prompt)) {
+        promptHtml = esc(q.prompt).replace(/_{3,}/, inlineBox);
+      } else {
+        inputHtml = `<div class="rp-gap-wrap">${inlineBox}</div>`;
+      }
     } else if (q.type === 'mcq') {
       inputHtml = `
         <div class="rp-mcq-list">
@@ -1030,7 +1098,7 @@
             <span>${ok ? '✓ Chính xác' : `✕ Đáp án đúng: <strong>${esc(correctDisplay)}</strong>`}</span>
             ${q.evidenceId ? `
               <button type="button" class="rp-locate-btn"
-                onclick="ReadingPracticeApp.locateEvidence('${esc(q.evidenceId)}')">📍 Định vị dẫn chứng</button>
+                onclick="ReadingPracticeApp.locateEvidence('${esc(q.evidenceId)}')">Định vị dẫn chứng</button>
             ` : ''}
           </div>
           ${paraRows ? `
@@ -1045,13 +1113,14 @@
     }
 
     return `
-      <div class="rp-q-card ${isReview ? (ok ? 'rev-ok' : 'rev-bad') : ''}" id="rp-qcard-${esc(qid)}">
+      <div class="rp-q-card ${isCur && !isReview ? 'is-current' : ''} ${isReview ? (ok ? 'rev-ok' : 'rev-bad') : ''}"
+        id="rp-qcard-${esc(qid)}" onclick="ReadingPracticeApp.focusQuestion('${esc(qid)}')">
         <div class="rp-q-head">
           <span class="rp-q-num">${q.num}</span>
-          <div class="rp-q-prompt">${esc(q.prompt)}</div>
+          <div class="rp-q-prompt">${promptHtml}</div>
           ${!isReview ? `
             <button type="button" class="rp-flag-btn ${flagged ? 'active' : ''}"
-              onclick="ReadingPracticeApp.toggleFlag('${esc(qid)}')" title="Đánh dấu kiểm tra lại">⚑</button>
+              onclick="event.stopPropagation(); ReadingPracticeApp.toggleFlag('${esc(qid)}')" title="Đánh dấu Review (chuyển số câu thành hình tròn giống CD-IELTS)">${flagged ? 'Review ✓' : 'Review'}</button>
           ` : ''}
         </div>
         ${inputHtml}
@@ -1288,7 +1357,73 @@
 
     setExamTheme(theme) {
       if (!state.session) return;
-      state.session.examTheme = theme === 'cd' ? 'cd' : 'ghibli';
+      state.session.examTheme = (theme === 'cd' || theme === 'night') ? theme : 'totoro';
+      renderExamWorkspace();
+    },
+
+    focusQuestion(qid) {
+      if (!state.session || state.session.activeQid === qid) return;
+      state.session.activeQid = qid;
+      document.querySelectorAll('.rp-q-card.is-current').forEach((c) => c.classList.remove('is-current'));
+      const card = document.getElementById(`rp-qcard-${qid}`);
+      if (card) card.classList.add('is-current');
+      const allQ = getAllSessionQuestions();
+      const idx = allQ.findIndex((x) => x._qid === qid);
+      document.querySelectorAll('.rp-nav-dot').forEach((d, i) => d.classList.toggle('is-current', i === idx));
+    },
+
+    stepQuestion(delta) {
+      if (!state.session) return;
+      const allQ = getAllSessionQuestions();
+      if (!allQ.length) return;
+      const curIdx = Math.max(0, allQ.findIndex((q) => q._qid === state.session.activeQid));
+      const nextIdx = Math.max(0, Math.min(allQ.length - 1, curIdx + (delta || 0)));
+      const target = allQ[nextIdx];
+      if (target) this.jumpToQuestion(target._pIdx, target._qid);
+    },
+
+    toggleNotesDrawer(forceVal) {
+      if (!state.session) return;
+      state.session.notesOpen = typeof forceVal === 'boolean' ? forceVal : !state.session.notesOpen;
+      renderExamWorkspace();
+    },
+
+    addNoteFromSelection() {
+      if (!state.session) return;
+      const sel = window.getSelection();
+      const quote = (sel ? sel.toString() : '').trim().slice(0, 180);
+      if (quote) this.applyHighlight('yellow');
+      this.hideHighlightToolbar();
+      state.session.notesOpen = true;
+      if (quote) {
+        state.session.notes.unshift({
+          id: 'n_' + Date.now().toString(36),
+          quote,
+          text: 'Ghi chú cho đoạn này...'
+        });
+      }
+      renderExamWorkspace();
+      const ta = document.getElementById('rp-note-input');
+      if (ta) ta.focus();
+    },
+
+    addManualNote(ev) {
+      if (ev) ev.preventDefault();
+      if (!state.session) return;
+      const ta = document.getElementById('rp-note-input');
+      const text = (ta?.value || '').trim();
+      if (!text) return;
+      state.session.notes.unshift({
+        id: 'n_' + Date.now().toString(36),
+        quote: '',
+        text
+      });
+      renderExamWorkspace();
+    },
+
+    deleteNote(noteId) {
+      if (!state.session) return;
+      state.session.notes = (state.session.notes || []).filter((n) => n.id !== noteId);
       renderExamWorkspace();
     },
 
@@ -1313,6 +1448,7 @@
     setAnswer(qid, value, skipFullRerender = false) {
       if (!state.session || state.session.mode !== 'exam') return;
       state.session.answers[qid] = value;
+      state.session.activeQid = qid;
       persistDraft();
       if (skipFullRerender) {
         // Lightweight update of footer nav dot without stealing input focus
@@ -1333,6 +1469,7 @@
     toggleFlag(qid) {
       if (!state.session || state.session.mode !== 'exam') return;
       state.session.flagged[qid] = !state.session.flagged[qid];
+      state.session.activeQid = qid;
       persistDraft();
       renderExamWorkspace();
     },
@@ -1346,11 +1483,15 @@
 
     jumpToQuestion(pIdx, qid) {
       if (!state.session) return;
+      state.session.activeQid = qid;
+      state.mobilePane = 'questions';
       if (state.session.activePassageIdx !== pIdx) {
         state.session.activePassageIdx = pIdx;
         renderExamWorkspace();
+      } else {
+        this.focusQuestion(qid);
+        renderExamWorkspace();
       }
-      state.mobilePane = 'questions';
       const el = document.getElementById(`rp-qcard-${qid}`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     },

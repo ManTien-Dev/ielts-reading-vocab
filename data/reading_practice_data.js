@@ -1108,10 +1108,10 @@
   ];
 
   const SOURCES = [
-    { id: 'cambridge', label: 'Cambridge', desc: 'Bộ đề chuẩn cấu trúc Academic Reading — tách riêng từng Passage & Full Test.' },
-    { id: 'volume', label: 'Volume', desc: 'Bộ đề luyện nâng band theo tập — luyện chuyên sâu từng Passage 1–3 hoặc Full Test.' },
-    { id: 'actual', label: 'Actual Tests', desc: 'Đề mô phỏng xu hướng thi thật gần đây — luyện tốc độ & bẫy paraphrase.' },
-    { id: 'news', label: 'News', desc: 'Đọc báo học thuật chọn lọc theo chủ đề — dịch song ngữ & bấm tra từ lưu thẳng về Flashcard.' }
+    { id: 'cambridge', label: 'Cambridge', bookTitle: 'Cambridge IELTS 1 – 20', desc: 'Bộ đề chuẩn Cambridge University Press — tách riêng Passage 1–3 & Full Test 40 câu.' },
+    { id: 'volume', label: 'Volume', bookTitle: 'IELTS Reading Recent Actual Tests (Vol 1–6)', desc: 'Bộ đề Volume luyện tăng Band chuyên sâu — chia rõ Passage 1–3 và Full Test.' },
+    { id: 'actual', label: 'Actual Tests', bookTitle: 'IELTS Reading Actual Tests 2025', desc: 'Tuyển tập đề thi thật & dự đoán gần đây — luyện tốc độ và nhận diện bẫy Paraphrase.' },
+    { id: 'news', label: 'News', bookTitle: 'The Economist · Nature · BBC Future', desc: 'Đọc báo học thuật chọn lọc theo chủ đề — dịch song ngữ & bấm tra từ lưu thẳng về Flashcard.' }
   ];
 
   window.READING_PRACTICE_DATA = {

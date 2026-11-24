@@ -788,50 +788,55 @@
 
     el.innerHTML = `
       <div class="rh-layout">
-        <div class="rh-hero ink-brackets">
-          <div>
-            <div class="rh-kicker">READING HOME · KHÔNG GIAN CHUYÊN SÂU</div>
-            <h2 class="rh-title">Tiến độ &amp; Lịch sử IELTS Reading</h2>
-            <p class="rh-sub">Tập trung toàn bộ từ vựng Reading, 110 Task bài tập và lịch sử luyện đề Cambridge · Volume · Actual · News.</p>
-          </div>
-          <div class="rh-hero-actions">
-            <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openGlobalHome()">← Home chung</button>
-            <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.switchView('practice')">Kho đề Practice →</button>
-            <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('flashcard')">Flashcard</button>
-            <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">Từ của tôi (${mvTotalWords})</button>
-          </div>
-        </div>
-
-        ${resumeHtml}
-
-        <div class="rh-kpi-grid">
-          <div class="rh-kpi-card ink-brackets">
-            <div class="rh-kpi-label">Từ vựng Reading</div>
-            <div class="rh-kpi-val tabular">${(snap.mastered || 0).toLocaleString('vi-VN')} <small>/ ${(snap.totalFamilies || 4489).toLocaleString('vi-VN')}</small></div>
-            <div class="rh-kpi-sub">+ ${mvTotalWords} từ trong sổ <strong>Từ của tôi</strong></div>
-            <div class="rh-decks-mini">${deckBarsHtml}</div>
-          </div>
-
-          <div class="rh-kpi-card ink-brackets">
-            <div class="rh-kpi-label">Task Bài tập Reading</div>
-            <div class="rh-kpi-val tabular">${snap.completedTasks.length} <small>/ 110 Tasks</small></div>
-            <div class="rh-kpi-sub">Đang hoàn thành ${Math.round((snap.completedTasks.length / 110) * 100)}% lộ trình từ vựng Reading.</div>
-            <div style="margin-top:auto;padding-top:12px;">
-              <button type="button" class="tot-demo-btn" style="width:100%;" onclick="window.TotoroUI.switchView('task')">Mở danh sách 110 Tasks →</button>
+        <div class="rh-top-asym">
+          <div class="tot-hero-card ink-brackets has-stamp rh-main-hero">
+            <div class="rh-hero-copy">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
+                  <svg viewBox="3 5.5 26 23.5" fill="none"><path d="M10.2 14L8.8 7.2L13.2 10.8C15 10.2 17 10.2 18.8 10.8L23.2 7.2L21.8 14C23.4 15.4 24 17.4 24 19H8C8 17.4 8.6 15.4 10.2 14Z" fill="#595651"/><path d="M14.2 10.2C15.8 7.5 19.2 7.4 20.6 9.5C18.5 11 15.8 11.2 14.2 10.2Z" fill="#4E9460"/><circle cx="13" cy="14.3" r="1.9" fill="#FFFFFF"/><circle cx="13.2" cy="14.3" r="0.95" fill="#181A1F"/><circle cx="19" cy="14.3" r="1.9" fill="#FFFFFF"/><circle cx="18.8" cy="14.3" r="0.95" fill="#181A1F"/><path d="M4.2 18.8C4.2 17.7 5.2 17 6.3 17.2L16 18.8L25.7 17.2C26.8 17 27.8 17.7 27.8 18.8V26.4C27.8 27.2 27 27.8 26.2 27.6L16 26L5.8 27.6C5 27.8 4.2 27.2 4.2 26.4V18.8Z" fill="#FBF8F0" stroke="#3F6E4A" stroke-width="1.6" stroke-linejoin="round"/><path d="M16 18.8V26" stroke="#3F6E4A" stroke-width="1.5"/></svg>
+                </span>
+                <div>
+                  <h2 class="tot-shell-title" style="margin:0;">IELTS Reading</h2>
+                  <div class="tot-shell-sub tabular">${(snap.mastered || 0).toLocaleString('vi-VN')} / ${(snap.totalFamilies || 4489).toLocaleString('vi-VN')} từ · ${snap.completedTasks.length} / 110 Tasks · ${mvTotalWords} từ cá nhân</div>
+                </div>
+              </div>
+              <div class="rh-decks-grid-4">${deckBarsHtml}</div>
+              <div class="rh-hero-actions" style="margin-top:12px;">
+                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.switchView('practice')">Vào kho đề Practice →</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('flashcard')">Học Flashcard</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('task')">110 Tasks</button>
+                <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">Từ của tôi (${mvTotalWords})</button>
+              </div>
             </div>
           </div>
 
-          <div class="rh-kpi-card ink-brackets">
-            <div class="rh-kpi-label">Luyện đề Reading Practice</div>
-            <div class="rh-kpi-val tabular">${rpStats.avgBand ? `Band ${rpStats.avgBand.toFixed(1)}` : 'Chưa có'}</div>
-            <div class="rh-kpi-sub">${rpStats.attemptsCount} lượt nộp bài · ${rpStats.completedUnique} bài đọc đã làm · ${rpStats.totalMins} phút luyện</div>
-            <div style="margin-top:auto;padding-top:12px;">
-              <button type="button" class="btn btn-primary tot-demo-btn" style="width:100%;" onclick="window.TotoroUI.switchView('practice')">Làm đề mới ngay →</button>
+          <div class="tot-home-panel ink-brackets rh-band-panel">
+            <div class="tot-panel-head">
+              <div>
+                <div class="tot-panel-title">Kết quả Luyện đề Reading</div>
+                <div class="tot-panel-sub tabular">${rpStats.attemptsCount} lượt nộp · ${rpStats.completedUnique} bài · ${rpStats.totalMins} phút</div>
+              </div>
+              <span class="rh-band-big tabular">${rpStats.avgBand ? `Band ${rpStats.avgBand.toFixed(1)}` : '—'}</span>
+            </div>
+            ${inProg ? `
+              <div class="rh-inline-resume">
+                <div style="min-width:0;">
+                  <div class="rh-resume-title" style="font-size:13.5px;">Đang làm dở: ${esc(inProg.title)}</div>
+                  <div class="rh-resume-sub">${Object.keys(inProg.answers || {}).length}/${inProg.totalQuestions || 0} câu · Còn ${Math.ceil((inProg.remainingSec || 0) / 60)} phút</div>
+                </div>
+                <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;flex-shrink:0;" onclick="window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.resumeDraft();">Làm tiếp →</button>
+              </div>
+            ` : `
+              <div class="rh-empty" style="margin:auto 0;">Chọn một Passage hoặc Full Test trong kho <strong>Cambridge · Volume · Actual · News</strong> để đo Band Reading thực tế.</div>
+            `}
+            <div class="tot-panel-foot" style="margin-top:auto;">
+              <span class="tot-foot-meta">Tiến độ Task <strong class="tabular">${snap.completedTasks.length}/110</strong></span>
+              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.switchView('practice')">Làm đề mới →</button>
             </div>
           </div>
         </div>
 
-        <div class="rh-bottom-grid">
+        <div class="rh-bottom-asym">
           <div class="tot-home-panel ink-brackets">
             <div class="tot-panel-head">
               <div>
@@ -1197,8 +1202,14 @@
     } catch (_) {}
 
     function syncSkillDropdownUI(modeVal) {
+      const isGlobal = modeVal === 'Overview';
+      document.body.classList.toggle('is-global-home', isGlobal);
+
       const chipTxt = document.getElementById('header-mode-chip-text');
-      if (chipTxt) chipTxt.textContent = modeVal === 'Overview' ? 'Home chung' : modeVal;
+      if (chipTxt) chipTxt.textContent = isGlobal ? 'Home chung' : modeVal;
+
+      const homeTabLbl = document.getElementById('nav-home-tab-label');
+      if (homeTabLbl) homeTabLbl.textContent = isGlobal ? 'Home' : 'Tổng quan';
 
       document.querySelectorAll('[data-tot-skill]').forEach((btn) => {
         const s = btn.dataset.totSkill;

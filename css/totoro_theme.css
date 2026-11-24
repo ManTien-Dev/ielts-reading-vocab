@@ -7784,3 +7784,457 @@ mark.rp-hl-mark.hl-pink   { background: rgba(244, 114, 182, 0.32); }
 .tot-exam-card.rp-portal-card {
   cursor: pointer;
 }
+
+
+/* =========================================================
+   2-TIER TOPBAR (Home chung vs Skill Workspace) + READING HOME ASYM
+   ========================================================= */
+.tot-back-global-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 30px;
+  padding: 0 9px 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-item);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+@media (max-width: 1480px) {
+  .app-header {
+    gap: 8px !important;
+  }
+  .tot-nav-tab {
+    padding: 0 11px;
+    font-size: 13px;
+  }
+  .brand-name-txt {
+    font-size: 14.5px;
+  }
+}
+.tot-back-global-btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+body.is-global-home #btn-back-global-home,
+body.is-teacher-mode #btn-back-global-home {
+  display: none !important;
+}
+#nav-global-skills {
+  display: none;
+}
+body.is-global-home:not(.is-teacher-mode) #nav-global-skills {
+  display: inline-flex;
+}
+body.is-global-home:not(.is-teacher-mode) #nav-skill-tabs {
+  display: none;
+}
+#nav-global-skills .tot-nav-tab.is-muted {
+  opacity: 0.56;
+}
+@media (max-width: 900px) {
+  .tot-back-global-btn span {
+    display: none;
+  }
+  .tot-back-global-btn {
+    padding: 0 8px;
+  }
+}
+
+/* Reading Home Asymmetric Totoro Washi Layout */
+.rh-top-asym {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 14px;
+}
+.rh-bottom-asym {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 14px;
+}
+.rh-main-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 22px;
+}
+.rh-hero-copy {
+  width: 100%;
+}
+.rh-decks-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+  margin-top: 14px;
+}
+.rh-band-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rh-band-big {
+  font-size: 20px;
+  font-weight: 850;
+  color: var(--accent);
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: rgba(64, 125, 84, 0.12);
+  white-space: nowrap;
+}
+.rh-inline-resume {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid rgba(64, 125, 84, 0.34);
+  background: rgba(64, 125, 84, 0.08);
+}
+@media (max-width: 960px) {
+  .rh-top-asym,
+  .rh-bottom-asym,
+  .rh-decks-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   CD-IELTS AUTHENTIC EXAM ROOM (Inspera / IDP / BC x Totoro)
+   ========================================================= */
+.rp-workspace.rp-theme-totoro {
+  --rp-bg: var(--surface-panel);
+  --rp-pane: var(--surface);
+  --rp-pane-alt: var(--surface-item);
+  background: var(--rp-bg);
+}
+.rp-workspace.rp-theme-night {
+  --surface: #1b1d1b;
+  --surface-panel: #141614;
+  --surface-item: #222522;
+  --bg-soft: #141614;
+  --ink: #eef0ec;
+  --ink-2: #b4bab1;
+  --border: #323732;
+  --accent: #7ec495;
+  background: #141614;
+  color: #eef0ec;
+}
+.rp-cd-topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+}
+.rp-cd-topbar .rp-top-center {
+  display: flex;
+  justify-content: center;
+}
+.rp-cd-topbar .rp-top-right {
+  justify-content: flex-end;
+}
+.rp-cd-qrange {
+  font-size: 11.5px;
+  font-weight: 750;
+  color: var(--ink-2);
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.rp-cd-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.rp-clock-svg {
+  width: 17px;
+  height: 17px;
+  color: var(--accent);
+}
+.rp-clock-lbl {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+}
+.rp-cd-clock.is-warn {
+  border-color: #d97706;
+  color: #b45309;
+  background: rgba(245, 158, 11, 0.12);
+}
+.rp-cd-clock.is-critical {
+  border-color: #dc2626;
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.12);
+}
+.rp-tool-btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.rp-tool-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.rp-cd-part-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 14px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-item, rgba(127, 138, 128, 0.08));
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.rp-resizer {
+  width: 12px;
+  background: var(--border);
+}
+.rp-resizer-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.rp-q-group-banner {
+  padding: 10px 13px;
+  border-radius: 10px;
+  background: var(--surface-item, rgba(127, 138, 128, 0.08));
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.rp-q-group-banner .rp-q-group-inst {
+  margin-bottom: 0;
+}
+.rp-q-card.is-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(64, 125, 84, 0.16);
+}
+.rp-gap-inline {
+  display: inline-block;
+  width: 165px;
+  max-width: 100%;
+  padding: 3px 9px;
+  margin: 0 4px;
+  border-radius: 7px;
+  border: 1.5px solid var(--accent);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 700;
+  vertical-align: baseline;
+}
+.rp-flag-btn {
+  width: auto;
+  height: 26px;
+  padding: 0 9px;
+  font-size: 11.5px;
+  font-weight: 750;
+}
+
+/* Signature CD-IELTS Bottom Navigator: Square (unanswered/answered) vs Circle (Review!) */
+.rp-cd-footer {
+  padding: 8px 14px;
+}
+.rp-cd-footer-left,
+.rp-cd-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rp-cd-parts {
+  display: inline-flex;
+  gap: 4px;
+  padding-right: 8px;
+  border-right: 1px solid var(--border);
+}
+.rp-cd-parts .rp-exam-ptab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.rp-cd-parts .rp-exam-ptab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.rp-cd-parts .rp-exam-ptab small {
+  opacity: 0.78;
+  font-size: 11px;
+}
+.rp-nav-dot {
+  border-radius: 5px;
+  transition: transform 110ms ease, border-radius 140ms ease;
+}
+.rp-nav-dot.is-current {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+.rp-nav-dot.is-review-circle {
+  border-radius: 50% !important;
+  border: 2px solid #d97706 !important;
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
+}
+.rp-dot-key.rev {
+  border-radius: 50%;
+  border: 2px solid #d97706;
+  background: transparent;
+}
+.rp-cd-step-btns {
+  display: inline-flex;
+  gap: 5px;
+}
+.rp-step-btn {
+  width: 32px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.rp-step-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Sticky Notes Side Drawer (CD-IELTS Inspera Notes) */
+.rp-notes-drawer {
+  position: absolute;
+  top: 56px;
+  right: 0;
+  bottom: 48px;
+  width: 310px;
+  max-width: 88vw;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: -10px 0 28px rgba(12, 24, 16, 0.14);
+  z-index: 40;
+  display: none;
+  flex-direction: column;
+  padding: 12px 14px;
+  gap: 10px;
+}
+.rp-notes-drawer.open {
+  display: flex;
+}
+.rp-notes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.rp-notes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rp-notes-form textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-item, var(--surface));
+  color: var(--ink);
+  font-size: 12.5px;
+  font-family: inherit;
+}
+.rp-notes-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rp-note-item {
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(217, 119, 6, 0.28);
+  background: rgba(250, 204, 21, 0.12);
+  font-size: 12.5px;
+}
+.rp-note-quote {
+  font-style: italic;
+  color: var(--ink-2);
+  font-size: 11.8px;
+  margin-bottom: 4px;
+}
+.rp-note-text {
+  color: var(--ink);
+  line-height: 1.45;
+}
+.rp-note-del {
+  margin-top: 5px;
+  border: 0;
+  background: transparent;
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.rp-notes-empty {
+  font-size: 12.2px;
+  color: var(--ink-2);
+  line-height: 1.5;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px dashed var(--border);
+}
+
+@media (max-width: 960px) {
+  .rp-cd-topbar {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .rp-cd-topbar .rp-top-center,
+  .rp-cd-topbar .rp-top-right {
+    justify-content: flex-start;
+  }
+}
