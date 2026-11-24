@@ -404,8 +404,8 @@
     el.innerHTML = `
       <div class="modal-card" style="max-width:560px;" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <div style="display:flex;align-items:center;gap:9px;min-width:0;">
-            <span class="tip-pill" id="lt-brief-pill" style="margin:0;">LISTENING</span>
+          <div style="display:flex;align-items:center;gap:9px;min-width:0;flex:1;">
+            <span class="tip-pill lt-nowrap-pill" id="lt-brief-pill" style="margin:0;">LISTENING</span>
             <span id="lt-brief-title" style="font-weight:750;font-size:14.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
           </div>
           <button type="button" class="btn-icon-glass" style="width:30px;height:30px;" onclick="ListeningTasksModule.closeTaskBrief()">✕</button>
@@ -498,16 +498,61 @@
     modal.classList.add('open');
   }
 
+  function formatListeningPos(posRaw) {
+    const p = String(posRaw || '').trim().toLowerCase();
+    if (p === 'n' || p === 'noun') return 'Danh từ';
+    if (p === 'v' || p === 'verb') return 'Động từ';
+    if (p === 'a' || p === 'adj' || p === 'adjective') return 'Tính từ';
+    if (p === 'r' || p === 'adv' || p === 'adverb') return 'Trạng từ';
+    if (p === 'cue') return 'Tín hiệu';
+    return posRaw || 'Từ vựng';
+  }
+
+  function cleanModalTitle(t) {
+    return `${t.label} · ${shortTopicTitle(t)}`;
+  }
+
+  function openPracticePicker(kind) {
+    const tasks = getTasksData().tasks || [];
+    const progress = loadProgress();
+    const list = kind === 'map'
+      ? tasks.filter((t) => t.isMapTask)
+      : tasks.filter((t) => t.hasFullTests && !t.isMapTask);
+    const modal = ensureBriefModal();
+    const pillEl = document.getElementById('lt-brief-pill');
+    const titleEl = document.getElementById('lt-brief-title');
+    const bodyEl = document.getElementById('lt-brief-body');
+    if (pillEl) pillEl.textContent = kind === 'map' ? 'MAP LABELLING' : 'NOTE COMPLETION';
+    if (titleEl) titleEl.textContent = kind === 'map' ? 'Chọn bài Bản đồ Map Labelling' : 'Chọn bài Note Completion (Part 1–4)';
+    if (bodyEl) {
+      bodyEl.innerHTML = `
+        <div class="lt-picker-list">
+          ${list.map((t) => {
+            const r = progress[t.id];
+            const scoreTxt = r?.t3Total ? `Điểm: ${r.t3Score}/${r.t3Total}` : 'Audio Neural 1.25×';
+            return `
+              <button type="button" class="lt-prac-row" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(t.id)}', 3)">
+                <span><strong>${esc(t.label)}</strong> · ${esc(shortTopicTitle(t))}</span>
+                <span class="lt-prac-go">${esc(scoreTxt)} →</span>
+              </button>`;
+          }).join('')}
+        </div>
+      `;
+    }
+    modal.classList.add('open');
+  }
+
   /* ---------------------------------------------------------
-     DEDICATED LISTENING PRACTICE SCREEN (#lp-app-root) — ZERO READING LEAKAGE!
+     DEDICATED LISTENING PRACTICE SCREEN (#lp-app-root) — 1:1 Match to Reading Practice
      --------------------------------------------------------- */
   function renderPracticeScreen() {
     const root = document.getElementById('lp-app-root');
     if (!root) return;
     const tasks = getTasksData().tasks || [];
-    const progress = loadProgress();
     const mapTasks = tasks.filter((t) => t.isMapTask);
     const noteTasks = tasks.filter((t) => t.hasFullTests && !t.isMapTask);
+    const firstMapId = mapTasks[0]?.id || 'lmap_01';
+    const firstNoteId = noteTasks[0]?.id || 'lp1_01';
 
     root.innerHTML = `
       <div class="tot-section-shell ink-brackets has-stamp">
@@ -518,59 +563,48 @@
             </span>
             <div>
               <h2 class="tot-shell-title">Luyện nghe · Practice</h2>
-              <p class="tot-shell-sub">Đề luyện nghe IELTS Listening thực chiến (Audio Neural 1.25× · Không phát lại khi làm bài).</p>
+              <p class="tot-shell-sub">Chọn luyện Bản đồ Map Labelling, Note Completion Part 1–4 hoặc mở lộ trình Task theo chủ đề.</p>
             </div>
           </div>
         </div>
 
         <div class="lt-prac-grid">
-          <article class="tot-exam-card ink-brackets">
-            <div class="rp-card-top">
-              <span class="rp-tag">MAP LABELLING · PART 2</span>
-              <span class="rp-count-pill">${mapTasks.length} bài bản đồ SVG</span>
+          <article class="tot-exam-card lt-prac-card ink-brackets">
+            <div class="lt-prac-card-top">
+              <span class="rp-tag">MAP LABELLING</span>
+              <span class="rp-count-pill">${mapTasks.length} bài bản đồ</span>
             </div>
-            <h3 class="rp-card-title">Bản đồ &amp; Sơ đồ mặt bằng (Map Labelling)</h3>
-            <p class="rp-card-desc">Nghe chỉ đường trên bản đồ công viên, thị trấn có bùng binh và mặt bằng tòa nhà — đối chiếu 2 cột Transcript 3 màu + Bản đồ chấm Xanh/Đỏ.</p>
-            <div class="lt-prac-list">
-              ${mapTasks.map((t) => {
-                const r = progress[t.id];
-                const sc = r?.t3Total ? `${r.t3Score}/${r.t3Total}` : 'Làm ngay →';
-                return `<button type="button" class="lt-prac-row" onclick="ListeningTasksModule.openExam('${esc(t.id)}', 3)">
-                  <span><strong>${esc(t.label)}</strong> · ${esc(shortTopicTitle(t))}</span>
-                  <span class="lt-prac-go">${esc(sc)}</span>
-                </button>`;
-              }).join('')}
+            <h3 class="rp-card-title">Bản đồ &amp; Sơ đồ · Part 2</h3>
+            <p class="rp-card-desc">Bản đồ công viên, thị trấn có bùng binh và mặt bằng tòa nhà — nghe 1 lần 1.25×, đối chiếu Transcript 3 màu và Map chấm trực tiếp.</p>
+            <div class="lt-prac-card-foot">
+              <button type="button" class="tot-demo-btn" onclick="ListeningTasksModule.openPracticePicker('map')">Chọn bài Map</button>
+              <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstMapId)}', 3)">Làm Map 01</button>
             </div>
           </article>
 
-          <article class="tot-exam-card ink-brackets">
-            <div class="rp-card-top">
-              <span class="rp-tag">NOTE COMPLETION · PART 1–4</span>
-              <span class="rp-count-pill">${noteTasks.length} bài chuẩn Cambridge</span>
+          <article class="tot-exam-card lt-prac-card ink-brackets">
+            <div class="lt-prac-card-top">
+              <span class="rp-tag">NOTE COMPLETION</span>
+              <span class="rp-count-pill">${noteTasks.length} bài Part 1–4</span>
             </div>
-            <h3 class="rp-card-title">Thực chiến Note Completion (Part 1 – Part 4)</h3>
-            <p class="rp-card-desc">10 giây đoán từ loại → nghe 1 lần duy nhất tốc độ 1.25× → chấm chính tả chuẩn Cambridge &amp; mở khóa nghe lại từng câu.</p>
-            <div class="lt-prac-list">
-              ${noteTasks.map((t) => {
-                const r = progress[t.id];
-                const sc = r?.t3Total ? `${r.t3Score}/${r.t3Total}` : 'Làm ngay →';
-                return `<button type="button" class="lt-prac-row" onclick="ListeningTasksModule.openExam('${esc(t.id)}', 3)">
-                  <span><strong>${esc(t.label)}</strong> · ${esc(shortTopicTitle(t))}</span>
-                  <span class="lt-prac-go">${esc(sc)}</span>
-                </button>`;
-              }).join('')}
+            <h3 class="rp-card-title">Thực chiến · Note Completion</h3>
+            <p class="rp-card-desc">10 giây đoán từ loại trước khi nghe, băng Neural 1.25× không phát lại, chấm chính tả chuẩn Cambridge và mở khóa nghe lại từng câu.</p>
+            <div class="lt-prac-card-foot">
+              <button type="button" class="tot-demo-btn" onclick="ListeningTasksModule.openPracticePicker('note')">Chọn bài nghe</button>
+              <button type="button" class="btn btn-primary tot-demo-btn" onclick="ListeningTasksModule.openExam('${esc(firstNoteId)}', 3)">Làm Part 1</button>
             </div>
           </article>
 
-          <article class="tot-exam-card ink-brackets">
-            <div class="rp-card-top">
+          <article class="tot-exam-card lt-prac-card ink-brackets">
+            <div class="lt-prac-card-top">
               <span class="rp-tag">KHO ĐỀ GỐC</span>
               <span class="rp-count-pill">282 Sections</span>
             </div>
-            <h3 class="rp-card-title">Cambridge IELTS · Achieve · Barron's Listening</h3>
-            <p class="rp-card-desc">Kho 282 bài nghe gốc đã tách sạch câu hỏi, đáp án &amp; transcript đang được ghép audio gốc từng section để mở rộng thêm vào Practice.</p>
-            <div style="margin-top:auto;padding-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-              <button type="button" class="btn btn-primary" onclick="window.TotoroUI?.switchView?.('task', {fromUser:true})">Về danh sách Task Listening →</button>
+            <h3 class="rp-card-title">Cambridge · Achieve · Barron's</h3>
+            <p class="rp-card-desc">282 bài nghe gốc đã tách câu hỏi, đáp án và transcript chuẩn — trong lúc chờ ghép audio gốc, hãy luyện trọn bộ 139 Task theo Topic.</p>
+            <div class="lt-prac-card-foot">
+              <button type="button" class="tot-demo-btn" onclick="window.TotoroUI?.enterSkillMode?.('Listening', 'flashcard')">Học Flashcard</button>
+              <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI?.switchView?.('task', {fromUser:true})">Mở 139 Task</button>
             </div>
           </article>
         </div>
@@ -591,11 +625,14 @@
     el.innerHTML = `
       <div class="modal-card lt-exam-card" onclick="event.stopPropagation()">
         <div class="modal-header lt-exam-header">
-          <div style="display:flex; align-items:center; gap:10px; min-width:0; flex-wrap:wrap;">
-            <span class="tip-pill" id="lt-exam-stage-pill" style="margin:0;">TEST 1 · NGHE &amp; VIẾT</span>
-            <div class="modal-title" id="lt-exam-title" style="font-size:16.5px;">Listening Task</div>
+          <div class="lt-exam-hdr-left">
+            <span class="tip-pill lt-nowrap-pill" id="lt-exam-stage-pill" style="margin:0;">TEST 1 · NGHE &amp; VIẾT</span>
+            <div class="modal-title lt-exam-title" id="lt-exam-title">Listening Task</div>
           </div>
-          <button type="button" class="btn-icon-glass" style="width:34px; height:34px;" onclick="ListeningTasksModule.closeExam()" title="Đóng">✕</button>
+          <div class="lt-exam-hdr-right">
+            <div class="lt-stepper" id="lt-exam-stepper" aria-label="Tiến trình bài thi"></div>
+            <button type="button" class="btn-icon-glass" style="width:32px; height:32px; flex-shrink:0;" onclick="ListeningTasksModule.closeExam()" aria-label="Đóng bài thi" title="Đóng">✕</button>
+          </div>
         </div>
         <div class="modal-body lt-exam-body" id="lt-exam-body"></div>
       </div>
@@ -680,7 +717,23 @@
     if (!examState) return;
     const pill = document.getElementById('lt-exam-stage-pill');
     const title = document.getElementById('lt-exam-title');
-    if (title) title.textContent = `${examState.task.label} · ${examState.task.theme || examState.task.topicTitle || ''}`;
+    const stepper = document.getElementById('lt-exam-stepper');
+    if (title) title.textContent = cleanModalTitle(examState.task);
+
+    if (stepper) {
+      const has3 = Boolean(examState.task.hasFullTests);
+      if (has3) {
+        const s3Lbl = examState.task.test3MapLabelling ? '3. Map' : '3. Note';
+        stepper.innerHTML = [
+          { n: 1, lbl: '1. Viết' },
+          { n: 2, lbl: '2. Hội thoại' },
+          { n: 3, lbl: s3Lbl },
+        ].map((st) => `<span class="lt-step-dot ${examState.stage === st.n ? 'is-active' : (examState.stage > st.n ? 'is-done' : '')}">${st.lbl}</span>`).join('');
+        stepper.style.display = 'inline-flex';
+      } else {
+        stepper.style.display = 'none';
+      }
+    }
 
     if (examState.stage === 1) {
       if (pill) pill.textContent = `TEST 1 · NGHE & VIẾT (${examState.words.length}/${examState.words.length} TỪ)`;
@@ -765,9 +818,9 @@
         </div>
 
         <div class="lt-t1-cue">
-          <span class="rl-cue-pos">${esc(item.pos || 'vocab')}</span>
+          <span class="rl-cue-pos">${esc(formatListeningPos(item.pos))}</span>
           <span class="lt-t1-meaning">${esc(item.clean_meaning || item.meaning || '')}</span>
-          ${item.spelling_trap ? `<span class="lt-trap-pill">⚠️ ${esc(item.spelling_trap)}</span>` : ''}
+          ${item.spelling_trap ? `<span class="lt-trap-pill">${esc(item.spelling_trap)}</span>` : ''}
         </div>
 
         <form class="lt-t1-form" onsubmit="ListeningTasksModule.submitT1Word(event)">
@@ -1113,7 +1166,7 @@
       return `
         <g class="${cls}">
           <rect x="${lm.x}" y="${lm.y}" width="${lm.w}" height="${lm.h}" rx="6"/>
-          <text x="${cx}" y="${cy}" text-anchor="middle">${isStart ? '📍 ' : ''}${esc(lm.label)}</text>
+          <text x="${cx}" y="${cy}" text-anchor="middle">${isStart ? '● ' : ''}${esc(lm.label)}</text>
         </g>`;
     }).join('');
 
@@ -1611,6 +1664,7 @@
   window.ListeningTasksModule = {
     renderHub,
     renderPracticeScreen,
+    openPracticePicker,
     openTaskBrief,
     closeTaskBrief,
     openSummaryModal,
