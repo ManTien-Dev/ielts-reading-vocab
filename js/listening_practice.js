@@ -11,7 +11,7 @@
   'use strict';
 
   const STORAGE_KEY_BASE = 'ielts_listening_practice_v1_';
-  const BANK_VERSION = '20261125g';
+  const BANK_VERSION = '20261125m';
 
   const _loadedBanks = {};
   const _bankPromises = {};
@@ -1296,7 +1296,7 @@
       if (exactEl) {
         exactEl.textContent = state.session.mode === 'practice'
           ? formatMMSS(state.session.remainingSec)
-          : `(${formatMMSS(state.session.remainingSec)})`;
+          : `· ${formatMMSS(state.session.remainingSec)}`;
       }
       if (btnEl) {
         btnEl.classList.toggle('is-warn', state.session.remainingSec <= 300 && state.session.remainingSec > 60);
@@ -1534,7 +1534,8 @@
     // 3. Split flat children into semantic Question Groups at every "Questions X-Y" heading
     const isGroupStart = (el) => {
       if (!el || el.nodeType !== 1) return false;
-      if (el.classList.contains('prac-sheet-eyebrow')) return false;
+      if (el.classList.contains('prac-sheet-eyebrow') || el.classList.contains('lp-ex-answer-strip')) return false;
+      if (el.querySelector && el.querySelector('input, select, table, img')) return false;
       if (!/^(H2|H3|H4|H5|P|DIV)$/.test(el.tagName)) return false;
       const txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
       return /^Questions?\s+\d+/i.test(txt) && txt.length < 44;
@@ -2095,7 +2096,7 @@
       : `
         <button type="button" class="ins-hdr-timer${timerUrgency}" id="lp-hdr-timer" title="Thời gian thi thật">
           <span id="lp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
-          <span class="ins-timer-exact tabular" id="lp-timer-exact">(${formatMMSS(s.remainingSec)})</span>
+          <span class="ins-timer-exact tabular" id="lp-timer-exact">· ${formatMMSS(s.remainingSec)}</span>
         </button>
       `;
 
