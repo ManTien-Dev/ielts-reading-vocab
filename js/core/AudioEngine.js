@@ -8,6 +8,10 @@
   const MALE_NAME_RE = /\b(david|mark|male|daniel|ryan|guy|george|alex|richard|sean|james|andrew|brian|christopher|eric|roger|steffan|liam|william)\b/i;
   // Tiny 44-byte silent WAV used once on first touch to unlock HTMLAudioElement on iOS/iPadOS Safari
   const SILENT_WAV_DATA_URI = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+  // Local studio MP3 overrides for dictionary entries whose Youdao clip is defective (e.g., double-spoken)
+  const CURATED_WORD_AUDIO = {
+    'en-us:researcher': 'assets/audio/words/researcher_us.mp3',
+  };
 
   class AudioEngine {
     constructor() {
@@ -409,6 +413,59 @@
       this._emitPlaybackState(false);
     }
 
+    _playCuratedLocalAudio(relPath, clean, accent, rate, seq) {
+      if (!relPath) return false;
+      try {
+        const audio = this._ensureStudioAudio();
+        audio.muted = false;
+        audio.volume = 1.0;
+        audio.onplaying = null;
+        audio.onerror = null;
+        audio.onended = null;
+        try { audio.pause(); } catch (_) {}
+
+        let settled = false;
+        const fallback = () => {
+          if (settled || this._speakSeq !== seq) return;
+          settled = true;
+          this._clearWatchdogs();
+          if (!this.playYoudaoAudio(clean, accent, rate, seq, true)) {
+            this.speakViaBrowser(clean, accent, rate, seq, true, false);
+          }
+        };
+
+        audio.onplaying = () => {
+          settled = true;
+          this._audioUnlocked = true;
+          this._clearWatchdogs();
+          if (this._speakSeq === seq) this._emitPlaybackState(true);
+        };
+        audio.onended = () => {
+          if (this._speakSeq === seq) this._emitPlaybackState(false);
+        };
+        audio.onerror = () => fallback();
+
+        const numRate = Number(rate);
+        const studioRate = (Number.isFinite(numRate) && Math.abs(numRate - 0.92) > 0.14)
+          ? Math.max(0.68, Math.min(1.35, numRate))
+          : 1.0;
+
+        audio.src = relPath;
+        audio.playbackRate = studioRate;
+        const playPromise = audio.play?.();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch((err) => {
+            if (this._speakSeq !== seq) return;
+            if (err && err.name === 'AbortError') return;
+            fallback();
+          });
+        }
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
     canUseYoudaoAudio(clean) {
       try {
         // Strict R4 test/offline isolation: never emit external media requests in webdriver/localhost/offline
@@ -637,6 +694,11 @@
       const preferYoudao = (engine === 'youdao') || (engine === 'auto' && !hasPinnedBrowserVoice);
 
       if (preferYoudao) {
+        const curatedKey = `${youdaoAccent.toLowerCase()}:${clean.toLowerCase()}`;
+        const curatedPath = CURATED_WORD_AUDIO[curatedKey];
+        if (curatedPath && !navigator.webdriver && this._playCuratedLocalAudio(curatedPath, clean, youdaoAccent, rate, seq)) {
+          return true;
+        }
         if (this.playYoudaoAudio(clean, youdaoAccent, rate, seq, true)) {
           return true;
         }
