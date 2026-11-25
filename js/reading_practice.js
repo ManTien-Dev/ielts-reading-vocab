@@ -3329,7 +3329,7 @@
     confirmFinishAndExit() {
       if (!state.session) return;
       const s = state.session;
-      this.closePreSubmitModal();
+      const allQ = getAllSessionQuestions();
       const res = computeReviewResult();
       const isMastered = res.total > 0 && res.score === res.total;
 
@@ -3350,14 +3350,66 @@
         completedAt: Date.now()
       });
 
+      const reportRows = allQ.map((q) => {
+        const val = String(s.answers[q._qid] ?? '').trim();
+        return {
+          num: q.num,
+          pIdx: q._pIdx,
+          qid: q._qid,
+          answer: val,
+          ok: isAnswerCorrect(q, val)
+        };
+      });
+
+      s.attemptCount = Math.max(1, (Number(s.attemptCount) || 0) + 1);
+      s.lastSubmitReport = {
+        attempt: s.attemptCount,
+        score: res.score,
+        total: res.total,
+        band: res.band,
+        elapsedSec: res.elapsedSec,
+        isMastered,
+        endedEarly: !isMastered,
+        rows: reportRows
+      };
+
+      if (isMastered) {
+        s.mode = 'review';
+        s.endedEarly = false;
+        s.wrongSet = {};
+        allQ.forEach((q) => { s.lockedCorrect[q._qid] = true; });
+        s.reviewResult = res;
+        renderExamWorkspace();
+      } else {
+        s.endedEarly = true;
+      }
+      this.openResultModal();
+    },
+
+    finishExitToHub() {
+      stopTimer();
+      stopReadingAntiCheat();
+      const modal = document.getElementById('rp-presubmit-modal');
+      if (modal) modal.classList.remove('open');
       state.pendingSelection = null;
       document.body.classList.remove('rp-exam-fullscreen');
       state.view = 'source';
       state.session = null;
       renderHub();
-      toast(isMastered
-        ? `Hoàn tất 100%: ${res.score}/${res.total} câu đúng — Đã mở khóa Solution!`
-        : `Đã kết thúc & chấm điểm: ${res.score}/${res.total} câu đúng (cần đạt 100% để mở Solution).`);
+    },
+
+    openReviewFromResult() {
+      if (!state.session) return;
+      const s = state.session;
+      if (!isTeacherBypass() && !s.lastSubmitReport?.isMastered && s.mode !== 'review') return;
+      stopTimer();
+      stopReadingAntiCheat();
+      s.endedEarly = false;
+      s.mode = 'review';
+      s.reviewResult = s.reviewResult || computeReviewResult();
+      const modal = document.getElementById('rp-presubmit-modal');
+      if (modal) modal.classList.remove('open');
+      renderExamWorkspace();
     },
 
     switchExamPassage(idx) {
@@ -3716,7 +3768,12 @@
     closePreSubmitModal(ev) {
       const modal = document.getElementById('rp-presubmit-modal');
       if (!modal) return;
-      if (!ev || ev.target === modal) modal.classList.remove('open');
+      if (!ev || ev.target === modal) {
+        modal.classList.remove('open');
+        if (state.session?.endedEarly) {
+          this.finishExitToHub();
+        }
+      }
     },
 
     confirmSubmit() {
@@ -3844,16 +3901,24 @@
       const titleEl = document.getElementById('rp-presubmit-title');
       const pct = report.total > 0 ? Math.round((report.score / report.total) * 100) : 0;
       const wrongCnt = Math.max(0, report.total - report.score);
+      const isEndedEarly = !!report.endedEarly && !report.isMastered;
+      const canPreviewSolutions = report.isMastered || isTeacherBypass();
       if (titleEl) {
-        titleEl.innerHTML = `${report.isMastered ? 'Hoàn thành 100%' : 'Kết quả chấm điểm'}<span class="rp-res-head-meta tabular">Lần nộp #${report.attempt} · ${formatDuration(report.elapsedSec)}</span>`;
+        const metaTxt = isEndedEarly
+          ? `Đã kết thúc · ${formatDuration(report.elapsedSec)}`
+          : `Lần nộp #${report.attempt} · ${formatDuration(report.elapsedSec)}`;
+        titleEl.innerHTML = `${report.isMastered ? 'Hoàn thành 100%' : 'Kết quả chấm điểm'}<span class="rp-res-head-meta tabular">${metaTxt}</span>`;
       }
 
       const rowsHtml = (report.rows || []).map((r) => {
         const displayAns = r.answer ? esc(r.answer) : 'Chưa làm';
+        const rowClick = isEndedEarly
+          ? (canPreviewSolutions ? `ReadingPracticeApp.openReviewFromResult(); ReadingPracticeApp.jumpToQuestion(${r.pIdx}, '${esc(r.qid)}')` : '')
+          : `ReadingPracticeApp.jumpFromResult(${r.pIdx}, '${esc(r.qid)}')`;
         return `
           <button type="button" class="rp-res-row ${r.ok ? 'is-ok' : 'is-bad'}"
-            onclick="ReadingPracticeApp.jumpFromResult(${r.pIdx}, '${esc(r.qid)}')"
-            title="${r.ok ? `Câu ${r.num}: Đúng` : `Câu ${r.num}: Sai — bấm để đi tới câu này`}">
+            ${rowClick ? `onclick="${rowClick}"` : 'disabled style="cursor:default;"'}
+            title="${r.ok ? `Câu ${r.num}: Đúng` : `Câu ${r.num}: Sai`}">
             <span class="rp-res-qnum tabular">${r.num}</span>
             <span class="rp-res-ans ${r.answer ? '' : 'is-blank'}">${displayAns}</span>
             <span class="rp-res-mark ${r.ok ? 'is-ok' : 'is-bad'}" aria-label="${r.ok ? 'Đúng' : 'Sai'}">${r.ok ? '✓' : '✕'}</span>
@@ -3862,22 +3927,33 @@
       }).join('');
 
       const noteHtml = report.isMastered
-        ? `<div class="rp-res-note">Xuất sắc! Bạn đã hoàn thành đúng <strong>100%</strong>. Toàn bộ <strong>Solution, Paraphrase Mapping &amp; Từ điển</strong> đã được mở khóa.</div>`
-        : `<div class="rp-res-note">Các câu đúng (<strong>✓</strong>) đã được giữ lại. Bấm trực tiếp vào câu sai (<strong>✕</strong>) hoặc nút <strong>Làm lại câu sai</strong> để sửa rồi bấm <strong>Nộp lại</strong>.</div>`;
+        ? `<div class="rp-res-note">Xuất sắc! Bạn đã hoàn thành đúng <strong>100%</strong>. Toàn bộ <strong>Solution, Locate &amp; Từ điển</strong> đã được mở khóa.</div>`
+        : (isEndedEarly
+          ? `<div class="rp-res-note">Lượt làm đã kết thúc và lưu kết quả. Bạn có thể bấm <strong>Làm lại bài</strong> hoặc quay về <strong>Kho đề</strong>${isTeacherBypass() ? ' (tài khoản Giáo viên có thể bấm <strong>Xem giải &amp; Locate</strong> ngay).' : ' (đạt 100% để mở khóa Solution &amp; Từ điển).'}</div>`
+          : `<div class="rp-res-note">Các câu đúng (<strong>✓</strong>) đã được giữ lại. Bấm trực tiếp vào câu sai (<strong>✕</strong>) hoặc nút <strong>Làm lại câu sai</strong> để sửa rồi bấm <strong>Nộp lại</strong>.</div>`);
 
       const footHtml = report.isMastered
         ? `
           <div class="rp-res-foot">
-            <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal(); ReadingPracticeApp.exitToHub();">← Về kho đề</button>
+            <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.finishExitToHub()">← Về kho đề</button>
             <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.closePreSubmitModal()">Xem lời giải chi tiết →</button>
           </div>
         `
-        : `
-          <div class="rp-res-foot">
-            <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal()">Đóng</button>
-            <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.focusFirstWrongFromResult()">Làm lại câu sai →</button>
-          </div>
-        `;
+        : (isEndedEarly
+          ? `
+            <div class="rp-res-foot">
+              <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.retryCurrent()">Làm lại bài</button>
+              ${isTeacherBypass() ? `<button type="button" class="btn-subtle" id="rp-res-teacher-sol-btn" onclick="ReadingPracticeApp.openReviewFromResult()">Xem giải &amp; Locate</button>` : ''}
+              <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.finishExitToHub()">← Về kho đề</button>
+            </div>
+          `
+          : `
+            <div class="rp-res-foot">
+              <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal()">Đóng</button>
+              ${isTeacherBypass() ? `<button type="button" class="btn-subtle" id="rp-res-teacher-sol-btn" onclick="ReadingPracticeApp.openReviewFromResult()">Xem giải &amp; Locate</button>` : ''}
+              <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.focusFirstWrongFromResult()">Làm lại câu sai →</button>
+            </div>
+          `);
 
       body.innerHTML = `
         <div class="rp-res-kpis">
