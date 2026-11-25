@@ -1334,6 +1334,26 @@
     });
   }
 
+  const LP_PASTEL_PENS = [
+    { id: 'yellow', name: 'Vàng nắng',     role: 'Ý chính',    swatch: '#FDE047' },
+    { id: 'green',  name: 'Xanh bạc hà',   role: 'Dẫn chứng',  swatch: '#86EFAC' },
+    { id: 'pink',   name: 'Hồng đào',      role: 'Từ bẫy',     swatch: '#F9A8D4' },
+    { id: 'blue',   name: 'Xanh bầu trời', role: 'Số liệu',    swatch: '#7DD3FC' },
+    { id: 'purple', name: 'Tím oải hương', role: 'Từ vựng',    swatch: '#D8B4FE' }
+  ];
+
+  function refreshPracticeProgressPill() {
+    if (!state.session || state.session.mode !== 'practice') return;
+    const parts = getSessionParts();
+    const totalQ = parts.reduce((acc, p) => acc + (p.answers || []).length, 0);
+    const doneQ = parts.reduce((acc, p) => acc + getPartAnsweredCount(p), 0);
+    const pct = totalQ ? Math.round((doneQ / totalQ) * 100) : 0;
+    const numEl = document.getElementById('lp-prac-prog-num');
+    const fillEl = document.getElementById('lp-prac-prog-fill');
+    if (numEl) numEl.textContent = String(doneQ);
+    if (fillEl) fillEl.style.width = `${pct}%`;
+  }
+
   function refreshBottomNavStates() {
     if (!state.session) return;
     const ans = state.session.answers || {};
@@ -1348,6 +1368,7 @@
       const el = document.querySelector(`#lp-ins-pcol-${idx} .lp-ins-pcnt`);
       if (el) el.textContent = `${getPartAnsweredCount(pt)} of ${(pt.answers || []).length}`;
     });
+    refreshPracticeProgressPill();
   }
 
   let _pendingSelRange = null;
@@ -1380,23 +1401,37 @@
     const pop = document.getElementById('lp-hl-toolbar');
     if (!pop) return;
     pop.classList.remove('hidden');
-    const top = Math.max(64, rect.top - 42);
-    const left = Math.max(12, Math.min(window.innerWidth - 220, rect.left + rect.width / 2 - 90));
+    const top = Math.max(58, rect.top - 46);
+    const left = Math.max(12, Math.min(window.innerWidth - 280, rect.left + rect.width / 2 - 120));
     pop.style.top = `${top}px`;
     pop.style.left = `${left}px`;
   }
 
-  function applyExamHighlight() {
+  function updatePracticeHlCount() {
+    const cnt = document.querySelectorAll('#lp-ex-paper mark.lp-ins-hl').length;
+    const btn = document.getElementById('lp-prac-hl-clear');
+    const span = document.getElementById('lp-prac-hl-cnt');
+    if (span) span.textContent = String(cnt);
+    if (btn) {
+      btn.classList.toggle('is-empty', cnt === 0);
+      btn.disabled = cnt === 0;
+    }
+  }
+
+  function applyExamHighlight(colorId) {
     if (!_pendingSelRange) return;
+    const c = colorId || (state.session?.activePenColor || 'yellow');
+    if (state.session) state.session.activePenColor = c;
+    const cls = `lp-ins-hl hl-${c}`;
     try {
       const mark = document.createElement('mark');
-      mark.className = 'lp-ins-hl';
+      mark.className = cls;
       _pendingSelRange.surroundContents(mark);
     } catch (_) {
       try {
         const frag = _pendingSelRange.extractContents();
         const mark = document.createElement('mark');
-        mark.className = 'lp-ins-hl';
+        mark.className = cls;
         mark.appendChild(frag);
         _pendingSelRange.insertNode(mark);
       } catch (__) {}
@@ -1404,6 +1439,7 @@
     try { window.getSelection()?.removeAllRanges(); } catch (_) {}
     _pendingSelRange = null;
     hideSelectionPopover();
+    updatePracticeHlCount();
   }
 
   function clearExamHighlight() {
@@ -1421,6 +1457,18 @@
     try { window.getSelection()?.removeAllRanges(); } catch (_) {}
     _pendingSelRange = null;
     hideSelectionPopover();
+    updatePracticeHlCount();
+  }
+
+  function clearAllPaperHighlights() {
+    const paper = document.getElementById('lp-ex-paper');
+    if (!paper) return;
+    paper.querySelectorAll('mark.lp-ins-hl').forEach((m) => {
+      const parent = m.parentNode;
+      while (m.firstChild) parent.insertBefore(m.firstChild, m);
+      parent.removeChild(m);
+    });
+    updatePracticeHlCount();
   }
 
   function addNoteFromSelection() {
@@ -1680,11 +1728,15 @@
     const qMax = curPartQs[curPartQs.length - 1]?.num || (part.partNum * 10);
     const ans = s.answers || {};
     const isPractice = s.mode === 'practice';
-    const contrastCls = `ins-contrast-${s.contrast || 'cd'}`;
+    const modeCls = isPractice ? 'ins-mode-practice' : 'ins-mode-exam';
+    const contrastKey = isPractice ? (s.contrast || 'totoro') : (s.contrast || 'cd');
+    const contrastCls = `ins-contrast-${contrastKey}`;
     const sizeCls = `ins-size-${s.textSize || 'regular'}`;
     const timerUrgency = s.remainingSec <= 60 ? ' is-critical' : (s.remainingSec <= 300 ? ' is-warn' : '');
     const curGlobalIdx = Math.max(0, allQs.findIndex((x) => x.num === Number(s.activeQNum || qMin)));
     const notesCount = (s.notes || []).length;
+    const totalAnswered = parts.reduce((acc, pt) => acc + getPartAnsweredCount(pt), 0);
+    const progressPct = allQs.length ? Math.round((totalAnswered / allQs.length) * 100) : 0;
 
     // 48px Official Inspera Bottom Parts (Expanded active Part + Collapsed other Parts)
     const bottomPartsHtml = parts.map((pt, pIdx) => {
@@ -1751,7 +1803,34 @@
       </aside>
     `;
 
-    const optionsOverlayHtml = `
+    // Anchored Totoro "Giao diện" Popover for Practice; Official Inspera Options Overlay for Exam
+    const practiceAppearancePopHtml = isPractice ? `
+      <div class="prac-pop-wrap" onclick="event.stopPropagation()">
+        <button type="button" class="prac-hdr-btn ${s.optionsOpen ? 'active' : ''}" id="lp-btn-options"
+          onclick="ListeningPracticeApp.toggleOptionsOverlay()" title="Tùy chỉnh nền giấy &amp; cỡ chữ" aria-label="Giao diện">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Giao diện</span>
+        </button>
+        <div class="prac-popover ${s.optionsOpen ? 'open' : ''}" id="lp-options-overlay" role="dialog" aria-label="Tùy chỉnh hiển thị">
+          <div>
+            <div class="prac-pop-lbl">Nền giấy làm bài</div>
+            <div class="prac-pop-seg" style="margin-bottom:12px;">
+              <button type="button" class="prac-seg-btn ${contrastKey === 'totoro' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('totoro')">Washi ấm</button>
+              <button type="button" class="prac-seg-btn ${contrastKey === 'cd' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('cd')">Trắng sáng</button>
+              <button type="button" class="prac-seg-btn ${contrastKey === 'sepia' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('sepia')">Giấy kem</button>
+            </div>
+          </div>
+          <div class="prac-pop-lbl">Cỡ chữ đề thi</div>
+          <div class="prac-pop-seg">
+            <button type="button" class="prac-seg-btn ${(s.textSize || 'regular') === 'regular' ? 'active' : ''}" onclick="ListeningPracticeApp.setTextSize('regular')">Vừa</button>
+            <button type="button" class="prac-seg-btn ${s.textSize === 'large' ? 'active' : ''}" onclick="ListeningPracticeApp.setTextSize('large')">Lớn</button>
+            <button type="button" class="prac-seg-btn ${s.textSize === 'xlarge' ? 'active' : ''}" onclick="ListeningPracticeApp.setTextSize('xlarge')">Rất lớn</button>
+          </div>
+        </div>
+      </div>
+    ` : '';
+
+    const optionsOverlayHtml = !isPractice ? `
       <div class="ins-options-overlay ${s.optionsOpen ? 'open' : ''}" id="lp-options-overlay">
         <div class="ins-options-head">
           <h2>Options</h2>
@@ -1766,17 +1845,14 @@
           <div class="ins-opt-card">
             <div class="ins-opt-sec-title">Contrast</div>
             <div class="ins-opt-choices">
-              <button type="button" class="ins-opt-row ${(s.contrast || 'cd') === 'cd' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('cd')">
-                <span>Black on white</span><span>${(s.contrast || 'cd') === 'cd' ? '✓' : ''}</span>
+              <button type="button" class="ins-opt-row ${contrastKey === 'cd' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('cd')">
+                <span>Black on white</span><span>${contrastKey === 'cd' ? '✓' : ''}</span>
               </button>
-              <button type="button" class="ins-opt-row ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('totoro')">
-                <span>Warm paper</span><span>${s.contrast === 'totoro' ? '✓' : ''}</span>
+              <button type="button" class="ins-opt-row ${contrastKey === 'dark' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('dark')">
+                <span>White on black</span><span>${contrastKey === 'dark' ? '✓' : ''}</span>
               </button>
-              <button type="button" class="ins-opt-row ${s.contrast === 'dark' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('dark')">
-                <span>White on black</span><span>${s.contrast === 'dark' ? '✓' : ''}</span>
-              </button>
-              <button type="button" class="ins-opt-row ${s.contrast === 'yellow' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('yellow')">
-                <span>Yellow on black</span><span>${s.contrast === 'yellow' ? '✓' : ''}</span>
+              <button type="button" class="ins-opt-row ${contrastKey === 'yellow' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('yellow')">
+                <span>Yellow on black</span><span>${contrastKey === 'yellow' ? '✓' : ''}</span>
               </button>
             </div>
           </div>
@@ -1799,54 +1875,169 @@
           <button type="button" class="ins-opt-exit-btn" onclick="ListeningPracticeApp.exitExam()">← Thoát ra kho đề</button>
         </div>
       </div>
+    ` : '';
+
+    const brandBlockHtml = isPractice
+      ? `
+        <button type="button" class="prac-back-btn" onclick="ListeningPracticeApp.exitExam()" title="Quay về kho đề" aria-label="Quay về kho đề">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <span>Kho đề</span>
+        </button>
+        <span class="prac-totoro-ico" aria-hidden="true">
+          <svg viewBox="0 0 36 36" fill="none">
+            <path d="M12.5 13L10 6.5C9.7 5.7 10.6 5.2 11.2 5.7L15.4 9.2" fill="#637067" stroke="#2F3B34" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M23.5 13L26 6.5C26.3 5.7 25.4 5.2 24.8 5.7L20.6 9.2" fill="#637067" stroke="#2F3B34" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M18 8.6C18 6.4 19.9 5.3 21.8 5.8C21.3 7.8 19.7 9 18 8.6Z" fill="#4E724D" stroke="#2F4D31" stroke-width="1" stroke-linejoin="round"/>
+            <path d="M9.5 23.5C9.5 15.2 13 10.2 18 10.2C23 10.2 26.5 15.2 26.5 23.5C26.5 28.4 23 30.8 18 30.8C13 30.8 9.5 28.4 9.5 23.5Z" fill="#6B756D" stroke="#2F3B34" stroke-width="1.4"/>
+            <ellipse cx="18" cy="24.5" rx="6.4" ry="4.6" fill="#EFE6D8"/>
+            <path d="M14.4 23.6L15.6 22.3L16.8 23.6M17.2 23.2L18.2 22L19.2 23.2M19.6 23.6L20.8 22.3L22 23.6" stroke="#5D645E" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="14.6" cy="16.2" r="1.65" fill="#FFFDF8"/><circle cx="14.8" cy="16.2" r="0.85" fill="#232B26"/>
+            <circle cx="21.4" cy="16.2" r="1.65" fill="#FFFDF8"/><circle cx="21.2" cy="16.2" r="0.85" fill="#232B26"/>
+            <ellipse cx="18" cy="17.1" rx="1.25" ry="0.65" fill="#232B26"/>
+          </svg>
+        </span>
+      `
+      : `<span class="ins-brand-mark">IELTS</span>`;
+
+    const timerBlockHtml = isPractice
+      ? `
+        <div class="prac-timer-pill">
+          <span class="prac-live-dot ${s.paused ? 'is-paused' : ''}" aria-hidden="true"></span>
+          ${s.showTimer !== false ? `
+            <button type="button" class="ins-hdr-timer" id="lp-hdr-timer" onclick="ListeningPracticeApp.togglePauseTimer()" title="Bấm để tạm dừng / tiếp tục đồng hồ">
+              <span class="tabular" id="lp-timer-exact">${formatMMSS(s.remainingSec)}</span>
+              <span class="sr-only" id="lp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
+              ${s.paused ? '<span class="ins-paused-tag">PAUSED</span>' : ''}
+            </button>
+          ` : `<span class="prac-timer-hidden-lbl">Tự do</span>`}
+          <button type="button" class="prac-timer-eye" onclick="ListeningPracticeApp.toggleTimerVisibility()" title="${s.showTimer !== false ? 'Ẩn đồng hồ' : 'Hiện đồng hồ'}" aria-label="${s.showTimer !== false ? 'Ẩn đồng hồ' : 'Hiện đồng hồ'}">
+            ${s.showTimer !== false
+              ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>'
+              : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>'}
+          </button>
+        </div>
+      `
+      : `
+        <button type="button" class="ins-hdr-timer${timerUrgency}" id="lp-hdr-timer" title="Thời gian thi thật">
+          <span id="lp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
+          <span class="ins-timer-exact tabular" id="lp-timer-exact">(${formatMMSS(s.remainingSec)})</span>
+        </button>
+      `;
+
+    const practiceProgPillHtml = isPractice ? `
+      <div class="prac-prog-pill tabular" title="Tiến độ trả lời bài hiện tại">
+        <span><strong id="lp-prac-prog-num">${totalAnswered}</strong>/${allQs.length} câu</span>
+        <span class="prac-prog-track" aria-hidden="true"><span class="prac-prog-fill" id="lp-prac-prog-fill" style="width:${progressPct}%;"></span></span>
+      </div>
+    ` : '';
+
+    const practiceStampSvg = isPractice ? `
+      <svg class="prac-folio-stamp" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+        <circle cx="40" cy="40" r="35" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 4"/>
+        <path d="M27 32L23.5 18L32.5 26C36.8 24.5 43.2 24.5 47.5 26L56.5 18L53 32C58.5 36.2 61.5 43 61.5 50.5C61.5 60.5 52.5 66 40 66C27.5 66 18.5 60.5 18.5 50.5C18.5 43 21.5 36.2 27 32Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M40 19.5C43.5 15.2 48.5 14.8 51.5 17.5C48 20.5 43.5 21.2 40 19.5Z" fill="currentColor" fill-opacity="0.18" stroke="currentColor" stroke-width="1.6"/>
+        <circle cx="32" cy="39" r="2.2" fill="currentColor"/><circle cx="48" cy="39" r="2.2" fill="currentColor"/>
+        <path d="M29.5 52L33 48.8L36.5 52M37.5 51L40 48.2L42.5 51M43.5 52L47 48.8L50.5 52" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    ` : '';
+
+    const selPopoverHtml = isPractice ? `
+      <div class="ins-sel-popover is-practice hidden" id="lp-hl-toolbar" role="toolbar" aria-label="Highlight màu pastel" onmousedown="event.stopPropagation()">
+        <div class="prac-pop-swatches">
+          ${LP_PASTEL_PENS.map((pen) => `
+            <button type="button"
+              class="prac-pop-dot ${(s.activePenColor || 'yellow') === pen.id ? 'is-active' : ''}"
+              style="--swatch:${pen.swatch};"
+              title="${esc(pen.name)} — ${esc(pen.role)}"
+              aria-label="Highlight ${esc(pen.name)}"
+              onclick="ListeningPracticeApp.applyExamHighlight('${pen.id}')"></button>
+          `).join('')}
+        </div>
+        <div class="prac-pop-divider" aria-hidden="true"></div>
+        <button type="button" class="ins-sel-act prac-pop-act" onclick="ListeningPracticeApp.addNoteFromSelection()" title="Tạo ghi chú">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Ghi chú</span>
+        </button>
+        <button type="button" class="ins-sel-clear prac-pop-clear" onclick="ListeningPracticeApp.clearExamHighlight()" title="Xóa màu đoạn chọn">Xóa</button>
+      </div>
+    ` : `
+      <div class="ins-sel-popover hidden" id="lp-hl-toolbar" onmousedown="event.stopPropagation()">
+        <button type="button" class="ins-sel-act" onclick="ListeningPracticeApp.addNoteFromSelection()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>Note</span>
+        </button>
+        <button type="button" class="ins-sel-act" onclick="ListeningPracticeApp.applyExamHighlight('yellow')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+          <span>Highlight</span>
+        </button>
+        <button type="button" class="ins-sel-clear" onclick="ListeningPracticeApp.clearExamHighlight()">Clear</button>
+      </div>
     `;
 
     root.innerHTML = `
-      <div class="ins-shell lp-ins-shell ${contrastCls} ${sizeCls}" id="lp-ins-workspace" data-mode="${esc(s.mode)}">
+      <div class="ins-shell lp-ins-shell ${modeCls} ${contrastCls} ${sizeCls}" id="lp-ins-workspace" data-mode="${esc(s.mode)}"
+        onclick="${isPractice && s.optionsOpen ? 'ListeningPracticeApp.toggleOptionsOverlay(false)' : ''}">
         <div class="ins-main-col">
-          <!-- 56px Official Inspera CD-IELTS Top Header -->
+          <!-- Workspace Header (Totoro Washi Studio for Practice · Official Inspera for Exam) -->
           <header class="ins-header">
             <div class="ins-hdr-left">
-              <span class="ins-brand-mark">IELTS</span>
+              ${brandBlockHtml}
               <div class="ins-hdr-meta">
                 <div class="ins-hdr-title">${esc(s.title)}</div>
-                <button type="button" class="ins-hdr-timer${timerUrgency}" id="lp-hdr-timer"
-                  onclick="${isPractice ? 'ListeningPracticeApp.togglePauseTimer()' : ''}"
-                  title="${isPractice ? 'Bấm để tạm dừng / tiếp tục đồng hồ' : 'Thời gian thi thật'}">
-                  <span id="lp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
-                  <span class="ins-timer-exact tabular" id="lp-timer-exact">(${formatMMSS(s.remainingSec)})</span>
-                  ${s.paused ? '<span class="ins-paused-tag">PAUSED</span>' : ''}
-                </button>
+                ${!isPractice ? timerBlockHtml : ''}
               </div>
             </div>
 
             <div class="ins-hdr-right">
-              <span class="lp-ins-mode-tag ${s.mode === 'exam' ? 'is-exam' : ''}">${s.mode === 'exam' ? 'Thi thật' : 'Luyện tập'}</span>
-              <button type="button" class="ins-hdr-ico ${s.notesOpen ? 'active' : ''}" onclick="ListeningPracticeApp.toggleNotesDrawer()" title="Notes" aria-label="Notes">
+              ${isPractice ? timerBlockHtml : '<span class="lp-ins-mode-tag is-exam">Thi thật</span>'}
+              ${practiceProgPillHtml}
+              <button type="button" class="ins-hdr-ico ${isPractice ? 'prac-hdr-ico' : ''} ${s.notesOpen ? 'active' : ''}" onclick="ListeningPracticeApp.toggleNotesDrawer()" title="Notes" aria-label="Notes">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 ${notesCount ? `<span class="ins-notes-badge">${notesCount}</span>` : ''}
               </button>
-              <button type="button" class="ins-hdr-ico ${s.optionsOpen ? 'active' : ''}" onclick="ListeningPracticeApp.toggleOptionsOverlay()" title="Options" aria-label="Options">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-              </button>
-              <button type="button" class="ins-hdr-exit" onclick="ListeningPracticeApp.exitExam()">Thoát</button>
+              ${isPractice ? practiceAppearancePopHtml : `
+                <button type="button" class="ins-hdr-ico ${s.optionsOpen ? 'active' : ''}" onclick="ListeningPracticeApp.toggleOptionsOverlay()" title="Options" aria-label="Options">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <button type="button" class="ins-hdr-exit" onclick="ListeningPracticeApp.exitExam()">Thoát</button>
+              `}
             </div>
           </header>
 
-          <!-- Official Listening Audio Strip -->
+          <!-- Official Listening Audio Strip (Washi styled in Practice · Official locked in Exam) -->
           ${renderAudioBarHtml(part, false)}
 
-          <!-- Full-width Official Inspera Part Sub-Banner -->
-          <div class="ins-part-banner">
-            <strong>Part ${part.partNum || 1}</strong>
-            <span>Listen and answer questions ${qMin}–${qMax}.</span>
-          </div>
+          ${!isPractice ? `
+            <!-- Full-width Official Inspera Part Sub-Banner (Exam mode) -->
+            <div class="ins-part-banner">
+              <strong>Part ${part.partNum || 1}</strong>
+              <span>Listen and answer questions ${qMin}–${qMax}.</span>
+            </div>
+          ` : ''}
 
-          <!-- Official Flat CD-IELTS Listening Paper (100% identical in Practice & Exam!) -->
-          <div class="lp-ins-body">
-            <main class="lp-ins-scroll">
-              <div class="lp-ins-paper" id="lp-ex-paper">${part.html || ''}</div>
-            </main>
+          <!-- Question Paper Body (Identical authentic CD-IELTS question layout in BOTH modes!) -->
+          <div class="lp-ins-body ${isPractice ? 'lp-prac-desk' : ''}">
+            ${isPractice ? `
+              <div class="prac-sheet-shell ink-brackets lp-prac-folio">
+                <main class="lp-ins-scroll">
+                  <div class="lp-ins-paper" id="lp-ex-paper">
+                    <div class="prac-sheet-eyebrow">
+                      <span class="prac-eyebrow-meta">Part ${part.partNum || 1} · Questions ${qMin}–${qMax}</span>
+                      <button type="button" class="prac-eyebrow-clear is-empty" id="lp-prac-hl-clear" disabled
+                        onclick="ListeningPracticeApp.clearAllPaperHighlights()">
+                        Xóa <span id="lp-prac-hl-cnt">0</span> màu
+                      </button>
+                    </div>
+                    ${part.html || ''}
+                  </div>
+                </main>
+                ${practiceStampSvg}
+              </div>
+            ` : `
+              <main class="lp-ins-scroll">
+                <div class="lp-ins-paper" id="lp-ex-paper">${part.html || ''}</div>
+              </main>
+            `}
 
             <!-- Official Floating 40x40px Prev / Next Square Arrows -->
             <div class="ins-float-arrows">
@@ -1857,28 +2048,22 @@
             </div>
           </div>
 
-          <!-- 48px Official Inspera Bottom Navigator Bar -->
+          <!-- 48px Official Inspera / Totoro Practice Bottom Navigator Bar -->
           <footer class="ins-footer" id="lp-ins-footer">
             <div class="ins-footer-parts">${bottomPartsHtml}</div>
-            <button type="button" class="ins-submit-check-btn lp-ex-submit-btn" onclick="ListeningPracticeApp.submitExam()" title="Submit answers" aria-label="Submit answers">✓</button>
+            ${isPractice ? `
+              <button type="button" class="ins-submit-check-btn prac-submit-pill lp-ex-submit-btn" onclick="ListeningPracticeApp.submitExam()" title="Nộp bài kiểm tra kết quả" aria-label="Nộp bài">
+                <span>Nộp bài →</span>
+              </button>
+            ` : `
+              <button type="button" class="ins-submit-check-btn lp-ex-submit-btn" onclick="ListeningPracticeApp.submitExam()" title="Submit answers" aria-label="Submit answers">✓</button>
+            `}
           </footer>
         </div>
 
         ${notesDrawerHtml}
         ${optionsOverlayHtml}
-
-        <!-- Text Selection Highlight & Note Popover -->
-        <div class="ins-sel-popover hidden" id="lp-hl-toolbar" onmousedown="event.stopPropagation()">
-          <button type="button" class="ins-sel-act" onclick="ListeningPracticeApp.addNoteFromSelection()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span>Note</span>
-          </button>
-          <button type="button" class="ins-sel-act" onclick="ListeningPracticeApp.applyExamHighlight()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
-            <span>Highlight</span>
-          </button>
-          <button type="button" class="ins-sel-clear" onclick="ListeningPracticeApp.clearExamHighlight()">Clear</button>
-        </div>
+        ${selPopoverHtml}
       </div>
     `;
 
@@ -2142,8 +2327,10 @@
       partIds,
       activePartIdx: 0,
       activeQNum: firstQ,
-      contrast: 'cd',
+      contrast: useMode === 'practice' ? 'totoro' : 'cd',
       textSize: 'regular',
+      activePenColor: 'yellow',
+      showTimer: true,
       optionsOpen: false,
       notesOpen: false,
       notes: [],
@@ -2218,6 +2405,12 @@
     renderExamView();
   }
 
+  function toggleTimerVisibility() {
+    if (!state.session || state.session.mode !== 'practice') return;
+    state.session.showTimer = state.session.showTimer === false ? true : false;
+    renderExamView();
+  }
+
   function toggleOptionsOverlay(force) {
     if (!state.session) return;
     state.session.optionsOpen = typeof force === 'boolean' ? force : !state.session.optionsOpen;
@@ -2254,7 +2447,7 @@
 
   function setContrast(preset) {
     if (!state.session) return;
-    state.session.contrast = ['cd', 'totoro', 'dark', 'yellow'].includes(preset) ? preset : 'cd';
+    state.session.contrast = ['cd', 'totoro', 'sepia', 'dark', 'yellow'].includes(preset) ? preset : 'cd';
     renderExamView();
   }
 
@@ -2369,6 +2562,7 @@
     focusQuestion,
     stepQuestion,
     togglePauseTimer,
+    toggleTimerVisibility,
     toggleOptionsOverlay,
     toggleNotesDrawer,
     addManualNote,
@@ -2377,6 +2571,7 @@
     setTextSize,
     applyExamHighlight,
     clearExamHighlight,
+    clearAllPaperHighlights,
     addNoteFromSelection,
     submitExam,
     exitExam,

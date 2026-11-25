@@ -12573,11 +12573,111 @@ body.lp-exam-fullscreen {
   color: var(--ins-ink);
 }
 
-.lp-ins-hl {
-  background: #fff176;
+.lp-ins-hl,
+.lp-ins-hl.hl-yellow {
+  background: #fde047;
   color: #111111;
-  border-radius: 2px;
-  padding: 0 1px;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.lp-ins-hl.hl-green  { background: #bbf7d0; color: #143623; }
+.lp-ins-hl.hl-pink   { background: #fbcfe8; color: #4a1530; }
+.lp-ins-hl.hl-blue   { background: #bae6fd; color: #0c3550; }
+.lp-ins-hl.hl-purple { background: #e9d5ff; color: #361954; }
+
+/* Totoro Washi Studio Customizations for Listening Practice Mode (.ins-mode-practice) */
+.ins-mode-practice .lp-ins-audio {
+  background: var(--prac-sheet-sub);
+  border-bottom: 1px solid var(--prac-bd);
+  padding: 7px 14px;
+}
+
+.ins-mode-practice .lp-ins-play {
+  background: var(--prac-accent);
+  border-color: var(--prac-accent);
+  color: var(--prac-accent-ink);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--prac-accent) 62%, #000);
+}
+
+.ins-mode-practice .lp-ins-play:hover {
+  filter: brightness(1.07);
+  background: var(--prac-accent);
+  border-color: var(--prac-accent);
+}
+
+.ins-mode-practice .lp-ins-step,
+.ins-mode-practice .lp-ins-rate {
+  border-radius: 9px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sand);
+  color: var(--prac-ink);
+  box-shadow: 0 1.5px 0 var(--prac-lip);
+}
+
+.ins-mode-practice .lp-ins-step:hover {
+  background: var(--prac-accent-soft);
+  color: var(--prac-accent);
+}
+
+.ins-mode-practice .lp-ins-seek,
+.ins-mode-practice .lp-ins-vol {
+  accent-color: var(--prac-accent);
+}
+
+.ins-mode-practice .lp-prac-desk {
+  padding: 8px 14px;
+  justify-content: center;
+  background-color: var(--prac-canvas);
+  background-image:
+    radial-gradient(var(--prac-dot) 1.1px, transparent 1.1px),
+    var(--bg-glow, none);
+  background-size: 22px 22px, 100% 100%;
+}
+
+.lp-prac-folio {
+  width: 100%;
+  max-width: 980px;
+  flex: 1 1 auto;
+}
+
+.lp-prac-folio > .lp-ins-scroll {
+  background: transparent;
+  padding: 18px 28px 82px;
+  position: relative;
+  z-index: 1;
+}
+
+.ins-mode-practice .lp-ins-paper .lp-ex-opt:hover,
+.ins-mode-practice .lp-ins-paper label:has(> input.lp-ex-radio):hover,
+.ins-mode-practice .lp-ins-paper label:has(> input.lp-ex-check):hover {
+  background: color-mix(in srgb, var(--prac-accent-soft) 55%, transparent);
+}
+
+.ins-mode-practice .lp-ins-paper .lp-ex-radio,
+.ins-mode-practice .lp-ins-paper .lp-ex-check {
+  accent-color: var(--prac-accent);
+}
+
+.ins-mode-practice .ins-arrow-btn {
+  border-radius: 9px;
+  background: var(--prac-sand);
+  border: 1px solid var(--prac-bd);
+  color: var(--prac-ink);
+  box-shadow: 0 2px 0 var(--prac-lip);
+}
+
+.ins-mode-practice .ins-arrow-btn.is-next {
+  background: var(--prac-accent);
+  border-color: var(--prac-accent);
+  color: var(--prac-accent-ink);
+}
+
+.ins-mode-practice .ins-arrow-btn:disabled,
+.ins-mode-practice .ins-arrow-btn.is-disabled {
+  background: var(--prac-sheet-sub);
+  color: var(--prac-ink-3);
+  box-shadow: none;
 }
 
 /* Full-Screen Inspera Review Body */
