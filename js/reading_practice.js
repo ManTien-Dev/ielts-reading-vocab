@@ -2644,13 +2644,144 @@
     return null;
   }
 
+  function canonicalMultiBlankSig(prompt) {
+    return String(prompt || '')
+      .replace(/^\s*(?:[•●○▪▸◦·\-–—]\s*)+/, '')
+      .replace(/(?:\b\d{1,2}\s*)?\[\s*\.\.\.\s*\]/g, '@@RPBLANK@@')
+      .replace(/(?:…|\.{3,})\s*\.?\s*_{3,}/g, '@@RPBLANK@@')
+      .replace(/_{3,}/g, '@@RPBLANK@@')
+      .replace(/\s+([,.;:!?])/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function clusterMultiBlankQuestions(qs) {
+    const out = [];
+    let i = 0;
+    while (i < qs.length) {
+      const q = qs[i];
+      const raw = String(q?.prompt || '');
+      if ((q.type === 'gap' || q.type === 'select') && /\[\s*\.\.\.\s*\]/.test(raw)) {
+        const sig = canonicalMultiBlankSig(raw);
+        const cluster = [q];
+        let j = i + 1;
+        while (j < qs.length && qs[j].type === q.type && canonicalMultiBlankSig(qs[j].prompt) === sig) {
+          cluster.push(qs[j]);
+          j++;
+        }
+        const blankCount = (sig.match(/@@RPBLANK@@/g) || []).length;
+        if (cluster.length >= 2 && blankCount === cluster.length) {
+          out.push({ kind: 'multi', type: q.type, template: sig, questions: cluster, rawFirst: raw });
+          i = j;
+          continue;
+        }
+      }
+      out.push({ kind: 'single', q });
+      i++;
+    }
+    return out;
+  }
+
+  function buildGapInlineBlankHtml(q, passage, isReview, includeAnchorId = false) {
+    const s = state.session;
+    const qid = `${passage.id}__q${q.num}`;
+    const userVal = String(s.answers[qid] ?? '');
+    const isCur = s.activeQid === qid;
+    const isLockedOk = !isReview && !!s.lockedCorrect?.[qid];
+    const wrongState = !isReview ? s.wrongSet?.[qid] : null;
+    const isWrongRetry = !!wrongState;
+    const isReadOnly = isReview || isLockedOk;
+    const ok = isReview ? isAnswerCorrect(q, userVal) : isLockedOk;
+
+    const badgeStateCls = isReview
+      ? (ok ? 'is-ok' : 'is-bad')
+      : (isLockedOk ? 'is-ok' : (isWrongRetry ? (wrongState === 'edited' ? 'is-edited' : 'is-bad') : (isCur ? 'is-current' : '')));
+    const gapCls = isReview ? (ok ? 'is-ok' : 'is-bad') : (isLockedOk ? 'is-ok' : (isWrongRetry && wrongState !== 'edited' ? 'is-bad' : ''));
+    const anchorAttr = includeAnchorId ? ` id="rp-qcard-${esc(qid)}"` : '';
+    return `<span class="ins-note-blank-wrap"${anchorAttr}><span class="ins-note-qnum ${badgeStateCls}">${q.num}</span><input type="text" class="ins-gap-input ins-note-input ${gapCls}" value="${esc(userVal)}" ${isReadOnly ? 'readonly' : ''} aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off"></span>`;
+  }
+
+  function buildSelectInlineBlankHtml(q, passage, isReview) {
+    const s = state.session;
+    const qid = `${passage.id}__q${q.num}`;
+    const userVal = String(s.answers[qid] ?? '');
+    const isCur = s.activeQid === qid;
+    const isLockedOk = !isReview && !!s.lockedCorrect?.[qid];
+    const wrongState = !isReview ? s.wrongSet?.[qid] : null;
+    const isWrongRetry = !!wrongState;
+    const isReadOnly = isReview || isLockedOk;
+    const ok = isReview ? isAnswerCorrect(q, userVal) : isLockedOk;
+    const opts = Array.isArray(q.options) && q.options.length ? q.options : ['A', 'B', 'C', 'D', 'E'];
+
+    const badgeStateCls = isReview
+      ? (ok ? 'is-ok' : 'is-bad')
+      : (isLockedOk ? 'is-ok' : (isWrongRetry ? (wrongState === 'edited' ? 'is-edited' : 'is-bad') : (isCur ? 'is-current' : '')));
+    const selCls = isReview ? (ok ? 'is-ok' : 'is-bad') : (isLockedOk ? 'is-ok' : (isWrongRetry && wrongState !== 'edited' ? 'is-bad' : (userVal ? 'is-filled' : '')));
+
+    const optsHtml = `<option value="">—</option>` + opts.map((opt) => {
+      const val = String(opt).trim();
+      const sel = userVal.toUpperCase() === val.toUpperCase() ? 'selected' : '';
+      return `<option value="${esc(val)}" ${sel}>${esc(val)}</option>`;
+    }).join('');
+
+    return `<span class="ins-note-blank-wrap ins-select-blank-wrap" id="rp-qcard-${esc(qid)}"><span class="ins-note-qnum ${badgeStateCls}">${q.num}</span><select class="ins-inline-select ${selCls}" ${isReadOnly ? 'disabled' : ''} aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" onchange="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value)">${optsHtml}</select></span>`;
+  }
+
   function renderNoteCompletionGroup(group, passage, isReview, frameKind) {
     const s = state.session;
     const isPractice = s?.studyMode === 'practice';
     const qs = group.questions || [];
     const frameTitle = group.noteTitle || passage?.title || '';
+    const entries = clusterMultiBlankQuestions(qs);
 
-    const rowsHtml = qs.map((q) => {
+    const rowsHtml = entries.map((entry) => {
+      if (entry.kind === 'multi') {
+        const cluster = entry.questions;
+        const isSubBullet = /^\s*[○◦\-–—]\s*/.test(entry.rawFirst);
+        let bIdx = 0;
+        const stem = esc(entry.template).replace(/@@RPBLANK@@/g, () => {
+          const cq = cluster[bIdx++];
+          return cq ? buildGapInlineBlankHtml(cq, passage, isReview, true) : '';
+        });
+
+        const subheadingHtml = cluster[0]?.subheading ? `<div class="ins-note-subheading">${esc(cluster[0].subheading)}</div>` : '';
+        const anyCur = !isReview && cluster.some((cq) => s.activeQid === `${passage.id}__q${cq.num}`);
+        const firstQid = `${passage.id}__q${cluster[0].num}`;
+        const anyFlagged = cluster.some((cq) => !!s.flagged[`${passage.id}__q${cq.num}`]);
+        const allReadOnly = isReview || cluster.every((cq) => !!s.lockedCorrect?.[`${passage.id}__q${cq.num}`]);
+
+        const bookmarkBtn = !allReadOnly ? `
+          <button type="button" class="ins-bookmark-btn ${anyFlagged ? 'active' : ''}"
+            onclick="event.stopPropagation(); ReadingPracticeApp.toggleFlag('${esc(firstQid)}')" title="Đánh dấu xem lại (Bookmark)">
+            <svg viewBox="0 0 24 24" fill="${anyFlagged ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+        ` : '';
+
+        const multiReviewsHtml = isReview ? `
+          <div class="ins-multi-reviews">
+            ${cluster.map((cq) => {
+              const cqid = `${passage.id}__q${cq.num}`;
+              const cOk = isAnswerCorrect(cq, String(s.answers[cqid] ?? ''));
+              const cDisp = Array.isArray(cq.answer) ? cq.answer[0] : cq.answer;
+              return renderReviewBlock(cq, cOk, cDisp, passage, true);
+            }).join('')}
+          </div>
+        ` : '';
+
+        return `
+          ${subheadingHtml}
+          <div class="ins-q-item ins-note-row ins-q-multi ${isSubBullet ? 'is-sub-bullet' : ''} ${frameKind === 'summary' ? 'is-summary-row' : ''} ${anyCur ? 'is-current' : ''}">
+            <div class="ins-note-line-wrap">
+              ${frameKind === 'note' ? `<span class="ins-note-bullet" aria-hidden="true">${isSubBullet ? '◦' : '•'}</span>` : ''}
+              <div class="ins-note-line">${stem}</div>
+              ${bookmarkBtn ? `<div class="prac-q-inline-acts ins-note-acts">${bookmarkBtn}</div>` : ''}
+            </div>
+            ${multiReviewsHtml}
+          </div>
+        `;
+      }
+
+      const q = entry.q;
       const qid = `${passage.id}__q${q.num}`;
       const userVal = String(s.answers[qid] ?? '');
       const flagged = !!s.flagged[qid];
@@ -2661,12 +2792,7 @@
       const isReadOnly = isReview || isLockedOk;
       const ok = isReview ? isAnswerCorrect(q, userVal) : isLockedOk;
 
-      const badgeStateCls = isReview
-        ? (ok ? 'is-ok' : 'is-bad')
-        : (isLockedOk ? 'is-ok' : (isWrongRetry ? (wrongState === 'edited' ? 'is-edited' : 'is-bad') : (isCur ? 'is-current' : '')));
-
-      const gapCls = isReview ? (ok ? 'is-ok' : 'is-bad') : (isLockedOk ? 'is-ok' : (isWrongRetry && wrongState !== 'edited' ? 'is-bad' : ''));
-      const inlineBlankHtml = `<span class="ins-note-blank-wrap"><span class="ins-note-qnum ${badgeStateCls}">${q.num}</span><input type="text" class="ins-gap-input ins-note-input ${gapCls}" value="${esc(userVal)}" ${isReadOnly ? 'readonly' : ''} aria-label="Question ${q.num}" onfocus="ReadingPracticeApp.focusQuestion('${esc(qid)}')" oninput="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value, true)" autocomplete="off"></span>`;
+      const inlineBlankHtml = buildGapInlineBlankHtml(q, passage, isReview, false);
 
       const rawPrompt = String(q.prompt || '');
       const isSubBullet = /^\s*[○◦\-–—]\s*/.test(rawPrompt);
@@ -2778,6 +2904,7 @@
       return renderNoteCompletionGroup(group, passage, isReview, frameKind);
     }
 
+    const entries = clusterMultiBlankQuestions(group.questions || []);
     return `
       <div class="ins-q-group">
         <div class="ins-group-head">
@@ -2790,13 +2917,62 @@
         </div>
         ${group.instruction ? `<p class="ins-group-inst">${formatGroupInstructionHtml(group.instruction)}</p>` : ''}
         <div class="ins-q-items">
-          ${(group.questions || []).map((q) => renderFlatQuestionItem(q, passage, isReview)).join('')}
+          ${entries.map((entry) => entry.kind === 'multi'
+            ? renderMultiBlankFlatItem(entry, passage, isReview)
+            : renderFlatQuestionItem(entry.q, passage, isReview)).join('')}
         </div>
       </div>
     `;
   }
 
-  function renderReviewBlock(q, ok, correctDisplay, passage) {
+  function renderMultiBlankFlatItem(entry, passage, isReview) {
+    const s = state.session;
+    const cluster = entry.questions;
+    let bIdx = 0;
+    const stem = esc(entry.template).replace(/@@RPBLANK@@/g, () => {
+      const cq = cluster[bIdx++];
+      if (!cq) return '';
+      return entry.type === 'select'
+        ? buildSelectInlineBlankHtml(cq, passage, isReview)
+        : buildGapInlineBlankHtml(cq, passage, isReview, true);
+    });
+
+    const anyCur = !isReview && cluster.some((cq) => s.activeQid === `${passage.id}__q${cq.num}`);
+    const firstQid = `${passage.id}__q${cluster[0].num}`;
+    const anyFlagged = cluster.some((cq) => !!s.flagged[`${passage.id}__q${cq.num}`]);
+    const allReadOnly = isReview || cluster.every((cq) => !!s.lockedCorrect?.[`${passage.id}__q${cq.num}`]);
+
+    const bookmarkBtn = !allReadOnly ? `
+      <button type="button" class="ins-bookmark-btn ${anyFlagged ? 'active' : ''}"
+        onclick="event.stopPropagation(); ReadingPracticeApp.toggleFlag('${esc(firstQid)}')" title="Đánh dấu xem lại (Bookmark)">
+        <svg viewBox="0 0 24 24" fill="${anyFlagged ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
+    ` : '';
+
+    const multiReviewsHtml = isReview ? `
+      <div class="ins-multi-reviews">
+        ${cluster.map((cq) => {
+          const cqid = `${passage.id}__q${cq.num}`;
+          const cOk = isAnswerCorrect(cq, String(s.answers[cqid] ?? ''));
+          const cDisp = Array.isArray(cq.answer) ? cq.answer.join(' / ') : cq.answer;
+          return renderReviewBlock(cq, cOk, cDisp, passage, true);
+        }).join('')}
+      </div>
+    ` : '';
+
+    return `
+      <div class="ins-q-item ins-q-gap ins-q-multi ${entry.type === 'select' ? 'ins-q-multi-select' : ''} ${anyCur ? 'is-current' : ''}">
+        <div class="ins-gap-bullet">
+          <span class="ins-bullet-dot">•</span>
+          <div class="ins-gap-line">${stem}</div>
+          ${bookmarkBtn ? `<div class="prac-q-inline-acts">${bookmarkBtn}</div>` : ''}
+        </div>
+        ${multiReviewsHtml}
+      </div>
+    `;
+  }
+
+  function renderReviewBlock(q, ok, correctDisplay, passage, showQNum = false) {
     const s = state.session;
     const sol = getQuestionSolution(passage, q.num);
     const paraList = (Array.isArray(q.paraphrase) && q.paraphrase.length) ? q.paraphrase : (sol?.para || []);
@@ -2836,7 +3012,7 @@
     return `
       <div class="rp-rev-inline ${ok ? 'is-ok' : 'is-bad'}">
         <div class="rp-rev-bar">
-          <span class="rp-rev-key ${ok ? 'is-ok' : 'is-bad'}">${ok ? `✓ Đúng · <strong>${esc(correctDisplay)}</strong>` : `Đáp án: <strong>${esc(correctDisplay)}</strong>`}</span>
+          <span class="rp-rev-key ${ok ? 'is-ok' : 'is-bad'}">${showQNum ? `<span class="rp-rev-qtag">Câu ${q.num}</span>` : ''}${ok ? `✓ Đúng · <strong>${esc(correctDisplay)}</strong>` : `Đáp án: <strong>${esc(correctDisplay)}</strong>`}</span>
           <div class="rp-rev-btns">
             ${locateBtnHtml}
             ${explainBtnHtml}
@@ -3571,10 +3747,13 @@
       state.session.activeQid = qid;
       document.querySelectorAll('.ins-q-item.is-current').forEach((el) => el.classList.remove('is-current'));
       document.querySelectorAll('.ins-q-num.is-active').forEach((el) => el.classList.remove('is-active'));
+      document.querySelectorAll('.ins-note-qnum.is-current').forEach((n) => n.classList.remove('is-current'));
       const card = document.getElementById(`rp-qcard-${qid}`);
       if (card) {
         card.classList.add('is-current');
         card.querySelector('.ins-q-num')?.classList.add('is-active');
+        card.querySelector('.ins-note-qnum')?.classList.add('is-current');
+        card.closest('.ins-q-item')?.classList.add('is-current');
       }
       const pQs = getAllSessionQuestions().filter((q) => q._pIdx === state.session.activePassageIdx);
       const idx = pQs.findIndex((q) => q._qid === qid);
