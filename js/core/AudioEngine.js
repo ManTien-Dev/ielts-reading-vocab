@@ -8,9 +8,14 @@
   const MALE_NAME_RE = /\b(david|mark|male|daniel|ryan|guy|george|alex|richard|sean|james|andrew|brian|christopher|eric|roger|steffan|liam|william)\b/i;
   // Tiny 44-byte silent WAV used once on first touch to unlock HTMLAudioElement on iOS/iPadOS Safari
   const SILENT_WAV_DATA_URI = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-  // Local studio MP3 overrides for dictionary entries whose Youdao clip is defective (e.g., double-spoken)
+  // Local studio MP3 overrides for dictionary entries whose Youdao clip is defective (double-spoken 2x)
+  // Verified across full 1,500-word Paraphrase audit (3,000 UK+US clips)
   const CURATED_WORD_AUDIO = {
     'en-us:researcher': 'assets/audio/words/researcher_us.mp3',
+    'en-us:financially': 'assets/audio/words/financially_us.mp3',
+    'en-us:unusually': 'assets/audio/words/unusually_us.mp3',
+    'en-us:poorly': 'assets/audio/words/poorly_us.mp3',
+    'en-us:comfortably': 'assets/audio/words/comfortably_us.mp3',
   };
 
   class AudioEngine {
