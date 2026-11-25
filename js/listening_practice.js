@@ -11,15 +11,16 @@
   'use strict';
 
   const STORAGE_KEY_BASE = 'ielts_listening_practice_v1_';
-  const BANK_VERSION = '20261125c';
+  const BANK_VERSION = '20261125g';
 
   const _loadedBanks = {};
   const _bankPromises = {};
+  let _examTimerId = null;
 
   function B() { return window.__VOCAB_BRIDGE__ || null; }
   function DATA() {
     return window.LISTENING_PRACTICE_DATA || {
-      PORTAL_CARDS: [], CAMBRIDGE_BOOKS: [], VOLUME_BOOKS: [], PARTS: {}, FULL_TESTS: []
+      PORTAL_CARDS: [], CAMBRIDGE_BOOKS: [], VOLUME_BOOKS: [], BANK_SUMMARY: {}, PARTS: {}, FULL_TESTS: []
     };
   }
   function getRoot() { return document.getElementById('lp-app-root'); }
@@ -39,11 +40,36 @@
     return String(uid || 'guest').trim().toLowerCase();
   }
 
+  function estimateListeningBand(correct, total) {
+    if (!total || total <= 0) return 0;
+    const s = Math.round((correct / total) * 40);
+    if (s >= 39) return 9.0;
+    if (s >= 37) return 8.5;
+    if (s >= 35) return 8.0;
+    if (s >= 32) return 7.5;
+    if (s >= 30) return 7.0;
+    if (s >= 26) return 6.5;
+    if (s >= 23) return 6.0;
+    if (s >= 18) return 5.5;
+    if (s >= 16) return 5.0;
+    if (s >= 13) return 4.5;
+    if (s >= 10) return 4.0;
+    if (s >= 6) return 3.5;
+    return 3.0;
+  }
+
+  function formatMMSS(sec) {
+    const s = Math.max(0, Math.floor(Number(sec) || 0));
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+  }
+
   /* ---------------------------------------------------------
      STATE & PROGRESS STORE
      --------------------------------------------------------- */
   const state = {
-    view: 'portal',           // 'portal' | 'source'
+    view: 'portal',           // 'portal' | 'source' | 'exam' | 'review'
     source: 'cambridge',      // 'cambridge' | 'volume' | 'actual'
     camGroup: 'recent',       // 'recent' (Cam 10-20) | 'classic' (Cam 1-9)
     actualTab: 'p1',          // 'p1' | 'p2' | 'p3' | 'p4' | 'full'
@@ -52,7 +78,9 @@
     actualSearch: '',
     selectedBookId: 'lcam_20',
     selectedTestNum: 1,       // 1..4
-    loadingBank: null
+    loadingBank: null,
+    session: null,            // Active exam session
+    lastReview: null          // Last submitted grading result
   };
 
   const ListeningPracticeStore = {
@@ -65,25 +93,47 @@
       } catch (_) {}
       return { history: [] };
     },
-    getPartProgress(partObj) {
-      if (!partObj) return null;
-      if (partObj.taskId && window.ListeningTasksModule?.getProgressMap) {
+    save(obj) {
+      try { localStorage.setItem(this._key(), JSON.stringify(obj)); } catch (_) {}
+      try { window.dispatchEvent(new CustomEvent('listening-practice-updated')); } catch (_) {}
+    },
+    recordAttempt(entry) {
+      const store = this.load();
+      store.history.unshift({
+        itemId: entry.itemId,
+        isFull: !!entry.isFull,
+        mode: entry.mode || 'practice',
+        score: Number(entry.score || 0),
+        total: Number(entry.total || 10),
+        band: Number(entry.band || 0),
+        elapsedSec: Number(entry.elapsedSec || 0),
+        ts: Date.now()
+      });
+      if (store.history.length > 250) store.history.length = 250;
+      this.save(store);
+    },
+    getItemProgress(itemObj) {
+      if (!itemObj) return null;
+      if (itemObj.taskId && window.ListeningTasksModule?.getProgressMap) {
         const prog = window.ListeningTasksModule.getProgressMap() || {};
-        const r = prog[partObj.taskId];
+        const r = prog[itemObj.taskId];
         if (r && (r.t3Total || r.completed)) {
           return {
             done: true,
             score: Number(r.t3Score || 0),
-            total: Number(r.t3Total || partObj.questionsCount || 10)
+            total: Number(r.t3Total || itemObj.questionsCount || 10)
           };
         }
       }
-      const hist = this.load().history.filter((h) => h.itemId === partObj.id);
+      const hist = this.load().history.filter((h) => h.itemId === itemObj.id);
       if (hist.length) {
         const best = hist.reduce((a, b) => ((b.score || 0) > (a.score || 0) ? b : a), hist[0]);
-        return { done: true, score: best.score || 0, total: best.total || partObj.questionsCount || 10 };
+        return { done: true, score: best.score || 0, total: best.total || itemObj.questionsCount || 10, band: best.band || 0 };
       }
       return null;
+    },
+    getPartProgress(partObj) {
+      return this.getItemProgress(partObj);
     }
   };
 
@@ -121,14 +171,20 @@
     }
     if (_bankPromises[src]) return _bankPromises[src];
 
-    const bankUrls = window.__LISTENING_BANK_URLS__ || {};
-    if (!bankUrls[src]) {
+    const bankUrls = window.__LISTENING_BANK_URLS__ || {
+      cambridge: 'data/bank_listening_cambridge.js',
+      volume: 'data/bank_listening_volume.js',
+      actual: 'data/bank_listening_actual.js'
+    };
+    const rawUrl = bankUrls[src];
+    if (!rawUrl) {
       _loadedBanks[src] = true;
       return Promise.resolve();
     }
 
     state.loadingBank = src;
-    const scriptSrc = `${bankUrls[src]}?v=${BANK_VERSION}`;
+    const base = (typeof window.__APP_BASE_PATH__ === 'string' && window.__APP_BASE_PATH__) ? `${window.__APP_BASE_PATH__}/` : '';
+    const scriptSrc = `${base}${rawUrl}?v=${BANK_VERSION}`;
     _bankPromises[src] = new Promise((resolve) => {
       const sc = document.createElement('script');
       sc.src = scriptSrc;
@@ -577,17 +633,18 @@
       let actionsHtml = '';
 
       if (c.kind === 'source') {
+        const sum = d.BANK_SUMMARY?.[c.id];
         if (c.id === 'cambridge') {
           const bks = getBooksForSource(c.id);
           const ready = bks.filter((b) => countReadyTestsInBook(b.id) > 0).length;
-          badge = ready > 0 ? `${ready}/${bks.length} cuốn` : `${bks.length} cuốn`;
+          badge = ready > 0 ? `${ready}/${bks.length} cuốn` : (sum ? `${sum.books} cuốn · ${sum.fullTests} Tests` : `${bks.length} cuốn`);
         } else if (c.id === 'volume') {
           const bks = getBooksForSource(c.id);
           const ready = bks.filter((b) => countReadyTestsInBook(b.id) > 0).length;
-          badge = ready > 0 ? `${ready}/${bks.length} tập` : '10 tập · Real Listening';
+          badge = ready > 0 ? `${ready}/${bks.length} tập` : (sum ? `${sum.books} tập · ${sum.fullTests} Tests` : '10 tập · Real Listening');
         } else if (c.id === 'actual') {
           const actCount = Object.values(d.PARTS || {}).filter((p) => p.source === 'actual').length;
-          badge = actCount > 0 ? `${actCount} bài nghe` : 'Part 1–4 · FULL TEST';
+          badge = actCount > 0 ? `${actCount} bài nghe` : (sum ? `${sum.parts} bài nghe · ${sum.fullTests} Full` : 'Part 1–4 · FULL TEST');
         }
         cardOnClick = `ListeningPracticeApp.openSource('${esc(c.id)}')`;
         actionsHtml = c.id === 'actual'
@@ -659,7 +716,7 @@
      VIEW 2 & 3: EXAM BANKS (WOODEN TOTORO BOOKSHELF / ACTUAL TABS)
      ========================================================= */
   function renderPartCard(item, isFull) {
-    const prog = !isFull ? ListeningPracticeStore.getPartProgress(item) : null;
+    const prog = ListeningPracticeStore.getItemProgress(item);
     const partLabel = isFull ? 'FULL TEST' : `PART ${item.partNum || 1}`;
     const types = Array.isArray(item.qTypes) ? item.qTypes : (isFull ? ['Part 1–4', 'Full 30 phút'] : ['Note Completion']);
     const qCount = Number(item.questionsCount) || (isFull ? 40 : 10);
@@ -1078,30 +1135,812 @@
     B()?.loadMainScope?.('l_cues_40');
   }
 
-  function startItem(itemId, isFull, mode) {
-    const d = DATA();
-    if (isFull) {
-      const ft = (d.FULL_TESTS || []).find((x) => x.id === itemId);
-      const firstPart = ft?.partIds?.[0] ? d.PARTS?.[ft.partIds[0]] : null;
-      if (firstPart?.taskId && window.ListeningTasksModule?.openExam) {
-        window.ListeningTasksModule.openExam(firstPart.taskId, 3, { fromPractice: true, mode });
+  /* =========================================================
+     VIEW 4 & 5: CD-IELTS LISTENING EXAM WORKSPACE & REVIEW
+     ========================================================= */
+  function stopExamTimer() {
+    if (_examTimerId) {
+      clearInterval(_examTimerId);
+      _examTimerId = null;
+    }
+  }
+
+  function stopActiveAudio() {
+    const a = document.getElementById('lp-ex-audio');
+    if (a) {
+      try { a.pause(); a.removeAttribute('src'); a.load(); } catch (_) {}
+    }
+  }
+
+  function normText(s) {
+    return String(s ?? '')
+      .toLowerCase()
+      .replace(/[’‘`]/g, "'")
+      .replace(/[“”]/g, '"')
+      .replace(/\ba\.m\.?\b/g, 'am')
+      .replace(/\bp\.m\.?\b/g, 'pm')
+      .replace(/(\d):(\d{2})/g, '$1.$2')
+      .replace(/[£$€]/g, '')
+      .replace(/[,;!?]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function expandOptionalParens(raw) {
+    const str = String(raw || '').trim();
+    const matches = [];
+    const re = /\(([^()]{1,36})\)/g;
+    let m;
+    while ((m = re.exec(str)) !== null && matches.length < 4) {
+      matches.push({ start: m.index, end: m.index + m[0].length, inner: m[1] });
+    }
+    if (!matches.length) return [str];
+    const results = new Set();
+    const combos = 1 << matches.length;
+    for (let mask = 0; mask < combos; mask++) {
+      let out = '';
+      let pos = 0;
+      for (let i = 0; i < matches.length; i++) {
+        out += str.slice(pos, matches[i].start);
+        if (mask & (1 << i)) out += matches[i].inner;
+        pos = matches[i].end;
+      }
+      out += str.slice(pos);
+      results.add(out.replace(/\s+/g, ' ').trim());
+    }
+    return Array.from(results);
+  }
+
+  function buildAcceptedVariants(officialStr) {
+    const alts = String(officialStr || '').split(/\s*\/\s*/).map((x) => x.trim()).filter(Boolean);
+    const out = new Set();
+    alts.forEach((alt) => {
+      expandOptionalParens(alt).forEach((v) => {
+        const n = normText(v);
+        if (n) {
+          out.add(n);
+          out.add(n.replace(/-/g, ' ').replace(/\s+/g, ' ').trim());
+          out.add(n.replace(/\s+/g, ''));
+        }
+      });
+    });
+    return out;
+  }
+
+  function isSingleAnswerMatch(userVal, officialStr) {
+    const u = normText(userVal);
+    if (!u) return false;
+    const accepted = buildAcceptedVariants(officialStr);
+    if (accepted.has(u)) return true;
+    const uNoHyphen = u.replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+    if (accepted.has(uNoHyphen)) return true;
+    const uCompact = u.replace(/\s+/g, '');
+    if (accepted.has(uCompact)) return true;
+    return false;
+  }
+
+  function getSessionParts() {
+    if (!state.session) return [];
+    const map = DATA().PARTS || {};
+    return state.session.partIds.map((pid) => map[pid]).filter(Boolean);
+  }
+
+  function getActivePart() {
+    const parts = getSessionParts();
+    return parts[state.session?.activePartIdx || 0] || parts[0] || null;
+  }
+
+  function getPartAnsweredCount(part) {
+    if (!part || !state.session) return 0;
+    const ans = state.session.answers || {};
+    return (part.answers || []).filter((a) => String(ans[a.num] ?? '').trim().length > 0).length;
+  }
+
+  function startExamTimer() {
+    stopExamTimer();
+    _examTimerId = setInterval(() => {
+      if (!state.session || state.view !== 'exam') {
+        stopExamTimer();
         return;
       }
-      toast('Đề FULL TEST này đang chờ nạp audio.');
+      state.session.remainingSec = Math.max(0, (state.session.remainingSec || 0) - 1);
+      const tEl = document.getElementById('lp-ex-timer');
+      if (tEl) {
+        tEl.textContent = formatMMSS(state.session.remainingSec);
+        tEl.classList.toggle('is-warn', state.session.remainingSec <= 120);
+      }
+      if (state.session.remainingSec <= 0 && state.session.mode === 'exam') {
+        stopExamTimer();
+        toast('Hết thời gian làm bài. Hệ thống tự động nộp bài.');
+        submitExam(true);
+      }
+    }, 1000);
+  }
+
+  function syncPaperFromState() {
+    const paper = document.getElementById('lp-ex-paper');
+    if (!paper || !state.session) return;
+    const answers = state.session.answers || {};
+
+    paper.querySelectorAll('input.lp-ex-gap, select.lp-ex-select').forEach((el) => {
+      const q = el.getAttribute('data-q');
+      if (q && answers[q] !== undefined) el.value = answers[q];
+    });
+
+    paper.querySelectorAll('input.lp-ex-radio').forEach((el) => {
+      const q = el.getAttribute('data-q');
+      const checked = q && String(answers[q] || '').toUpperCase() === String(el.value || '').toUpperCase();
+      el.checked = !!checked;
+      el.closest('label, .lp-ex-opt, .lp-ex-opt-row')?.classList.toggle('is-selected', !!checked);
+    });
+
+    const multiSeen = new Set();
+    paper.querySelectorAll('input.lp-ex-check').forEach((el) => {
+      const csv = el.getAttribute('data-multi') || '';
+      if (!csv) return;
+      const nums = csv.split(',').map((x) => x.trim()).filter(Boolean);
+      const chosen = new Set(nums.map((n) => String(answers[n] || '').toUpperCase()).filter(Boolean));
+      const checked = chosen.has(String(el.value || '').toUpperCase());
+      el.checked = checked;
+      el.closest('label, .lp-ex-opt, .lp-ex-opt-row')?.classList.toggle('is-selected', checked);
+      multiSeen.add(csv);
+    });
+  }
+
+  function refreshBottomNavStates() {
+    if (!state.session) return;
+    const ans = state.session.answers || {};
+    document.querySelectorAll('#lp-ex-qstrip .lp-ex-qdot').forEach((btn) => {
+      const q = btn.getAttribute('data-q');
+      btn.classList.toggle('is-answered', String(ans[q] ?? '').trim().length > 0);
+    });
+    const parts = getSessionParts();
+    parts.forEach((pt, idx) => {
+      const badge = document.querySelector(`#lp-ex-ptab-${idx} .lp-ex-ptab-cnt`);
+      if (badge) badge.textContent = `${getPartAnsweredCount(pt)}/${(pt.answers || []).length}`;
+    });
+  }
+
+  function bindPaperInputs() {
+    const paper = document.getElementById('lp-ex-paper');
+    if (!paper || !state.session) return;
+
+    paper.addEventListener('input', (ev) => {
+      const el = ev.target;
+      if (!el || !el.matches('input.lp-ex-gap')) return;
+      const q = el.getAttribute('data-q');
+      if (!q) return;
+      state.session.answers[q] = el.value;
+      refreshBottomNavStates();
+    });
+
+    paper.addEventListener('change', (ev) => {
+      const el = ev.target;
+      if (!el) return;
+      if (el.matches('select.lp-ex-select')) {
+        const q = el.getAttribute('data-q');
+        if (q) state.session.answers[q] = el.value;
+        refreshBottomNavStates();
+      } else if (el.matches('input.lp-ex-radio')) {
+        const q = el.getAttribute('data-q');
+        if (q) {
+          state.session.answers[q] = el.value;
+          paper.querySelectorAll(`input.lp-ex-radio[data-q="${q}"]`).forEach((r) => {
+            r.closest('label, .lp-ex-opt, .lp-ex-opt-row')?.classList.toggle('is-selected', r.checked);
+          });
+        }
+        refreshBottomNavStates();
+      } else if (el.matches('input.lp-ex-check')) {
+        const csv = el.getAttribute('data-multi') || '';
+        const limit = Number(el.getAttribute('data-limit') || 2);
+        const nums = csv.split(',').map((x) => x.trim()).filter(Boolean);
+        const groupBoxes = Array.from(paper.querySelectorAll(`input.lp-ex-check[data-multi="${csv}"]`));
+        const checkedBoxes = groupBoxes.filter((b) => b.checked);
+        if (checkedBoxes.length > limit) {
+          el.checked = false;
+          toast(`Chỉ chọn tối đa ${limit} đáp án cho nhóm câu ${nums[0]}–${nums[nums.length - 1]}.`);
+          return;
+        }
+        groupBoxes.forEach((b) => {
+          b.closest('label, .lp-ex-opt, .lp-ex-opt-row')?.classList.toggle('is-selected', b.checked);
+        });
+        const vals = checkedBoxes.map((b) => b.value);
+        nums.forEach((n, idx) => {
+          state.session.answers[n] = vals[idx] || '';
+        });
+        refreshBottomNavStates();
+      }
+    });
+
+    // Click to zoom Map / Diagram images cleanly
+    paper.addEventListener('click', (ev) => {
+      const img = ev.target?.closest?.('img.lp-ex-diagram');
+      if (!img) return;
+      openDiagramLightbox(img.src, img.alt || 'Listening Diagram');
+    });
+
+    syncPaperFromState();
+  }
+
+  function openDiagramLightbox(src, alt) {
+    const existing = document.getElementById('lp-diagram-lightbox');
+    if (existing) existing.remove();
+    const ov = document.createElement('div');
+    ov.id = 'lp-diagram-lightbox';
+    ov.className = 'lp-lightbox';
+    ov.innerHTML = `
+      <div class="lp-lightbox-card" onclick="event.stopPropagation()">
+        <button type="button" class="lp-lightbox-close" aria-label="Đóng" onclick="document.getElementById('lp-diagram-lightbox')?.remove()">✕</button>
+        <img src="${esc(src)}" alt="${esc(alt)}">
+      </div>
+    `;
+    ov.addEventListener('click', () => ov.remove());
+    document.body.appendChild(ov);
+  }
+
+  function bindAudioPlayer(isReview) {
+    const audio = document.getElementById('lp-ex-audio');
+    const playBtn = document.getElementById('lp-audio-play');
+    const seek = document.getElementById('lp-audio-seek');
+    const curEl = document.getElementById('lp-audio-cur');
+    const durEl = document.getElementById('lp-audio-dur');
+    const statusEl = document.getElementById('lp-audio-status');
+    if (!audio || !playBtn) return;
+
+    const isExamLocked = !isReview && state.session?.mode === 'exam';
+
+    const updatePlayIcon = () => {
+      playBtn.classList.toggle('is-playing', !audio.paused);
+      playBtn.setAttribute('aria-label', audio.paused ? 'Phát audio' : 'Tạm dừng audio');
+      playBtn.innerHTML = audio.paused
+        ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v14l11-7-11-7z"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+    };
+
+    playBtn.addEventListener('click', () => {
+      if (isExamLocked && !audio.paused) {
+        toast('Chế độ Thi thật phát băng liên tục 1 lượt.');
+        return;
+      }
+      if (audio.paused) {
+        const p = audio.play();
+        if (p && p.catch) p.catch(() => { if (statusEl) statusEl.textContent = 'Không phát được audio — nhấn thử lại.'; });
+      } else {
+        audio.pause();
+      }
+    });
+
+    audio.addEventListener('play', () => {
+      updatePlayIcon();
+      if (statusEl) statusEl.textContent = '';
+    });
+    audio.addEventListener('pause', updatePlayIcon);
+    audio.addEventListener('loadedmetadata', () => {
+      if (durEl) durEl.textContent = formatMMSS(audio.duration);
+      if (seek) seek.max = String(Math.floor(audio.duration || 100));
+    });
+    audio.addEventListener('timeupdate', () => {
+      if (curEl) curEl.textContent = formatMMSS(audio.currentTime);
+      if (seek && audio.duration) {
+        seek.max = String(Math.floor(audio.duration));
+        seek.value = String(Math.floor(audio.currentTime));
+      }
+    });
+    audio.addEventListener('error', () => {
+      updatePlayIcon();
+      if (statusEl) statusEl.textContent = 'Lỗi tải audio từ máy chủ.';
+    });
+    audio.addEventListener('ended', () => {
+      updatePlayIcon();
+      if (!isReview && state.session?.isFull && state.session.activePartIdx < state.session.partIds.length - 1) {
+        toast(`Đã phát xong Part ${state.session.activePartIdx + 1}. Chuyển sang Part ${state.session.activePartIdx + 2}…`);
+        setTimeout(() => {
+          if (state.view === 'exam' && state.session) {
+            switchExamPart(state.session.activePartIdx + 1, true);
+          }
+        }, 1200);
+      }
+    });
+
+    if (seek && !isExamLocked) {
+      seek.addEventListener('input', () => {
+        audio.currentTime = Number(seek.value) || 0;
+      });
+    }
+
+    const skipBack = document.getElementById('lp-audio-back');
+    const skipFwd = document.getElementById('lp-audio-fwd');
+    if (skipBack && !isExamLocked) {
+      skipBack.addEventListener('click', () => { audio.currentTime = Math.max(0, (audio.currentTime || 0) - 5); });
+    }
+    if (skipFwd && !isExamLocked) {
+      skipFwd.addEventListener('click', () => { audio.currentTime = Math.min(audio.duration || 0, (audio.currentTime || 0) + 5); });
+    }
+
+    const rateSel = document.getElementById('lp-audio-rate');
+    if (rateSel && !isExamLocked) {
+      rateSel.addEventListener('change', () => {
+        audio.playbackRate = Number(rateSel.value) || 1;
+      });
+    }
+
+    updatePlayIcon();
+  }
+
+  function renderAudioBarHtml(part, isReview) {
+    const isExamLocked = !isReview && state.session?.mode === 'exam';
+    return `
+      <div class="lp-ex-audio-bar ${isExamLocked ? 'is-locked' : ''}">
+        <audio id="lp-ex-audio" preload="metadata" src="${esc(part?.audioUrl || '')}"></audio>
+        <button type="button" class="lp-audio-play" id="lp-audio-play" aria-label="Phát audio">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v14l11-7-11-7z"/></svg>
+        </button>
+        ${!isExamLocked ? `
+          <button type="button" class="lp-audio-step" id="lp-audio-back" title="Lùi 5 giây">−5s</button>
+          <button type="button" class="lp-audio-step" id="lp-audio-fwd" title="Tua 5 giây">+5s</button>
+        ` : `<span class="lp-audio-lock-pill">Thi thật · Phát 1 lượt</span>`}
+        <div class="lp-audio-track">
+          <span class="lp-audio-time tabular" id="lp-audio-cur">00:00</span>
+          <input type="range" class="lp-audio-seek" id="lp-audio-seek" min="0" max="100" value="0" ${isExamLocked ? 'disabled' : ''} aria-label="Tiến độ băng nghe">
+          <span class="lp-audio-time tabular" id="lp-audio-dur">--:--</span>
+        </div>
+        ${!isExamLocked ? `
+          <select class="lp-audio-rate" id="lp-audio-rate" aria-label="Tốc độ phát">
+            <option value="0.85">0.85×</option>
+            <option value="1" selected>1.0×</option>
+            <option value="1.15">1.15×</option>
+            <option value="1.25">1.25×</option>
+          </select>
+        ` : ''}
+        <span class="lp-audio-status" id="lp-audio-status" role="status"></span>
+      </div>
+    `;
+  }
+
+  function renderExamView() {
+    const root = getRoot();
+    const s = state.session;
+    const part = getActivePart();
+    if (!root || !s || !part) {
+      openSource(state.source);
       return;
     }
-    const part = d.PARTS?.[itemId];
-    if (part?.taskId && window.ListeningTasksModule?.openExam) {
-      window.ListeningTasksModule.openExam(part.taskId, 3, { fromPractice: true, mode });
+
+    const parts = getSessionParts();
+    const ans = s.answers || {};
+    const modeLabel = s.mode === 'exam' ? 'Thi thật' : 'Luyện tập';
+
+    const partTabsHtml = parts.length > 1 ? `
+      <div class="lp-ex-part-tabs" role="tablist">
+        ${parts.map((pt, idx) => `
+          <button type="button" role="tab" id="lp-ex-ptab-${idx}"
+            class="lp-ex-ptab ${idx === s.activePartIdx ? 'active' : ''}"
+            onclick="ListeningPracticeApp.switchExamPart(${idx})">
+            <span>Part ${pt.partNum || idx + 1}</span>
+            <small class="lp-ex-ptab-cnt tabular">${getPartAnsweredCount(pt)}/${(pt.answers || []).length}</small>
+          </button>
+        `).join('')}
+      </div>
+    ` : '';
+
+    const qStripHtml = (part.answers || []).map((a) => {
+      const isAns = String(ans[a.num] ?? '').trim().length > 0;
+      return `<button type="button" class="lp-ex-qdot tabular ${isAns ? 'is-answered' : ''}" data-q="${a.num}" onclick="ListeningPracticeApp.focusQuestion(${a.num})">${a.num}</button>`;
+    }).join('');
+
+    root.innerHTML = `
+      <div class="lp-ex-shell">
+        <header class="lp-ex-topbar">
+          <div class="lp-ex-top-left">
+            <button type="button" class="btn-subtle lp-btn-back" onclick="ListeningPracticeApp.exitExam()">← Quay lại</button>
+            <div class="lp-ex-title-wrap">
+              <div class="lp-ex-kicker">
+                <span class="lp-ex-mode-pill ${s.mode === 'exam' ? 'is-exam' : ''}">${esc(modeLabel)}</span>
+                <span>Part ${part.partNum || 1}</span>
+              </div>
+              <h2 class="lp-ex-title">${esc(s.title)}</h2>
+            </div>
+          </div>
+          <div class="lp-ex-top-right">
+            <div class="lp-ex-timer tabular ${s.remainingSec <= 120 ? 'is-warn' : ''}" id="lp-ex-timer">${formatMMSS(s.remainingSec)}</div>
+            <button type="button" class="btn btn-primary lp-ex-submit-btn" onclick="ListeningPracticeApp.submitExam()">Nộp bài</button>
+          </div>
+        </header>
+
+        ${partTabsHtml}
+        ${renderAudioBarHtml(part, false)}
+
+        <main class="lp-ex-paper-wrap">
+          <div class="lp-ex-paper-head">
+            <span class="lp-ex-paper-badge">PART ${part.partNum || 1}</span>
+            <h3 class="lp-ex-paper-title">${esc(part.title)}</h3>
+          </div>
+          <div class="lp-ex-paper" id="lp-ex-paper">${part.html || ''}</div>
+        </main>
+
+        <footer class="lp-ex-bottombar">
+          <div class="lp-ex-qstrip" id="lp-ex-qstrip">${qStripHtml}</div>
+          <div class="lp-ex-bottom-actions">
+            ${parts.length > 1 && s.activePartIdx < parts.length - 1 ? `
+              <button type="button" class="btn-subtle lp-btn-sm" onclick="ListeningPracticeApp.switchExamPart(${s.activePartIdx + 1})">Part ${s.activePartIdx + 2} →</button>
+            ` : ''}
+            <button type="button" class="btn btn-primary lp-btn-sm" onclick="ListeningPracticeApp.submitExam()">Nộp bài ✓</button>
+          </div>
+        </footer>
+      </div>
+    `;
+
+    bindPaperInputs();
+    bindAudioPlayer(false);
+    startExamTimer();
+  }
+
+  function gradeSession(s) {
+    const map = DATA().PARTS || {};
+    const parts = s.partIds.map((pid) => map[pid]).filter(Boolean);
+    const userAns = s.answers || {};
+    const rows = [];
+    let totalCorrect = 0;
+    let totalQuestions = 0;
+
+    parts.forEach((pt) => {
+      const pAns = pt.answers || [];
+      // Detect shared multi-letter groups (e.g. Q17 & Q18 both having official "A / E")
+      let i = 0;
+      while (i < pAns.length) {
+        const cur = pAns[i];
+        const off = String(cur.answer || '').trim();
+        const isMultiLetters = /\//.test(off) && off.split('/').every((x) => /^[A-J]$/i.test(x.trim()));
+
+        if (isMultiLetters && i + 1 < pAns.length && String(pAns[i + 1].answer || '').trim() === off) {
+          const grp = [cur];
+          while (i + 1 < pAns.length && String(pAns[i + 1].answer || '').trim() === off) {
+            i++;
+            grp.push(pAns[i]);
+          }
+          const validSet = new Set(off.split('/').map((x) => x.trim().toUpperCase()));
+          const usedCorrect = new Set();
+          grp.forEach((gItem) => {
+            const uRaw = String(userAns[gItem.num] ?? '').trim();
+            const uUp = uRaw.toUpperCase();
+            let ok = false;
+            if (uUp && validSet.has(uUp) && !usedCorrect.has(uUp)) {
+              ok = true;
+              usedCorrect.add(uUp);
+            }
+            if (ok) totalCorrect++;
+            totalQuestions++;
+            rows.push({
+              partNum: pt.partNum,
+              partId: pt.id,
+              num: gItem.num,
+              user: uRaw,
+              official: off,
+              ok
+            });
+          });
+        } else {
+          const uRaw = String(userAns[cur.num] ?? '').trim();
+          const ok = isSingleAnswerMatch(uRaw, off);
+          if (ok) totalCorrect++;
+          totalQuestions++;
+          rows.push({
+            partNum: pt.partNum,
+            partId: pt.id,
+            num: cur.num,
+            user: uRaw,
+            official: off,
+            ok
+          });
+        }
+        i++;
+      }
+    });
+
+    const elapsedSec = Math.max(1, Math.round((Date.now() - (s.startedAt || Date.now())) / 1000));
+    const band = estimateListeningBand(totalCorrect, totalQuestions);
+    return {
+      itemId: s.itemId,
+      isFull: s.isFull,
+      mode: s.mode,
+      title: s.title,
+      partIds: s.partIds.slice(),
+      activePartIdx: 0,
+      transcriptQuery: '',
+      score: totalCorrect,
+      total: totalQuestions,
+      band,
+      elapsedSec,
+      rows
+    };
+  }
+
+  function renderHighlightedTranscript(transcript, query) {
+    if (!transcript) {
+      return '<p class="lp-rev-empty-tr">Bài nghe này chưa có bản ghi Transcript đi kèm. Bạn có thể nghe lại trực tiếp bằng thanh Audio phía trên.</p>';
+    }
+    const q = String(query || '').trim();
+    const lines = String(transcript).split('\n').filter((x) => x.trim());
+    return lines.map((ln) => {
+      let safe = esc(ln);
+      if (q.length >= 2) {
+        const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        safe = safe.replace(re, '<mark class="lp-tr-mark">$1</mark>');
+      }
+      const isSpeaker = /^([A-Z][a-zA-Z0-9 .'-]{1,22}:)\s*/.test(ln);
+      if (isSpeaker) {
+        safe = safe.replace(/^([^:]{1,24}:)/, '<strong class="lp-tr-spk">$1</strong>');
+      }
+      return `<p class="lp-tr-line">${safe}</p>`;
+    }).join('');
+  }
+
+  function renderReviewView() {
+    const root = getRoot();
+    const rev = state.lastReview;
+    if (!root || !rev) {
+      openSource(state.source);
       return;
     }
-    toast('Bài nghe này đang chờ nạp audio.');
+
+    const map = DATA().PARTS || {};
+    const parts = rev.partIds.map((pid) => map[pid]).filter(Boolean);
+    const activePart = parts[rev.activePartIdx || 0] || parts[0];
+    const pct = rev.total ? Math.round((rev.score / rev.total) * 100) : 0;
+    const partRows = parts.length > 1
+      ? rev.rows.filter((r) => r.partId === activePart?.id)
+      : rev.rows;
+
+    const partTabsHtml = parts.length > 1 ? `
+      <div class="lp-ex-part-tabs" role="tablist">
+        ${parts.map((pt, idx) => {
+          const pRows = rev.rows.filter((r) => r.partId === pt.id);
+          const pOk = pRows.filter((r) => r.ok).length;
+          return `
+            <button type="button" role="tab"
+              class="lp-ex-ptab ${idx === rev.activePartIdx ? 'active' : ''}"
+              onclick="ListeningPracticeApp.switchReviewPart(${idx})">
+              <span>Part ${pt.partNum || idx + 1}</span>
+              <small class="tabular">${pOk}/${pRows.length}</small>
+            </button>
+          `;
+        }).join('')}
+      </div>
+    ` : '';
+
+    root.innerHTML = `
+      <div class="lp-rev-shell">
+        <div class="lp-rev-hero">
+          <div class="lp-rev-hero-left">
+            <div class="lp-rev-kicker">${rev.mode === 'exam' ? 'Thi thật' : 'Luyện tập'} · Kết quả chi tiết</div>
+            <h2 class="lp-rev-title">${esc(rev.title)}</h2>
+            <div class="lp-rev-actions">
+              <button type="button" class="btn-subtle lp-btn-sm" onclick="ListeningPracticeApp.backToSourceFromReview()">← Quay lại bộ đề</button>
+              <button type="button" class="btn btn-primary lp-btn-sm" onclick="ListeningPracticeApp.startItem('${esc(rev.itemId)}', ${rev.isFull ? 'true' : 'false'}, '${esc(rev.mode)}')">Làm lại</button>
+            </div>
+          </div>
+          <div class="lp-rev-metrics">
+            <div class="lp-rev-metric is-band">
+              <span class="lp-rev-mval tabular">${rev.band.toFixed(1)}</span>
+              <span class="lp-rev-mlbl">Band ước tính</span>
+            </div>
+            <div class="lp-rev-metric">
+              <span class="lp-rev-mval tabular">${rev.score}/${rev.total}</span>
+              <span class="lp-rev-mlbl">Chính xác ${pct}%</span>
+            </div>
+            <div class="lp-rev-metric">
+              <span class="lp-rev-mval tabular">${formatMMSS(rev.elapsedSec)}</span>
+              <span class="lp-rev-mlbl">Thời gian</span>
+            </div>
+          </div>
+        </div>
+
+        ${partTabsHtml}
+        ${activePart ? renderAudioBarHtml(activePart, true) : ''}
+
+        <div class="lp-rev-grid">
+          <section class="lp-rev-card">
+            <div class="lp-rev-card-head">
+              <h3>Answer Key · Part ${activePart?.partNum || 1}</h3>
+              <span class="lp-rev-card-pill tabular">${partRows.filter((r) => r.ok).length}/${partRows.length} đúng</span>
+            </div>
+            <div class="lp-rev-table-wrap">
+              <table class="lp-rev-table">
+                <thead>
+                  <tr>
+                    <th>Câu</th>
+                    <th>Bạn điền</th>
+                    <th>Đáp án đúng</th>
+                    <th>KQ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${partRows.map((r) => `
+                    <tr class="${r.ok ? 'is-ok' : 'is-bad'}">
+                      <td class="tabular"><strong>${r.num}</strong></td>
+                      <td>${r.user ? esc(r.user) : '<span class="lp-rev-blank">—</span>'}</td>
+                      <td class="lp-rev-off">${esc(r.official)}</td>
+                      <td><span class="lp-rev-dot ${r.ok ? 'is-ok' : 'is-bad'}">${r.ok ? '✓' : '✕'}</span></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="lp-rev-card">
+            <div class="lp-rev-card-head">
+              <h3>Transcript · ${esc(activePart?.title || '')}</h3>
+              <input type="search" class="lp-tr-search" value="${esc(rev.transcriptQuery || '')}" placeholder="Tìm từ khóa trong Transcript..." oninput="ListeningPracticeApp.onTranscriptSearch(this.value)" autocomplete="off">
+            </div>
+            <div class="lp-rev-transcript" id="lp-rev-transcript">
+              ${renderHighlightedTranscript(activePart?.transcript || '', rev.transcriptQuery || '')}
+            </div>
+          </section>
+        </div>
+      </div>
+    `;
+
+    bindAudioPlayer(true);
+  }
+
+  function startItem(itemId, isFull, mode) {
+    const d = DATA();
+    const useMode = mode === 'exam' ? 'exam' : 'practice';
+    let partIds = [];
+    let title = '';
+    let durationMin = 7;
+
+    if (isFull) {
+      const ft = (d.FULL_TESTS || []).find((x) => x.id === itemId);
+      if (!ft || !Array.isArray(ft.partIds) || !ft.partIds.length) {
+        toast('Đề FULL TEST này chưa có dữ liệu.');
+        return;
+      }
+      const firstPart = d.PARTS?.[ft.partIds[0]];
+      if (firstPart?.taskId && window.ListeningTasksModule?.openExam) {
+        window.ListeningTasksModule.openExam(firstPart.taskId, 3, { fromPractice: true, mode: useMode });
+        return;
+      }
+      partIds = ft.partIds.filter((pid) => !!d.PARTS?.[pid]);
+      title = ft.title || 'IELTS Listening FULL TEST';
+      durationMin = Number(ft.durationMin) || 30;
+    } else {
+      const part = d.PARTS?.[itemId];
+      if (!part) {
+        toast('Bài nghe này chưa có dữ liệu.');
+        return;
+      }
+      if (part.taskId && window.ListeningTasksModule?.openExam) {
+        window.ListeningTasksModule.openExam(part.taskId, 3, { fromPractice: true, mode: useMode });
+        return;
+      }
+      partIds = [part.id];
+      title = part.title || `Part ${part.partNum || 1}`;
+      durationMin = Number(part.durationMin) || (part.partNum >= 3 ? 8 : 7);
+    }
+
+    stopExamTimer();
+    stopActiveAudio();
+    state.session = {
+      itemId,
+      isFull: !!isFull,
+      mode: useMode,
+      title,
+      partIds,
+      activePartIdx: 0,
+      answers: {},
+      durationSec: durationMin * 60,
+      remainingSec: durationMin * 60,
+      startedAt: Date.now()
+    };
+    state.view = 'exam';
+    render();
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) {}
+  }
+
+  function switchExamPart(idx, autoPlay) {
+    if (!state.session) return;
+    const maxIdx = Math.max(0, state.session.partIds.length - 1);
+    const nextIdx = Math.max(0, Math.min(maxIdx, Number(idx) || 0));
+    if (nextIdx === state.session.activePartIdx && !autoPlay) return;
+    stopActiveAudio();
+    state.session.activePartIdx = nextIdx;
+    renderExamView();
+    if (autoPlay) {
+      const a = document.getElementById('lp-ex-audio');
+      if (a) a.play().catch(() => {});
+    }
+  }
+
+  function focusQuestion(qNum) {
+    const paper = document.getElementById('lp-ex-paper');
+    if (!paper) return;
+    let target = paper.querySelector(`[data-q="${qNum}"]`);
+    if (!target) {
+      target = Array.from(paper.querySelectorAll('input.lp-ex-check')).find((el) =>
+        (el.getAttribute('data-multi') || '').split(',').map((x) => x.trim()).includes(String(qNum))
+      );
+    }
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      try { target.focus({ preventScroll: true }); } catch (_) {}
+    }
+  }
+
+  function submitExam(force) {
+    if (!state.session) return;
+    const parts = getSessionParts();
+    const totalQ = parts.reduce((acc, p) => acc + (p.answers || []).length, 0);
+    const answeredQ = parts.reduce((acc, p) => acc + getPartAnsweredCount(p), 0);
+    if (!force && answeredQ < totalQ) {
+      const ok = window.confirm(`Bạn đã điền ${answeredQ}/${totalQ} câu. Xác nhận nộp bài và xem đáp án ngay?`);
+      if (!ok) return;
+    }
+    stopExamTimer();
+    stopActiveAudio();
+    const result = gradeSession(state.session);
+    ListeningPracticeStore.recordAttempt(result);
+    state.lastReview = result;
+    state.session = null;
+    state.view = 'review';
+    render();
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) {}
+  }
+
+  function exitExam() {
+    if (state.session) {
+      const parts = getSessionParts();
+      const answeredQ = parts.reduce((acc, p) => acc + getPartAnsweredCount(p), 0);
+      if (answeredQ > 0) {
+        const ok = window.confirm('Thoát khỏi bài thi hiện tại? Các câu bạn đang điền sẽ không được lưu.');
+        if (!ok) return;
+      }
+    }
+    stopExamTimer();
+    stopActiveAudio();
+    state.session = null;
+    state.view = 'source';
+    render();
+  }
+
+  function switchReviewPart(idx) {
+    if (!state.lastReview) return;
+    stopActiveAudio();
+    state.lastReview.activePartIdx = Math.max(0, Math.min(state.lastReview.partIds.length - 1, Number(idx) || 0));
+    renderReviewView();
+  }
+
+  function onTranscriptSearch(val) {
+    if (!state.lastReview) return;
+    state.lastReview.transcriptQuery = String(val || '');
+    const box = document.getElementById('lp-rev-transcript');
+    const map = DATA().PARTS || {};
+    const parts = state.lastReview.partIds.map((pid) => map[pid]).filter(Boolean);
+    const activePart = parts[state.lastReview.activePartIdx || 0] || parts[0];
+    if (box) {
+      box.innerHTML = renderHighlightedTranscript(activePart?.transcript || '', state.lastReview.transcriptQuery);
+    }
+  }
+
+  function backToSourceFromReview() {
+    stopActiveAudio();
+    state.view = 'source';
+    render();
   }
 
   function render() {
-    if (state.view === 'source') {
+    if (state.view === 'exam' && state.session) {
+      renderExamView();
+    } else if (state.view === 'review' && state.lastReview) {
+      renderReviewView();
+    } else if (state.view === 'source') {
+      stopExamTimer();
+      stopActiveAudio();
       renderHub();
     } else {
+      stopExamTimer();
+      stopActiveAudio();
       renderPortal();
     }
   }
@@ -1127,6 +1966,13 @@
     launchListeningSpeedQuiz,
     openSignalDeck,
     startItem,
+    switchExamPart,
+    focusQuestion,
+    submitExam,
+    exitExam,
+    switchReviewPart,
+    onTranscriptSearch,
+    backToSourceFromReview,
     renderTotoroBookSvg,
     getState: () => ({ ...state })
   };

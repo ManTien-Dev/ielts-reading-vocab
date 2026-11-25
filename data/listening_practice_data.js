@@ -339,12 +339,23 @@
   ];
 
   /* ---------------------------------------------------------
-     CLEAN EXAM BANKS (0 FAKE TASKS MIXED INTO CAMBRIDGE / VOLUME / ACTUAL!)
-     Real imported Listening exams merge cleanly via window.__LISTENING_BANKS__:
-       - data/bank_listening_cambridge.js
-       - data/bank_listening_volume.js
-       - data/bank_listening_actual.js
+     VERIFIED LISTENING EXAM BANKS (AUTO LAZY-LOADED)
+       - data/bank_listening_cambridge.js (20 Books · 80 Full Tests · 320 Parts)
+       - data/bank_listening_volume.js    (10 Volumes · 40 Full Tests · 160 Parts)
+       - data/bank_listening_actual.js    (13 Full Tests · 52 Parts)
      --------------------------------------------------------- */
+  const BANK_SUMMARY = {
+    cambridge: { books: 20, fullTests: 80, parts: 320 },
+    volume: { books: 10, fullTests: 40, parts: 160 },
+    actual: { fullTests: 13, parts: 52 }
+  };
+
+  window.__LISTENING_BANK_URLS__ = {
+    cambridge: 'data/bank_listening_cambridge.js',
+    volume: 'data/bank_listening_volume.js',
+    actual: 'data/bank_listening_actual.js'
+  };
+
   const PARTS = {};
   const FULL_TESTS = [];
 
@@ -352,6 +363,7 @@
     PORTAL_CARDS,
     CAMBRIDGE_BOOKS,
     VOLUME_BOOKS,
+    BANK_SUMMARY,
     PARTS,
     FULL_TESTS
   };
