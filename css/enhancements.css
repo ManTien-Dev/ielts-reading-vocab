@@ -10966,3 +10966,410 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
     transition: none !important;
   }
 }
+
+/* ---------- FULL-BLEED EDITORIAL SERIES COVERS ("BÌA CỦA BỘ") ---------- */
+.lp-series-cover {
+  position: relative;
+  height: 178px;
+  overflow: hidden;
+  padding: 12px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #f8f5ec;
+}
+
+.lp-series-frame {
+  position: absolute;
+  inset: 7px;
+  border-radius: 10px;
+  border: 1px solid rgba(235, 198, 114, 0.24);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.lp-series-badges {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.lp-cover-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+}
+
+.lp-cover-pill.is-source {
+  background: rgba(250, 246, 236, 0.94);
+  color: #1d2822;
+}
+
+.lp-cover-pill.is-meta {
+  background: rgba(15, 22, 18, 0.56);
+  color: #f4efe3;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(4px);
+}
+
+.lp-series-inner {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 1;
+  padding: 6px 4px 2px;
+}
+
+.lp-series-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-self: center;
+  min-width: 0;
+  flex: 1 1 48%;
+  padding-bottom: 4px;
+}
+
+.lp-series-eyebrow {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 2px 7px;
+  margin-bottom: 5px;
+  border-radius: 999px;
+  border: 1px solid rgba(235, 198, 114, 0.42);
+  color: #e8c77a;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+}
+
+.lp-series-h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #ffffff;
+}
+
+.lp-series-h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.12;
+  color: #ecc875;
+  margin-top: 1px;
+}
+
+.lp-series-sub {
+  font-size: 10.5px;
+  color: rgba(246, 241, 228, 0.78);
+  margin-top: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lp-series-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 52%;
+  max-width: 54%;
+}
+
+.lp-series-books {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  width: 100%;
+  padding-right: 4px;
+}
+
+.lp-cover-book {
+  display: block;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.36));
+  transition: transform 0.28s var(--lp-ease);
+}
+
+.lp-cover-book.is-back {
+  height: 82px;
+  margin-right: -24px;
+  opacity: 0.92;
+  transform: translateY(-2px);
+}
+
+.lp-cover-book.is-hero {
+  height: 106px;
+  position: relative;
+  z-index: 3;
+}
+
+.lp-p3-card:hover .lp-cover-book.is-hero {
+  transform: translateY(-4px) scale(1.04);
+}
+
+.lp-p3-card:hover .lp-cover-book.is-back {
+  transform: translateY(-3px);
+}
+
+.lp-series-plank {
+  width: 100%;
+  height: 6px;
+  border-radius: 4px;
+  margin-top: -3px;
+  background: linear-gradient(180deg, #d7b682 0%, #a57f4b 100%);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.42);
+}
+
+/* ---------- INLINE TEST 1-4 PILLS IN BOOK DESK (IMAGE 2 FORMAT) ---------- */
+.lp-test-tabs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.lp-test-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: var(--surface-panel, #f4f1ea);
+  border: 1px solid var(--border, rgba(36, 34, 31, 0.1));
+  color: var(--ink, #1F2421);
+  cursor: pointer;
+  transition: transform 0.16s var(--lp-ease), border-color 0.16s ease, background 0.16s ease;
+}
+
+.lp-test-pill:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent, #2F6049) 38%, transparent);
+}
+
+.lp-test-pill.active {
+  background: var(--accent, #2F6049);
+  border-color: var(--accent, #2F6049);
+  color: #ffffff;
+}
+
+.lp-test-pill .lp-test-dot {
+  margin-bottom: 0;
+}
+
+.lp-test-pill.active .lp-test-dot {
+  background: #fde68a;
+}
+
+.lp-test-pill small {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+[data-theme="dark"] .lp-test-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .lp-test-pill.active {
+  background: #2d5f46;
+  border-color: #3f7c5d;
+  color: #ffffff;
+}
+
+/* ---------- IMAGE 2 HORIZONTAL PART 1-4 & FULL TEST ROW CARDS ---------- */
+.lp-section-head {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.lp-section-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2.5px 10px;
+  border-radius: 999px;
+  background: var(--surface-panel, #efeae0);
+  color: var(--ink-2, #57524A);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.lp-row-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lp-row-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 16px 12px 12px;
+  border-radius: 16px;
+  background: var(--surface, #fffdf8);
+  border: 1px solid var(--border, rgba(36, 34, 31, 0.11));
+  transition: border-color 0.18s ease, box-shadow 0.2s ease;
+}
+
+.lp-row-card:hover {
+  border-color: color-mix(in srgb, var(--accent, #2F6049) 38%, transparent);
+  box-shadow: 0 8px 20px rgba(27, 42, 34, 0.07);
+}
+
+.lp-row-thumb {
+  position: relative;
+  width: 210px;
+  height: 124px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #1b3d2d 0%, #2a5842 100%);
+  color: #ffffff;
+}
+
+.lp-row-thumb.is-p2 { background: linear-gradient(135deg, #163a48 0%, #255a6e 100%); }
+.lp-row-thumb.is-p3 { background: linear-gradient(135deg, #3c294d 0%, #583f6e 100%); }
+.lp-row-thumb.is-p4 { background: linear-gradient(135deg, #432820 0%, #663d30 100%); }
+.lp-row-thumb.is-full { background: linear-gradient(135deg, #152b22 0%, #214536 100%); }
+
+.lp-thumb-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.lp-thumb-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.92);
+  color: #1d2822;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.lp-thumb-tag.is-full {
+  background: #ecc875;
+  color: #1c241e;
+}
+
+.lp-thumb-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(15, 22, 18, 0.56);
+  color: #f4efe3;
+  font-size: 10.5px;
+  font-weight: 750;
+}
+
+.lp-thumb-pill.is-score {
+  background: #2e7d47;
+  color: #ffffff;
+}
+
+.lp-thumb-art {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  height: 92px;
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.lp-thumb-art img {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+}
+
+.lp-thumb-foot {
+  position: relative;
+  z-index: 2;
+  font-size: 11px;
+  font-weight: 750;
+  color: rgba(255, 252, 244, 0.92);
+}
+
+.lp-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lp-row-title {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 800;
+  color: var(--ink, #1F2421);
+}
+
+.lp-row-sub {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.48;
+  color: var(--ink-2, #57524A);
+}
+
+.lp-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lp-row-btn {
+  min-height: 34px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .lp-row-card {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+[data-theme="dark"] .lp-section-pill {
+  background: rgba(255, 255, 255, 0.07);
+  color: #cfc9be;
+}
+
+@media (max-width: 780px) {
+  .lp-row-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lp-row-thumb {
+    width: 100%;
+    height: 132px;
+  }
+  .lp-row-actions {
+    justify-content: flex-end;
+  }
+}

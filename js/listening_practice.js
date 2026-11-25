@@ -446,7 +446,7 @@
     }
   }
 
-  const BOOK_ART_VERSION = '20261125d';
+  const BOOK_ART_VERSION = '20261125e';
 
   function getBookImgUrl(bookId) {
     if (!bookId) return '';
@@ -468,41 +468,91 @@
   }
 
   /* =========================================================
-     PORTAL 3x2 ARTWORK BANNERS (6 DISTINCT STUDIO TOTORO BOOKS)
+     PORTAL 3x2 FULL-BLEED EDITORIAL SERIES COVERS ("BÌA CỦA BỘ")
+     Mirrors Reading's collector cover format using our painted Totoro books!
      ========================================================= */
-  function renderPortalArt(scene) {
-    const mapCfg = {
+  function renderPortalArt(card, rightBadge) {
+    const cfgs = {
       cambridge: {
-        bg1: '#E9F3EC', bg2: '#D3E6D8', ring: '#2F6049', imgId: 'lcam_20',
-        deco: `<path d="M18 88 Q74 64 134 82 T244 70" stroke="#2F6049" stroke-width="2" stroke-dasharray="4 4" opacity="0.26" fill="none"/><circle cx="212" cy="36" r="24" fill="#E5B95C" opacity="0.2"/>`
+        bg: 'linear-gradient(135deg, #163626 0%, #214B36 52%, #132C1F 100%)',
+        eyebrow: 'CAMBRIDGE PRESS',
+        t1: 'Cambridge',
+        t2: 'IELTS 1–20',
+        sub: 'Listening Archive · 20 Books',
+        books: ['lcam_17', 'lcam_18', 'lcam_19', 'lcam_20'],
+        shelf: true
       },
       volume: {
-        bg1: '#EAF2F8', bg2: '#D3E3F0', ring: '#275274', imgId: 'lvol_10',
-        deco: `<path d="M188 18 L182 36 M212 24 L206 42 M234 16 L228 34" stroke="#4D85B2" stroke-width="2.2" stroke-linecap="round" opacity="0.38"/><circle cx="218" cy="86" r="26" fill="#275274" opacity="0.09"/>`
+        bg: 'linear-gradient(135deg, #13293F 0%, #1E4060 52%, #0F2235 100%)',
+        eyebrow: 'COLLECTOR SERIES',
+        t1: 'Volume',
+        t2: '01 – 10',
+        sub: 'Real Listening Test Box Set',
+        books: ['lvol_2', 'lvol_5', 'lvol_7', 'lvol_1'],
+        shelf: true
       },
       actual: {
-        bg1: '#F7EFEA', bg2: '#ECDDD2', ring: '#8E4E34', imgId: 'lactual_p14',
-        deco: `<g stroke="#8E4E34" stroke-width="3" stroke-linecap="round" opacity="0.26"><line x1="184" y1="42" x2="184" y2="76"/><line x1="196" y1="30" x2="196" y2="88"/><line x1="208" y1="22" x2="208" y2="96"/><line x1="220" y1="36" x2="220" y2="82"/><line x1="232" y1="46" x2="232" y2="72"/></g>`
+        bg: 'linear-gradient(135deg, #3A1D19 0%, #572D25 52%, #2B1512 100%)',
+        eyebrow: 'REAL EXAM BANK',
+        t1: 'Recent',
+        t2: 'Actual Tests',
+        sub: 'Parts 1–4 · FULL TEST 30m',
+        books: ['lcam_14', 'lcam_3', 'lactual_p14'],
+        shelf: true
       },
       map: {
-        bg1: '#EAF4F3', bg2: '#D2E7E4', ring: '#236360', imgId: 'lcam_13',
-        deco: `<rect x="166" y="20" width="76" height="72" rx="8" fill="#FFF" fill-opacity="0.65" stroke="#236360" stroke-opacity="0.22" stroke-dasharray="3 3"/><path d="M174 74 Q196 40 214 58 T234 36" stroke="#236360" stroke-width="2.2" fill="none" opacity="0.55"/><circle cx="178" cy="70" r="4" fill="#E5B95C"/><circle cx="232" cy="38" r="4" fill="#B6424B"/>`
+        bg: 'linear-gradient(135deg, #133638 0%, #1F5355 52%, #0E292B 100%)',
+        eyebrow: 'PART 2 STUDIO',
+        t1: 'Map & Plan',
+        t2: 'Labelling',
+        sub: 'Park · Town · Floor Plan',
+        books: ['lvol_2', 'lcam_13'],
+        shelf: true
       },
       note: {
-        bg1: '#F5F2E8', bg2: '#E9E2CE', ring: '#966828', imgId: 'lcam_15',
-        deco: `<rect x="170" y="22" width="70" height="68" rx="8" fill="#FFF" fill-opacity="0.72" stroke="#966828" stroke-opacity="0.2"/><path d="M180 40 H230 M180 54 H222 M180 68 H214" stroke="#966828" stroke-width="2.2" stroke-linecap="round" opacity="0.38"/>`
+        bg: 'linear-gradient(135deg, #3B2B15 0%, #59411F 52%, #2D200E 100%)',
+        eyebrow: 'CAMBRIDGE FORM',
+        t1: 'Note',
+        t2: 'Completion',
+        sub: 'Parts 1–4 · Authentic Notes',
+        books: ['lcam_11', 'lcam_15'],
+        shelf: true
       },
       tasks: {
-        bg1: '#EEF3EA', bg2: '#DAE6D3', ring: '#4B6B3A', imgId: 'lcam_12',
-        deco: `<g fill="#4B6B3A" opacity="0.22"><rect x="172" y="24" width="20" height="16" rx="4"/><rect x="197" y="24" width="20" height="16" rx="4"/><rect x="222" y="24" width="20" height="16" rx="4"/><rect x="172" y="46" width="20" height="16" rx="4"/><rect x="197" y="46" width="20" height="16" rx="4"/><rect x="222" y="46" width="20" height="16" rx="4"/><rect x="172" y="68" width="20" height="16" rx="4"/><rect x="197" y="68" width="20" height="16" rx="4"/><rect x="222" y="68" width="20" height="16" rx="4"/></g>`
+        bg: 'linear-gradient(135deg, #21361C 0%, #34522B 52%, #182914 100%)',
+        eyebrow: '139 TOPICS',
+        t1: 'Dictation &',
+        t2: 'Spelling',
+        sub: '3,864 Core Listening Words',
+        books: ['lcam_1', 'lcam_16', 'lcam_12'],
+        shelf: true
       }
     };
-    const cfg = mapCfg[scene] || mapCfg.cambridge;
-    const bookArt = renderTotoroBookArt(null, { imgId: cfg.imgId, alt: scene });
+    const cfg = cfgs[card.scene] || cfgs.cambridge;
+    const booksHtml = cfg.books.map((bid, idx) => {
+      const isHero = idx === cfg.books.length - 1;
+      return `<img class="lp-cover-book ${isHero ? 'is-hero' : 'is-back'}" style="--bi:${idx};--bn:${cfg.books.length};" src="${esc(getBookImgUrl(bid))}" alt="" loading="lazy" decoding="async" draggable="false">`;
+    }).join('');
+
     return `
-      <div class="lp-p3-art" style="--lp-bg1:${cfg.bg1};--lp-bg2:${cfg.bg2};--lp-ring:${cfg.ring};">
-        <svg class="lp-p3-bg" viewBox="0 0 260 116" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${cfg.deco}</svg>
-        <div class="lp-p3-totoro">${bookArt}</div>
+      <div class="lp-series-cover" style="background:${cfg.bg};">
+        <div class="lp-series-frame" aria-hidden="true"></div>
+        <div class="lp-series-badges">
+          <span class="lp-cover-pill is-source">${esc(card.label)}</span>
+          <span class="lp-cover-pill is-meta tabular">${esc(rightBadge)}</span>
+        </div>
+        <div class="lp-series-inner">
+          <div class="lp-series-copy">
+            <span class="lp-series-eyebrow">${esc(cfg.eyebrow)}</span>
+            <div class="lp-series-h1">${esc(cfg.t1)}</div>
+            <div class="lp-series-h2">${esc(cfg.t2)}</div>
+            <div class="lp-series-sub">${esc(cfg.sub)}</div>
+          </div>
+          <div class="lp-series-stage">
+            <div class="lp-series-books">${booksHtml}</div>
+            ${cfg.shelf ? '<div class="lp-series-plank" aria-hidden="true"></div>' : ''}
+          </div>
+        </div>
       </div>
     `;
   }
@@ -527,72 +577,55 @@
       let actionsHtml = '';
 
       if (c.kind === 'source') {
-        if (c.id === 'cambridge' || c.id === 'volume') {
+        if (c.id === 'cambridge') {
           const bks = getBooksForSource(c.id);
           const ready = bks.filter((b) => countReadyTestsInBook(b.id) > 0).length;
-          const unit = c.id === 'volume' ? 'Volumes' : 'Books';
-          badge = ready > 0 ? `★ ${ready}/${bks.length} ${unit}` : `${bks.length} ${unit}`;
+          badge = ready > 0 ? `${ready}/${bks.length} cuốn` : `${bks.length} cuốn`;
+        } else if (c.id === 'volume') {
+          const bks = getBooksForSource(c.id);
+          const ready = bks.filter((b) => countReadyTestsInBook(b.id) > 0).length;
+          badge = ready > 0 ? `${ready}/${bks.length} tập` : '10 tập · Real Listening';
         } else if (c.id === 'actual') {
           const actCount = Object.values(d.PARTS || {}).filter((p) => p.source === 'actual').length;
-          badge = actCount > 0 ? `★ ${actCount} Parts` : 'Parts 1–4 · FULL TEST';
+          badge = actCount > 0 ? `${actCount} bài nghe` : 'Part 1–4 · FULL TEST';
         }
         cardOnClick = `ListeningPracticeApp.openSource('${esc(c.id)}')`;
         actionsHtml = c.id === 'actual'
           ? `
             <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('actual', 'p1')">Chọn bài nghe</button>
-            <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('actual', 'full')">FULL TEST →</button>
+            <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('actual', 'full')">Làm Full Test</button>
           `
           : `
             <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('${esc(c.id)}')">Chọn bộ đề</button>
-            <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('${esc(c.id)}')">Mở kệ →</button>
+            <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('${esc(c.id)}')">Làm Full Test</button>
           `;
       } else if (c.kind === 'map_drill') {
         badge = `★ ${mapTasks.length || 3} Maps`;
         cardOnClick = `ListeningTasksModule.openPracticePicker('map')`;
         actionsHtml = `
           <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningTasksModule.openPracticePicker('map')">Chọn bài Map</button>
-          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningTasksModule.openExam('${esc(firstMapId)}', 3, { fromPractice: true })">Làm Map 01 →</button>
+          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningTasksModule.openExam('${esc(firstMapId)}', 3, { fromPractice: true })">Làm Map 01</button>
         `;
       } else if (c.kind === 'note_drill') {
         badge = `★ ${noteTasks.length || 8} Tests`;
         cardOnClick = `ListeningTasksModule.openPracticePicker('note')`;
         actionsHtml = `
           <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningTasksModule.openPracticePicker('note')">Chọn bài nghe</button>
-          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningTasksModule.openExam('${esc(firstNoteId)}', 3, { fromPractice: true })">Làm Part 1 →</button>
+          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningTasksModule.openExam('${esc(firstNoteId)}', 3, { fromPractice: true })">Làm Part 1</button>
         `;
-      } else if (c.kind === 'tasks_hub') {
+      } else {
         badge = `${tasks.length || 139} Tasks`;
         cardOnClick = `window.TotoroUI?.switchView?.('task', { fromUser: true })`;
         actionsHtml = `
           <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); window.TotoroUI?.enterSkillMode?.('Listening', 'flashcard')">Flashcard</button>
-          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); window.TotoroUI?.switchView?.('task', { fromUser: true })">Mở Tasks →</button>
-        `;
-      } else if (c.kind === 'speed_quiz') {
-        cardOnClick = `ListeningPracticeApp.launchListeningSpeedQuiz()`;
-        actionsHtml = `
-          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.launchListeningSpeedQuiz()">Bắt đầu Speed Quiz →</button>
-        `;
-      } else if (c.kind === 'signal_deck') {
-        cardOnClick = `ListeningPracticeApp.openSignalDeck(false)`;
-        actionsHtml = `
-          <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSignalDeck(false)">Flashcard</button>
-          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSignalDeck(true)">Speed Quiz →</button>
-        `;
-      } else {
-        cardOnClick = `window.TotoroVoiceLab?.open?.('word')`;
-        actionsHtml = `
-          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); window.TotoroVoiceLab?.open?.('word')">Mở Voice Lab →</button>
+          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); window.TotoroUI?.switchView?.('task', { fromUser: true })">Mở Tasks</button>
         `;
       }
 
       return `
         <article class="tot-exam-card lp-p3-card" data-lp-portal="${esc(c.id)}" onclick="${cardOnClick}" role="button" tabindex="0">
-          ${renderPortalArt(c.scene)}
+          ${renderPortalArt(c, badge)}
           <div class="lp-p3-body">
-            <div class="lp-p3-badges">
-              <span class="lp-source-pill">${esc(c.label)}</span>
-              <span class="lp-meta-pill tabular">${esc(badge)}</span>
-            </div>
             <h3 class="lp-p3-title">${esc(c.bookTitle)}</h3>
             <p class="lp-p3-desc">${esc(c.desc)}</p>
             <div class="lp-p3-foot">${actionsHtml}</div>
@@ -627,27 +660,37 @@
      ========================================================= */
   function renderPartCard(item, isFull) {
     const prog = !isFull ? ListeningPracticeStore.getPartProgress(item) : null;
-    const partLabel = isFull ? 'FULL TEST' : `Part ${item.partNum || 1}`;
-    const types = Array.isArray(item.qTypes) ? item.qTypes : (isFull ? ['Parts 1–4'] : ['Note Completion']);
-    const scoreBadge = prog ? `<span class="lp-score-pill is-done tabular">✓ ${prog.score}/${prog.total}</span>` : '';
+    const partLabel = isFull ? 'FULL TEST' : `PART ${item.partNum || 1}`;
+    const types = Array.isArray(item.qTypes) ? item.qTypes : (isFull ? ['Part 1–4', 'Full 30 phút'] : ['Note Completion']);
+    const qCount = Number(item.questionsCount) || (isFull ? 40 : 10);
+    const mins = Number(item.durationMin) || (isFull ? 30 : 7);
+    const rightPill = prog
+      ? `<span class="lp-thumb-pill is-score tabular">${prog.score}/${prog.total} câu</span>`
+      : `<span class="lp-thumb-pill tabular">${esc(item.targetBand || (isFull ? '6.5 – 8.5' : (item.partNum >= 3 ? '7.0 – 8.5' : '6.0 – 7.0')))}</span>`;
+    const thumbTheme = isFull ? 'is-full' : `is-p${item.partNum || 1}`;
 
     return `
-      <article class="lp-part-card ${isFull ? 'is-full' : ''}">
-        <div class="lp-part-top">
-          <span class="lp-part-tag ${isFull ? 'is-full' : ''}">${esc(partLabel)}</span>
-          ${scoreBadge}
+      <article class="lp-row-card ${isFull ? 'is-full' : ''}">
+        <div class="lp-row-thumb ${thumbTheme}">
+          <div class="lp-thumb-top">
+            <span class="lp-thumb-tag ${isFull ? 'is-full' : ''}">${esc(partLabel)}</span>
+            ${rightPill}
+          </div>
+          <div class="lp-thumb-art" aria-hidden="true">
+            <img src="${esc(getBookImgUrl(item.bookId || (isFull ? 'lcam_20' : 'lactual_p14')))}" alt="" loading="lazy" decoding="async" draggable="false">
+          </div>
+          <div class="lp-thumb-foot tabular">${qCount} câu hỏi · ${mins} phút</div>
         </div>
-        <h4 class="lp-part-title">${esc(item.title)}</h4>
-        <p class="lp-part-sub">${esc(item.subtitle || '')}</p>
-        <div class="lp-part-foot">
+        <div class="lp-row-body">
+          <h4 class="lp-row-title">${esc(item.title)}</h4>
+          <p class="lp-row-sub">${esc(item.subtitle || '')}</p>
           <div class="lp-part-meta">
             ${types.map((t) => `<span class="lp-qtype-chip">${esc(t)}</span>`).join('')}
-            <span class="lp-qtype-chip tabular">${Number(item.questionsCount) || (isFull ? 40 : 10)} câu · ${Number(item.durationMin) || (isFull ? 30 : 7)} phút</span>
           </div>
-          <div class="lp-part-btns">
-            <button type="button" class="btn-subtle lp-part-go" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'practice')">Luyện tập</button>
-            <button type="button" class="btn btn-primary lp-part-go" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'exam')">Thi thật →</button>
-          </div>
+        </div>
+        <div class="lp-row-actions">
+          <button type="button" class="btn-subtle lp-row-btn" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'practice')">Luyện tập</button>
+          <button type="button" class="btn btn-primary lp-row-btn" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'exam')">${isFull ? 'Thi Full Test →' : 'Thi thật →'}</button>
         </div>
       </article>
     `;
@@ -821,7 +864,7 @@
       const labelTxt = st.done ? 'Đã làm' : (st.hasData ? 'Sẵn sàng' : 'Trống');
       return `
         <button type="button"
-          class="lp-test-tab ${isAct ? 'active' : ''} ${st.hasData ? 'has-data' : 'is-empty'} ${st.done ? 'is-done' : ''}"
+          class="lp-test-pill ${isAct ? 'active' : ''} ${st.hasData ? 'has-data' : 'is-empty'} ${st.done ? 'is-done' : ''}"
           data-lp-test="${tNum}"
           onclick="ListeningPracticeApp.selectTestNum(${tNum})">
           <span class="lp-test-dot" aria-hidden="true"></span>
@@ -854,6 +897,12 @@
         </div>
       `;
     } else {
+      const partMeta = {
+        1: '7 phút · Dễ → Trung bình',
+        2: '7 phút · Bản đồ & Độc thoại',
+        3: '8 phút · Thảo luận học thuật',
+        4: '8 phút · Bài giảng Band 7.5+'
+      };
       examListHtml = [1, 2, 3, 4].map((pNum) => {
         const items = testParts.filter((p) => Number(p.partNum) === pNum);
         if (!items.length) return '';
@@ -861,17 +910,18 @@
           <div class="lp-section-block">
             <div class="lp-section-head">
               <h3 class="lp-section-title">Part ${pNum}</h3>
+              <span class="lp-section-pill">${partMeta[pNum]}</span>
             </div>
-            <div class="lp-parts-grid is-single">${items.map((p) => renderPartCard(p, false)).join('')}</div>
+            <div class="lp-row-stack">${items.map((p) => renderPartCard(p, false)).join('')}</div>
           </div>
         `;
       }).join('') + (testFulls.length ? `
         <div class="lp-section-block">
           <div class="lp-section-head">
             <h3 class="lp-section-title">FULL TEST</h3>
-            <span class="lp-section-badge">Parts 1–4</span>
+            <span class="lp-section-pill">30 phút · Trọn bộ 4 Part</span>
           </div>
-          <div class="lp-parts-grid is-single">${testFulls.map((ft) => renderPartCard(ft, true)).join('')}</div>
+          <div class="lp-row-stack">${testFulls.map((ft) => renderPartCard(ft, true)).join('')}</div>
         </div>
       ` : '');
     }

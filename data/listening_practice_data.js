@@ -19,43 +19,43 @@
   'use strict';
 
   const PORTAL_CARDS = [
-    // ROW 1: 3 REAL IELTS EXAM BANKS (mirroring Reading Practice)
+    // ROW 1: 3 REAL IELTS EXAM BANKS (mirroring Reading Practice format)
     {
       id: 'cambridge',
       row: 'exams',
-      label: 'Cambridge IELTS',
-      bookTitle: 'Cambridge IELTS 1–20',
-      badge: '★ 20 Books',
-      desc: 'Đầy đủ khung 20 cuốn Cambridge chuẩn phòng thi thật — nổi bật bẫy Paraphrase Part 3–4 và Map Labelling.',
+      label: 'CAMBRIDGE',
+      bookTitle: 'Cambridge IELTS 1 – 20',
+      badge: '20 cuốn',
+      desc: 'Đầy đủ 20 cuốn Cambridge Listening chia theo Test 1–4, Part 1–4 & FULL TEST chuẩn phòng thi thật.',
       scene: 'cambridge',
       kind: 'source'
     },
     {
       id: 'volume',
       row: 'exams',
-      label: 'Volume',
-      bookTitle: 'Real Listening Tests 1–10',
-      badge: '10 Volumes',
-      desc: '10 tập đề thực chiến mật độ Distractor dày — rèn phản xạ bắt bẫy đổi ý từ Band 7.0 đến 9.0.',
+      label: 'VOLUME',
+      bookTitle: 'Real Listening Test — Volume 1–10',
+      badge: '10 tập · Real Listening',
+      desc: 'Trọn bộ 10 tập Real Listening Test mật độ Distractor & Paraphrase dày — chia rõ Test 1–4, Part 1–4 & FULL TEST.',
       scene: 'volume',
       kind: 'source'
     },
     {
       id: 'actual',
       row: 'exams',
-      label: 'Recent Actual Tests',
-      bookTitle: 'Recent Actual Tests',
-      badge: 'Parts 1–4 · FULL TEST',
-      desc: 'Kho đề thi thật gần đây lọc trực tiếp theo Part 1, Part 2, Part 3, Part 4 hoặc FULL TEST 30 phút.',
+      label: 'RECENT ACTUAL',
+      bookTitle: 'IELTS Listening Recent Actual Tests',
+      badge: 'Part 1–4 · FULL TEST',
+      desc: 'Ngân hàng đề thi Listening thật gần đây — chọn luyện trực tiếp theo Part 1, Part 2, Part 3, Part 4 hoặc FULL TEST 30 phút.',
       scene: 'actual',
       kind: 'source'
     },
 
-    // ROW 2: 3 CORE SUPPLEMENTARY DRILLS (exact 3x2 = 6 cards total)
+    // ROW 2: 3 CORE SUPPLEMENTARY DRILLS (kept intact for exact 3x2 grid)
     {
       id: 'map_labelling',
       row: 'drills',
-      label: 'Map Labelling',
+      label: 'MAP LABELLING',
       bookTitle: 'Map Labelling · Part 2',
       badge: '★ 3 Maps',
       desc: 'Bản đồ công viên, thị trấn có bùng binh và mặt bằng tòa nhà — chấm trực tiếp trên bản đồ và đối chiếu Transcript.',
@@ -65,7 +65,7 @@
     {
       id: 'note_completion',
       row: 'drills',
-      label: 'Note Completion',
+      label: 'NOTE COMPLETION',
       bookTitle: 'Note Completion · Parts 1–4',
       badge: '★ 8 Tests',
       desc: 'Luyện nghe điền từ chuẩn chính tả Cambridge qua 4 Part — tự động phát 2 lượt và mở khóa nghe lại từng câu.',
@@ -75,7 +75,7 @@
     {
       id: 'dictation_tasks',
       row: 'drills',
-      label: 'Listening Tasks',
+      label: 'LISTENING TASKS',
       bookTitle: 'Dictation & Spelling Tasks',
       badge: '139 Tasks',
       desc: 'Lộ trình 139 bài Task theo chủ đề phủ kín 3.864 từ cốt lõi — nghe chính tả, hội thoại A/B/C và thực chiến.',
