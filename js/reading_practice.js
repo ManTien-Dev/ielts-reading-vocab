@@ -1777,7 +1777,17 @@
       end,
       color: color || 'yellow'
     });
-    next.sort((a, b) => (a.paraIdx - b.paraIdx) || (a.start - b.start));
+    next.sort((a, b) => {
+      const ka = String(a.paraIdx);
+      const kb = String(b.paraIdx);
+      if (ka !== kb) {
+        const qa = ka.startsWith('q') ? 1 : 0;
+        const qb = kb.startsWith('q') ? 1 : 0;
+        if (qa !== qb) return qa - qb;
+        return Number(ka.replace(/^q/, '')) - Number(kb.replace(/^q/, ''));
+      }
+      return a.start - b.start;
+    });
     state.session.highlights[passageId] = next;
   }
 
@@ -1795,49 +1805,127 @@
     state.session.highlights[passageId] = next;
   }
 
-  function getSelectionParaOffsets(range) {
-    const pane = document.getElementById('rp-passage-content');
-    if (!pane || !range) return [];
-    const blocks = Array.from(pane.querySelectorAll('.ins-para-block'));
-    const slices = [];
-    for (const blk of blocks) {
-      const textRoot = blk.querySelector('.rp-para-text');
-      if (!textRoot || !range.intersectsNode(textRoot)) continue;
-      const paraIdx = Number(blk.dataset.paraIdx);
-      const totalLen = (textRoot.textContent || '').length;
-      if (!totalLen) continue;
-
-      let startOff = 0;
-      let endOff = totalLen;
-      if (textRoot.contains(range.startContainer)) {
-        const pre = document.createRange();
-        pre.selectNodeContents(textRoot);
-        pre.setEnd(range.startContainer, range.startOffset);
-        startOff = pre.toString().length;
-      }
-      if (textRoot.contains(range.endContainer)) {
-        const preEnd = document.createRange();
-        preEnd.selectNodeContents(textRoot);
-        preEnd.setEnd(range.endContainer, range.endOffset);
-        endOff = preEnd.toString().length;
-      }
-      startOff = Math.max(0, Math.min(totalLen, startOff));
-      endOff = Math.max(0, Math.min(totalLen, endOff));
-      if (endOff > startOff) slices.push({ paraIdx, start: startOff, end: endOff });
+  function isQuestionTextNodeHighlightable(node) {
+    if (!node || node.nodeType !== 3 || !node.nodeValue || !node.nodeValue.length) return false;
+    const el = node.parentElement;
+    if (!el) return false;
+    if (el.closest('input, select, option, textarea, button, svg, style, script, .ins-note-qnum, .ins-q-num, .rp-q-num, .ins-q-badge, .rp-q-badge, .rp-rev-badge, .rp-rev-inline, .rp-exp-panel, .rp-exp-box, .ins-mh-hint')) {
+      return false;
     }
-    return slices;
+    return true;
+  }
+
+  function collectHighlightTextNodes(root, isQuestionPane) {
+    const textNodes = [];
+    if (!root) return textNodes;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let cursor = 0;
+    let node;
+    while ((node = walker.nextNode())) {
+      if (isQuestionPane && !isQuestionTextNodeHighlightable(node)) continue;
+      const len = node.nodeValue ? node.nodeValue.length : 0;
+      if (len > 0) {
+        textNodes.push({ node, start: cursor, end: cursor + len });
+        cursor += len;
+      }
+    }
+    return textNodes;
+  }
+
+  function getHighlightRootForKey(paraIdx) {
+    const key = String(paraIdx);
+    if (key.startsWith('q')) {
+      const qPane = document.getElementById('rp-questions-pane');
+      if (!qPane) return null;
+      const idx = Number(key.slice(1));
+      const groups = qPane.querySelectorAll('.ins-q-group');
+      const grp = groups[idx] || null;
+      return grp ? { root: grp, isQuestionPane: true } : null;
+    }
+    const pPane = document.getElementById('rp-passage-content');
+    if (!pPane) return null;
+    const blk = pPane.querySelector(`.ins-para-block[data-para-idx="${paraIdx}"]`);
+    const textRoot = blk?.querySelector('.rp-para-text');
+    return textRoot ? { root: textRoot, isQuestionPane: false } : null;
+  }
+
+  function getSelectionParaOffsets(range) {
+    if (!range) return [];
+    const pPane = document.getElementById('rp-passage-content');
+    if (pPane && pPane.contains(range.commonAncestorContainer)) {
+      const blocks = Array.from(pPane.querySelectorAll('.ins-para-block'));
+      const slices = [];
+      for (const blk of blocks) {
+        const textRoot = blk.querySelector('.rp-para-text');
+        if (!textRoot || !range.intersectsNode(textRoot)) continue;
+        const paraIdx = Number(blk.dataset.paraIdx);
+        const totalLen = (textRoot.textContent || '').length;
+        if (!totalLen) continue;
+
+        let startOff = 0;
+        let endOff = totalLen;
+        if (textRoot.contains(range.startContainer)) {
+          const pre = document.createRange();
+          pre.selectNodeContents(textRoot);
+          pre.setEnd(range.startContainer, range.startOffset);
+          startOff = pre.toString().length;
+        }
+        if (textRoot.contains(range.endContainer)) {
+          const preEnd = document.createRange();
+          preEnd.selectNodeContents(textRoot);
+          preEnd.setEnd(range.endContainer, range.endOffset);
+          endOff = preEnd.toString().length;
+        }
+        startOff = Math.max(0, Math.min(totalLen, startOff));
+        endOff = Math.max(0, Math.min(totalLen, endOff));
+        if (endOff > startOff) slices.push({ paraIdx, start: startOff, end: endOff });
+      }
+      return slices;
+    }
+
+    // Question Pane highlighting (supports all question types while skipping inputs/selects/badges)
+    const qPane = document.getElementById('rp-questions-pane');
+    if (qPane && qPane.contains(range.commonAncestorContainer)) {
+      const groups = Array.from(qPane.querySelectorAll('.ins-q-group'));
+      const slices = [];
+      groups.forEach((grp, gIdx) => {
+        if (!range.intersectsNode(grp)) return;
+        const textNodes = collectHighlightTextNodes(grp, true);
+        let minStart = Infinity;
+        let maxEnd = -1;
+        for (const tn of textNodes) {
+          if (!range.intersectsNode(tn.node)) continue;
+          let sLocal = 0;
+          let eLocal = tn.node.nodeValue.length;
+          if (tn.node === range.startContainer) sLocal = Math.max(0, Math.min(eLocal, range.startOffset));
+          if (tn.node === range.endContainer) eLocal = Math.max(0, Math.min(eLocal, range.endOffset));
+          if (eLocal > sLocal) {
+            minStart = Math.min(minStart, tn.start + sLocal);
+            maxEnd = Math.max(maxEnd, tn.start + eLocal);
+          }
+        }
+        if (maxEnd > minStart && Number.isFinite(minStart)) {
+          slices.push({ paraIdx: `q${gIdx}`, start: minStart, end: maxEnd });
+        }
+      });
+      return slices;
+    }
+
+    return [];
   }
 
   function applyStoredHighlightsToPassage(passageId) {
-    const pane = document.getElementById('rp-passage-content');
-    if (!pane) return;
-    // Unwrap existing marks first so function is idempotent
-    pane.querySelectorAll('mark.rp-hl-mark').forEach((m) => {
-      const parent = m.parentNode;
-      if (!parent) return;
-      while (m.firstChild) parent.insertBefore(m.firstChild, m);
-      parent.removeChild(m);
-      parent.normalize();
+    // Unwrap existing marks in BOTH Passage and Questions panes so function is idempotent
+    ['rp-passage-content', 'rp-questions-pane'].forEach((paneId) => {
+      const el = document.getElementById(paneId);
+      if (!el) return;
+      el.querySelectorAll('mark.rp-hl-mark').forEach((m) => {
+        const parent = m.parentNode;
+        if (!parent) return;
+        while (m.firstChild) parent.insertBefore(m.firstChild, m);
+        parent.removeChild(m);
+        parent.normalize();
+      });
     });
 
     const list = getPassageHighlights(passageId);
@@ -1850,21 +1938,9 @@
     }
 
     byPara.forEach((hlItems, paraIdx) => {
-      const blk = pane.querySelector(`.ins-para-block[data-para-idx="${paraIdx}"]`);
-      const textRoot = blk?.querySelector('.rp-para-text');
-      if (!textRoot) return;
-
-      const walker = document.createTreeWalker(textRoot, NodeFilter.SHOW_TEXT, null);
-      const textNodes = [];
-      let cursor = 0;
-      let node;
-      while ((node = walker.nextNode())) {
-        const len = node.nodeValue ? node.nodeValue.length : 0;
-        if (len > 0) {
-          textNodes.push({ node, start: cursor, end: cursor + len });
-          cursor += len;
-        }
-      }
+      const target = getHighlightRootForKey(paraIdx);
+      if (!target) return;
+      const textNodes = collectHighlightTextNodes(target.root, target.isQuestionPane);
 
       // Wrap intersecting text nodes from back to front so offsets stay exact
       for (let i = textNodes.length - 1; i >= 0; i--) {
@@ -1899,36 +1975,26 @@
   }
 
   function clearSelectionPreview() {
-    const pane = document.getElementById('rp-passage-content');
-    if (!pane) return;
-    pane.querySelectorAll('mark.rp-hl-preview').forEach((m) => {
-      const parent = m.parentNode;
-      if (!parent) return;
-      while (m.firstChild) parent.insertBefore(m.firstChild, m);
-      parent.removeChild(m);
-      parent.normalize();
+    ['rp-passage-content', 'rp-questions-pane'].forEach((paneId) => {
+      const pane = document.getElementById(paneId);
+      if (!pane) return;
+      pane.querySelectorAll('mark.rp-hl-preview').forEach((m) => {
+        const parent = m.parentNode;
+        if (!parent) return;
+        while (m.firstChild) parent.insertBefore(m.firstChild, m);
+        parent.removeChild(m);
+        parent.normalize();
+      });
     });
   }
 
   function renderSelectionPreview(slices) {
     clearSelectionPreview();
-    const pane = document.getElementById('rp-passage-content');
-    if (!pane || !Array.isArray(slices) || !slices.length) return;
+    if (!Array.isArray(slices) || !slices.length) return;
     for (const sl of slices) {
-      const blk = pane.querySelector(`.ins-para-block[data-para-idx="${sl.paraIdx}"]`);
-      const textRoot = blk?.querySelector('.rp-para-text');
-      if (!textRoot) continue;
-      const walker = document.createTreeWalker(textRoot, NodeFilter.SHOW_TEXT, null);
-      const textNodes = [];
-      let cursor = 0;
-      let node;
-      while ((node = walker.nextNode())) {
-        const len = node.nodeValue ? node.nodeValue.length : 0;
-        if (len > 0) {
-          textNodes.push({ node, start: cursor, end: cursor + len });
-          cursor += len;
-        }
-      }
+      const target = getHighlightRootForKey(sl.paraIdx);
+      if (!target) continue;
+      const textNodes = collectHighlightTextNodes(target.root, target.isQuestionPane);
       for (let i = textNodes.length - 1; i >= 0; i--) {
         const tn = textNodes[i];
         if (sl.end <= tn.start || sl.start >= tn.end) continue;
@@ -2558,7 +2624,11 @@
             </div>
 
             <div class="${isPractice ? 'prac-sheet-shell ink-brackets prac-sheet-right ' : 'ins-pane-wrap ins-pane-wrap-right '}${state.mobilePane === 'questions' ? 'mob-active' : ''}">
-              <section class="ins-pane ins-pane-right ${state.mobilePane === 'questions' ? 'mob-active' : ''}" id="rp-questions-pane">
+              <section class="ins-pane ins-pane-right ${state.mobilePane === 'questions' ? 'mob-active' : ''}" id="rp-questions-pane"
+                onmousedown="ReadingPracticeApp.onPassageMouseDown(event)"
+                onmouseup="ReadingPracticeApp.handlePassageSelection(event)"
+                oncontextmenu="ReadingPracticeApp.handlePassageContextMenu(event)"
+                onclick="ReadingPracticeApp.onQuestionsClickGuard(event)">
                 <div class="ins-questions-inner">
                   ${groupsHtml}
                 </div>
@@ -4261,6 +4331,15 @@
       bar.classList.remove('hidden');
     },
 
+    onQuestionsClickGuard(ev) {
+      if (state.suppressQuestionClickUntil && Date.now() < state.suppressQuestionClickUntil) {
+        if (ev.target && ev.target.closest && ev.target.closest('label, .ins-radio-row, .ins-check-row')) {
+          ev.preventDefault();
+          ev.stopPropagation();
+        }
+      }
+    },
+
     onPassageMouseDown(ev) {
       if (ev.target && ev.target.closest && ev.target.closest('#rp-hl-toolbar')) return;
       state.pendingSelection = null;
@@ -4268,18 +4347,25 @@
       this.hideHighlightToolbar();
     },
 
-    handlePassageSelection() {
+    handlePassageSelection(ev) {
       const s = state.session;
       const sel = window.getSelection();
       const bar = document.getElementById('rp-hl-toolbar');
       if (!s || !bar) return;
+      // Never hijack text selection inside editable inputs/selects
+      if (ev?.target && ev.target.closest && ev.target.closest('input, textarea, select')) {
+        return;
+      }
       if (!sel || sel.isCollapsed || !sel.toString().trim()) {
         if (!state.pendingSelection) bar.classList.add('hidden');
         return;
       }
       const range = sel.getRangeAt(0);
-      const pane = document.getElementById('rp-passage-content');
-      if (!pane || !pane.contains(range.commonAncestorContainer)) {
+      const pPane = document.getElementById('rp-passage-content');
+      const qPane = document.getElementById('rp-questions-pane');
+      const inPassage = Boolean(pPane && pPane.contains(range.commonAncestorContainer));
+      const inQuestions = Boolean(qPane && qPane.contains(range.commonAncestorContainer));
+      if (!inPassage && !inQuestions) {
         state.pendingSelection = null;
         clearSelectionPreview();
         bar.classList.add('hidden');
@@ -4303,8 +4389,12 @@
         return;
       }
 
+      if (inQuestions) {
+        state.suppressQuestionClickUntil = Date.now() + 280;
+      }
+
       // Cache selection & IMMEDIATELY collapse native browser selection so Microsoft Edge's Mini Menu NEVER pops up!
-      state.pendingSelection = { passageId: curPassage.id, slices, text, rect, context };
+      state.pendingSelection = { passageId: curPassage.id, slices, text, rect, context, pane: inQuestions ? 'questions' : 'passage' };
       try { sel.removeAllRanges(); } catch (_) {}
       renderSelectionPreview(slices);
       this._positionSelectionPopover(rect);
@@ -4347,7 +4437,7 @@
         if (sel && !sel.isCollapsed) slices = getSelectionParaOffsets(sel.getRangeAt(0));
       }
       if (!slices.length) {
-        toast('Hãy bôi đen trực tiếp trên đoạn văn để highlight.');
+        toast('Hãy bôi đen trực tiếp trên đoạn văn hoặc câu hỏi để highlight.');
         this.hideHighlightToolbar();
         return;
       }
