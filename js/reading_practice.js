@@ -2797,12 +2797,20 @@
   }
 
   function renderReviewBlock(q, ok, correctDisplay, passage) {
+    const s = state.session;
     const sol = getQuestionSolution(passage, q.num);
     const paraList = (Array.isArray(q.paraphrase) && q.paraphrase.length) ? q.paraphrase : (sol?.para || []);
     const expText = q.explanation || sol?.exp || '';
     const loc = Array.isArray(sol?.loc) && sol.loc.length === 3 ? sol.loc : null;
     const quoteText = (!loc && sol?.quote) ? sol.quote : '';
     const srcLabel = sol?.src || '';
+    const hasDetails = !!(paraList.length || expText || quoteText);
+    const expKey = `${passage?.id || 'p'}__q${q.num}`;
+    const isExpOpen = !!(s?.openExplanations && s.openExplanations[expKey]);
+    const isLocActive = !!(
+      (q.evidenceId && s?.activeEvidenceId === q.evidenceId) ||
+      (loc && s?.activeEvidenceLoc && s.activeEvidenceLoc.passageId === passage?.id && s.activeEvidenceLoc.qnum === q.num)
+    );
 
     const paraRows = paraList.map((pr) => `
       <div class="rp-para-map-row">
@@ -2812,26 +2820,41 @@
       </div>
     `).join('');
 
+    const pinSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
+    const chevSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+
     const locateBtnHtml = q.evidenceId
-      ? `<button type="button" class="rp-locate-btn" onclick="ReadingPracticeApp.locateEvidence('${esc(q.evidenceId)}')">Định vị dẫn chứng</button>`
+      ? `<button type="button" class="rp-rev-pill is-locate ${isLocActive ? 'is-active' : ''}" onclick="event.stopPropagation(); ReadingPracticeApp.locateEvidence('${esc(q.evidenceId)}')">${pinSvg}<span>Locate</span></button>`
       : (loc && passage?.id
-        ? `<button type="button" class="rp-locate-btn" onclick="ReadingPracticeApp.locateWebEvidence('${esc(passage.id)}', ${loc[0]}, ${loc[1]}, ${loc[2]}, ${q.num})">Định vị dẫn chứng</button>`
+        ? `<button type="button" class="rp-rev-pill is-locate ${isLocActive ? 'is-active' : ''}" onclick="event.stopPropagation(); ReadingPracticeApp.locateWebEvidence('${esc(passage.id)}', ${loc[0]}, ${loc[1]}, ${loc[2]}, ${q.num})">${pinSvg}<span>Locate</span></button>`
         : '');
 
+    const explainBtnHtml = hasDetails
+      ? `<button type="button" class="rp-rev-pill is-explain ${isExpOpen ? 'is-open' : ''}" aria-expanded="${isExpOpen ? 'true' : 'false'}" onclick="event.stopPropagation(); ReadingPracticeApp.toggleQuestionExplanation('${esc(expKey)}')"><span>Giải thích</span>${chevSvg}</button>`
+      : '';
+
     return `
-      <div class="rp-rev-box ins-rev-box ${ok ? 'is-ok' : 'is-bad'}">
-        <div class="rp-rev-box-head">
-          <span><strong>Q${q.num}:</strong> ${ok ? '✓ Chính xác' : `✕ Đáp án đúng: <strong>${esc(correctDisplay)}</strong>`}${srcLabel ? ` <span class="rp-rev-src-tag">${esc(srcLabel)}</span>` : ''}</span>
-          ${locateBtnHtml}
+      <div class="rp-rev-inline ${ok ? 'is-ok' : 'is-bad'}">
+        <div class="rp-rev-bar">
+          <span class="rp-rev-key ${ok ? 'is-ok' : 'is-bad'}">${ok ? `✓ Đúng · <strong>${esc(correctDisplay)}</strong>` : `Đáp án: <strong>${esc(correctDisplay)}</strong>`}</span>
+          <div class="rp-rev-btns">
+            ${locateBtnHtml}
+            ${explainBtnHtml}
+          </div>
         </div>
-        ${paraRows ? `
-          <div class="rp-para-map">
-            <div class="rp-pm-title">Paraphrase Mapping (Câu hỏi ↔ Bài đọc)</div>
-            ${paraRows}
+        ${(hasDetails && isExpOpen) ? `
+          <div class="rp-rev-drawer">
+            ${paraRows ? `
+              <div class="rp-para-map">
+                <div class="rp-pm-title">Paraphrase Mapping</div>
+                ${paraRows}
+              </div>
+            ` : ''}
+            ${quoteText ? `<div class="rp-rev-quote">“${esc(quoteText)}”</div>` : ''}
+            ${expText ? `<div class="rp-rev-exp">${esc(expText)}</div>` : ''}
+            ${srcLabel ? `<div class="rp-rev-src-foot">Nguồn: ${esc(srcLabel)}</div>` : ''}
           </div>
         ` : ''}
-        ${quoteText ? `<div class="rp-rev-quote">“${esc(quoteText)}”</div>` : ''}
-        ${expText ? `<div class="rp-rev-exp">${esc(expText)}</div>` : ''}
       </div>
     `;
   }
@@ -3960,6 +3983,13 @@
       setTimeout(() => {
         document.querySelector('.rp-ev-span[data-ev-loc="active"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 45);
+    },
+
+    toggleQuestionExplanation(expKey) {
+      if (!state.session) return;
+      if (!state.session.openExplanations) state.session.openExplanations = {};
+      state.session.openExplanations[expKey] = !state.session.openExplanations[expKey];
+      renderExamWorkspace();
     },
 
     /* ---------- SELECTION & PASTEL HIGHLIGHT POPOVER (Suppresses Edge Mini Menu!) ---------- */

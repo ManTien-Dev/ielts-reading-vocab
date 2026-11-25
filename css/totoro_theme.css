@@ -14145,11 +14145,121 @@ mark.rp-hl-preview {
 .rp-rev-quote {
   margin-top: 6px;
   padding: 6px 10px;
-  border-left: 3px solid #d97706;
-  background: rgba(254, 243, 199, 0.45);
+  border-left: 2.5px solid #d97706;
+  background: rgba(254, 243, 199, 0.42);
   border-radius: 0 6px 6px 0;
   font-size: 12.5px;
   font-style: italic;
   color: var(--ink, #1f2421);
   line-height: 1.5;
+}
+
+/* Compact, Quiet Editorial Review Strip (Locate + Collapsible Giải thích) */
+.rp-rev-inline {
+  margin-top: 8px;
+  margin-left: 34px;
+}
+.ins-note-row .rp-rev-inline,
+.ins-q-gap .rp-rev-inline {
+  margin-left: 16px;
+}
+.rp-rev-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0 4px;
+  border-top: 1px dashed rgba(44, 52, 46, 0.13);
+  flex-wrap: wrap;
+}
+.rp-rev-key {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2, #4d5750);
+  letter-spacing: -0.005em;
+}
+.rp-rev-key.is-ok {
+  color: #1f6b43;
+}
+.rp-rev-key.is-bad {
+  color: #9e352b;
+}
+.rp-rev-key strong {
+  font-weight: 800;
+}
+.rp-rev-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rp-rev-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(44, 52, 46, 0.15);
+  background: #ffffff;
+  color: var(--ink-2, #454f48);
+  font-size: 11.8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.rp-rev-pill svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  transition: transform 160ms ease;
+}
+.rp-rev-pill.is-locate:hover,
+.rp-rev-pill.is-locate.is-active {
+  background: #e8f5ec;
+  border-color: rgba(47, 107, 71, 0.45);
+  color: #1f5c3a;
+}
+.rp-rev-pill.is-explain:hover,
+.rp-rev-pill.is-explain.is-open {
+  background: rgba(44, 52, 46, 0.06);
+  border-color: rgba(44, 52, 46, 0.28);
+  color: var(--ink, #1f2421);
+}
+.rp-rev-pill.is-explain.is-open svg {
+  transform: rotate(180deg);
+}
+.rp-rev-drawer {
+  margin-top: 6px;
+  padding: 10px 13px;
+  border-radius: 0 9px 9px 0;
+  border-left: 2.5px solid #4e7a51;
+  background: rgba(246, 243, 235, 0.78);
+  font-size: 12.8px;
+  color: var(--ink-2, #3c453f);
+  line-height: 1.58;
+}
+.rp-rev-drawer .rp-para-map {
+  margin-top: 0;
+  padding-top: 0;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-top: 0;
+  border-bottom: 1px dashed rgba(44, 52, 46, 0.14);
+}
+.rp-rev-drawer .rp-rev-exp {
+  margin-top: 0;
+  color: #2f3832;
+  line-height: 1.6;
+}
+.rp-rev-src-foot {
+  margin-top: 6px;
+  font-size: 10.8px;
+  font-weight: 650;
+  color: var(--ink-3, #7a837c);
+  text-align: right;
+}
+@media (max-width: 640px) {
+  .rp-rev-inline {
+    margin-left: 0;
+  }
 }
