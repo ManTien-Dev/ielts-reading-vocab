@@ -12219,11 +12219,426 @@ html #screen-study .scope-select-wrap.has-custom-scope > select.is-native-hidden
   color: #82d0a7;
 }
 
+/* =========================================================
+   REAL PHOTO THUMBNAILS + 1:1 INSPERA CD-IELTS LISTENING SHELL
+   ========================================================= */
+.lp-row-thumb.has-photo {
+  background: #14261d;
+  padding: 9px 10px;
+}
+
+.lp-thumb-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s var(--lp-ease);
+}
+
+.lp-row-thumb.is-full-cover .lp-thumb-photo {
+  object-fit: cover;
+  object-position: center;
+}
+
+.lp-row-card:hover .lp-thumb-photo {
+  transform: scale(1.045);
+}
+
+.lp-thumb-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(10, 18, 14, 0.56) 0%, rgba(10, 18, 14, 0.14) 48%, rgba(10, 18, 14, 0.72) 100%);
+  pointer-events: none;
+}
+
+.lp-row-thumb.is-full-cover .lp-thumb-scrim {
+  background: linear-gradient(180deg, rgba(10, 18, 14, 0.42) 0%, rgba(10, 18, 14, 0.04) 45%, rgba(10, 18, 14, 0.52) 100%);
+}
+
+/* Full-screen Inspera Listening Exam Lock */
+body.lp-exam-fullscreen {
+  overflow: hidden;
+}
+
+.lp-ins-mode-tag {
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--ins-border);
+  background: var(--ins-banner);
+  color: var(--ins-ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lp-ins-mode-tag.is-exam {
+  border-color: rgba(213, 26, 44, 0.35);
+  background: rgba(213, 26, 44, 0.08);
+  color: #b91c1c;
+}
+
+/* Integrated Inspera Audio Strip */
+.lp-ins-audio {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 7px 18px;
+  background: var(--ins-banner);
+  border-bottom: 1px solid var(--ins-border);
+  color: var(--ins-ink);
+}
+
+.lp-ins-play {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--ins-border);
+  background: #111111;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.lp-ins-play:hover {
+  background: #2b7bd6;
+  border-color: #2b7bd6;
+}
+
+.lp-ins-play svg {
+  width: 15px;
+  height: 15px;
+}
+
+.lp-ins-step {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 1px solid var(--ins-border);
+  background: var(--ins-hdr);
+  color: var(--ins-ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lp-ins-step:hover {
+  background: var(--ins-sel-bg);
+}
+
+.lp-ins-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 240px;
+  min-width: 160px;
+}
+
+.lp-ins-time {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ins-muted);
+  min-width: 38px;
+}
+
+.lp-ins-seek {
+  flex: 1;
+  accent-color: var(--ins-active-ring);
+  cursor: pointer;
+}
+
+.lp-ins-seek:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.lp-ins-vol-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ins-ink);
+}
+
+.lp-ins-vol-wrap svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.lp-ins-vol {
+  width: 72px;
+  accent-color: var(--ins-active-ring);
+  cursor: pointer;
+}
+
+.lp-ins-rate {
+  height: 28px;
+  padding: 0 7px;
+  border-radius: 4px;
+  border: 1px solid var(--ins-border);
+  background: var(--ins-hdr);
+  color: var(--ins-ink);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lp-ins-audio .lp-audio-lock-pill {
+  padding: 3px 9px;
+  border-radius: 4px;
+  background: rgba(213, 26, 44, 0.08);
+  border: 1px solid rgba(213, 26, 44, 0.28);
+  color: #b91c1c;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* Official Flat CD-IELTS Listening Paper (100% identical in Practice & Exam!) */
+.lp-ins-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  background: var(--ins-bg);
+}
+
+.lp-ins-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 18px 28px 92px;
+  background: var(--ins-bg);
+}
+
+.lp-ins-paper {
+  max-width: 920px;
+  margin: 0 auto;
+  font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--ins-fs, 15px);
+  line-height: 1.78;
+  color: var(--ins-ink);
+}
+
+.lp-ins-paper h2,
+.lp-ins-paper h3,
+.lp-ins-paper h4 {
+  margin: 20px 0 8px;
+  font-weight: 700;
+  color: var(--ins-ink);
+  line-height: 1.35;
+}
+
+.lp-ins-paper h2,
+.lp-ins-paper h3 {
+  font-size: calc(var(--ins-fs, 15px) + 2px);
+}
+
+.lp-ins-paper h4 {
+  font-size: calc(var(--ins-fs, 15px) + 0.5px);
+}
+
+.lp-ins-paper p {
+  margin: 7px 0;
+}
+
+.lp-ins-paper ul,
+.lp-ins-paper ol {
+  margin: 8px 0 12px;
+  padding-left: 24px;
+}
+
+.lp-ins-paper li {
+  margin: 6px 0;
+}
+
+.lp-ins-paper table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0 18px;
+  border: 1px solid var(--ins-border);
+  background: var(--ins-bg);
+}
+
+.lp-ins-paper th,
+.lp-ins-paper td {
+  padding: 10px 13px;
+  border: 1px solid var(--ins-border);
+  text-align: left;
+  vertical-align: top;
+  color: var(--ins-ink);
+}
+
+.lp-ins-paper thead th,
+.lp-ins-paper tr:first-child th {
+  background: var(--ins-banner);
+  font-weight: 700;
+}
+
+/* Official Inspera Rectangular Gap-Fill Input (#888 border, centered bold question number) */
+.lp-ins-paper .lp-ex-gap {
+  display: inline-block;
+  width: 158px;
+  height: 28px;
+  padding: 0 8px;
+  margin: 1px 4px;
+  border: 1px solid var(--ins-input-bd);
+  border-radius: 3px;
+  background: var(--ins-input-bg);
+  color: var(--ins-ink);
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.lp-ins-paper .lp-ex-gap.is-letter {
+  width: 62px;
+  text-transform: uppercase;
+}
+
+.lp-ins-paper .lp-ex-gap::placeholder {
+  color: var(--ins-ink);
+  font-weight: 800;
+  opacity: 0.92;
+}
+
+.lp-ins-paper .lp-ex-gap:focus {
+  outline: 2px solid var(--ins-active-ring);
+  border-color: var(--ins-active-ring);
+  box-shadow: none;
+}
+
+.lp-ins-paper .lp-ex-select {
+  height: 29px;
+  padding: 0 8px;
+  margin: 1px 4px;
+  border: 1px solid var(--ins-input-bd);
+  border-radius: 3px;
+  background: var(--ins-input-bg);
+  color: var(--ins-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Official Inspera Flat Full-Row Light Blue (#b8d8f0) Radio & Checkbox Rows */
+.lp-ins-paper .lp-ex-opt,
+.lp-ins-paper label:has(> input.lp-ex-radio),
+.lp-ins-paper label:has(> input.lp-ex-check) {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 12px;
+  margin: 2px 0;
+  border-radius: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--ins-ink);
+  cursor: pointer;
+}
+
+.lp-ins-paper .lp-ex-opt:hover,
+.lp-ins-paper label:has(> input.lp-ex-radio):hover,
+.lp-ins-paper label:has(> input.lp-ex-check):hover {
+  background: rgba(184, 216, 240, 0.35);
+}
+
+.lp-ins-paper .lp-ex-opt.is-selected,
+.lp-ins-paper .lp-ex-opt-row.is-selected > .lp-ex-opt,
+.lp-ins-paper label:has(> input.lp-ex-radio:checked),
+.lp-ins-paper label:has(> input.lp-ex-check:checked) {
+  background: var(--ins-sel-bg);
+}
+
+.lp-ins-paper .lp-ex-radio,
+.lp-ins-paper .lp-ex-check {
+  accent-color: #111111;
+}
+
+.lp-ins-paper .lp-ex-answer-strip {
+  border-radius: 4px;
+  background: var(--ins-banner);
+  border: 1px solid var(--ins-border);
+}
+
+.lp-ins-paper .lp-ex-strip-num {
+  border-radius: 3px;
+  background: var(--ins-hdr);
+  border: 1px solid var(--ins-input-bd);
+  color: var(--ins-ink);
+}
+
+.lp-ins-hl {
+  background: #fff176;
+  color: #111111;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Full-Screen Inspera Review Body */
+.lp-ins-rev-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.lp-ins-rev-metrics {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lp-ins-rev-strip .lp-rev-metric {
+  min-width: 96px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid var(--ins-border);
+  color: var(--ins-ink);
+}
+
+.lp-ins-rev-strip .lp-rev-metric.is-band {
+  background: #eaf6ee;
+  border-color: #22a052;
+  color: #14532d;
+}
+
+.lp-ins-rev-strip .lp-rev-mval {
+  font-size: 18px;
+}
+
+.lp-ins-rev-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lp-ins-rev-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 18px 24px 32px;
+  background: var(--ins-bg);
+}
+
+.lp-ins-rev-scroll .lp-rev-grid {
+  max-width: 1260px;
+  margin: 0 auto;
+}
+
 @media (max-width: 900px) {
   .lp-rev-grid {
     grid-template-columns: 1fr;
   }
-  .lp-ex-paper-wrap {
-    padding: 16px;
+  .lp-ins-scroll {
+    padding: 14px 14px 86px;
   }
 }

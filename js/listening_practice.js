@@ -715,6 +715,37 @@
   /* =========================================================
      VIEW 2 & 3: EXAM BANKS (WOODEN TOTORO BOOKSHELF / ACTUAL TABS)
      ========================================================= */
+  const LP_COVER_TOPIC_RULES = [
+    ['music_art', /\b(music|art|artist|paint|film|cinema|photo|theatre|theater|concert|pottery|museum|gallery|festival|dance|song|violin|piano)\b/i],
+    ['ancient', /\b(ancient|roman|egypt|archaeolog|medieval|temple|heritage|history|historical|castle|palace|ruins|century|museum|archive)\b/i],
+    ['agriculture', /\b(food|restaurant|cafe|coffee|tea|farm|farming|market|organic|cook|bakery|kitchen|garden|crop|honey|diet|nutrition)\b/i],
+    ['wildlife', /\b(bird|animal|wildlife|zoo|park|whale|dolphin|bee|insect|fish|species|nature|reserve|habitat|dog|horse|sheep|penguin)\b/i],
+    ['ocean', /\b(ocean|sea|river|coastal|island|boat|sail|sailing|ship|harbour|harbor|beach|lake|water|marine|diving|ferry|canal)\b/i],
+    ['botany', /\b(plant|tree|forest|flower|botan|wood|garden|greenhouse|soil|leaf|environment|ecology|climate|conservation)\b/i],
+    ['architecture', /\b(building|city|urban|street|road|bridge|library|hotel|house|housing|apartment|campus|station|airport|transport|bike|cycling|train)\b/i],
+    ['space', /\b(space|planet|star|astron|observatory|weather|climate|geolog|volcan|solar|energy|wind|earthquake)\b/i],
+    ['medicine', /\b(health|medic|hospital|clinic|sport|fitness|gym|swimming|sleep|stress|doctor|therapy|exercise|mental|wellbeing)\b/i],
+    ['tech', /\b(tech|robot|computer|digital|internet|phone|engine|machine|factory|science|lab|experiment|data|online|software|media)\b/i],
+    ['mind', /\b(school|university|college|student|course|study|class|lecture|seminar|research|language|education|teacher|training|library|career)\b/i],
+    ['society', /\b(job|work|company|business|office|volunteer|community|club|tour|tourism|travel|holiday|excursion|event|charity|shop|bank)\b/i]
+  ];
+
+  function getListeningCardCover(item, isFull) {
+    if (isFull) {
+      const ft = 'assets/images/listening_covers/cover_listening_fulltest.webp?v=20261125h';
+      return { primary: ft, fallback: ft };
+    }
+    let matched = 'society';
+    const hay = `${item?.title || ''} ${item?.subtitle || ''}`;
+    for (const [key, re] of LP_COVER_TOPIC_RULES) {
+      if (re.test(hay)) { matched = key; break; }
+    }
+    const fallback = `assets/images/reading_covers/${matched}.webp`;
+    const photoMap = window.LISTENING_PHOTO_MAP || {};
+    const realPhoto = item?.id ? photoMap[item.id] : null;
+    return { primary: realPhoto || fallback, fallback };
+  }
+
   function renderPartCard(item, isFull) {
     const prog = ListeningPracticeStore.getItemProgress(item);
     const partLabel = isFull ? 'FULL TEST' : `PART ${item.partNum || 1}`;
@@ -724,17 +755,18 @@
     const rightPill = prog
       ? `<span class="lp-thumb-pill is-score tabular">${prog.score}/${prog.total} câu</span>`
       : `<span class="lp-thumb-pill tabular">${esc(item.targetBand || (isFull ? '6.5 – 8.5' : (item.partNum >= 3 ? '7.0 – 8.5' : '6.0 – 7.0')))}</span>`;
-    const thumbTheme = isFull ? 'is-full' : `is-p${item.partNum || 1}`;
+    const cover = getListeningCardCover(item, isFull);
 
     return `
       <article class="lp-row-card ${isFull ? 'is-full' : ''}">
-        <div class="lp-row-thumb ${thumbTheme}">
+        <div class="lp-row-thumb has-photo ${isFull ? 'is-full-cover' : ''}">
+          <img class="lp-thumb-photo" src="${esc(cover.primary)}" data-fb="${esc(cover.fallback)}"
+            onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.removeAttribute('data-fb');}"
+            alt="" loading="lazy" decoding="async" draggable="false">
+          <div class="lp-thumb-scrim" aria-hidden="true"></div>
           <div class="lp-thumb-top">
-            <span class="lp-thumb-tag ${isFull ? 'is-full' : ''}">${esc(partLabel)}</span>
+            ${isFull ? '<span></span>' : `<span class="lp-thumb-tag">${esc(partLabel)}</span>`}
             ${rightPill}
-          </div>
-          <div class="lp-thumb-art" aria-hidden="true">
-            <img src="${esc(getBookImgUrl(item.bookId || (isFull ? 'lcam_20' : 'lactual_p14')))}" alt="" loading="lazy" decoding="async" draggable="false">
           </div>
           <div class="lp-thumb-foot tabular">${qCount} câu hỏi · ${mins} phút</div>
         </div>
@@ -1136,7 +1168,8 @@
   }
 
   /* =========================================================
-     VIEW 4 & 5: CD-IELTS LISTENING EXAM WORKSPACE & REVIEW
+     VIEW 4 & 5: 1:1 OFFICIAL INSPERA CD-IELTS LISTENING WORKSPACE & REVIEW
+     (Identical authentic exam paper format for BOTH Luyện tập & Thi thật!)
      ========================================================= */
   function stopExamTimer() {
     if (_examTimerId) {
@@ -1150,6 +1183,13 @@
     if (a) {
       try { a.pause(); a.removeAttribute('src'); a.load(); } catch (_) {}
     }
+  }
+
+  function formatMinsRemaining(sec) {
+    const s = Math.max(0, Math.floor(Number(sec) || 0));
+    if (s < 60) return `${s} seconds remaining`;
+    const mins = Math.ceil(s / 60);
+    return `${mins} minute${mins === 1 ? '' : 's'} remaining`;
   }
 
   function normText(s) {
@@ -1230,6 +1270,14 @@
     return parts[state.session?.activePartIdx || 0] || parts[0] || null;
   }
 
+  function getAllSessionQNums() {
+    const out = [];
+    getSessionParts().forEach((pt, pIdx) => {
+      (pt.answers || []).forEach((a) => out.push({ num: a.num, pIdx, partId: pt.id }));
+    });
+    return out;
+  }
+
   function getPartAnsweredCount(part) {
     if (!part || !state.session) return 0;
     const ans = state.session.answers || {};
@@ -1239,15 +1287,16 @@
   function startExamTimer() {
     stopExamTimer();
     _examTimerId = setInterval(() => {
-      if (!state.session || state.view !== 'exam') {
-        stopExamTimer();
-        return;
-      }
+      if (!state.session || state.view !== 'exam' || state.session.paused) return;
       state.session.remainingSec = Math.max(0, (state.session.remainingSec || 0) - 1);
-      const tEl = document.getElementById('lp-ex-timer');
-      if (tEl) {
-        tEl.textContent = formatMMSS(state.session.remainingSec);
-        tEl.classList.toggle('is-warn', state.session.remainingSec <= 120);
+      const dispEl = document.getElementById('lp-timer-display');
+      const exactEl = document.getElementById('lp-timer-exact');
+      const btnEl = document.getElementById('lp-hdr-timer');
+      if (dispEl) dispEl.textContent = formatMinsRemaining(state.session.remainingSec);
+      if (exactEl) exactEl.textContent = `(${formatMMSS(state.session.remainingSec)})`;
+      if (btnEl) {
+        btnEl.classList.toggle('is-warn', state.session.remainingSec <= 300 && state.session.remainingSec > 60);
+        btnEl.classList.toggle('is-critical', state.session.remainingSec <= 60);
       }
       if (state.session.remainingSec <= 0 && state.session.mode === 'exam') {
         stopExamTimer();
@@ -1274,7 +1323,6 @@
       el.closest('label, .lp-ex-opt, .lp-ex-opt-row')?.classList.toggle('is-selected', !!checked);
     });
 
-    const multiSeen = new Set();
     paper.querySelectorAll('input.lp-ex-check').forEach((el) => {
       const csv = el.getAttribute('data-multi') || '';
       if (!csv) return;
@@ -1283,27 +1331,123 @@
       const checked = chosen.has(String(el.value || '').toUpperCase());
       el.checked = checked;
       el.closest('label, .lp-ex-opt, .lp-ex-opt-row')?.classList.toggle('is-selected', checked);
-      multiSeen.add(csv);
     });
   }
 
   function refreshBottomNavStates() {
     if (!state.session) return;
     const ans = state.session.answers || {};
-    document.querySelectorAll('#lp-ex-qstrip .lp-ex-qdot').forEach((btn) => {
-      const q = btn.getAttribute('data-q');
-      btn.classList.toggle('is-answered', String(ans[q] ?? '').trim().length > 0);
+    const activeNum = Number(state.session.activeQNum || 0);
+    document.querySelectorAll('#lp-ins-footer .ins-qbox').forEach((btn) => {
+      const q = Number(btn.getAttribute('data-q'));
+      btn.classList.toggle('is-attempted', String(ans[q] ?? '').trim().length > 0);
+      btn.classList.toggle('is-current', q === activeNum);
     });
     const parts = getSessionParts();
     parts.forEach((pt, idx) => {
-      const badge = document.querySelector(`#lp-ex-ptab-${idx} .lp-ex-ptab-cnt`);
-      if (badge) badge.textContent = `${getPartAnsweredCount(pt)}/${(pt.answers || []).length}`;
+      const el = document.querySelector(`#lp-ins-pcol-${idx} .lp-ins-pcnt`);
+      if (el) el.textContent = `${getPartAnsweredCount(pt)} of ${(pt.answers || []).length}`;
     });
+  }
+
+  let _pendingSelRange = null;
+  let _pendingSelText = '';
+
+  function hideSelectionPopover() {
+    const pop = document.getElementById('lp-hl-toolbar');
+    if (pop) pop.classList.add('hidden');
+  }
+
+  function showSelectionPopover(paper) {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) {
+      hideSelectionPopover();
+      return;
+    }
+    const text = String(sel.toString() || '').trim();
+    if (!text || text.length < 2) {
+      hideSelectionPopover();
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!paper.contains(range.commonAncestorContainer)) {
+      hideSelectionPopover();
+      return;
+    }
+    _pendingSelRange = range.cloneRange();
+    _pendingSelText = text;
+    const rect = range.getBoundingClientRect();
+    const pop = document.getElementById('lp-hl-toolbar');
+    if (!pop) return;
+    pop.classList.remove('hidden');
+    const top = Math.max(64, rect.top - 42);
+    const left = Math.max(12, Math.min(window.innerWidth - 220, rect.left + rect.width / 2 - 90));
+    pop.style.top = `${top}px`;
+    pop.style.left = `${left}px`;
+  }
+
+  function applyExamHighlight() {
+    if (!_pendingSelRange) return;
+    try {
+      const mark = document.createElement('mark');
+      mark.className = 'lp-ins-hl';
+      _pendingSelRange.surroundContents(mark);
+    } catch (_) {
+      try {
+        const frag = _pendingSelRange.extractContents();
+        const mark = document.createElement('mark');
+        mark.className = 'lp-ins-hl';
+        mark.appendChild(frag);
+        _pendingSelRange.insertNode(mark);
+      } catch (__) {}
+    }
+    try { window.getSelection()?.removeAllRanges(); } catch (_) {}
+    _pendingSelRange = null;
+    hideSelectionPopover();
+  }
+
+  function clearExamHighlight() {
+    const paper = document.getElementById('lp-ex-paper');
+    if (!paper) return;
+    if (_pendingSelRange) {
+      paper.querySelectorAll('mark.lp-ins-hl').forEach((m) => {
+        if (_pendingSelRange.intersectsNode(m)) {
+          const parent = m.parentNode;
+          while (m.firstChild) parent.insertBefore(m.firstChild, m);
+          parent.removeChild(m);
+        }
+      });
+    }
+    try { window.getSelection()?.removeAllRanges(); } catch (_) {}
+    _pendingSelRange = null;
+    hideSelectionPopover();
+  }
+
+  function addNoteFromSelection() {
+    if (!state.session) return;
+    const quote = _pendingSelText.slice(0, 140);
+    state.session.notesOpen = true;
+    state.session.pendingQuote = quote;
+    hideSelectionPopover();
+    renderExamView();
+    setTimeout(() => {
+      document.getElementById('lp-note-input')?.focus();
+    }, 60);
   }
 
   function bindPaperInputs() {
     const paper = document.getElementById('lp-ex-paper');
     if (!paper || !state.session) return;
+
+    paper.addEventListener('focusin', (ev) => {
+      const el = ev.target?.closest?.('[data-q], [data-multi]');
+      if (!el) return;
+      const q = el.getAttribute('data-q') || (el.getAttribute('data-multi') || '').split(',')[0];
+      if (q) {
+        state.session.activeQNum = Number(q);
+        refreshBottomNavStates();
+      }
+    });
 
     paper.addEventListener('input', (ev) => {
       const el = ev.target;
@@ -1311,6 +1455,7 @@
       const q = el.getAttribute('data-q');
       if (!q) return;
       state.session.answers[q] = el.value;
+      state.session.activeQNum = Number(q);
       refreshBottomNavStates();
     });
 
@@ -1319,12 +1464,16 @@
       if (!el) return;
       if (el.matches('select.lp-ex-select')) {
         const q = el.getAttribute('data-q');
-        if (q) state.session.answers[q] = el.value;
+        if (q) {
+          state.session.answers[q] = el.value;
+          state.session.activeQNum = Number(q);
+        }
         refreshBottomNavStates();
       } else if (el.matches('input.lp-ex-radio')) {
         const q = el.getAttribute('data-q');
         if (q) {
           state.session.answers[q] = el.value;
+          state.session.activeQNum = Number(q);
           paper.querySelectorAll(`input.lp-ex-radio[data-q="${q}"]`).forEach((r) => {
             r.closest('label, .lp-ex-opt, .lp-ex-opt-row')?.classList.toggle('is-selected', r.checked);
           });
@@ -1348,8 +1497,13 @@
         nums.forEach((n, idx) => {
           state.session.answers[n] = vals[idx] || '';
         });
+        if (nums[0]) state.session.activeQNum = Number(nums[0]);
         refreshBottomNavStates();
       }
+    });
+
+    paper.addEventListener('mouseup', () => {
+      setTimeout(() => showSelectionPopover(paper), 10);
     });
 
     // Click to zoom Map / Diagram images cleanly
@@ -1382,6 +1536,7 @@
     const audio = document.getElementById('lp-ex-audio');
     const playBtn = document.getElementById('lp-audio-play');
     const seek = document.getElementById('lp-audio-seek');
+    const vol = document.getElementById('lp-audio-vol');
     const curEl = document.getElementById('lp-audio-cur');
     const durEl = document.getElementById('lp-audio-dur');
     const statusEl = document.getElementById('lp-audio-status');
@@ -1448,6 +1603,12 @@
       });
     }
 
+    if (vol) {
+      vol.addEventListener('input', () => {
+        audio.volume = Math.max(0, Math.min(1, Number(vol.value)));
+      });
+    }
+
     const skipBack = document.getElementById('lp-audio-back');
     const skipFwd = document.getElementById('lp-audio-fwd');
     if (skipBack && !isExamLocked) {
@@ -1470,22 +1631,26 @@
   function renderAudioBarHtml(part, isReview) {
     const isExamLocked = !isReview && state.session?.mode === 'exam';
     return `
-      <div class="lp-ex-audio-bar ${isExamLocked ? 'is-locked' : ''}">
+      <div class="lp-ins-audio ${isExamLocked ? 'is-locked' : ''}">
         <audio id="lp-ex-audio" preload="metadata" src="${esc(part?.audioUrl || '')}"></audio>
-        <button type="button" class="lp-audio-play" id="lp-audio-play" aria-label="Phát audio">
+        <button type="button" class="lp-ins-play" id="lp-audio-play" aria-label="Phát audio">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v14l11-7-11-7z"/></svg>
         </button>
         ${!isExamLocked ? `
-          <button type="button" class="lp-audio-step" id="lp-audio-back" title="Lùi 5 giây">−5s</button>
-          <button type="button" class="lp-audio-step" id="lp-audio-fwd" title="Tua 5 giây">+5s</button>
+          <button type="button" class="lp-ins-step" id="lp-audio-back" title="Lùi 5 giây">−5s</button>
+          <button type="button" class="lp-ins-step" id="lp-audio-fwd" title="Tua 5 giây">+5s</button>
         ` : `<span class="lp-audio-lock-pill">Thi thật · Phát 1 lượt</span>`}
-        <div class="lp-audio-track">
-          <span class="lp-audio-time tabular" id="lp-audio-cur">00:00</span>
-          <input type="range" class="lp-audio-seek" id="lp-audio-seek" min="0" max="100" value="0" ${isExamLocked ? 'disabled' : ''} aria-label="Tiến độ băng nghe">
-          <span class="lp-audio-time tabular" id="lp-audio-dur">--:--</span>
+        <div class="lp-ins-track">
+          <span class="lp-ins-time tabular" id="lp-audio-cur">00:00</span>
+          <input type="range" class="lp-ins-seek" id="lp-audio-seek" min="0" max="100" value="0" ${isExamLocked ? 'disabled' : ''} aria-label="Tiến độ băng nghe">
+          <span class="lp-ins-time tabular" id="lp-audio-dur">--:--</span>
+        </div>
+        <div class="lp-ins-vol-wrap" title="Âm lượng">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          <input type="range" class="lp-ins-vol" id="lp-audio-vol" min="0" max="1" step="0.05" value="1" aria-label="Âm lượng">
         </div>
         ${!isExamLocked ? `
-          <select class="lp-audio-rate" id="lp-audio-rate" aria-label="Tốc độ phát">
+          <select class="lp-ins-rate" id="lp-audio-rate" aria-label="Tốc độ phát">
             <option value="0.85">0.85×</option>
             <option value="1" selected>1.0×</option>
             <option value="1.15">1.15×</option>
@@ -1502,71 +1667,218 @@
     const s = state.session;
     const part = getActivePart();
     if (!root || !s || !part) {
+      document.body.classList.remove('lp-exam-fullscreen');
       openSource(state.source);
       return;
     }
 
+    document.body.classList.add('lp-exam-fullscreen');
     const parts = getSessionParts();
+    const allQs = getAllSessionQNums();
+    const curPartQs = part.answers || [];
+    const qMin = curPartQs[0]?.num || ((part.partNum - 1) * 10 + 1);
+    const qMax = curPartQs[curPartQs.length - 1]?.num || (part.partNum * 10);
     const ans = s.answers || {};
-    const modeLabel = s.mode === 'exam' ? 'Thi thật' : 'Luyện tập';
+    const isPractice = s.mode === 'practice';
+    const contrastCls = `ins-contrast-${s.contrast || 'cd'}`;
+    const sizeCls = `ins-size-${s.textSize || 'regular'}`;
+    const timerUrgency = s.remainingSec <= 60 ? ' is-critical' : (s.remainingSec <= 300 ? ' is-warn' : '');
+    const curGlobalIdx = Math.max(0, allQs.findIndex((x) => x.num === Number(s.activeQNum || qMin)));
+    const notesCount = (s.notes || []).length;
 
-    const partTabsHtml = parts.length > 1 ? `
-      <div class="lp-ex-part-tabs" role="tablist">
-        ${parts.map((pt, idx) => `
-          <button type="button" role="tab" id="lp-ex-ptab-${idx}"
-            class="lp-ex-ptab ${idx === s.activePartIdx ? 'active' : ''}"
-            onclick="ListeningPracticeApp.switchExamPart(${idx})">
-            <span>Part ${pt.partNum || idx + 1}</span>
-            <small class="lp-ex-ptab-cnt tabular">${getPartAnsweredCount(pt)}/${(pt.answers || []).length}</small>
+    // 48px Official Inspera Bottom Parts (Expanded active Part + Collapsed other Parts)
+    const bottomPartsHtml = parts.map((pt, pIdx) => {
+      const pQs = pt.answers || [];
+      const pDone = getPartAnsweredCount(pt);
+      const isAct = pIdx === s.activePartIdx;
+      const pTitle = `Part ${pt.partNum || (pIdx + 1)}`;
+      if (!isAct) {
+        return `
+          <button type="button" class="ins-part-collapsed" id="lp-ins-pcol-${pIdx}" onclick="ListeningPracticeApp.switchExamPart(${pIdx})">
+            <strong>${esc(pTitle)}</strong>
+            <span class="lp-ins-pcnt tabular">${pDone} of ${pQs.length}</span>
           </button>
-        `).join('')}
-      </div>
-    ` : '';
-
-    const qStripHtml = (part.answers || []).map((a) => {
-      const isAns = String(ans[a.num] ?? '').trim().length > 0;
-      return `<button type="button" class="lp-ex-qdot tabular ${isAns ? 'is-answered' : ''}" data-q="${a.num}" onclick="ListeningPracticeApp.focusQuestion(${a.num})">${a.num}</button>`;
+        `;
+      }
+      const qBoxesHtml = pQs.map((a) => {
+        const isDone = String(ans[a.num] ?? '').trim().length > 0;
+        const isCur = Number(s.activeQNum || qMin) === a.num;
+        return `
+          <button type="button" class="ins-qbox ${isDone ? 'is-attempted' : ''} ${isCur ? 'is-current' : ''}"
+            data-q="${a.num}" onclick="ListeningPracticeApp.focusQuestion(${a.num})" title="Question ${a.num}">
+            <span class="ins-qbox-dash"></span>
+            <span class="ins-qbox-num">${a.num}</span>
+          </button>
+        `;
+      }).join('');
+      return `
+        <div class="ins-part-expanded">
+          <strong class="ins-part-lbl">${esc(pTitle)}</strong>
+          <div class="ins-qboxes-row">${qBoxesHtml}</div>
+        </div>
+      `;
     }).join('');
 
-    root.innerHTML = `
-      <div class="lp-ex-shell">
-        <header class="lp-ex-topbar">
-          <div class="lp-ex-top-left">
-            <button type="button" class="btn-subtle lp-btn-back" onclick="ListeningPracticeApp.exitExam()">← Quay lại</button>
-            <div class="lp-ex-title-wrap">
-              <div class="lp-ex-kicker">
-                <span class="lp-ex-mode-pill ${s.mode === 'exam' ? 'is-exam' : ''}">${esc(modeLabel)}</span>
-                <span>Part ${part.partNum || 1}</span>
-              </div>
-              <h2 class="lp-ex-title">${esc(s.title)}</h2>
+    const notesDrawerHtml = `
+      <aside class="ins-notes-sidebar ${s.notesOpen ? 'open' : ''}" id="lp-notes-drawer" aria-label="Notes">
+        <div class="ins-notes-header">
+          <span>Notes${notesCount ? ` (${notesCount})` : ''}</span>
+          <button type="button" class="ins-notes-close" onclick="ListeningPracticeApp.toggleNotesDrawer(false)" aria-label="Close notes">✕</button>
+        </div>
+        <div class="ins-notes-body">
+          ${notesCount ? `
+            <div class="ins-notes-list">
+              ${s.notes.map((n) => `
+                <div class="ins-note-card">
+                  ${n.quote ? `<div class="ins-note-quote">“${esc(n.quote)}”</div>` : ''}
+                  <div class="ins-note-text">${esc(n.text)}</div>
+                  <button type="button" class="ins-note-del" onclick="ListeningPracticeApp.deleteNote('${esc(n.id)}')">Delete</button>
+                </div>
+              `).join('')}
+            </div>
+          ` : `
+            <div class="ins-notes-empty">
+              <strong>Your private notes will show here</strong>
+              <p>Select text in the questions to highlight or add a note.</p>
+            </div>
+          `}
+          <form class="ins-notes-form" onsubmit="ListeningPracticeApp.addManualNote(event)">
+            ${s.pendingQuote ? `<div class="ins-note-quote" style="margin-bottom:6px;">“${esc(s.pendingQuote)}”</div>` : ''}
+            <textarea id="lp-note-input" rows="2" placeholder="Add a private note..."></textarea>
+            <button type="submit" class="ins-note-save-btn">+ Save note</button>
+          </form>
+        </div>
+      </aside>
+    `;
+
+    const optionsOverlayHtml = `
+      <div class="ins-options-overlay ${s.optionsOpen ? 'open' : ''}" id="lp-options-overlay">
+        <div class="ins-options-head">
+          <h2>Options</h2>
+          <button type="button" class="ins-options-x" onclick="ListeningPracticeApp.toggleOptionsOverlay(false)" aria-label="Close options">✕</button>
+        </div>
+        <div class="ins-options-body">
+          <button type="button" class="ins-opt-submit-btn" onclick="ListeningPracticeApp.toggleOptionsOverlay(false); ListeningPracticeApp.submitExam();">
+            <span>Go to submission page</span>
+            <span>›</span>
+          </button>
+
+          <div class="ins-opt-card">
+            <div class="ins-opt-sec-title">Contrast</div>
+            <div class="ins-opt-choices">
+              <button type="button" class="ins-opt-row ${(s.contrast || 'cd') === 'cd' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('cd')">
+                <span>Black on white</span><span>${(s.contrast || 'cd') === 'cd' ? '✓' : ''}</span>
+              </button>
+              <button type="button" class="ins-opt-row ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('totoro')">
+                <span>Warm paper</span><span>${s.contrast === 'totoro' ? '✓' : ''}</span>
+              </button>
+              <button type="button" class="ins-opt-row ${s.contrast === 'dark' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('dark')">
+                <span>White on black</span><span>${s.contrast === 'dark' ? '✓' : ''}</span>
+              </button>
+              <button type="button" class="ins-opt-row ${s.contrast === 'yellow' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('yellow')">
+                <span>Yellow on black</span><span>${s.contrast === 'yellow' ? '✓' : ''}</span>
+              </button>
             </div>
           </div>
-          <div class="lp-ex-top-right">
-            <div class="lp-ex-timer tabular ${s.remainingSec <= 120 ? 'is-warn' : ''}" id="lp-ex-timer">${formatMMSS(s.remainingSec)}</div>
-            <button type="button" class="btn btn-primary lp-ex-submit-btn" onclick="ListeningPracticeApp.submitExam()">Nộp bài</button>
-          </div>
-        </header>
 
-        ${partTabsHtml}
-        ${renderAudioBarHtml(part, false)}
-
-        <main class="lp-ex-paper-wrap">
-          <div class="lp-ex-paper-head">
-            <span class="lp-ex-paper-badge">PART ${part.partNum || 1}</span>
-            <h3 class="lp-ex-paper-title">${esc(part.title)}</h3>
+          <div class="ins-opt-card">
+            <div class="ins-opt-sec-title">Text size</div>
+            <div class="ins-opt-choices">
+              <button type="button" class="ins-opt-row ${(s.textSize || 'regular') === 'regular' ? 'active' : ''}" onclick="ListeningPracticeApp.setTextSize('regular')">
+                <span>Regular</span><span>${(s.textSize || 'regular') === 'regular' ? '✓' : ''}</span>
+              </button>
+              <button type="button" class="ins-opt-row ${s.textSize === 'large' ? 'active' : ''}" onclick="ListeningPracticeApp.setTextSize('large')">
+                <span>Large</span><span>${s.textSize === 'large' ? '✓' : ''}</span>
+              </button>
+              <button type="button" class="ins-opt-row ${s.textSize === 'xlarge' ? 'active' : ''}" onclick="ListeningPracticeApp.setTextSize('xlarge')">
+                <span>Extra large</span><span>${s.textSize === 'xlarge' ? '✓' : ''}</span>
+              </button>
+            </div>
           </div>
-          <div class="lp-ex-paper" id="lp-ex-paper">${part.html || ''}</div>
-        </main>
 
-        <footer class="lp-ex-bottombar">
-          <div class="lp-ex-qstrip" id="lp-ex-qstrip">${qStripHtml}</div>
-          <div class="lp-ex-bottom-actions">
-            ${parts.length > 1 && s.activePartIdx < parts.length - 1 ? `
-              <button type="button" class="btn-subtle lp-btn-sm" onclick="ListeningPracticeApp.switchExamPart(${s.activePartIdx + 1})">Part ${s.activePartIdx + 2} →</button>
-            ` : ''}
-            <button type="button" class="btn btn-primary lp-btn-sm" onclick="ListeningPracticeApp.submitExam()">Nộp bài ✓</button>
+          <button type="button" class="ins-opt-exit-btn" onclick="ListeningPracticeApp.exitExam()">← Thoát ra kho đề</button>
+        </div>
+      </div>
+    `;
+
+    root.innerHTML = `
+      <div class="ins-shell lp-ins-shell ${contrastCls} ${sizeCls}" id="lp-ins-workspace" data-mode="${esc(s.mode)}">
+        <div class="ins-main-col">
+          <!-- 56px Official Inspera CD-IELTS Top Header -->
+          <header class="ins-header">
+            <div class="ins-hdr-left">
+              <span class="ins-brand-mark">IELTS</span>
+              <div class="ins-hdr-meta">
+                <div class="ins-hdr-title">${esc(s.title)}</div>
+                <button type="button" class="ins-hdr-timer${timerUrgency}" id="lp-hdr-timer"
+                  onclick="${isPractice ? 'ListeningPracticeApp.togglePauseTimer()' : ''}"
+                  title="${isPractice ? 'Bấm để tạm dừng / tiếp tục đồng hồ' : 'Thời gian thi thật'}">
+                  <span id="lp-timer-display">${formatMinsRemaining(s.remainingSec)}</span>
+                  <span class="ins-timer-exact tabular" id="lp-timer-exact">(${formatMMSS(s.remainingSec)})</span>
+                  ${s.paused ? '<span class="ins-paused-tag">PAUSED</span>' : ''}
+                </button>
+              </div>
+            </div>
+
+            <div class="ins-hdr-right">
+              <span class="lp-ins-mode-tag ${s.mode === 'exam' ? 'is-exam' : ''}">${s.mode === 'exam' ? 'Thi thật' : 'Luyện tập'}</span>
+              <button type="button" class="ins-hdr-ico ${s.notesOpen ? 'active' : ''}" onclick="ListeningPracticeApp.toggleNotesDrawer()" title="Notes" aria-label="Notes">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                ${notesCount ? `<span class="ins-notes-badge">${notesCount}</span>` : ''}
+              </button>
+              <button type="button" class="ins-hdr-ico ${s.optionsOpen ? 'active' : ''}" onclick="ListeningPracticeApp.toggleOptionsOverlay()" title="Options" aria-label="Options">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+              </button>
+              <button type="button" class="ins-hdr-exit" onclick="ListeningPracticeApp.exitExam()">Thoát</button>
+            </div>
+          </header>
+
+          <!-- Official Listening Audio Strip -->
+          ${renderAudioBarHtml(part, false)}
+
+          <!-- Full-width Official Inspera Part Sub-Banner -->
+          <div class="ins-part-banner">
+            <strong>Part ${part.partNum || 1}</strong>
+            <span>Listen and answer questions ${qMin}–${qMax}.</span>
           </div>
-        </footer>
+
+          <!-- Official Flat CD-IELTS Listening Paper (100% identical in Practice & Exam!) -->
+          <div class="lp-ins-body">
+            <main class="lp-ins-scroll">
+              <div class="lp-ins-paper" id="lp-ex-paper">${part.html || ''}</div>
+            </main>
+
+            <!-- Official Floating 40x40px Prev / Next Square Arrows -->
+            <div class="ins-float-arrows">
+              <button type="button" class="ins-arrow-btn ${curGlobalIdx <= 0 ? 'is-disabled' : ''}"
+                onclick="ListeningPracticeApp.stepQuestion(-1)" title="Previous question" ${curGlobalIdx <= 0 ? 'disabled' : ''}>←</button>
+              <button type="button" class="ins-arrow-btn is-next ${curGlobalIdx >= allQs.length - 1 ? 'is-disabled' : ''}"
+                onclick="ListeningPracticeApp.stepQuestion(1)" title="Next question" ${curGlobalIdx >= allQs.length - 1 ? 'disabled' : ''}>→</button>
+            </div>
+          </div>
+
+          <!-- 48px Official Inspera Bottom Navigator Bar -->
+          <footer class="ins-footer" id="lp-ins-footer">
+            <div class="ins-footer-parts">${bottomPartsHtml}</div>
+            <button type="button" class="ins-submit-check-btn lp-ex-submit-btn" onclick="ListeningPracticeApp.submitExam()" title="Submit answers" aria-label="Submit answers">✓</button>
+          </footer>
+        </div>
+
+        ${notesDrawerHtml}
+        ${optionsOverlayHtml}
+
+        <!-- Text Selection Highlight & Note Popover -->
+        <div class="ins-sel-popover hidden" id="lp-hl-toolbar" onmousedown="event.stopPropagation()">
+          <button type="button" class="ins-sel-act" onclick="ListeningPracticeApp.addNoteFromSelection()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Note</span>
+          </button>
+          <button type="button" class="ins-sel-act" onclick="ListeningPracticeApp.applyExamHighlight()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+            <span>Highlight</span>
+          </button>
+          <button type="button" class="ins-sel-clear" onclick="ListeningPracticeApp.clearExamHighlight()">Clear</button>
+        </div>
       </div>
     `;
 
@@ -1585,7 +1897,6 @@
 
     parts.forEach((pt) => {
       const pAns = pt.answers || [];
-      // Detect shared multi-letter groups (e.g. Q17 & Q18 both having official "A / E")
       let i = 0;
       while (i < pAns.length) {
         const cur = pAns[i];
@@ -1610,28 +1921,14 @@
             }
             if (ok) totalCorrect++;
             totalQuestions++;
-            rows.push({
-              partNum: pt.partNum,
-              partId: pt.id,
-              num: gItem.num,
-              user: uRaw,
-              official: off,
-              ok
-            });
+            rows.push({ partNum: pt.partNum, partId: pt.id, num: gItem.num, user: uRaw, official: off, ok });
           });
         } else {
           const uRaw = String(userAns[cur.num] ?? '').trim();
           const ok = isSingleAnswerMatch(uRaw, off);
           if (ok) totalCorrect++;
           totalQuestions++;
-          rows.push({
-            partNum: pt.partNum,
-            partId: pt.id,
-            num: cur.num,
-            user: uRaw,
-            official: off,
-            ok
-          });
+          rows.push({ partNum: pt.partNum, partId: pt.id, num: cur.num, user: uRaw, official: off, ok });
         }
         i++;
       }
@@ -1679,10 +1976,12 @@
     const root = getRoot();
     const rev = state.lastReview;
     if (!root || !rev) {
+      document.body.classList.remove('lp-exam-fullscreen');
       openSource(state.source);
       return;
     }
 
+    document.body.classList.add('lp-exam-fullscreen');
     const map = DATA().PARTS || {};
     const parts = rev.partIds.map((pid) => map[pid]).filter(Boolean);
     const activePart = parts[rev.activePartIdx || 0] || parts[0];
@@ -1692,7 +1991,7 @@
       : rev.rows;
 
     const partTabsHtml = parts.length > 1 ? `
-      <div class="lp-ex-part-tabs" role="tablist">
+      <div class="lp-ins-rev-tabs" role="tablist">
         ${parts.map((pt, idx) => {
           const pRows = rev.rows.filter((r) => r.partId === pt.id);
           const pOk = pRows.filter((r) => r.ok).length;
@@ -1709,74 +2008,84 @@
     ` : '';
 
     root.innerHTML = `
-      <div class="lp-rev-shell">
-        <div class="lp-rev-hero">
-          <div class="lp-rev-hero-left">
-            <div class="lp-rev-kicker">${rev.mode === 'exam' ? 'Thi thật' : 'Luyện tập'} · Kết quả chi tiết</div>
-            <h2 class="lp-rev-title">${esc(rev.title)}</h2>
-            <div class="lp-rev-actions">
-              <button type="button" class="btn-subtle lp-btn-sm" onclick="ListeningPracticeApp.backToSourceFromReview()">← Quay lại bộ đề</button>
-              <button type="button" class="btn btn-primary lp-btn-sm" onclick="ListeningPracticeApp.startItem('${esc(rev.itemId)}', ${rev.isFull ? 'true' : 'false'}, '${esc(rev.mode)}')">Làm lại</button>
+      <div class="ins-shell lp-ins-shell ins-contrast-cd ins-size-regular">
+        <div class="ins-main-col">
+          <header class="ins-header">
+            <div class="ins-hdr-left">
+              <span class="ins-brand-mark">IELTS</span>
+              <div class="ins-hdr-meta">
+                <div class="ins-hdr-title">${esc(rev.title)}</div>
+                <div class="ins-hdr-review-lbl">Review Mode · Answer Key &amp; Transcript Unlocked</div>
+              </div>
+            </div>
+            <div class="ins-hdr-right">
+              <button type="button" class="ins-hdr-exit" onclick="ListeningPracticeApp.startItem('${esc(rev.itemId)}', ${rev.isFull ? 'true' : 'false'}, '${esc(rev.mode)}')">Làm lại</button>
+              <button type="button" class="ins-hdr-pill active" onclick="ListeningPracticeApp.backToSourceFromReview()">← Quay lại bộ đề</button>
+            </div>
+          </header>
+
+          <div class="ins-review-strip lp-ins-rev-strip">
+            <div class="lp-ins-rev-metrics">
+              <div class="lp-rev-metric is-band">
+                <span class="lp-rev-mval tabular">${rev.band.toFixed(1)}</span>
+                <span class="lp-rev-mlbl">Band ước tính</span>
+              </div>
+              <div class="lp-rev-metric">
+                <span class="lp-rev-mval tabular">${rev.score}/${rev.total}</span>
+                <span class="lp-rev-mlbl">Chính xác ${pct}%</span>
+              </div>
+              <div class="lp-rev-metric">
+                <span class="lp-rev-mval tabular">${formatMMSS(rev.elapsedSec)}</span>
+                <span class="lp-rev-mlbl">Thời gian</span>
+              </div>
+            </div>
+            ${partTabsHtml}
+          </div>
+
+          ${activePart ? renderAudioBarHtml(activePart, true) : ''}
+
+          <div class="lp-ins-rev-scroll">
+            <div class="lp-rev-grid">
+              <section class="lp-rev-card">
+                <div class="lp-rev-card-head">
+                  <h3>Answer Key · Part ${activePart?.partNum || 1}</h3>
+                  <span class="lp-rev-card-pill tabular">${partRows.filter((r) => r.ok).length}/${partRows.length} đúng</span>
+                </div>
+                <div class="lp-rev-table-wrap">
+                  <table class="lp-rev-table">
+                    <thead>
+                      <tr>
+                        <th>Câu</th>
+                        <th>Bạn điền</th>
+                        <th>Đáp án đúng</th>
+                        <th>KQ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${partRows.map((r) => `
+                        <tr class="${r.ok ? 'is-ok' : 'is-bad'}">
+                          <td class="tabular"><strong>${r.num}</strong></td>
+                          <td>${r.user ? esc(r.user) : '<span class="lp-rev-blank">—</span>'}</td>
+                          <td class="lp-rev-off">${esc(r.official)}</td>
+                          <td><span class="lp-rev-dot ${r.ok ? 'is-ok' : 'is-bad'}">${r.ok ? '✓' : '✕'}</span></td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="lp-rev-card">
+                <div class="lp-rev-card-head">
+                  <h3>Transcript · ${esc(activePart?.title || '')}</h3>
+                  <input type="search" class="lp-tr-search" value="${esc(rev.transcriptQuery || '')}" placeholder="Tìm từ khóa trong Transcript..." oninput="ListeningPracticeApp.onTranscriptSearch(this.value)" autocomplete="off">
+                </div>
+                <div class="lp-rev-transcript" id="lp-rev-transcript">
+                  ${renderHighlightedTranscript(activePart?.transcript || '', rev.transcriptQuery || '')}
+                </div>
+              </section>
             </div>
           </div>
-          <div class="lp-rev-metrics">
-            <div class="lp-rev-metric is-band">
-              <span class="lp-rev-mval tabular">${rev.band.toFixed(1)}</span>
-              <span class="lp-rev-mlbl">Band ước tính</span>
-            </div>
-            <div class="lp-rev-metric">
-              <span class="lp-rev-mval tabular">${rev.score}/${rev.total}</span>
-              <span class="lp-rev-mlbl">Chính xác ${pct}%</span>
-            </div>
-            <div class="lp-rev-metric">
-              <span class="lp-rev-mval tabular">${formatMMSS(rev.elapsedSec)}</span>
-              <span class="lp-rev-mlbl">Thời gian</span>
-            </div>
-          </div>
-        </div>
-
-        ${partTabsHtml}
-        ${activePart ? renderAudioBarHtml(activePart, true) : ''}
-
-        <div class="lp-rev-grid">
-          <section class="lp-rev-card">
-            <div class="lp-rev-card-head">
-              <h3>Answer Key · Part ${activePart?.partNum || 1}</h3>
-              <span class="lp-rev-card-pill tabular">${partRows.filter((r) => r.ok).length}/${partRows.length} đúng</span>
-            </div>
-            <div class="lp-rev-table-wrap">
-              <table class="lp-rev-table">
-                <thead>
-                  <tr>
-                    <th>Câu</th>
-                    <th>Bạn điền</th>
-                    <th>Đáp án đúng</th>
-                    <th>KQ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${partRows.map((r) => `
-                    <tr class="${r.ok ? 'is-ok' : 'is-bad'}">
-                      <td class="tabular"><strong>${r.num}</strong></td>
-                      <td>${r.user ? esc(r.user) : '<span class="lp-rev-blank">—</span>'}</td>
-                      <td class="lp-rev-off">${esc(r.official)}</td>
-                      <td><span class="lp-rev-dot ${r.ok ? 'is-ok' : 'is-bad'}">${r.ok ? '✓' : '✕'}</span></td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section class="lp-rev-card">
-            <div class="lp-rev-card-head">
-              <h3>Transcript · ${esc(activePart?.title || '')}</h3>
-              <input type="search" class="lp-tr-search" value="${esc(rev.transcriptQuery || '')}" placeholder="Tìm từ khóa trong Transcript..." oninput="ListeningPracticeApp.onTranscriptSearch(this.value)" autocomplete="off">
-            </div>
-            <div class="lp-rev-transcript" id="lp-rev-transcript">
-              ${renderHighlightedTranscript(activePart?.transcript || '', rev.transcriptQuery || '')}
-            </div>
-          </section>
         </div>
       </div>
     `;
@@ -1820,6 +2129,9 @@
       durationMin = Number(part.durationMin) || (part.partNum >= 3 ? 8 : 7);
     }
 
+    const firstPartObj = d.PARTS?.[partIds[0]];
+    const firstQ = firstPartObj?.answers?.[0]?.num || 1;
+
     stopExamTimer();
     stopActiveAudio();
     state.session = {
@@ -1829,6 +2141,14 @@
       title,
       partIds,
       activePartIdx: 0,
+      activeQNum: firstQ,
+      contrast: 'cd',
+      textSize: 'regular',
+      optionsOpen: false,
+      notesOpen: false,
+      notes: [],
+      pendingQuote: '',
+      paused: false,
       answers: {},
       durationSec: durationMin * 60,
       remainingSec: durationMin * 60,
@@ -1836,7 +2156,6 @@
     };
     state.view = 'exam';
     render();
-    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) {}
   }
 
   function switchExamPart(idx, autoPlay) {
@@ -1846,6 +2165,8 @@
     if (nextIdx === state.session.activePartIdx && !autoPlay) return;
     stopActiveAudio();
     state.session.activePartIdx = nextIdx;
+    const pt = getActivePart();
+    if (pt?.answers?.[0]?.num) state.session.activeQNum = pt.answers[0].num;
     renderExamView();
     if (autoPlay) {
       const a = document.getElementById('lp-ex-audio');
@@ -1854,6 +2175,10 @@
   }
 
   function focusQuestion(qNum) {
+    if (state.session) {
+      state.session.activeQNum = Number(qNum);
+      refreshBottomNavStates();
+    }
     const paper = document.getElementById('lp-ex-paper');
     if (!paper) return;
     let target = paper.querySelector(`[data-q="${qNum}"]`);
@@ -1866,6 +2191,77 @@
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       try { target.focus({ preventScroll: true }); } catch (_) {}
     }
+  }
+
+  function stepQuestion(delta) {
+    if (!state.session) return;
+    const allQs = getAllSessionQNums();
+    if (!allQs.length) return;
+    const curIdx = Math.max(0, allQs.findIndex((x) => x.num === Number(state.session.activeQNum || allQs[0].num)));
+    const nextIdx = Math.max(0, Math.min(allQs.length - 1, curIdx + Number(delta || 1)));
+    const target = allQs[nextIdx];
+    if (!target) return;
+    state.session.activeQNum = target.num;
+    if (target.pIdx !== state.session.activePartIdx) {
+      stopActiveAudio();
+      state.session.activePartIdx = target.pIdx;
+      renderExamView();
+      setTimeout(() => focusQuestion(target.num), 40);
+    } else {
+      focusQuestion(target.num);
+    }
+  }
+
+  function togglePauseTimer() {
+    if (!state.session || state.session.mode !== 'practice') return;
+    state.session.paused = !state.session.paused;
+    renderExamView();
+  }
+
+  function toggleOptionsOverlay(force) {
+    if (!state.session) return;
+    state.session.optionsOpen = typeof force === 'boolean' ? force : !state.session.optionsOpen;
+    renderExamView();
+  }
+
+  function toggleNotesDrawer(force) {
+    if (!state.session) return;
+    state.session.notesOpen = typeof force === 'boolean' ? force : !state.session.notesOpen;
+    renderExamView();
+  }
+
+  function addManualNote(ev) {
+    if (ev) ev.preventDefault();
+    if (!state.session) return;
+    const ta = document.getElementById('lp-note-input');
+    const txt = String(ta?.value || '').trim();
+    if (!txt) return;
+    state.session.notes = state.session.notes || [];
+    state.session.notes.unshift({
+      id: 'ln_' + Date.now().toString(36),
+      quote: state.session.pendingQuote || '',
+      text: txt
+    });
+    state.session.pendingQuote = '';
+    renderExamView();
+  }
+
+  function deleteNote(id) {
+    if (!state.session) return;
+    state.session.notes = (state.session.notes || []).filter((n) => n.id !== id);
+    renderExamView();
+  }
+
+  function setContrast(preset) {
+    if (!state.session) return;
+    state.session.contrast = ['cd', 'totoro', 'dark', 'yellow'].includes(preset) ? preset : 'cd';
+    renderExamView();
+  }
+
+  function setTextSize(sz) {
+    if (!state.session) return;
+    state.session.textSize = ['regular', 'large', 'xlarge'].includes(sz) ? sz : 'regular';
+    renderExamView();
   }
 
   function submitExam(force) {
@@ -1885,7 +2281,6 @@
     state.session = null;
     state.view = 'review';
     render();
-    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) {}
   }
 
   function exitExam() {
@@ -1899,6 +2294,7 @@
     }
     stopExamTimer();
     stopActiveAudio();
+    document.body.classList.remove('lp-exam-fullscreen');
     state.session = null;
     state.view = 'source';
     render();
@@ -1925,6 +2321,7 @@
 
   function backToSourceFromReview() {
     stopActiveAudio();
+    document.body.classList.remove('lp-exam-fullscreen');
     state.view = 'source';
     render();
   }
@@ -1935,10 +2332,12 @@
     } else if (state.view === 'review' && state.lastReview) {
       renderReviewView();
     } else if (state.view === 'source') {
+      document.body.classList.remove('lp-exam-fullscreen');
       stopExamTimer();
       stopActiveAudio();
       renderHub();
     } else {
+      document.body.classList.remove('lp-exam-fullscreen');
       stopExamTimer();
       stopActiveAudio();
       renderPortal();
@@ -1968,6 +2367,17 @@
     startItem,
     switchExamPart,
     focusQuestion,
+    stepQuestion,
+    togglePauseTimer,
+    toggleOptionsOverlay,
+    toggleNotesDrawer,
+    addManualNote,
+    deleteNote,
+    setContrast,
+    setTextSize,
+    applyExamHighlight,
+    clearExamHighlight,
+    addNoteFromSelection,
     submitExam,
     exitExam,
     switchReviewPart,
