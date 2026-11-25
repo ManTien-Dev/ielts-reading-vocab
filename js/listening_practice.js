@@ -1293,7 +1293,11 @@
       const exactEl = document.getElementById('lp-timer-exact');
       const btnEl = document.getElementById('lp-hdr-timer');
       if (dispEl) dispEl.textContent = formatMinsRemaining(state.session.remainingSec);
-      if (exactEl) exactEl.textContent = `(${formatMMSS(state.session.remainingSec)})`;
+      if (exactEl) {
+        exactEl.textContent = state.session.mode === 'practice'
+          ? formatMMSS(state.session.remainingSec)
+          : `(${formatMMSS(state.session.remainingSec)})`;
+      }
       if (btnEl) {
         btnEl.classList.toggle('is-warn', state.session.remainingSec <= 300 && state.session.remainingSec > 60);
         btnEl.classList.toggle('is-critical', state.session.remainingSec <= 60);
@@ -1483,9 +1487,180 @@
     }, 60);
   }
 
+  /* ---------- REAL CD-IELTS PAPER LAYOUT ENHANCER (IDENTICAL IN PRACTICE & EXAM!) ---------- */
+  function enhanceListeningPaperLayout(paper) {
+    if (!paper) return;
+
+    // 1. Remove redundant raw "SECTION 1..4" / "PART 1..4" headers (already displayed in official Part Banner)
+    Array.from(paper.children).forEach((el) => {
+      if (/^H[1-4]$/.test(el.tagName)) {
+        const txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (/^(?:SECTION|PART)\s*[1-4]\b\.?$/i.test(txt)) el.remove();
+      }
+    });
+
+    // 2. Normalize nested Engnovate radio/checkbox rows into single full-row clickable CD-IELTS <label class="lp-cam-choice">
+    paper.querySelectorAll('div.lp-ex-opt').forEach((row) => {
+      const inp = row.querySelector('input.lp-ex-radio, input.lp-ex-check');
+      if (!inp) return;
+      const letterLbl = row.querySelector('label');
+      const letterTxt = (letterLbl?.textContent || inp.value || '').trim();
+      const spans = Array.from(row.children).filter((ch) => ch.tagName === 'SPAN');
+      const textHtml = spans.length ? spans.map((sp) => sp.innerHTML).join(' ') : row.textContent.replace(letterTxt, '').trim();
+
+      const cleanLabel = document.createElement('label');
+      cleanLabel.className = 'lp-cam-choice';
+      cleanLabel.appendChild(inp);
+      if (letterTxt) {
+        const lSpan = document.createElement('span');
+        lSpan.className = 'lp-cam-letter';
+        lSpan.textContent = letterTxt;
+        cleanLabel.appendChild(lSpan);
+      }
+      const tSpan = document.createElement('span');
+      tSpan.className = 'lp-cam-otext';
+      tSpan.innerHTML = textHtml;
+      cleanLabel.appendChild(tSpan);
+      row.replaceWith(cleanLabel);
+    });
+
+    // Also normalize ITO <p class="lp-ex-opt-row"><label class="lp-ex-opt">...</label></p>
+    paper.querySelectorAll('label.lp-ex-opt').forEach((lbl) => {
+      const inp = lbl.querySelector('input.lp-ex-radio, input.lp-ex-check');
+      if (!inp) return;
+      lbl.classList.add('lp-cam-choice');
+    });
+
+    // 3. Split flat children into semantic Question Groups at every "Questions X-Y" heading
+    const isGroupStart = (el) => {
+      if (!el || el.nodeType !== 1) return false;
+      if (el.classList.contains('prac-sheet-eyebrow')) return false;
+      if (!/^(H2|H3|H4|H5|P|DIV)$/.test(el.tagName)) return false;
+      const txt = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      return /^Questions?\s+\d+/i.test(txt) && txt.length < 44;
+    };
+
+    const rawNodes = Array.from(paper.children).filter((el) => !el.classList.contains('prac-sheet-eyebrow'));
+    const groups = [];
+    let curGroup = null;
+    rawNodes.forEach((el) => {
+      if (isGroupStart(el)) {
+        curGroup = [el];
+        groups.push(curGroup);
+      } else {
+        if (!curGroup) {
+          curGroup = [];
+          groups.push(curGroup);
+        }
+        curGroup.push(el);
+      }
+    });
+
+    if (groups.length) {
+      const grid = document.createElement('div');
+      const hasDiagram = !!paper.querySelector('img.lp-ex-diagram');
+      const hasWideTable = Array.from(paper.querySelectorAll('table')).some((t) => {
+        const firstRow = t.querySelector('tr');
+        return firstRow && firstRow.children.length >= 4;
+      });
+      const useTwoCol = groups.length >= 2 && !hasWideTable;
+      grid.className = `lp-cam-grid ${useTwoCol ? 'is-twocol' : 'is-singlecol'}${hasDiagram ? ' has-diagram' : ''}`;
+
+      groups.forEach((nodes) => {
+        if (!nodes.length) return;
+        const sec = document.createElement('section');
+        sec.className = 'lp-cam-group';
+
+        // Separate heading + instruction lines from the actual form/notes/questions body
+        const headNodes = [];
+        const bodyNodes = [];
+        let passedInst = false;
+        nodes.forEach((n, idx) => {
+          const txt = (n.textContent || '').replace(/\s+/g, ' ').trim();
+          const hasCtrl = !!(n.querySelector && n.querySelector('input, select, table, img'));
+          const isInst = !hasCtrl && (
+            idx === 0 && /^Questions?\s+\d+/i.test(txt) ||
+            /^(?:Complete|Write|Choose|Label|Match|Answer|Select|Which|What|In boxes|NB\b|NO MORE THAN|ONE WORD|TWO WORDS)/i.test(txt)
+          );
+          if (!passedInst && isInst) {
+            if (idx === 0 && /^Questions?\s+\d+/i.test(txt)) n.classList.add('lp-cam-qrange');
+            else n.classList.add('lp-cam-inst');
+            headNodes.push(n);
+          } else {
+            passedInst = true;
+            bodyNodes.push(n);
+          }
+        });
+
+        headNodes.forEach((n) => sec.appendChild(n));
+
+        // Detect Note / Form Completion block (has gap inputs, no table, no radio MCQ) -> wrap in authentic Cambridge bordered Note Box!
+        const tempCheck = document.createElement('div');
+        bodyNodes.forEach((n) => tempCheck.appendChild(n));
+        const hasGaps = !!tempCheck.querySelector('input.lp-ex-gap');
+        const hasTables = !!tempCheck.querySelector('table');
+        const hasMcq = !!tempCheck.querySelector('input.lp-ex-radio, input.lp-ex-check');
+        const hasImg = !!tempCheck.querySelector('img.lp-ex-diagram');
+
+        if (hasGaps && !hasTables && !hasMcq && !hasImg && tempCheck.children.length >= 2) {
+          tempCheck.className = 'lp-cam-note-box';
+          // Promote first bold heading inside Note Box as official centered Cambridge form title
+          const firstChild = tempCheck.firstElementChild;
+          if (firstChild && /^(H3|H4|H5|P)$/.test(firstChild.tagName) && !firstChild.querySelector('input') && (firstChild.textContent || '').trim().length < 64) {
+            firstChild.classList.add('lp-cam-note-title');
+          }
+          // Style label: [input] lines cleanly
+          Array.from(tempCheck.children).forEach((ch) => {
+            if (ch.tagName === 'P' && ch.querySelector('input.lp-ex-gap')) {
+              ch.classList.add('lp-cam-note-row');
+            }
+          });
+        } else {
+          tempCheck.className = 'lp-cam-group-body';
+        }
+
+        // If this group has a Map/Diagram + questions AND we're in single-col mode, lay Map left & Questions right!
+        if (hasImg && !useTwoCol && tempCheck.querySelectorAll('input, select').length >= 3) {
+          const imgEl = tempCheck.querySelector('img.lp-ex-diagram');
+          const imgParent = imgEl?.parentElement;
+          if (imgEl) {
+            const split = document.createElement('div');
+            split.className = 'lp-cam-map-split';
+            const leftPane = document.createElement('div');
+            leftPane.className = 'lp-cam-map-pane';
+            leftPane.appendChild(imgEl);
+            const hint = document.createElement('div');
+            hint.className = 'lp-cam-map-hint';
+            hint.textContent = 'Bấm vào hình để phóng to';
+            leftPane.appendChild(hint);
+            if (imgParent && imgParent !== tempCheck && !imgParent.textContent.trim() && !imgParent.querySelector('input, select')) {
+              imgParent.remove();
+            }
+            const rightPane = document.createElement('div');
+            rightPane.className = 'lp-cam-map-qs';
+            while (tempCheck.firstChild) rightPane.appendChild(tempCheck.firstChild);
+            split.appendChild(leftPane);
+            split.appendChild(rightPane);
+            sec.appendChild(split);
+          } else {
+            sec.appendChild(tempCheck);
+          }
+        } else {
+          sec.appendChild(tempCheck);
+        }
+
+        grid.appendChild(sec);
+      });
+
+      paper.appendChild(grid);
+    }
+  }
+
   function bindPaperInputs() {
     const paper = document.getElementById('lp-ex-paper');
     if (!paper || !state.session) return;
+
+    enhanceListeningPaperLayout(paper);
 
     paper.addEventListener('focusin', (ev) => {
       const el = ev.target?.closest?.('[data-q], [data-multi]');
@@ -2007,29 +2182,28 @@
           <!-- Official Listening Audio Strip (Washi styled in Practice · Official locked in Exam) -->
           ${renderAudioBarHtml(part, false)}
 
-          ${!isPractice ? `
-            <!-- Full-width Official Inspera Part Sub-Banner (Exam mode) -->
-            <div class="ins-part-banner">
-              <strong>Part ${part.partNum || 1}</strong>
-              <span>Listen and answer questions ${qMin}–${qMax}.</span>
+          <!-- Full-width Official Part Sub-Banner (BOTH Practice & Exam — 1:1 CD-IELTS hierarchy!) -->
+          <div class="ins-part-banner ${isPractice ? 'is-practice' : ''}">
+            <div class="lp-part-banner-row">
+              <div>
+                <strong>Part ${part.partNum || 1}</strong>
+                <span>Listen and answer questions ${qMin}–${qMax}.</span>
+              </div>
+              ${isPractice ? `
+                <button type="button" class="prac-eyebrow-clear is-empty" id="lp-prac-hl-clear" disabled
+                  onclick="ListeningPracticeApp.clearAllPaperHighlights()">
+                  Xóa <span id="lp-prac-hl-cnt">0</span> màu
+                </button>
+              ` : ''}
             </div>
-          ` : ''}
+          </div>
 
-          <!-- Question Paper Body (Identical authentic CD-IELTS question layout in BOTH modes!) -->
+          <!-- Question Paper Body (Full-width authentic CD-IELTS layout in BOTH modes!) -->
           <div class="lp-ins-body ${isPractice ? 'lp-prac-desk' : ''}">
             ${isPractice ? `
               <div class="prac-sheet-shell ink-brackets lp-prac-folio">
                 <main class="lp-ins-scroll">
-                  <div class="lp-ins-paper" id="lp-ex-paper">
-                    <div class="prac-sheet-eyebrow">
-                      <span class="prac-eyebrow-meta">Part ${part.partNum || 1} · Questions ${qMin}–${qMax}</span>
-                      <button type="button" class="prac-eyebrow-clear is-empty" id="lp-prac-hl-clear" disabled
-                        onclick="ListeningPracticeApp.clearAllPaperHighlights()">
-                        Xóa <span id="lp-prac-hl-cnt">0</span> màu
-                      </button>
-                    </div>
-                    ${part.html || ''}
-                  </div>
+                  <div class="lp-ins-paper" id="lp-ex-paper">${part.html || ''}</div>
                 </main>
                 ${practiceStampSvg}
               </div>

@@ -12470,17 +12470,205 @@ body.lp-exam-fullscreen {
 .lp-ins-scroll {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 18px 28px 92px;
+  padding: 16px 26px 86px;
   background: var(--ins-bg);
 }
 
 .lp-ins-paper {
-  max-width: 920px;
+  width: 100%;
+  max-width: 1380px;
   margin: 0 auto;
   font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: var(--ins-fs, 15px);
-  line-height: 1.78;
+  line-height: 1.72;
   color: var(--ins-ink);
+}
+
+.lp-part-banner-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.lp-part-banner-row > div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ins-part-banner.is-practice {
+  margin: 6px 10px 4px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sheet);
+  box-shadow: 0 1px 0 var(--prac-lip);
+}
+
+.ins-part-banner.is-practice strong {
+  color: var(--prac-accent);
+  font-size: 13.5px;
+}
+
+.ins-part-banner.is-practice span {
+  color: var(--prac-ink-2);
+  font-size: 13.5px;
+}
+
+/* Authentic CD-IELTS 2-Column Group Grid & Framed Cambridge Note Boxes */
+.lp-cam-grid.is-twocol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 36px;
+  align-items: start;
+}
+
+.lp-cam-grid.is-twocol > .lp-cam-group:nth-child(even) {
+  border-left: 1px solid var(--ins-border);
+  padding-left: 32px;
+}
+
+.lp-cam-grid.is-singlecol {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 1060px;
+}
+
+.lp-cam-grid.is-singlecol.has-diagram {
+  max-width: 1340px;
+}
+
+.lp-cam-qrange {
+  margin: 0 0 6px !important;
+  font-size: calc(var(--ins-fs, 15px) + 2px) !important;
+  font-weight: 800 !important;
+  color: var(--ins-ink) !important;
+}
+
+.lp-cam-inst {
+  margin: 3px 0 6px !important;
+  font-size: calc(var(--ins-fs, 15px) - 0.5px);
+  color: var(--ins-ink);
+  line-height: 1.55;
+}
+
+.lp-cam-note-box {
+  margin-top: 12px;
+  padding: 18px 22px 20px;
+  border: 1.5px solid color-mix(in srgb, var(--ins-ink) 28%, transparent);
+  border-radius: 4px;
+  background: var(--ins-bg);
+}
+
+.ins-mode-practice .lp-cam-note-box {
+  border-radius: 10px;
+  border: 1.5px solid color-mix(in srgb, var(--prac-ink) 20%, transparent);
+  background: var(--prac-sheet-sub);
+}
+
+.lp-cam-note-title {
+  margin: 0 0 14px !important;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ins-border);
+  font-size: calc(var(--ins-fs, 15px) + 1.5px) !important;
+  font-weight: 800 !important;
+  text-align: center;
+  color: var(--ins-ink);
+}
+
+.lp-cam-note-row {
+  margin: 9px 0 !important;
+  line-height: 1.95;
+}
+
+.lp-cam-group-body {
+  margin-top: 10px;
+}
+
+/* Authentic CD-IELTS Map/Diagram Split Pane */
+.lp-cam-map-split {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.05fr) minmax(300px, 1fr);
+  gap: 26px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.lp-cam-map-pane {
+  position: sticky;
+  top: 8px;
+  padding: 12px;
+  border: 1px solid var(--ins-border);
+  border-radius: 6px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.lp-cam-map-pane .lp-ex-diagram {
+  margin: 0 auto;
+  border: 0;
+  padding: 0;
+  max-height: 520px;
+}
+
+.lp-cam-map-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #555555;
+  font-weight: 600;
+}
+
+/* Crisp Official CD-IELTS Choice Row (Full-row clickable!) */
+.lp-ins-paper .lp-cam-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  margin: 3px 0;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ins-ink);
+  cursor: pointer;
+  line-height: 1.5;
+  transition: background-color 110ms ease;
+}
+
+.lp-ins-paper .lp-cam-choice:hover {
+  background: rgba(184, 216, 240, 0.38);
+}
+
+.ins-mode-practice .lp-ins-paper .lp-cam-choice:hover {
+  background: color-mix(in srgb, var(--prac-accent-soft) 58%, transparent);
+}
+
+.lp-ins-paper .lp-cam-choice.is-selected,
+.lp-ins-paper .lp-cam-choice:has(> input:checked) {
+  background: var(--ins-sel-bg);
+}
+
+.lp-ins-paper .lp-cam-letter {
+  font-weight: 800;
+  min-width: 18px;
+  flex-shrink: 0;
+}
+
+.lp-ins-paper .lp-cam-otext {
+  flex: 1;
+}
+
+.lp-ins-paper .lp-ex-q-inline {
+  margin: 14px 0 18px;
+}
+
+.lp-ins-paper .lp-ex-q-inline > span:first-child {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
 }
 
 .lp-ins-paper h2,
@@ -12538,22 +12726,27 @@ body.lp-exam-fullscreen {
   font-weight: 700;
 }
 
-/* Official Inspera Rectangular Gap-Fill Input (#888 border, centered bold question number) */
+/* Official Inspera Rectangular Gap-Fill Input (crisp dark #666 border, centered bold question number) */
 .lp-ins-paper .lp-ex-gap {
   display: inline-block;
-  width: 158px;
-  height: 28px;
-  padding: 0 8px;
-  margin: 1px 4px;
-  border: 1px solid var(--ins-input-bd);
+  width: 168px;
+  height: 30px;
+  padding: 0 9px;
+  margin: 1px 5px;
+  border: 1.5px solid #666666;
   border-radius: 3px;
   background: var(--ins-input-bg);
   color: var(--ins-ink);
   font-family: Arial, sans-serif;
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
   text-align: center;
   vertical-align: middle;
+}
+
+.ins-contrast-dark .lp-ins-paper .lp-ex-gap,
+.ins-contrast-yellow .lp-ins-paper .lp-ex-gap {
+  border-color: var(--ins-input-bd);
 }
 
 .lp-ins-paper .lp-ex-gap.is-letter {
@@ -12685,8 +12878,8 @@ body.lp-exam-fullscreen {
 }
 
 .ins-mode-practice .lp-prac-desk {
-  padding: 8px 14px;
-  justify-content: center;
+  padding: 4px 10px 6px;
+  justify-content: stretch;
   background-color: var(--prac-canvas);
   background-image:
     radial-gradient(var(--prac-dot) 1.1px, transparent 1.1px),
@@ -12696,7 +12889,7 @@ body.lp-exam-fullscreen {
 
 .lp-prac-folio {
   width: 100%;
-  max-width: 980px;
+  max-width: none;
   flex: 1 1 auto;
 }
 
@@ -12705,6 +12898,25 @@ body.lp-exam-fullscreen {
   padding: 18px 28px 82px;
   position: relative;
   z-index: 1;
+}
+
+@media (max-width: 1020px) {
+  .lp-cam-grid.is-twocol {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .lp-cam-grid.is-twocol > .lp-cam-group:nth-child(even) {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--ins-border);
+    padding-top: 18px;
+  }
+  .lp-cam-map-split {
+    grid-template-columns: 1fr;
+  }
+  .lp-cam-map-pane {
+    position: static;
+  }
 }
 
 .ins-mode-practice .lp-ins-paper .lp-ex-opt:hover,
