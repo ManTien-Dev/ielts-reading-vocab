@@ -610,8 +610,48 @@
   }
 
   const BANK_VERSION = '20261125a';
+  const SOL_VERSION = '20261125a';
   const _loadedBanks = {};
   const _bankPromises = {};
+  const _loadedSolutions = {};
+  const _solutionPromises = {};
+
+  function ensureSourceSolutionsLoaded(src) {
+    if (!['cambridge', 'volume', 'actual'].includes(src)) return Promise.resolve();
+    if (_loadedSolutions[src]) return Promise.resolve();
+    if (window.__READING_SOLUTIONS__ && window.__READING_SOLUTIONS__[src]) {
+      _loadedSolutions[src] = true;
+      return Promise.resolve();
+    }
+    if (_solutionPromises[src]) return _solutionPromises[src];
+
+    const base = (typeof window.__APP_BASE_PATH__ === 'string' && window.__APP_BASE_PATH__) ? `${window.__APP_BASE_PATH__}/` : '';
+    const scriptSrc = `${base}data/solutions_${src}.js?v=${SOL_VERSION}`;
+    _solutionPromises[src] = new Promise((resolve) => {
+      const sc = document.createElement('script');
+      sc.src = scriptSrc;
+      sc.async = true;
+      sc.onload = () => {
+        _loadedSolutions[src] = true;
+        resolve();
+      };
+      sc.onerror = () => {
+        resolve();
+      };
+      document.head.appendChild(sc);
+    });
+    return _solutionPromises[src];
+  }
+
+  function getQuestionSolution(passage, qNum) {
+    if (!passage || !passage.id) return null;
+    const src = passage.source || '';
+    const bankSol = window.__READING_SOLUTIONS__?.[src];
+    if (!bankSol) return null;
+    const pSol = bankSol[passage.id];
+    if (!pSol) return null;
+    return pSol[String(qNum)] || null;
+  }
 
   function mergeBankPayload(src, payload) {
     if (!payload) return;
@@ -1969,15 +2009,27 @@
     };
 
     const raw = String(para.en || '');
-    const parts = raw.split(/(<ev id="[^"]+">[\s\S]*?<\/ev>)/g);
-    const enHtml = parts.map((chunk) => {
-      const m = chunk.match(/^<ev id="([^"]+)">([\s\S]*?)<\/ev>$/);
-      if (m) {
-        const activeCls = s?.activeEvidenceId === m[1] ? ' rp-evidence-active' : '';
-        return `<span class="rp-ev-span${activeCls}" data-ev-id="${esc(m[1])}">${tokenWrap(m[2])}</span>`;
+    const activeLoc = s?.activeEvidenceLoc;
+    let enHtml = '';
+    if (activeLoc && activeLoc.passageId === passage.id && activeLoc.p === paraIdx && !raw.includes('<ev ')) {
+      const st = Math.max(0, Math.min(raw.length, Number(activeLoc.s) || 0));
+      const en = Math.max(st, Math.min(raw.length, Number(activeLoc.e) || st));
+      if (en > st) {
+        enHtml = `${tokenWrap(raw.slice(0, st))}<span class="rp-ev-span rp-evidence-active" data-ev-loc="active">${tokenWrap(raw.slice(st, en))}</span>${tokenWrap(raw.slice(en))}`;
+      } else {
+        enHtml = tokenWrap(raw);
       }
-      return tokenWrap(chunk);
-    }).join('');
+    } else {
+      const parts = raw.split(/(<ev id="[^"]+">[\s\S]*?<\/ev>)/g);
+      enHtml = parts.map((chunk) => {
+        const m = chunk.match(/^<ev id="([^"]+)">([\s\S]*?)<\/ev>$/);
+        if (m) {
+          const activeCls = s?.activeEvidenceId === m[1] ? ' rp-evidence-active' : '';
+          return `<span class="rp-ev-span${activeCls}" data-ev-id="${esc(m[1])}">${tokenWrap(m[2])}</span>`;
+        }
+        return tokenWrap(chunk);
+      }).join('');
+    }
 
     // Inspera Dashed Blue Drop Zone above paragraph for Matching Headings (like step_41_shot_2!)
     let dropZoneHtml = '';
@@ -2035,6 +2087,11 @@
     const samePassage = prevPassageId === curPassage.id;
 
     const isReview = s.mode === 'review';
+    if (isReview && !s.isNews && !_loadedSolutions[s.source]) {
+      ensureSourceSolutionsLoaded(s.source).then(() => {
+        if (state.session === s && state.session.mode === 'review') renderExamWorkspace();
+      });
+    }
     const isPractice = s.studyMode === 'practice';
     // STRICT RULE: Dictionary is LOCKED during active Practice & Exam — ONLY unlocked after 100% completion (Review) or News!
     const enableDict = isReview || s.isNews;
@@ -2647,7 +2704,7 @@
             <div class="ins-note-line">${stem}</div>
             ${(retryStatusPill || bookmarkBtn) ? `<div class="prac-q-inline-acts ins-note-acts">${retryStatusPill}${bookmarkBtn}</div>` : ''}
           </div>
-          ${isReview ? renderReviewBlock(q, ok, correctDisplay) : ''}
+          ${isReview ? renderReviewBlock(q, ok, correctDisplay, passage) : ''}
         </div>
       `;
     }).join('');
@@ -2701,7 +2758,7 @@
         const qid = `${passage.id}__q${q.num}`;
         const ok = isAnswerCorrect(q, s.answers[qid]);
         const keyObj = (group.headings || []).find((h) => h.key === q.answer);
-        return renderReviewBlock(q, ok, keyObj ? `${keyObj.key}. ${keyObj.text}` : q.answer);
+        return renderReviewBlock(q, ok, keyObj ? `${keyObj.key}. ${keyObj.text}` : q.answer, passage);
       }).join('') : '';
 
       return `
@@ -2739,8 +2796,15 @@
     `;
   }
 
-  function renderReviewBlock(q, ok, correctDisplay) {
-    const paraRows = (q.paraphrase || []).map((pr) => `
+  function renderReviewBlock(q, ok, correctDisplay, passage) {
+    const sol = getQuestionSolution(passage, q.num);
+    const paraList = (Array.isArray(q.paraphrase) && q.paraphrase.length) ? q.paraphrase : (sol?.para || []);
+    const expText = q.explanation || sol?.exp || '';
+    const loc = Array.isArray(sol?.loc) && sol.loc.length === 3 ? sol.loc : null;
+    const quoteText = (!loc && sol?.quote) ? sol.quote : '';
+    const srcLabel = sol?.src || '';
+
+    const paraRows = paraList.map((pr) => `
       <div class="rp-para-map-row">
         <span class="rp-pm-q">${esc(pr.q)}</span>
         <span class="rp-pm-arrow">↔</span>
@@ -2748,14 +2812,17 @@
       </div>
     `).join('');
 
+    const locateBtnHtml = q.evidenceId
+      ? `<button type="button" class="rp-locate-btn" onclick="ReadingPracticeApp.locateEvidence('${esc(q.evidenceId)}')">Định vị dẫn chứng</button>`
+      : (loc && passage?.id
+        ? `<button type="button" class="rp-locate-btn" onclick="ReadingPracticeApp.locateWebEvidence('${esc(passage.id)}', ${loc[0]}, ${loc[1]}, ${loc[2]}, ${q.num})">Định vị dẫn chứng</button>`
+        : '');
+
     return `
       <div class="rp-rev-box ins-rev-box ${ok ? 'is-ok' : 'is-bad'}">
         <div class="rp-rev-box-head">
-          <span><strong>Q${q.num}:</strong> ${ok ? '✓ Chính xác' : `✕ Đáp án đúng: <strong>${esc(correctDisplay)}</strong>`}</span>
-          ${q.evidenceId ? `
-            <button type="button" class="rp-locate-btn"
-              onclick="ReadingPracticeApp.locateEvidence('${esc(q.evidenceId)}')">Định vị dẫn chứng</button>
-          ` : ''}
+          <span><strong>Q${q.num}:</strong> ${ok ? '✓ Chính xác' : `✕ Đáp án đúng: <strong>${esc(correctDisplay)}</strong>`}${srcLabel ? ` <span class="rp-rev-src-tag">${esc(srcLabel)}</span>` : ''}</span>
+          ${locateBtnHtml}
         </div>
         ${paraRows ? `
           <div class="rp-para-map">
@@ -2763,7 +2830,8 @@
             ${paraRows}
           </div>
         ` : ''}
-        ${q.explanation ? `<div class="rp-rev-exp">${esc(q.explanation)}</div>` : ''}
+        ${quoteText ? `<div class="rp-rev-quote">“${esc(quoteText)}”</div>` : ''}
+        ${expText ? `<div class="rp-rev-exp">${esc(expText)}</div>` : ''}
       </div>
     `;
   }
@@ -2811,7 +2879,7 @@
             <div class="ins-gap-line">${stem}</div>
             <div class="prac-q-inline-acts">${retryStatusPill}${bookmarkBtn}</div>
           </div>
-          ${isReview ? renderReviewBlock(q, ok, correctDisplay) : ''}
+          ${isReview ? renderReviewBlock(q, ok, correctDisplay, passage) : ''}
         </div>
       `;
     }
@@ -2896,7 +2964,7 @@
           <div class="prac-q-inline-acts">${retryStatusPill}${bookmarkBtn}</div>
         </div>
         ${optionsHtml}
-        ${isReview ? renderReviewBlock(q, ok, correctDisplay) : ''}
+        ${isReview ? renderReviewBlock(q, ok, correctDisplay, passage) : ''}
       </div>
     `;
   }
@@ -3872,12 +3940,26 @@
 
     locateEvidence(evId) {
       if (!state.session) return;
+      state.session.activeEvidenceLoc = null;
       state.session.activeEvidenceId = evId;
       state.mobilePane = 'passage';
       renderExamWorkspace();
       setTimeout(() => {
         document.querySelector(`.rp-ev-span[data-ev-id="${evId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 40);
+    },
+
+    locateWebEvidence(passageId, paraIdx, start, end, qnum) {
+      if (!state.session) return;
+      const pIdx = (state.session.passageIds || []).indexOf(passageId);
+      if (pIdx >= 0) state.session.activePassageIdx = pIdx;
+      state.session.activeEvidenceId = null;
+      state.session.activeEvidenceLoc = { passageId, p: Number(paraIdx) || 0, s: Number(start) || 0, e: Number(end) || 0, qnum: Number(qnum) || 0 };
+      state.mobilePane = 'passage';
+      renderExamWorkspace();
+      setTimeout(() => {
+        document.querySelector('.rp-ev-span[data-ev-loc="active"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 45);
     },
 
     /* ---------- SELECTION & PASTEL HIGHLIGHT POPOVER (Suppresses Edge Mini Menu!) ---------- */
