@@ -51,7 +51,7 @@
       kind: 'source'
     },
 
-    // ROW 2: 3 CORE SUPPLEMENTARY DRILLS (kept intact from original Listening Practice)
+    // ROW 2: 3 CORE SUPPLEMENTARY DRILLS (exact 3x2 = 6 cards total)
     {
       id: 'map_labelling',
       row: 'drills',
@@ -81,38 +81,6 @@
       desc: 'Lộ trình 139 bài Task theo chủ đề phủ kín 3.864 từ cốt lõi — nghe chính tả, hội thoại A/B/C và thực chiến.',
       scene: 'tasks',
       kind: 'tasks_hub'
-    },
-
-    // ROW 3: 3 LISTENING REFLEX & SKILL LABS (completing crisp 3x3 grid)
-    {
-      id: 'speed_quiz',
-      row: 'labs',
-      label: 'Speed Quiz',
-      bookTitle: 'Listening Speed Quiz',
-      badge: '6s / từ',
-      desc: 'Nghe phản xạ ẩn mặt chữ xoay vòng giọng UK, AU, US — trộn câu hỏi Paraphrase và bẫy từ trái nghĩa.',
-      scene: 'speed',
-      kind: 'speed_quiz'
-    },
-    {
-      id: 'signal_traps',
-      row: 'labs',
-      label: 'Signal Words',
-      bookTitle: 'Signal Words & Traps',
-      badge: '40 Cues',
-      desc: '40 cụm từ tín hiệu chuyển ý và bẫy đổi đáp án phút chót xuất hiện dày đặc trong Part 1 đến Part 4.',
-      scene: 'traps',
-      kind: 'signal_deck'
-    },
-    {
-      id: 'voice_lab',
-      row: 'labs',
-      label: 'Voice Lab',
-      bookTitle: 'Pronunciation & Mic Lab',
-      badge: 'UK · AU · US',
-      desc: 'Kiểm tra Micro, luyện phát âm chuẩn theo giọng bản xứ để tăng độ nhạy nhận diện nối âm khi nghe.',
-      scene: 'voice',
-      kind: 'voice_lab'
     }
   ];
 
@@ -124,6 +92,7 @@
     {
       id: 'lcam_20', source: 'cambridge', num: 20, group: 'recent', testsCount: 4,
       title: 'Cambridge IELTS 20',
+      coverImg: 'assets/images/listening_books/lcam_20.webp',
       persona: 'headphones', eyes: 'alert',
       palette: { fur: '#2F6049', furDark: '#204534', spine: '#193729', belly: '#FAF4E6', accent: '#E5B95C', cheek: '#E89B8B' },
       stars: 4, diff: 'Band 7.0–8.5', tag: 'Chuẩn 2025 · Paraphrase',

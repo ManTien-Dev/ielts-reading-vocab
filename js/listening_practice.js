@@ -446,130 +446,63 @@
     }
   }
 
+  const BOOK_ART_VERSION = '20261125d';
+
+  function getBookImgUrl(bookId) {
+    if (!bookId) return '';
+    const base = (typeof window.__APP_BASE_PATH__ === 'string' && window.__APP_BASE_PATH__)
+      ? `${window.__APP_BASE_PATH__}/`
+      : '';
+    return `${base}assets/images/listening_books/${encodeURIComponent(bookId)}.webp?v=${BOOK_ART_VERSION}`;
+  }
+
+  function renderTotoroBookArt(book, opts = {}) {
+    const imgId = opts.imgId || book?.id || 'lcam_20';
+    const url = getBookImgUrl(imgId);
+    const alt = esc(opts.alt || book?.title || 'Totoro Book');
+    return `<img class="lp-totoro-book-img" src="${esc(url)}" alt="${alt}" loading="lazy" decoding="async" draggable="false">`;
+  }
+
   function renderTotoroBookSvg(book, opts = {}) {
-    const pal = book?.palette || {
-      fur: '#2F6049', furDark: '#204534', spine: '#193729', belly: '#FAF4E6', accent: '#E5B95C', cheek: '#E89B8B'
-    };
-    const clipId = `lp-tb-clip-${esc(book?.id || 'def')}-${opts.suffix || 'shelf'}`;
-    const seriesLabel = opts.seriesLabel || getSeriesShortLabel(book);
-    const numText = opts.numText != null ? String(opts.numText) : getBookNumText(book);
-    const readyCount = opts.readyCount || 0;
-
-    return `
-      <svg class="lp-totoro-book-svg" viewBox="0 0 180 206" fill="none" aria-hidden="true">
-        <defs>
-          <clipPath id="${clipId}">
-            <path d="M51 54 L43 18 C42.5 14 47.5 12.5 51 16 L66 43 C74 40 106 40 114 43 L129 16 C132.5 12.5 137.5 14 137 18 L129 54 C146 67 154 91 153 125 C152 162 132 184 90 184 C48 184 28 162 27 125 C26 91 34 67 51 54 Z"/>
-          </clipPath>
-        </defs>
-
-        <ellipse cx="92" cy="193" rx="54" ry="8" fill="#1C2822" opacity="0.14"/>
-
-        <path d="M82 178 H98 V200 L90 193.5 L82 200 Z" fill="${pal.accent}" stroke="${pal.spine}" stroke-width="1.2" stroke-linejoin="round"/>
-        ${readyCount > 0 ? `<circle cx="90" cy="188.5" r="2.2" fill="${pal.spine}" opacity="0.7"/>` : ''}
-
-        <path d="M132 56 C152 70 161 94 160 128 C159 164 138 186 96 186 L90 184 C132 184 152 162 153 125 C154 91 146 67 129 54 Z" fill="#F2EAD7" stroke="#B9AE95" stroke-width="1.2"/>
-        <path d="M155 96 C157 110 157 132 154 148 M158 102 C159.5 114 159.5 132 156.5 146" stroke="#C8BCA2" stroke-width="1" stroke-linecap="round"/>
-
-        <path d="M51 54 L43 18 C42.5 14 47.5 12.5 51 16 L66 43 C74 40 106 40 114 43 L129 16 C132.5 12.5 137.5 14 137 18 L129 54 C146 67 154 91 153 125 C152 162 132 184 90 184 C48 184 28 162 27 125 C26 91 34 67 51 54 Z"
-              fill="${pal.fur}" stroke="${pal.spine}" stroke-width="2" stroke-linejoin="round"/>
-
-        <g clip-path="url(#${clipId})">
-          <rect x="20" y="10" width="23" height="180" fill="${pal.spine}" opacity="0.88"/>
-          <line x1="43" y1="12" x2="43" y2="188" stroke="#FFFFFF" stroke-width="1.3" opacity="0.22"/>
-          <line x1="45.5" y1="12" x2="45.5" y2="188" stroke="${pal.spine}" stroke-width="1.2" opacity="0.45"/>
-          <rect x="24" y="74" width="19" height="2.6" rx="1.2" fill="${pal.accent}" opacity="0.72"/>
-          <rect x="24" y="114" width="19" height="2.6" rx="1.2" fill="${pal.accent}" opacity="0.72"/>
-          <rect x="24" y="152" width="19" height="2.6" rx="1.2" fill="${pal.accent}" opacity="0.72"/>
-          <ellipse cx="106" cy="54" rx="46" ry="20" fill="#FFFFFF" opacity="0.07"/>
-          <path d="M49 46 L46 23 L60 42 Z" fill="${pal.furDark}" opacity="0.5"/>
-          <path d="M131 46 L134 23 L120 42 Z" fill="${pal.furDark}" opacity="0.5"/>
-        </g>
-
-        ${renderEyesSvg(book?.eyes || 'alert')}
-        <path d="M85.5 79.5 Q90 77.2 94.5 79.5 Q90 83.2 85.5 79.5 Z" fill="#1E2421"/>
-        <path d="M86 85.5 Q90 88.2 94 85.5" stroke="#1E2421" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.7"/>
-        <ellipse cx="56" cy="82" rx="5.2" ry="3.1" fill="${pal.cheek}" opacity="0.34"/>
-        <ellipse cx="124" cy="82" rx="5.2" ry="3.1" fill="${pal.cheek}" opacity="0.34"/>
-        <path d="M49 81L34 78.5M48 85L33 85M49 89L35 91.5" stroke="#FFFDF8" stroke-width="1.35" stroke-linecap="round" opacity="0.62"/>
-        <path d="M131 81L146 78.5M132 85L147 85M131 89L145 91.5" stroke="#FFFDF8" stroke-width="1.35" stroke-linecap="round" opacity="0.62"/>
-
-        <ellipse cx="92" cy="138" rx="44" ry="37" fill="${pal.belly}" stroke="${pal.spine}" stroke-width="1.1" stroke-opacity="0.22"/>
-        <path d="M68 116 L73.5 110.5 L79 116 M86.5 113.5 L92 108 L97.5 113.5 M105 116 L110.5 110.5 L116 116"
-              stroke="${pal.furDark}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.82"/>
-
-        <text x="92" y="131" text-anchor="middle" font-size="8.6" font-weight="800" letter-spacing="1.4" fill="${pal.furDark}" opacity="0.78" font-family="system-ui, -apple-system, sans-serif">${esc(seriesLabel)}</text>
-        <text x="92" y="161" text-anchor="middle" font-size="${numText.length > 2 ? '23' : '31'}" font-weight="900" letter-spacing="-0.8" fill="${pal.spine}" font-family="Georgia, 'Times New Roman', serif">${esc(numText)}</text>
-
-        ${renderPersonaAccessory(book?.persona || 'headphones', pal)}
-      </svg>
-    `;
+    return renderTotoroBookArt(book, opts);
   }
 
   /* =========================================================
-     PORTAL 3x3 ARTWORK BANNERS (9 DISTINCT STUDIO TOTORO SCENES)
+     PORTAL 3x2 ARTWORK BANNERS (6 DISTINCT STUDIO TOTORO BOOKS)
      ========================================================= */
   function renderPortalArt(scene) {
-    const cams = DATA().CAMBRIDGE_BOOKS || [];
-    const vols = DATA().VOLUME_BOOKS || [];
     const mapCfg = {
       cambridge: {
-        bg1: '#E9F3EC', bg2: '#D3E6D8', ring: '#2F6049',
-        book: cams[0], seriesLabel: 'CAMBRIDGE', numText: '20',
-        deco: `<path d="M18 82 Q70 58 128 78 T238 66" stroke="#2F6049" stroke-width="2" stroke-dasharray="4 4" opacity="0.26" fill="none"/><circle cx="212" cy="36" r="24" fill="#E5B95C" opacity="0.2"/>`
+        bg1: '#E9F3EC', bg2: '#D3E6D8', ring: '#2F6049', imgId: 'lcam_20',
+        deco: `<path d="M18 88 Q74 64 134 82 T244 70" stroke="#2F6049" stroke-width="2" stroke-dasharray="4 4" opacity="0.26" fill="none"/><circle cx="212" cy="36" r="24" fill="#E5B95C" opacity="0.2"/>`
       },
       volume: {
-        bg1: '#EAF2F8', bg2: '#D3E3F0', ring: '#275274',
-        book: { ...(vols[1] || cams[1]), persona: 'umbrella' }, seriesLabel: 'REAL VOL', numText: '10',
-        deco: `<path d="M188 18 L182 36 M212 24 L206 42 M234 16 L228 34" stroke="#4D85B2" stroke-width="2.2" stroke-linecap="round" opacity="0.38"/><circle cx="218" cy="84" r="26" fill="#275274" opacity="0.09"/>`
+        bg1: '#EAF2F8', bg2: '#D3E3F0', ring: '#275274', imgId: 'lvol_10',
+        deco: `<path d="M188 18 L182 36 M212 24 L206 42 M234 16 L228 34" stroke="#4D85B2" stroke-width="2.2" stroke-linecap="round" opacity="0.38"/><circle cx="218" cy="86" r="26" fill="#275274" opacity="0.09"/>`
       },
       actual: {
-        bg1: '#F7EFEA', bg2: '#ECDDD2', ring: '#8E4E34',
-        book: { ...(cams[2] || {}), persona: 'mic' }, seriesLabel: 'ACTUAL', numText: 'P1–4',
-        deco: `<g stroke="#8E4E34" stroke-width="3" stroke-linecap="round" opacity="0.26"><line x1="184" y1="42" x2="184" y2="72"/><line x1="196" y1="30" x2="196" y2="84"/><line x1="208" y1="22" x2="208" y2="92"/><line x1="220" y1="36" x2="220" y2="78"/><line x1="232" y1="46" x2="232" y2="68"/></g>`
+        bg1: '#F7EFEA', bg2: '#ECDDD2', ring: '#8E4E34', imgId: 'lactual_p14',
+        deco: `<g stroke="#8E4E34" stroke-width="3" stroke-linecap="round" opacity="0.26"><line x1="184" y1="42" x2="184" y2="76"/><line x1="196" y1="30" x2="196" y2="88"/><line x1="208" y1="22" x2="208" y2="96"/><line x1="220" y1="36" x2="220" y2="82"/><line x1="232" y1="46" x2="232" y2="72"/></g>`
       },
       map: {
-        bg1: '#EAF4F3', bg2: '#D2E7E4', ring: '#236360',
-        book: cams[7], seriesLabel: 'MAP LAB', numText: 'P2',
-        deco: `<rect x="166" y="20" width="76" height="68" rx="8" fill="#FFF" fill-opacity="0.65" stroke="#236360" stroke-opacity="0.22" stroke-dasharray="3 3"/><path d="M174 72 Q196 38 214 56 T234 34" stroke="#236360" stroke-width="2.2" fill="none" opacity="0.55"/><circle cx="178" cy="68" r="4" fill="#E5B95C"/><circle cx="232" cy="36" r="4" fill="#B6424B"/>`
+        bg1: '#EAF4F3', bg2: '#D2E7E4', ring: '#236360', imgId: 'lcam_13',
+        deco: `<rect x="166" y="20" width="76" height="72" rx="8" fill="#FFF" fill-opacity="0.65" stroke="#236360" stroke-opacity="0.22" stroke-dasharray="3 3"/><path d="M174 74 Q196 40 214 58 T234 36" stroke="#236360" stroke-width="2.2" fill="none" opacity="0.55"/><circle cx="178" cy="70" r="4" fill="#E5B95C"/><circle cx="232" cy="38" r="4" fill="#B6424B"/>`
       },
       note: {
-        bg1: '#F5F2E8', bg2: '#E9E2CE', ring: '#966828',
-        book: cams[5], seriesLabel: 'NOTES', numText: 'P1–4',
-        deco: `<rect x="170" y="22" width="70" height="64" rx="8" fill="#FFF" fill-opacity="0.72" stroke="#966828" stroke-opacity="0.2"/><path d="M180 38 H230 M180 52 H222 M180 66 H214" stroke="#966828" stroke-width="2.2" stroke-linecap="round" opacity="0.38"/>`
+        bg1: '#F5F2E8', bg2: '#E9E2CE', ring: '#966828', imgId: 'lcam_15',
+        deco: `<rect x="170" y="22" width="70" height="68" rx="8" fill="#FFF" fill-opacity="0.72" stroke="#966828" stroke-opacity="0.2"/><path d="M180 40 H230 M180 54 H222 M180 68 H214" stroke="#966828" stroke-width="2.2" stroke-linecap="round" opacity="0.38"/>`
       },
       tasks: {
-        bg1: '#EEF3EA', bg2: '#DAE6D3', ring: '#4B6B3A',
-        book: cams[8], seriesLabel: 'TASKS', numText: '139',
+        bg1: '#EEF3EA', bg2: '#DAE6D3', ring: '#4B6B3A', imgId: 'lcam_12',
         deco: `<g fill="#4B6B3A" opacity="0.22"><rect x="172" y="24" width="20" height="16" rx="4"/><rect x="197" y="24" width="20" height="16" rx="4"/><rect x="222" y="24" width="20" height="16" rx="4"/><rect x="172" y="46" width="20" height="16" rx="4"/><rect x="197" y="46" width="20" height="16" rx="4"/><rect x="222" y="46" width="20" height="16" rx="4"/><rect x="172" y="68" width="20" height="16" rx="4"/><rect x="197" y="68" width="20" height="16" rx="4"/><rect x="222" y="68" width="20" height="16" rx="4"/></g>`
-      },
-      speed: {
-        bg1: '#F1EEF6', bg2: '#E1DAF0', ring: '#594474',
-        book: cams[3], seriesLabel: 'SPEED', numText: '6s',
-        deco: `<circle cx="208" cy="54" r="28" fill="#FFF" fill-opacity="0.58" stroke="#594474" stroke-width="2" stroke-opacity="0.28"/><path d="M208 38 V54 L220 60" stroke="#594474" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.58"/>`
-      },
-      traps: {
-        bg1: '#F5ECEE', bg2: '#E9D6DB', ring: '#873E49',
-        book: cams[4], seriesLabel: 'CUES', numText: '40',
-        deco: `<path d="M174 70 L204 28 L234 70 Z" fill="#FFF" fill-opacity="0.55" stroke="#873E49" stroke-width="2" stroke-opacity="0.32" stroke-linejoin="round"/><path d="M204 42 V56" stroke="#873E49" stroke-width="2.4" stroke-linecap="round" opacity="0.65"/><circle cx="204" cy="63" r="2" fill="#873E49" opacity="0.7"/>`
-      },
-      voice: {
-        bg1: '#EDF1F4', bg2: '#D9E1E8', ring: '#3E4854',
-        book: cams[6], seriesLabel: 'VOICE', numText: 'MIC',
-        deco: `<circle cx="206" cy="54" r="30" fill="none" stroke="#3E4854" stroke-width="1.6" stroke-dasharray="4 4" opacity="0.25"/><circle cx="206" cy="54" r="18" fill="none" stroke="#3E4854" stroke-width="2" opacity="0.3"/><circle cx="206" cy="54" r="7" fill="#E8B85F"/>`
       }
     };
     const cfg = mapCfg[scene] || mapCfg.cambridge;
-    const svg = renderTotoroBookSvg(cfg.book, {
-      suffix: `p3x3-${scene}`,
-      seriesLabel: cfg.seriesLabel,
-      numText: cfg.numText,
-      readyCount: 1
-    });
+    const bookArt = renderTotoroBookArt(null, { imgId: cfg.imgId, alt: scene });
     return `
       <div class="lp-p3-art" style="--lp-bg1:${cfg.bg1};--lp-bg2:${cfg.bg2};--lp-ring:${cfg.ring};">
-        <svg class="lp-p3-bg" viewBox="0 0 260 108" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${cfg.deco}</svg>
-        <div class="lp-p3-totoro">${svg}</div>
+        <svg class="lp-p3-bg" viewBox="0 0 260 116" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${cfg.deco}</svg>
+        <div class="lp-p3-totoro">${bookArt}</div>
       </div>
     `;
   }
@@ -677,7 +610,7 @@
             </span>
             <div>
               <h2 class="tot-shell-title">LISTENING PRACTICE</h2>
-              <p class="tot-shell-sub">Cambridge IELTS, Real Listening Tests, Recent Actual Tests cùng hệ thống bài bổ trợ Map Labelling, Note Completion và Speed Quiz.</p>
+              <p class="tot-shell-sub">Cambridge IELTS, Real Listening Tests, Recent Actual Tests cùng các bài bổ trợ Map Labelling, Note Completion và Tasks.</p>
             </div>
           </div>
         </div>
