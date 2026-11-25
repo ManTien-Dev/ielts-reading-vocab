@@ -1,0 +1,1914 @@
+/* ==========================================================================
+   TOTORO IELTS MASTER — 4-SKILL TEACHER STUDIO (COMMAND CENTER)
+   Supports Reading · Listening · Writing · Speaking:
+   - Unified 4-skill student roster with daily 4-skill matrix (R / L / W / S)
+   - Granular Per-Task Unlock + Unlock All (handles 1 locked task OR all 4 locked!)
+   - Dedicated Active / Expired 4-Skill Homework Monitor (2x2 daily card grid)
+   - Ultra-clean 4-Skill Link Composer & Picker (NO "chưa làm / đang học" clutter on cards!)
+   - Multi-skill student assignment link routing (?task=... / ?tasks=...)
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  const SENT_KEY = 'ielts_teacher_sent_tasks_v1';
+  const LIVE_DL_KEY = 'ielts_teacher_live_deadlines_v1';
+  const DISMISSED_KEY = 'ielts_teacher_dismissed_hw_v1';
+  const LOCK_PENALTY_MS = 30 * 60 * 1000;
+
+  const LISTENING_PROG_BASE = 'totoro_listening_task_progress_v1_';
+  const LISTENING_LOCK_BASE = 'totoro_listening_task_locks_v1_';
+  const WRITING_PROG_BASE = 'totoro_writing_task_prog_v1_';
+  const WRITING_LOCK_BASE = 'totoro_writing_task_lock_v1_';
+  const WRITING_PRAC_LOCK_BASE = 'totoro_writing_prac_lock_v1_';
+  const SPEAKING_PROG_BASE = 'totoro_speaking_task_prog_v1_';
+  const SPEAKING_LOCK_BASE = 'totoro_speaking_task_locks_v1_';
+
+  const SKILLS = [
+    { key: 'reading',   short: 'R', label: 'Reading',   sub: '110 Tasks · 4 bộ từ' },
+    { key: 'listening', short: 'L', label: 'Listening', sub: '139 Tasks · Part 1–4' },
+    { key: 'writing',   short: 'W', label: 'Writing',   sub: 'Flow Ideas · 3 bước' },
+    { key: 'speaking',  short: 'S', label: 'Speaking',  sub: 'Part 1–3 · Chuẩn bị' },
+  ];
+
+  const READING_SUITES = [
+    { key: 'foundation', label: 'Nền tảng (30)' },
+    { key: 'academic',   label: 'Học thuật (20)' },
+    { key: 'paraphrase', label: 'Paraphrase (30)' },
+    { key: 'advanced',   label: 'Chuyên sâu (30)' },
+  ];
+
+  const state = {
+    tableView: 'today',       // 'today' | 'month' | 'full'
+    rosterFilter: 'all',      // 'all' | 'locked' | 'pending'
+    monitorTab: 'active',     // 'active' | 'expired'
+    monitorSkill: 'all',      // 'all' | 'reading' | 'listening' | 'writing' | 'speaking'
+    pickerSkill: 'reading',   // 'reading' | 'listening' | 'writing' | 'speaking'
+    pickerSuite: {
+      reading: 'foundation',
+      listening: 'part1',
+      writing: 'all',
+      speaking: 'all',
+    },
+    pickerQuery: '',
+    pickerHideAllDone: false,
+    selectedIds: new Set(),
+    presetDirty: false,
+    detailTaskId: '',
+    detailFilter: 'all',
+    remindedKeys: new Set(),
+    tickerId: null,
+  };
+
+  function B() { return window.__VOCAB_BRIDGE__ || null; }
+  function esc(str) {
+    if (B()?.escapeHtml) return B().escapeHtml(str);
+    return String(str ?? '').replace(/[&<>"']/g, (s) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[s]));
+  }
+
+  function readJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      return (parsed && typeof parsed === 'object') ? parsed : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function writeJson(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (_) {}
+  }
+
+  function shortName(fullName) {
+    const pts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+    return pts.length >= 2 ? pts.slice(-2).join(' ') : (pts[0] || '');
+  }
+
+  function monogram(name) {
+    const pts = String(name || 'HV').trim().split(/\s+/).filter(Boolean);
+    return (pts.length >= 2 ? (pts[pts.length - 2][0] + pts[pts.length - 1][0]) : (pts[0] || 'HV').slice(0, 2)).toUpperCase();
+  }
+
+  function formatMmSs(ms) {
+    const total = Math.max(0, Math.ceil(Number(ms || 0) / 1000));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function formatDeadlineRemaining(ms) {
+    const sec = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    if (d > 0) return `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m`;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function formatDeadlineTs(ts) {
+    if (!ts) return '';
+    const d = new Date(Number(ts));
+    if (Number.isNaN(d.getTime())) return '';
+    const p = (n) => String(n).padStart(2, '0');
+    return `${p(d.getHours())}:${p(d.getMinutes())} ${p(d.getDate())}/${p(d.getMonth() + 1)}`;
+  }
+
+  function formatDurationCompact(sec) {
+    const s = Math.max(0, Math.round(Number(sec || 0)));
+    if (!s) return '';
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return m > 0 ? `${m}p${r > 0 ? `${r}s` : ''}` : `${r}s`;
+  }
+
+  function skillMeta(skillKey) {
+    return SKILLS.find((s) => s.key === skillKey) || SKILLS[0];
+  }
+
+  function detectSkillByTaskId(rawId) {
+    const id = String(rawId || '').trim();
+    if (!id) return 'reading';
+    if (/^(task|fnd|acd|adv)_\d+$/i.test(id)) return 'reading';
+    if (/^(lp\d|lmap|lcf|lcore|ltask)_/i.test(id)) return 'listening';
+    if (/^w_/i.test(id)) return 'writing';
+    if (/^sp_/i.test(id)) return 'speaking';
+    // Fallback lookup in Listening / Writing datasets
+    if ((window.APP_LISTENING_TASKS?.tasks || []).some((t) => t.id === id)) return 'listening';
+    if ((window.WRITING_STUDIO_DATA?.MODULES || []).some((m) => m.id === id)) return 'writing';
+    return 'reading';
+  }
+
+  function normalizeAnyTaskId(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return '';
+    // Reading numeric shorthand "1" -> "task_01"
+    if (/^\d{1,2}$/.test(s)) return `task_${s.padStart(2, '0')}`;
+    if (/^(task|fnd|acd|adv)_\d{1,2}$/i.test(s)) {
+      const [pref, num] = s.toLowerCase().split('_');
+      return `${pref}_${String(Number(num)).padStart(2, '0')}`;
+    }
+    return s;
+  }
+
+  /* =========================================================
+     1. UNIFIED 4-SKILL TASK CATALOG
+     ========================================================= */
+  function getReadingCatalog() {
+    const raw = window.TasksModule?.getAllCatalogTasks?.() || [];
+    return raw.map((t) => ({
+      id: t.id,
+      skill: 'reading',
+      suite: t.scopeKey || 'paraphrase',
+      num: t.num || Number(String(t.id).replace(/\D/g, '')) || 0,
+      code: t.label || t.id,
+      shortCode: /^fnd_/i.test(t.id) ? `NT${t.num}` : (/^acd_/i.test(t.id) ? `HT${t.num}` : (/^adv_/i.test(t.id) ? `CS${t.num}` : `P${t.num}`)),
+      theme: t.theme || '',
+      wordTotal: Array.isArray(t.words) ? t.words.length : 50,
+      raw: t,
+    }));
+  }
+
+  function getListeningCatalog() {
+    const raw = window.APP_LISTENING_TASKS?.tasks || [];
+    return raw.map((t, idx) => {
+      const shortTopic = window.ListeningTasksModule?.shortTopicTitle?.(t.theme) || t.theme || t.label;
+      const num = t.num || (idx + 1);
+      const shortCode = t.isMapTask ? `Map ${num}` : (t.suite === 'core_found' ? `Core ${num}` : `P${(t.suite || '1').replace(/\D/g, '') || '1'}·${String(num).padStart(2, '0')}`);
+      return {
+        id: t.id,
+        skill: 'listening',
+        suite: t.suite || 'part1',
+        num,
+        code: t.label || t.id,
+        shortCode,
+        theme: shortTopic,
+        wordTotal: Array.isArray(t.wordIds) ? t.wordIds.length : 30,
+        raw: t,
+      };
+    });
+  }
+
+  function getWritingCatalog() {
+    const mods = window.WRITING_STUDIO_DATA?.MODULES || [];
+    const subMap = {};
+    (window.WRITING_STUDIO_DATA?.SUBTOPICS || []).forEach((st) => { subMap[st.key] = st.shortTitle || st.title; });
+    return mods.map((m, idx) => {
+      const stIdx = String(m.subtopic || '').replace(/\D/g, '') || '1';
+      const mIdx = String(m.id || '').match(/m(\d+)/i)?.[1] || String(idx + 1);
+      const cleanTitle = (window.WritingStudio?.getShortFlowTitle?.(m.id)) || m.title || m.code || m.id;
+      const stName = subMap[m.subtopic] || '';
+      return {
+        id: m.id,
+        skill: 'writing',
+        suite: m.subtopic || 'st01',
+        num: idx + 1,
+        code: `W${Number(stIdx)}.${Number(mIdx)}`,
+        shortCode: `W${Number(stIdx)}.${Number(mIdx)}`,
+        theme: stName ? `${cleanTitle} · ${stName}` : cleanTitle,
+        wordTotal: (Array.isArray(m.vocab) ? m.vocab.length : 0) + (Array.isArray(m.viFlowSteps) ? m.viFlowSteps.length : 0) + (Array.isArray(m.grammar) ? m.grammar.length : 0) || 12,
+        raw: m,
+      };
+    });
+  }
+
+  function getSpeakingCatalog() {
+    const raw = window.SPEAKING_TASKS_DATA?.tasks || [];
+    return raw.map((t, idx) => ({
+      id: t.id || `sp_${String(idx + 1).padStart(2, '0')}`,
+      skill: 'speaking',
+      suite: t.suite || 'part1',
+      num: t.num || (idx + 1),
+      code: t.label || `Speaking ${idx + 1}`,
+      shortCode: `S${idx + 1}`,
+      theme: t.theme || t.title || '',
+      wordTotal: Number(t.totalItems || 10),
+      raw: t,
+    }));
+  }
+
+  function getCatalogBySkill(skillKey) {
+    if (skillKey === 'reading') return getReadingCatalog();
+    if (skillKey === 'listening') return getListeningCatalog();
+    if (skillKey === 'writing') return getWritingCatalog();
+    if (skillKey === 'speaking') return getSpeakingCatalog();
+    return [];
+  }
+
+  function getAllCatalogTasks() {
+    return [
+      ...getReadingCatalog(),
+      ...getListeningCatalog(),
+      ...getWritingCatalog(),
+      ...getSpeakingCatalog(),
+    ];
+  }
+
+  function getTaskById(rawId) {
+    const id = normalizeAnyTaskId(rawId);
+    if (!id) return null;
+    const sk = detectSkillByTaskId(id);
+    const list = getCatalogBySkill(sk);
+    const found = list.find((t) => t.id === id);
+    if (found) return found;
+    return getAllCatalogTasks().find((t) => t.id === id) || null;
+  }
+
+  function getSuitesForSkill(skillKey) {
+    if (skillKey === 'reading') return READING_SUITES;
+    if (skillKey === 'listening') {
+      const suites = window.APP_LISTENING_TASKS?.suites || [];
+      return suites.map((s) => ({ key: s.key, label: s.label }));
+    }
+    if (skillKey === 'writing') {
+      const subs = window.WRITING_STUDIO_DATA?.SUBTOPICS || [];
+      const mods = window.WRITING_STUDIO_DATA?.MODULES || [];
+      return [
+        { key: 'all', label: `Tất cả (${mods.length})` },
+        ...subs.map((st) => {
+          const c = mods.filter((m) => m.subtopic === st.key).length;
+          return { key: st.key, label: `${st.shortTitle || st.title} (${c})` };
+        }),
+      ];
+    }
+    if (skillKey === 'speaking') {
+      return [{ key: 'all', label: 'Tất cả' }];
+    }
+    return [];
+  }
+
+  /* =========================================================
+     2. UNIFIED 4-SKILL PROGRESS & GRANULAR LOCK STATE READER
+     ========================================================= */
+  function loadLiveDeadlines() { return readJson(LIVE_DL_KEY, {}); }
+  function loadSentMap() { return readJson(SENT_KEY, {}); }
+  function loadDismissedMap() { return readJson(DISMISSED_KEY, {}); }
+
+  function saveSentTasks(ids) {
+    if (!Array.isArray(ids) || !ids.length) return;
+    const m = loadSentMap();
+    const now = Date.now();
+    ids.forEach((id) => { m[normalizeAnyTaskId(id)] = now; });
+    writeJson(SENT_KEY, m);
+  }
+
+  function updateLiveDeadlines(ids, newDeadlineAt, toastMsg = '') {
+    const cleanIds = (Array.isArray(ids) ? ids : [ids]).map(normalizeAnyTaskId).filter(Boolean);
+    if (!cleanIds.length) return;
+    const nowTs = Date.now();
+    const dl = Number(newDeadlineAt || 0);
+    const map = loadLiveDeadlines();
+    cleanIds.forEach((tid) => {
+      map[tid] = { deadlineAt: dl, issuedAt: nowTs };
+    });
+    writeJson(LIVE_DL_KEY, map);
+    B()?.broadcastTeacherTaskDeadlines?.(map);
+    if (toastMsg) B()?.showToast?.(toastMsg);
+    renderDashboard();
+  }
+
+  function getStudentUnlockInfo(uid, cache) {
+    const bridge = B();
+    const sd = cache?.[uid]?.syncData || {};
+    const remoteAll = Number(sd.teacherUnlockedAt || 0);
+    let localAll = 0;
+    try { localAll = Number(localStorage.getItem(`${bridge?.TEACHER_UNLOCK_KEY_BASE || 'ielts_teacher_unlocked_at_'}${uid}`) || 0); } catch (_) {}
+    const hasRemote = Boolean(bridge?.getSyncUrl?.() && cache?.[uid]?.syncData);
+    const unlockAllAt = hasRemote ? remoteAll : Math.max(remoteAll, localAll);
+
+    const remotePer = (sd.teacherTaskUnlocks && typeof sd.teacherTaskUnlocks === 'object') ? sd.teacherTaskUnlocks : {};
+    const localPer = readJson(`ielts_teacher_task_unlocks_v1_${uid}`, {});
+    const perTask = { ...remotePer };
+    Object.entries(localPer).forEach(([k, v]) => {
+      const nv = Number(v || 0);
+      if (nv > Number(perTask[k] || 0)) perTask[k] = nv;
+    });
+    return { unlockAllAt, perTask, hasRemote };
+  }
+
+  function isLockCleared(lockKey, untilMs, unlockInfo) {
+    const u = Number(untilMs || 0);
+    if (u <= 0) return true;
+    const origin = u - LOCK_PENALTY_MS;
+    if (unlockInfo.unlockAllAt > 0 && origin <= unlockInfo.unlockAllAt) return true;
+    const perAt = Number(unlockInfo.perTask?.[lockKey] || 0);
+    if (perAt > 0 && origin <= perAt) return true;
+    return false;
+  }
+
+  function readStudentAllLocks(studentId, nowMs = Date.now()) {
+    const bridge = B();
+    if (!bridge) return [];
+    const uid = bridge.getScopedUid(studentId);
+    const cache = bridge.getCloudClassCache?.() || {};
+    const sd = cache?.[uid]?.syncData || {};
+    const unlockInfo = getStudentUnlockInfo(uid, cache);
+
+    const merged = {};
+    const addLock = (lockKey, untilMs, meta = {}) => {
+      const u = Number(untilMs || 0);
+      if (u <= nowMs) return;
+      if (isLockCleared(lockKey, u, unlockInfo)) return;
+      if (!merged[lockKey] || u > merged[lockKey].until) {
+        merged[lockKey] = { lockKey, until: u, remainingMs: u - nowMs, ...meta };
+      }
+    };
+
+    // 1. Unified cloud taskLocks (holds Reading + synced Listening/Writing/Speaking locks)
+    const remoteLocks = (sd.taskLocks && typeof sd.taskLocks === 'object') ? sd.taskLocks : {};
+    Object.entries(remoteLocks).forEach(([k, until]) => addLock(k, until));
+
+    // 2. Local fallbacks when offline or testing on same browser
+    if (!unlockInfo.hasRemote) {
+      const localR = readJson(`${bridge.TASK_LOCKS_KEY_BASE}${uid}`, {});
+      Object.entries(localR).forEach(([k, until]) => addLock(k, until));
+      const localL = readJson(`${LISTENING_LOCK_BASE}${uid}`, {});
+      Object.entries(localL).forEach(([k, until]) => addLock(k, until));
+      const localS = readJson(`${SPEAKING_LOCK_BASE}${uid}`, {});
+      Object.entries(localS).forEach(([k, until]) => addLock(k, until));
+      const wTaskLock = readJson(`${WRITING_LOCK_BASE}${uid}`, null);
+      if (wTaskLock && Number(wTaskLock.until || 0) > nowMs) {
+        const wKey = wTaskLock.modId ? String(wTaskLock.modId) : 'w_task_lock';
+        addLock(wKey, wTaskLock.until, { reason: wTaskLock.reason || '' });
+      }
+      const wPracLock = readJson(`${WRITING_PRAC_LOCK_BASE}${uid}`, null);
+      if (wPracLock && Number(wPracLock.until || 0) > nowMs) {
+        addLock('w_prac_lock', wPracLock.until, { reason: wPracLock.reason || '' });
+      }
+    }
+
+    return Object.values(merged).map((entry) => {
+      const tid = entry.lockKey;
+      let skill = detectSkillByTaskId(tid);
+      let label = tid;
+      if (tid === 'w_task_lock') {
+        skill = 'writing';
+        label = 'Writing Task';
+      } else if (tid === 'w_prac_lock') {
+        skill = 'writing';
+        label = 'Writing Practice';
+      } else {
+        const taskObj = getTaskById(tid);
+        if (taskObj) {
+          skill = taskObj.skill;
+          label = taskObj.shortCode || taskObj.code;
+        }
+      }
+      return {
+        ...entry,
+        skill,
+        skillShort: skillMeta(skill).short,
+        label,
+      };
+    }).sort((a, b) => a.until - b.until);
+  }
+
+  function readSkillProgressMap(studentId, skillKey) {
+    const bridge = B();
+    if (!bridge) return {};
+    const uid = bridge.getScopedUid(studentId);
+    const cache = bridge.getCloudClassCache?.() || {};
+    const sd = cache?.[uid]?.syncData || {};
+
+    let remote = {};
+    let local = {};
+    if (skillKey === 'reading') {
+      remote = (sd.taskProgress && typeof sd.taskProgress === 'object') ? sd.taskProgress : {};
+      local = readJson(`${bridge.TASK_PROGRESS_KEY_BASE}${uid}`, {});
+    } else if (skillKey === 'listening') {
+      remote = (sd.listeningTaskProgress && typeof sd.listeningTaskProgress === 'object') ? sd.listeningTaskProgress : {};
+      local = readJson(`${LISTENING_PROG_BASE}${uid}`, {});
+    } else if (skillKey === 'writing') {
+      remote = (sd.writingTaskProgress && typeof sd.writingTaskProgress === 'object') ? sd.writingTaskProgress : {};
+      local = readJson(`${WRITING_PROG_BASE}${uid}`, {});
+    } else if (skillKey === 'speaking') {
+      remote = (sd.speakingTaskProgress && typeof sd.speakingTaskProgress === 'object') ? sd.speakingTaskProgress : {};
+      local = readJson(`${SPEAKING_PROG_BASE}${uid}`, {});
+    }
+
+    const merged = { ...remote };
+    Object.entries(local).forEach(([tid, rec]) => {
+      const prev = merged[tid];
+      if (!rec) return;
+      const recDone = rec.status === 'completed' || rec.completed === true || rec.passed === true;
+      const prevDone = prev && (prev.status === 'completed' || prev.completed === true || prev.passed === true);
+      const recTs = Number(rec.updatedAt || rec.completedAt || 0);
+      const prevTs = Number(prev?.updatedAt || prev?.completedAt || 0);
+      if (!prev || recTs >= prevTs || (recDone && !prevDone)) {
+        merged[tid] = rec;
+      }
+    });
+    return merged;
+  }
+
+  function isRecordCompleted(skillKey, rec) {
+    if (!rec) return false;
+    if (skillKey === 'reading') return rec.status === 'completed';
+    if (skillKey === 'listening') return Boolean(rec.completed || rec.status === 'completed');
+    if (skillKey === 'writing') return Boolean(rec.passed || rec.completed || rec.status === 'completed');
+    return Boolean(rec.completed || rec.passed || rec.status === 'completed');
+  }
+
+  function getRecordScoreLabel(taskObj, rec) {
+    if (!rec) return '';
+    if (taskObj.skill === 'reading') {
+      if (rec.translationScore != null) return `${Number(rec.translationScore).toFixed(1)}/10`;
+      if (rec.recognitionScore != null) return `${Math.round(Number(rec.recognitionScore))}%`;
+      return 'Đạt';
+    }
+    if (taskObj.skill === 'listening') {
+      const scores = [rec.t1Pct, rec.t2Pct, rec.t3Pct].filter((x) => x != null).map(Number);
+      if (scores.length) {
+        const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+        return `${avg}%`;
+      }
+      if (rec.score != null) return `${rec.score}%`;
+      return 'Đạt';
+    }
+    if (taskObj.skill === 'writing') {
+      if (rec.band != null) return `Band ${Number(rec.band).toFixed(1)}`;
+      if (rec.t3Band != null) return `Band ${Number(rec.t3Band).toFixed(1)}`;
+      if (rec.score != null) return `${Number(rec.score).toFixed(1)}/10`;
+      return 'Đạt';
+    }
+    return rec.score != null ? String(rec.score) : 'Đạt';
+  }
+
+  function getStudentHomeworkRow(taskObj, student, nowMs = Date.now()) {
+    const bridge = B();
+    const uid = bridge.getScopedUid(student.id);
+    const progMap = readSkillProgressMap(student.id, taskObj.skill);
+    const rec = progMap[taskObj.id] || null;
+    const locks = readStudentAllLocks(student.id, nowMs);
+    const matchedLock = locks.find((lk) => lk.lockKey === taskObj.id || (taskObj.skill === 'writing' && lk.lockKey === 'w_task_lock'));
+
+    let doneUnits = 0;
+    let totalUnits = taskObj.wordTotal || 10;
+    let progressLabel = 'Chưa bắt đầu';
+
+    const completed = isRecordCompleted(taskObj.skill, rec);
+
+    if (taskObj.skill === 'reading') {
+      const assessMap = bridge.getStudentAssessmentsMap?.(student.id) || {};
+      const wList = Array.isArray(taskObj.raw?.words) ? taskObj.raw.words : [];
+      totalUnits = wList.length || 50;
+      doneUnits = completed
+        ? totalUnits
+        : (wList.length ? wList.filter((w) => assessMap[w.id] === 3).length : 0);
+      if (completed) progressLabel = 'Đã nộp';
+      else if (matchedLock) progressLabel = `Khóa ${formatMmSs(matchedLock.remainingMs)}`;
+      else if (rec?.status === 'in_progress') progressLabel = `Đang làm Test ${Math.min(3, Number(rec.stage || 1) + 1)}`;
+      else if (doneUnits >= totalUnits) progressLabel = 'Đủ từ · Chờ thi';
+      else if (doneUnits > 0) progressLabel = `Học ${doneUnits}/${totalUnits} từ`;
+    } else if (taskObj.skill === 'listening') {
+      const stagesDone = [rec?.t1Done, rec?.t2Done, rec?.t3Done].filter(Boolean).length;
+      totalUnits = 3;
+      doneUnits = completed ? 3 : stagesDone;
+      if (completed) progressLabel = 'Đã nộp';
+      else if (matchedLock) progressLabel = `Khóa ${formatMmSs(matchedLock.remainingMs)}`;
+      else if (stagesDone > 0) progressLabel = `Xong ${stagesDone}/3 vòng`;
+    } else if (taskObj.skill === 'writing') {
+      const stepsDone = [rec?.t1Passed, rec?.t2Passed, rec?.t3Passed].filter(Boolean).length;
+      totalUnits = 3;
+      doneUnits = completed ? 3 : stepsDone;
+      if (completed) progressLabel = 'Đã nộp';
+      else if (matchedLock) progressLabel = `Khóa ${formatMmSs(matchedLock.remainingMs)}`;
+      else if (stepsDone > 0) progressLabel = `Xong Bước ${stepsDone}/3`;
+      else if (rec?.updatedAt) progressLabel = 'Đang học Flow';
+    } else {
+      totalUnits = 1;
+      doneUnits = completed ? 1 : 0;
+      if (completed) progressLabel = 'Đã nộp';
+      else if (matchedLock) progressLabel = `Khóa ${formatMmSs(matchedLock.remainingMs)}`;
+    }
+
+    let bucket = 'missing';
+    if (completed) bucket = 'done';
+    else if (matchedLock) bucket = 'locked';
+    else if (doneUnits > 0 || rec?.status === 'in_progress' || rec?.updatedAt) bucket = 'progress';
+
+    return {
+      student,
+      uid,
+      rec,
+      bucket,
+      completed,
+      lock: matchedLock || null,
+      doneUnits,
+      totalUnits,
+      progressLabel,
+      scoreLabel: completed ? getRecordScoreLabel(taskObj, rec) : '',
+      updatedAt: Number(rec?.updatedAt || rec?.completedAt || 0),
+    };
+  }
+
+  function isTaskAllDone(taskObj, nowMs = Date.now()) {
+    const students = B()?.getStudentAccounts?.() || [];
+    if (!students.length) return false;
+    return students.every((st) => getStudentHomeworkRow(taskObj, st, nowMs).completed);
+  }
+
+  /* =========================================================
+     3. ACTIVE & EXPIRED HOMEWORK BUCKETS (ALL 4 SKILLS)
+     ========================================================= */
+  function getMonitorBuckets(nowMs = Date.now()) {
+    const liveMap = loadLiveDeadlines();
+    const sentMap = loadSentMap();
+    const dismissedMap = loadDismissedMap();
+    const activeList = [];
+    const expiredList = [];
+    const seen = new Set();
+
+    const inspect = (rawId) => {
+      const tid = normalizeAnyTaskId(rawId);
+      if (!tid || seen.has(tid)) return;
+      const taskObj = getTaskById(tid);
+      if (!taskObj) return;
+      seen.add(tid);
+
+      const dlRec = liveMap[tid] || null;
+      const sentTs = Number(sentMap[tid] || 0);
+      const issuedAt = Math.max(Number(dlRec?.issuedAt || 0), sentTs);
+      const deadlineAt = Number(dlRec?.deadlineAt || 0);
+      const dismissedAt = Number(dismissedMap[tid] || 0);
+      const lastEventTs = Math.max(issuedAt, deadlineAt > 0 && deadlineAt <= nowMs ? deadlineAt : 0);
+      if (dismissedAt > 0 && dismissedAt >= lastEventTs) return;
+
+      if (deadlineAt > nowMs) {
+        activeList.push({ task: taskObj, deadlineAt, issuedAt, mode: 'active' });
+      } else if (deadlineAt > 0 && deadlineAt <= nowMs) {
+        expiredList.push({ task: taskObj, deadlineAt, issuedAt, mode: 'expired' });
+      } else if (issuedAt > 0) {
+        if (!isTaskAllDone(taskObj, nowMs)) {
+          activeList.push({ task: taskObj, deadlineAt: 0, issuedAt, mode: 'active' });
+        }
+      }
+    };
+
+    Object.keys(liveMap).forEach(inspect);
+    Object.keys(sentMap).forEach(inspect);
+
+    const skillRank = { reading: 1, listening: 2, writing: 3, speaking: 4 };
+    activeList.sort((a, b) => (
+      (a.deadlineAt > 0 && b.deadlineAt > 0 ? a.deadlineAt - b.deadlineAt : b.issuedAt - a.issuedAt)
+      || (skillRank[a.task.skill] - skillRank[b.task.skill])
+    ));
+    expiredList.sort((a, b) => b.deadlineAt - a.deadlineAt);
+    return { activeList, expiredList };
+  }
+
+  /* =========================================================
+     4. UNLOCK ACTIONS (PER-TASK OR UNLOCK ALL)
+     ========================================================= */
+  function unlockStudentTask(studentId, lockKey = null) {
+    const bridge = B();
+    if (!bridge?.isTeacherUser?.() || !studentId) return;
+    const nowTs = Date.now();
+    const acct = (bridge.getStudentAccounts?.() || []).find((a) => bridge.getScopedUid(a.id) === bridge.getScopedUid(studentId));
+    const displayName = acct?.name || studentId;
+
+    const p = bridge.unlockStudentCloudLocks?.(studentId, nowTs, lockKey || null);
+    renderDashboard();
+    if (document.getElementById('modal-teacher-task-detail')?.classList.contains('open') && state.detailTaskId) {
+      renderDetailModalBody();
+    }
+    const labelMsg = lockKey
+      ? `Đã mở khóa bài ${getTaskById(lockKey)?.shortCode || lockKey} cho ${shortName(displayName)}!`
+      : `Đã mở khóa tất cả bài đang bị khóa cho ${shortName(displayName)}!`;
+    if (p && typeof p.then === 'function') {
+      p.then((ok) => {
+        if (ok) bridge.showToast?.(labelMsg);
+        renderDashboard();
+        if (document.getElementById('modal-teacher-task-detail')?.classList.contains('open') && state.detailTaskId) {
+          renderDetailModalBody();
+        }
+      });
+    } else {
+      bridge.showToast?.(labelMsg);
+    }
+  }
+
+  /* =========================================================
+     5. RENDER: LOCK ALERT BANNER + ROSTER TABLE (4-SKILL MATRIX)
+     ========================================================= */
+  function renderLockAlertBanner(studentsWithLocks, nowMs) {
+    const el = document.getElementById('ts-lock-alert-banner');
+    if (!el) return;
+    if (!studentsWithLocks.length) {
+      el.style.display = 'none';
+      el.innerHTML = '';
+      return;
+    }
+
+    const totalLocks = studentsWithLocks.reduce((sum, x) => sum + x.locks.length, 0);
+    const chipsHtml = studentsWithLocks.map(({ student, locks }) => {
+      if (locks.length === 1) {
+        const lk = locks[0];
+        return `
+          <div class="ts-lock-banner-chip">
+            <strong>${esc(shortName(student.name))}</strong>
+            <span class="ts-skill-pill is-${esc(lk.skill)}">${esc(lk.skillShort)} · ${esc(lk.label)}</span>
+            <span class="ts-lock-time" data-ts-lock-until="${lk.until}">${formatMmSs(lk.until - nowMs)}</span>
+            <button type="button" class="ts-btn-unlock-one" onclick="TeacherStudio.unlockStudentTask('${esc(student.id)}', '${esc(lk.lockKey)}')">Mở</button>
+          </div>
+        `;
+      }
+      const skTags = locks.map((lk) => `<span class="ts-skill-pill is-${esc(lk.skill)}" title="${esc(lk.label)} (${formatMmSs(lk.until - nowMs)})">${esc(lk.skillShort)}</span>`).join('');
+      return `
+        <div class="ts-lock-banner-chip">
+          <strong>${esc(shortName(student.name))}</strong>
+          <span>Khóa ${locks.length} bài:</span>
+          ${skTags}
+          <button type="button" class="ts-btn-unlock-all" onclick="TeacherStudio.unlockStudentTask('${esc(student.id)}')">Mở tất cả (${locks.length})</button>
+        </div>
+      `;
+    }).join('');
+
+    el.style.display = 'flex';
+    el.innerHTML = `
+      <div class="ts-lock-banner-top">
+        <div class="ts-lock-banner-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <span>Cảnh báo khóa bài · ${studentsWithLocks.length} học viên (${totalLocks} khóa đang hiệu lực)</span>
+        </div>
+        <button type="button" class="ts-qfilter-btn is-lock-filter ${state.rosterFilter === 'locked' ? 'active' : ''}" onclick="TeacherStudio.setRosterFilter('${state.rosterFilter === 'locked' ? 'all' : 'locked'}')">
+          ${state.rosterFilter === 'locked' ? 'Đang lọc học viên bị khóa ×' : 'Lọc danh sách bị khóa'}
+        </button>
+      </div>
+      <div class="ts-lock-banner-items">${chipsHtml}</div>
+    `;
+  }
+
+  function renderStatusUnlockCell(student, locks, nowMs) {
+    if (!locks.length) {
+      return '<span class="ts-status-ok">Bình thường</span>';
+    }
+    if (locks.length === 1) {
+      const lk = locks[0];
+      return `
+        <div class="ts-locks-wrap">
+          <div class="ts-lock-item">
+            <span class="ts-lock-item-meta">
+              <span class="ts-slot-sk is-${esc(lk.skill)}">${esc(lk.skillShort)}</span>
+              <span class="ts-lock-item-code" title="${esc(lk.label)}">${esc(lk.label)}</span>
+              <span class="ts-lock-time" data-ts-lock-until="${lk.until}">${formatMmSs(lk.until - nowMs)}</span>
+            </span>
+            <button type="button" class="ts-btn-unlock-one" onclick="TeacherStudio.unlockStudentTask('${esc(student.id)}', '${esc(lk.lockKey)}')" title="Chỉ mở khóa bài này">Mở</button>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="ts-locks-wrap">
+        <div class="ts-locks-head">
+          <span class="ts-locks-count">Khóa ${locks.length} bài</span>
+          <button type="button" class="ts-btn-unlock-all" onclick="TeacherStudio.unlockStudentTask('${esc(student.id)}')" title="Mở khóa toàn bộ ${locks.length} bài cho học viên này">Mở tất cả (${locks.length})</button>
+        </div>
+        <div class="ts-locks-list">
+          ${locks.map((lk) => `
+            <div class="ts-lock-item">
+              <span class="ts-lock-item-meta">
+                <span class="ts-slot-sk is-${esc(lk.skill)}">${esc(lk.skillShort)}</span>
+                <span class="ts-lock-item-code" title="${esc(lk.label)}">${esc(lk.label)}</span>
+                <span class="ts-lock-time" data-ts-lock-until="${lk.until}">${formatMmSs(lk.until - nowMs)}</span>
+              </span>
+              <button type="button" class="ts-btn-unlock-one" onclick="TeacherStudio.unlockStudentTask('${esc(student.id)}', '${esc(lk.lockKey)}')" title="Chỉ mở khóa riêng bài này">Mở</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderStudentDailyMatrixCell(student, activeTasks, nowMs) {
+    if (!activeTasks.length) {
+      return '<span style="color:var(--ink-3); font-size:12px;">Chưa giao bài</span>';
+    }
+    const slotsHtml = activeTasks.slice(0, 6).map(({ task }) => {
+      const row = getStudentHomeworkRow(task, student, nowMs);
+      const sm = skillMeta(task.skill);
+      let icon = '—';
+      let stateCls = 'is-missing';
+      if (row.bucket === 'done') {
+        icon = '✓';
+        stateCls = 'is-done';
+      } else if (row.bucket === 'locked') {
+        icon = '🔒';
+        stateCls = 'is-locked';
+      } else if (row.bucket === 'progress') {
+        icon = '•';
+        stateCls = 'is-progress';
+      }
+      const tip = `${sm.label} · ${task.code} (${task.theme}) — ${row.progressLabel}${row.scoreLabel ? ` · ${row.scoreLabel}` : ''}`;
+      return `
+        <button type="button" class="ts-slot ${stateCls}" title="${esc(tip)}" onclick="TeacherStudio.openTaskDetailModal('${esc(task.id)}')">
+          <span class="ts-slot-sk is-${esc(task.skill)}">${esc(sm.short)}</span>
+          <span>${icon}</span>
+        </button>
+      `;
+    }).join('');
+    const extra = activeTasks.length > 6 ? `<span class="ts-done-mini">+${activeTasks.length - 6}</span>` : '';
+    return `<div class="ts-matrix-row">${slotsHtml}${extra}</div>`;
+  }
+
+  function renderStudentDone4SkillCell(doneBySkill) {
+    const items = SKILLS
+      .map((s) => ({ ...s, count: doneBySkill[s.key] || 0 }))
+      .filter((s) => s.count > 0);
+    if (!items.length) {
+      return '<span style="color:var(--ink-3); font-size:12px;">0 bài</span>';
+    }
+    return `<div class="ts-done-pills">${items.map((it) => `<span class="ts-done-mini is-${it.key}" title="${it.label}: ${it.count} bài đã xong">${it.short} ${it.count}</span>`).join('')}</div>`;
+  }
+
+  function renderRosterSection(nowMs, activeList) {
+    const bridge = B();
+    if (!bridge?.isTeacherUser?.()) return;
+
+    const statusEl = document.getElementById('teacher-sync-status');
+    const syncTime = bridge.getLastCloudSyncTime?.();
+    if (statusEl) {
+      statusEl.textContent = syncTime ? `Đồng bộ lúc ${syncTime}` : 'Theo dõi học tập & bài tập 4 kỹ năng';
+    }
+
+    const viewMode = state.tableView;
+    document.querySelectorAll('#teacher-view-tabs .teacher-view-tab').forEach((btn) => {
+      const act = btn.getAttribute('data-view') === viewMode;
+      btn.classList.toggle('active', act);
+      btn.setAttribute('aria-selected', act ? 'true' : 'false');
+    });
+
+    const ranked = bridge.getClassRankedEntries?.(viewMode === 'month' ? 'month' : 'week') || [];
+    const nowDate = new Date(nowMs);
+    const todayKey = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
+    const curYear = nowDate.getFullYear();
+    const curMonth = nowDate.getMonth();
+
+    const inPeriod = (ts) => {
+      if (viewMode === 'full') return true;
+      if (!ts) return false;
+      const d = new Date(Number(ts));
+      if (viewMode === 'today') {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === todayKey;
+      }
+      return d.getFullYear() === curYear && d.getMonth() === curMonth;
+    };
+
+    const enrichedAll = ranked.map((item) => {
+      const streak = item.streak ?? (bridge.computeConsecutiveStreakForUser?.(item.id) || 0);
+      const locks = readStudentAllLocks(item.id, nowMs);
+      const doneBySkill = { reading: 0, listening: 0, writing: 0, speaking: 0 };
+      SKILLS.forEach((sk) => {
+        const pm = readSkillProgressMap(item.id, sk.key);
+        Object.values(pm).forEach((rec) => {
+          if (isRecordCompleted(sk.key, rec) && inPeriod(rec.updatedAt || rec.completedAt)) {
+            doneBySkill[sk.key] += 1;
+          }
+        });
+      });
+      const totalDonePeriod = doneBySkill.reading + doneBySkill.listening + doneBySkill.writing + doneBySkill.speaking;
+      const activePendingCount = activeList.reduce((acc, { task }) => (
+        acc + (getStudentHomeworkRow(task, item, nowMs).completed ? 0 : 1)
+      ), 0);
+      const periodMins = viewMode === 'today' ? Number(item.todayMins || 0) : (viewMode === 'month' ? Number(item.monthMins || 0) : Number(item.weekMins || 0));
+      const periodWords = viewMode === 'today' ? Number(item.todayWords || 0) : (viewMode === 'month' ? Number(item.monthWords || 0) : Number(item.mastered || 0));
+      const periodActivity = (totalDonePeriod * 100) + (periodWords * 10) + periodMins;
+      return { item, streak, locks, doneBySkill, totalDonePeriod, activePendingCount, periodMins, periodWords, periodActivity };
+    });
+
+    if (viewMode !== 'full') {
+      enrichedAll.sort((a, b) => (
+        (b.locks.length > 0 ? 1 : 0) - (a.locks.length > 0 ? 1 : 0)
+        || (b.periodActivity - a.periodActivity)
+        || (b.periodMins - a.periodMins)
+        || (Number(a.item.order || 0) - Number(b.item.order || 0))
+      ));
+    }
+
+    // Lock Alert Banner at very top
+    const studentsWithLocks = enrichedAll
+      .filter((r) => r.locks.length > 0)
+      .map((r) => ({ student: r.item, locks: r.locks }));
+    renderLockAlertBanner(studentsWithLocks, nowMs);
+
+    // Quick filter chips counts
+    const lockedStuCount = studentsWithLocks.length;
+    const pendingStuCount = activeList.length
+      ? enrichedAll.filter((r) => r.activePendingCount > 0).length
+      : 0;
+    const qfWrap = document.getElementById('ts-quick-filters');
+    if (qfWrap) {
+      qfWrap.innerHTML = `
+        <button type="button" class="ts-qfilter-btn ${state.rosterFilter === 'all' ? 'active' : ''}" onclick="TeacherStudio.setRosterFilter('all')">Tất cả (${enrichedAll.length})</button>
+        <button type="button" class="ts-qfilter-btn is-lock-filter ${lockedStuCount > 0 ? 'has-locks' : ''} ${state.rosterFilter === 'locked' ? 'active' : ''}" onclick="TeacherStudio.setRosterFilter('locked')">Đang bị khóa (${lockedStuCount})</button>
+        ${activeList.length ? `<button type="button" class="ts-qfilter-btn ${state.rosterFilter === 'pending' ? 'active' : ''}" onclick="TeacherStudio.setRosterFilter('pending')">Chưa xong bài giao (${pendingStuCount})</button>` : ''}
+      `;
+    }
+
+    // KPI Strip
+    const kpiStrip = document.getElementById('teacher-kpi-strip');
+    if (kpiStrip) {
+      const totalStu = enrichedAll.length;
+      const activeStu = enrichedAll.filter((r) => r.periodActivity > 0).length;
+      const totalLocks = studentsWithLocks.reduce((s, x) => s + x.locks.length, 0);
+      const totalPeriodMins = enrichedAll.reduce((s, r) => s + r.periodMins, 0);
+
+      // Homework completion across active assigned tasks
+      const totalSlots = activeList.length * totalStu;
+      const doneSlots = totalSlots
+        ? activeList.reduce((acc, { task }) => acc + enrichedAll.filter((r) => getStudentHomeworkRow(task, r.item, nowMs).completed).length, 0)
+        : 0;
+      const hwPct = totalSlots ? Math.round((doneSlots / totalSlots) * 100) : 0;
+      const activeSkillPills = SKILLS.map((sk) => {
+        const cnt = activeList.filter((x) => x.task.skill === sk.key).length;
+        return cnt > 0 ? `<span class="ts-skill-pill is-${sk.key}">${sk.short} ${cnt}</span>` : '';
+      }).filter(Boolean).join('');
+
+      const periodLabel = viewMode === 'today' ? 'hôm nay' : (viewMode === 'month' ? 'tháng này' : 'tuần này');
+      kpiStrip.innerHTML = `
+        <div class="teacher-kpi-card is-mint">
+          <div class="teacher-kpi-label">Học viên hoạt động ${periodLabel}</div>
+          <div class="teacher-kpi-val tabular">${activeStu}/${totalStu}</div>
+          <div class="ts-kpi-sub tabular">Tổng ${totalPeriodMins.toLocaleString('vi-VN')} phút học</div>
+        </div>
+        <div class="teacher-kpi-card is-teal">
+          <div class="teacher-kpi-label">Bài đang giao (4 kỹ năng)</div>
+          <div class="teacher-kpi-val tabular">${activeList.length} <span class="teacher-kpi-unit">bài</span></div>
+          <div class="ts-kpi-sub">${activeSkillPills || 'Chưa giao bài nào'}</div>
+        </div>
+        <div class="teacher-kpi-card is-gold">
+          <div class="teacher-kpi-label">Tiến độ bài đang giao</div>
+          <div class="teacher-kpi-val tabular">${totalSlots ? `${hwPct}%` : '—'}</div>
+          <div class="ts-kpi-sub tabular">${totalSlots ? `${doneSlots}/${totalSlots} lượt nộp` : 'Chọn bài bên dưới để giao'}</div>
+        </div>
+        <div class="teacher-kpi-card ${totalLocks > 0 ? 'is-danger' : 'is-coral'}" onclick="TeacherStudio.setRosterFilter('${state.rosterFilter === 'locked' ? 'all' : 'locked'}')" title="Bấm để lọc nhanh học viên đang bị khóa">
+          <div class="teacher-kpi-label">Trạng thái khóa bài</div>
+          <div class="teacher-kpi-val tabular" style="${totalLocks > 0 ? 'color:var(--ts-danger)!important;' : ''}">${totalLocks > 0 ? `${lockedStuCount} HS` : '0 khóa'}</div>
+          <div class="ts-kpi-sub">${totalLocks > 0 ? `${totalLocks} bài đang khóa · Bấm để lọc` : 'Cả lớp bình thường'}</div>
+        </div>
+      `;
+    }
+
+    // Search + Filter
+    const searchEl = document.getElementById('teacher-student-search');
+    if (searchEl) {
+      const curTeacherId = String(bridge.getCurrentUser?.()?.id || '').trim().toLowerCase();
+      const rawQ = String(searchEl.value || '').trim().toLowerCase();
+      if (!searchEl.matches(':focus') && curTeacherId && rawQ === curTeacherId) searchEl.value = '';
+    }
+    const q = (searchEl?.value || '').trim().toLowerCase();
+
+    const visible = enrichedAll.filter((r) => {
+      if (q && !String(r.item.name || '').toLowerCase().includes(q) && !String(r.item.id || '').toLowerCase().includes(q)) return false;
+      if (state.rosterFilter === 'locked' && !r.locks.length) return false;
+      if (state.rosterFilter === 'pending' && r.activePendingCount <= 0) return false;
+      return true;
+    });
+
+    const thead = document.getElementById('teacher-dashboard-thead');
+    const tbody = document.getElementById('teacher-dashboard-tbody');
+    if (!tbody) return;
+
+    if (thead) {
+      thead.innerHTML = viewMode === 'full'
+        ? `<tr>
+            <th>#</th>
+            <th>Học viên</th>
+            <th>Hôm nay</th>
+            <th>Tuần</th>
+            <th>Tháng</th>
+            <th>Chuỗi</th>
+            <th>Từ thuộc</th>
+            <th>Bài đang giao (4KN)</th>
+            <th>Đã xong (4KN)</th>
+            <th>Trạng thái &amp; Mở khóa</th>
+          </tr>`
+        : `<tr>
+            <th>#</th>
+            <th>Học viên</th>
+            <th>Phút học</th>
+            <th>Từ mới</th>
+            <th>Bài đang giao (4 kỹ năng)</th>
+            <th>Đã xong ${viewMode === 'today' ? 'hôm nay' : 'tháng này'}</th>
+            <th>Trạng thái &amp; Mở khóa</th>
+          </tr>`;
+    }
+
+    const colSpan = viewMode === 'full' ? 10 : 7;
+    if (!visible.length) {
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding:22px; color:var(--ink-3);">Không có học viên nào khớp bộ lọc hiện tại.</td></tr>`;
+      return;
+    }
+
+    let activeRankSeq = 0;
+    tbody.innerHTML = visible.map((r, idx) => {
+      const rankTxt = r.locks.length > 0 && r.periodActivity <= 0
+        ? '🔒'
+        : (r.periodActivity > 0 || viewMode === 'full' ? `#${++activeRankSeq}` : '–');
+      const matrixHtml = renderStudentDailyMatrixCell(r.item, activeList, nowMs);
+      const doneHtml = renderStudentDone4SkillCell(r.doneBySkill);
+      const statusHtml = renderStatusUnlockCell(r.item, r.locks, nowMs);
+      const rowCls = r.locks.length ? ' style="background:color-mix(in srgb, var(--ts-danger-bg) 35%, transparent);"' : '';
+
+      if (viewMode === 'full') {
+        return `
+          <tr${rowCls}>
+            <td class="tabular"><strong>${rankTxt}</strong></td>
+            <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(monogram(r.item.name))}</span><strong>${esc(r.item.name)}</strong></div></td>
+            <td class="tabular">${Number(r.item.todayMins || 0)}p</td>
+            <td class="tabular">${Number(r.item.weekMins || 0)}p</td>
+            <td class="tabular">${Number(r.item.monthMins || 0)}p</td>
+            <td class="tabular">${r.streak} ngày</td>
+            <td class="tabular">${Number(r.item.mastered || 0).toLocaleString('vi-VN')}</td>
+            <td>${matrixHtml}</td>
+            <td>${doneHtml}</td>
+            <td>${statusHtml}</td>
+          </tr>
+        `;
+      }
+      return `
+        <tr${rowCls}>
+          <td class="tabular"><strong>${rankTxt}</strong></td>
+          <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(monogram(r.item.name))}</span><strong>${esc(r.item.name)}</strong></div></td>
+          <td class="tabular"><strong>${r.periodMins}p</strong></td>
+          <td class="tabular">${r.periodWords} từ</td>
+          <td>${matrixHtml}</td>
+          <td>${doneHtml}</td>
+          <td>${statusHtml}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  /* =========================================================
+     6. RENDER: ACTIVE / EXPIRED 4-SKILL HOMEWORK MONITOR
+     ========================================================= */
+  function renderMonitorSection(nowMs, buckets) {
+    const box = document.getElementById('ts-monitor-body');
+    const panel = document.getElementById('ts-panel-monitor');
+    if (!box || !panel) return;
+
+    const { activeList, expiredList } = buckets;
+    if (!activeList.length && !expiredList.length) {
+      panel.style.display = 'none';
+      return;
+    }
+    panel.style.display = '';
+
+    if (state.monitorTab === 'active' && !activeList.length && expiredList.length) state.monitorTab = 'expired';
+    else if (state.monitorTab === 'expired' && !expiredList.length && activeList.length) state.monitorTab = 'active';
+
+    const showingExpired = state.monitorTab === 'expired';
+    const baseList = showingExpired ? expiredList : activeList;
+    const filteredList = state.monitorSkill === 'all'
+      ? baseList
+      : baseList.filter((x) => x.task.skill === state.monitorSkill);
+
+    const students = B()?.getStudentAccounts?.() || [];
+    const totalStu = students.length || 1;
+
+    const skillFiltersHtml = [
+      { key: 'all', label: `Tất cả (${baseList.length})` },
+      ...SKILLS.map((s) => ({
+        key: s.key,
+        label: `${s.label} (${baseList.filter((x) => x.task.skill === s.key).length})`,
+      })).filter((s) => baseList.some((x) => x.task.skill === s.key)),
+    ].map((f) => `<button type="button" class="ts-qfilter-btn ${state.monitorSkill === f.key ? 'active' : ''}" onclick="TeacherStudio.setMonitorSkill('${f.key}')">${esc(f.label)}</button>`).join('');
+
+    const cardsHtml = filteredList.map(({ task, deadlineAt }) => {
+      const sm = skillMeta(task.skill);
+      const rows = students.map((st) => getStudentHomeworkRow(task, st, nowMs));
+      const doneRows = rows.filter((r) => r.bucket === 'done');
+      const progRows = rows.filter((r) => r.bucket === 'progress');
+      const lockRows = rows.filter((r) => r.bucket === 'locked');
+      const missRows = rows.filter((r) => r.bucket === 'missing');
+      const notDoneRows = rows.filter((r) => !r.completed);
+
+      const donePct = Math.round((doneRows.length / totalStu) * 100);
+      const progPct = Math.round((progRows.length / totalStu) * 100);
+      const lockPct = Math.round((lockRows.length / totalStu) * 100);
+
+      let dlHtml = '<span class="ts-hw-dl is-open">Không giới hạn</span>';
+      if (deadlineAt > 0) {
+        const rem = deadlineAt - nowMs;
+        const closeStr = formatDeadlineTs(deadlineAt);
+        dlHtml = rem > 0
+          ? `<span class="ts-hw-dl is-live" data-ts-dl-task="${esc(task.id)}" title="Đóng lúc ${esc(closeStr)}">⏱ Còn ${esc(formatDeadlineRemaining(rem))}</span>`
+          : `<span class="ts-hw-dl is-ended" data-ts-dl-task="${esc(task.id)}">Đã đóng · ${esc(closeStr)}</span>`;
+      }
+
+      const lockStripHtml = lockRows.length
+        ? `<div class="ts-hw-lock-strip">
+            <strong>🔒 Bị khóa (${lockRows.length}):</strong>
+            ${lockRows.map((r) => `
+              <span>${esc(shortName(r.student.name))} (<span class="ts-lock-time" data-ts-lock-until="${r.lock.until}">${formatMmSs(r.lock.remainingMs)}</span>)</span>
+              <button type="button" class="ts-btn-unlock-one" onclick="TeacherStudio.unlockStudentTask('${esc(r.student.id)}', '${esc(r.lock.lockKey)}')">Mở</button>
+            `).join('')}
+          </div>`
+        : '';
+
+      const rollLines = [];
+      if (doneRows.length) {
+        rollLines.push(`<div class="is-done"><strong>✓ Đã nộp (${doneRows.length}):</strong> ${esc(doneRows.map((r) => `${shortName(r.student.name)}${r.scoreLabel ? ` · ${r.scoreLabel}` : ''}`).join(', '))}</div>`);
+      }
+      if (showingExpired) {
+        if (notDoneRows.length) {
+          rollLines.push(`<div class="is-overdue"><strong>✗ Chưa nộp sau hạn (${notDoneRows.length}):</strong> ${esc(notDoneRows.map((r) => shortName(r.student.name)).join(', '))}</div>`);
+        } else {
+          rollLines.push('<div class="is-done"><strong>✓ Cả lớp đã nộp đủ 100%</strong></div>');
+        }
+      } else {
+        const pendingNoLock = [...progRows, ...missRows];
+        if (pendingNoLock.length) {
+          rollLines.push(`<div class="is-miss"><strong>Chưa xong (${pendingNoLock.length}):</strong> ${esc(pendingNoLock.map((r) => shortName(r.student.name)).join(', '))}</div>`);
+        } else if (!lockRows.length) {
+          rollLines.push('<div class="is-done"><strong>✓ Cả lớp đã hoàn thành 100%</strong></div>');
+        }
+      }
+
+      const actionsHtml = showingExpired
+        ? `
+          <button type="button" class="ts-hw-btn is-primary" onclick="TeacherStudio.openTaskDetailModal('${esc(task.id)}', 'pending')">Nhắc từng bạn</button>
+          <button type="button" class="ts-hw-btn" onclick="TeacherStudio.copyGroupReminder('${esc(task.id)}', true)">Copy DS nhóm</button>
+          <button type="button" class="ts-hw-btn" onclick="TeacherStudio.extendTaskDeadline('${esc(task.id)}', 60)">+1h</button>
+          <button type="button" class="ts-hw-btn" onclick="TeacherStudio.dismissMonitorTask('${esc(task.id)}')">Ẩn</button>
+        `
+        : `
+          <button type="button" class="ts-hw-btn is-primary" onclick="TeacherStudio.openTaskDetailModal('${esc(task.id)}', 'pending')">Chi tiết &amp; Nhắc</button>
+          <button type="button" class="ts-hw-btn" onclick="TeacherStudio.copyGroupReminder('${esc(task.id)}', false)">Copy nhóm</button>
+          <button type="button" class="ts-hw-btn" onclick="TeacherStudio.extendTaskDeadline('${esc(task.id)}', 60)">+1h</button>
+          <button type="button" class="ts-hw-btn is-danger" onclick="TeacherStudio.endTasksNow(['${esc(task.id)}'])">Đóng hạn</button>
+        `;
+
+      return `
+        <article class="ts-hw-card is-${esc(task.skill)} ${showingExpired ? 'is-expired' : ''}">
+          <div class="ts-hw-top">
+            <div class="ts-hw-title-col">
+              <div class="ts-hw-meta-line">
+                <span class="ts-skill-pill is-${esc(task.skill)}">${esc(sm.label.toUpperCase())}</span>
+                <span class="ts-hw-code">${esc(task.code)}</span>
+                ${dlHtml}
+              </div>
+              <div class="ts-hw-theme">${esc(task.theme)}</div>
+            </div>
+          </div>
+          <div class="ts-hw-progress">
+            <div class="ts-hw-bar">
+              <div class="ts-hw-seg-done" style="width:${donePct}%;"></div>
+              ${!showingExpired ? `<div class="ts-hw-seg-prog" style="width:${progPct}%;"></div>` : ''}
+              ${lockPct ? `<div class="ts-hw-seg-lock" style="width:${lockPct}%;"></div>` : ''}
+            </div>
+            <div class="ts-hw-counts">
+              <span><strong>${doneRows.length}/${rows.length}</strong> đã nộp · ${donePct}%</span>
+              <span>${showingExpired ? `${notDoneRows.length} chưa nộp` : `${progRows.length} đang làm · ${lockRows.length} khóa · ${missRows.length} chưa mở`}</span>
+            </div>
+          </div>
+          ${lockStripHtml}
+          <div class="ts-hw-rollcall">${rollLines.join('')}</div>
+          <div class="ts-hw-actions">${actionsHtml}</div>
+        </article>
+      `;
+    }).join('');
+
+    box.innerHTML = `
+      <div class="ts-monitor-head">
+        <div class="ts-monitor-tabs" role="tablist">
+          <button type="button" class="ts-monitor-tab ${!showingExpired ? 'active' : ''}" onclick="TeacherStudio.setMonitorTab('active')">
+            <span class="tam-dot is-live"></span>Đang giao <strong class="tabular">${activeList.length}</strong>
+          </button>
+          <button type="button" class="ts-monitor-tab ${showingExpired ? 'active' : ''}" onclick="TeacherStudio.setMonitorTab('expired')">
+            <span class="tam-dot is-ended"></span>Đã hết hạn <strong class="tabular">${expiredList.length}</strong>
+          </button>
+        </div>
+        <div class="ts-monitor-skill-filters">${skillFiltersHtml}</div>
+      </div>
+      ${cardsHtml ? `<div class="ts-monitor-grid">${cardsHtml}</div>` : `<div class="ts-monitor-empty">Không có bài tập nào trong mục lọc này.</div>`}
+    `;
+  }
+
+  /* =========================================================
+     7. RENDER: 4-SKILL LINK COMPOSER & ULTRA-CLEAN PICKER
+        (STRICT: NO "chưa làm / đang học / chưa ai làm" on cards!)
+     ========================================================= */
+  function renderPickerSection(nowMs) {
+    // 1. 4-Skill Tabs
+    const tabsEl = document.getElementById('ts-skill-tabs');
+    if (tabsEl) {
+      tabsEl.innerHTML = SKILLS.map((sk) => {
+        const list = getCatalogBySkill(sk.key);
+        const selCnt = list.filter((t) => state.selectedIds.has(t.id)).length;
+        const countText = list.length ? `${list.length} bài` : 'Sắp mở';
+        return `
+          <button type="button" class="ts-skill-tab is-${sk.key} ${state.pickerSkill === sk.key ? 'active' : ''}" onclick="TeacherStudio.setPickerSkill('${sk.key}')">
+            <div class="ts-skill-tab-left">
+              <div class="ts-skill-tab-name">
+                <span class="ts-slot-sk is-${sk.key}">${sk.short}</span>
+                <span>${sk.label}</span>
+              </div>
+              <div class="ts-skill-tab-sub">${countText}</div>
+            </div>
+            ${selCnt > 0 ? `<span class="ts-skill-tab-sel tabular">${selCnt}</span>` : ''}
+          </button>
+        `;
+      }).join('');
+    }
+
+    // 2. Selected Basket Strip inside Composer
+    const basketEl = document.getElementById('ts-selected-basket');
+    if (basketEl) {
+      const selArr = [...state.selectedIds];
+      if (!selArr.length) {
+        basketEl.innerHTML = '<span class="ts-basket-empty">Tick 1–4 bài ở bất kỳ kỹ năng nào bên dưới để gom vào cùng 1 link giao bài trong ngày.</span>';
+      } else {
+        basketEl.innerHTML = selArr.map((tid) => {
+          const t = getTaskById(tid);
+          const sk = t?.skill || detectSkillByTaskId(tid);
+          const sm = skillMeta(sk);
+          return `
+            <span class="ts-basket-chip is-${sk}">
+              <strong>${sm.short}</strong> · ${esc(t?.shortCode || t?.code || tid)}
+              <button type="button" class="ts-basket-rm" onclick="TeacherStudio.toggleSelectTask('${esc(tid)}', false)" aria-label="Bỏ chọn">×</button>
+            </span>
+          `;
+        }).join('');
+      }
+    }
+
+    // 3. Sub-suite tabs
+    const suites = getSuitesForSkill(state.pickerSkill);
+    const curSuite = state.pickerSuite[state.pickerSkill] || (suites[0]?.key || 'all');
+    const suiteTabsEl = document.getElementById('teacher-task-suite-tabs');
+    if (suiteTabsEl) {
+      suiteTabsEl.innerHTML = suites.map((s) => `
+        <button type="button" class="task-suite-tab ${curSuite === s.key ? 'active' : ''}" onclick="TeacherStudio.setPickerSuite('${esc(s.key)}')">${esc(s.label)}</button>
+      `).join('');
+    }
+
+    // 4. Grid cards — STRICTLY CLEAN (NO "chưa làm / đang học / 0/8 HS" lines!)
+    const gridEl = document.getElementById('teacher-dash-task-grid');
+    if (!gridEl) return;
+
+    if (state.pickerSkill === 'speaking' && !getSpeakingCatalog().length) {
+      gridEl.className = 'ts-picker-grid';
+      gridEl.innerHTML = `
+        <div class="ts-speaking-soon">
+          <strong>Kho Task IELTS Speaking (Part 1–3) đã sẵn sàng khung kết nối</strong>
+          Khi nạp dữ liệu <code>SPEAKING_TASKS_DATA</code>, danh sách bài Speaking sẽ tự động hiện tại đây để tick giao chung link 4 kỹ năng cùng Reading, Listening và Writing.
+        </div>
+      `;
+      updateLinkPreview();
+      return;
+    }
+
+    const q = state.pickerQuery.trim().toLowerCase();
+    const liveMap = loadLiveDeadlines();
+    const catalog = getCatalogBySkill(state.pickerSkill).filter((t) => {
+      if (curSuite !== 'all' && t.suite !== curSuite) return false;
+      if (q && !t.code.toLowerCase().includes(q) && !t.theme.toLowerCase().includes(q) && !t.id.toLowerCase().includes(q)) return false;
+      if (state.pickerHideAllDone && isTaskAllDone(t, nowMs)) return false;
+      return true;
+    });
+
+    gridEl.className = 'ts-picker-grid';
+    if (!catalog.length) {
+      gridEl.innerHTML = '<div class="ts-monitor-empty" style="grid-column:1/-1;">Không tìm thấy bài nào khớp từ khóa.</div>';
+      updateLinkPreview();
+      return;
+    }
+
+    gridEl.innerHTML = catalog.map((t) => {
+      const checked = state.selectedIds.has(t.id);
+      const dlRec = liveMap[t.id];
+      const dlAt = Number(dlRec?.deadlineAt || 0);
+      const isLive = dlAt > nowMs;
+      const isEnded = dlAt > 0 && dlAt <= nowMs;
+      const allDone = isTaskAllDone(t, nowMs);
+
+      let tagHtml = '';
+      if (isLive) {
+        tagHtml = `<span class="ts-pick-tag is-live" data-ts-dl-task="${esc(t.id)}">⏱ ${esc(formatDeadlineRemaining(dlAt - nowMs))}</span>`;
+      } else if (allDone) {
+        tagHtml = '<span class="ts-pick-tag is-done">✓ Xong hết</span>';
+      } else if (isEnded) {
+        tagHtml = '<span class="ts-pick-tag is-ended">Hết hạn</span>';
+      }
+
+      let previewBtns = '';
+      if (t.skill === 'reading') {
+        previewBtns = `
+          <button type="button" class="ts-pick-mini-btn" onclick="TasksModule.openAdminTestPreview(1, '${esc(t.id)}')">T1</button>
+          <button type="button" class="ts-pick-mini-btn" onclick="TasksModule.openAdminTestPreview(2, '${esc(t.id)}')">T2</button>
+          <button type="button" class="ts-pick-mini-btn" onclick="TasksModule.openAdminTestPreview(3, '${esc(t.id)}')">T3</button>
+        `;
+      } else if (t.skill === 'listening') {
+        previewBtns = `<button type="button" class="ts-pick-mini-btn" onclick="TeacherStudio.previewSkillTask('listening', '${esc(t.id)}')">Xem bài</button>`;
+      } else if (t.skill === 'writing') {
+        previewBtns = `<button type="button" class="ts-pick-mini-btn" onclick="TeacherStudio.previewSkillTask('writing', '${esc(t.id)}')">Xem bài</button>`;
+      }
+
+      const dlMiniBtns = isLive
+        ? `<button type="button" class="ts-pick-mini-btn" onclick="TeacherStudio.extendTaskDeadline('${esc(t.id)}', 60)">+1h</button>
+           <button type="button" class="ts-pick-mini-btn is-danger" onclick="TeacherStudio.endTasksNow(['${esc(t.id)}'])">Đóng</button>`
+        : '';
+
+      return `
+        <label class="ts-pick-card is-${esc(t.skill)} ${checked ? 'is-selected' : ''}">
+          <input type="checkbox" class="ts-pick-chk" ${checked ? 'checked' : ''} onchange="TeacherStudio.toggleSelectTask('${esc(t.id)}', this.checked)">
+          <div class="ts-pick-body">
+            <div class="ts-pick-head">
+              <span class="ts-pick-code">${esc(t.code)}</span>
+              ${tagHtml}
+            </div>
+            <div class="ts-pick-theme">${esc(t.theme)}</div>
+            <div class="ts-pick-foot" onclick="event.stopPropagation(); event.preventDefault();">
+              ${previewBtns}
+              ${dlMiniBtns}
+            </div>
+          </div>
+        </label>
+      `;
+    }).join('');
+
+    updateLinkPreview();
+  }
+
+  /* =========================================================
+     8. COMPOSER: DAILY HOMEWORK ZALO TEMPLATE & DEADLINES
+     ========================================================= */
+  function computeSelectedDeadlineMs(nowTs = Date.now()) {
+    const preset = document.getElementById('teacher-task-deadline-preset')?.value || '0';
+    if (preset === '0') return 0;
+    if (preset === 'tonight_24') {
+      const d = new Date(nowTs);
+      d.setHours(23, 59, 59, 0);
+      return d.getTime() > nowTs ? d.getTime() : (nowTs + 60 * 60 * 1000);
+    }
+    if (preset === 'tomorrow_24') {
+      const d = new Date(nowTs);
+      d.setDate(d.getDate() + 1);
+      d.setHours(23, 59, 59, 0);
+      return d.getTime();
+    }
+    if (preset === 'custom') {
+      const raw = document.getElementById('teacher-task-deadline-custom')?.value || '';
+      if (!raw) return 0;
+      const ts = new Date(raw).getTime();
+      return (Number.isFinite(ts) && ts > nowTs) ? ts : 0;
+    }
+    const mins = Number(preset || 0);
+    return (Number.isFinite(mins) && mins > 0) ? (nowTs + mins * 60 * 1000) : 0;
+  }
+
+  function formatVietnameseDeadlinePhrase(deadlineMs, nowMs = Date.now()) {
+    if (!deadlineMs || deadlineMs <= 0) return '';
+    const d = new Date(Number(deadlineMs));
+    const now = new Date(Number(nowMs));
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    const h = d.getHours();
+    const m = d.getMinutes();
+
+    const startOfDay = (dt) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+    const dayDiff = Math.round((startOfDay(d) - startOfDay(now)) / 86400000);
+
+    const isMidnightEnd = (h === 23 && m >= 55);
+    const timePart = isMidnightEnd
+      ? '12h tối'
+      : (h >= 18
+        ? `${h}${m ? `h${pad(m)}` : 'h'} tối`
+        : (h >= 13
+          ? `${h}${m ? `h${pad(m)}` : 'h'} chiều`
+          : (h === 12
+            ? `12${m ? `h${pad(m)}` : 'h'} trưa`
+            : `${h}${m ? `h${pad(m)}` : 'h'} sáng`)));
+
+    if (dayDiff === 0) return `trước ${timePart} nay`;
+    if (dayDiff === 1) return `trước ${timePart} mai`;
+    if (isMidnightEnd) return `trước 12h tối ngày ${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+    return `trước ${pad(h)}:${pad(m)} ngày ${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+  }
+
+  function resolveComposerDeadline(ids, nowTs = Date.now()) {
+    const liveMap = loadLiveDeadlines();
+    const preset = document.getElementById('teacher-task-deadline-preset')?.value || '0';
+    if (ids.length > 0 && (!state.presetDirty || preset === '0')) {
+      const active = ids.map((id) => liveMap[id]).filter((r) => r && Number(r.deadlineAt || 0) > nowTs);
+      if (active.length === ids.length && active.every((r) => Number(r.deadlineAt) === Number(active[0].deadlineAt))) {
+        return { deadlineMs: Number(active[0].deadlineAt), issuedAt: Number(active[0].issuedAt || nowTs), fromExistingLive: true };
+      }
+    }
+    return { deadlineMs: computeSelectedDeadlineMs(nowTs), issuedAt: nowTs, fromExistingLive: false };
+  }
+
+  function buildBaseUrl() {
+    const basePath = typeof window.__APP_BASE_PATH__ === 'string'
+      ? window.__APP_BASE_PATH__
+      : (window.location.pathname || '/')
+          .replace(/\/index\.html$/i, '')
+          .replace(/\/(home|flashcard|task|practice|practise)\/?$/i, '')
+          .replace(/\/+$/, '');
+    return window.location.protocol === 'file:'
+      ? window.location.href.split('?')[0].split('#')[0]
+      : `${window.location.origin}${basePath}/`;
+  }
+
+  function buildDirectTaskUrl(taskId, liveDl = null) {
+    const base = buildBaseUrl();
+    let url = `${base}?task=${encodeURIComponent(taskId)}`;
+    const dl = Number(liveDl?.deadlineAt || 0);
+    const iss = Number(liveDl?.issuedAt || 0);
+    if (dl > 0) url += `&deadline=${dl}${iss > 0 ? `&issued=${iss}` : ''}`;
+    return url;
+  }
+
+  function buildDailyHomeworkMessage(ids, deadlineMs, issuedAt, nowTs = Date.now()) {
+    if (!Array.isArray(ids) || !ids.length) return '';
+    const base = buildBaseUrl();
+    const dlQuery = deadlineMs > 0 ? `&deadline=${deadlineMs}&issued=${issuedAt}` : '';
+    const skillOrder = ['listening', 'reading', 'writing', 'speaking'];
+    const bySkill = { listening: [], reading: [], writing: [], speaking: [] };
+    ids.forEach((tid) => {
+      const sk = detectSkillByTaskId(tid);
+      if (bySkill[sk]) bySkill[sk].push(tid);
+      else bySkill.reading.push(tid);
+    });
+
+    const lines = ['DAILY HOMEWORK'];
+    skillOrder.forEach((sk) => {
+      const list = bySkill[sk];
+      if (!list.length) return;
+      const skillUrl = list.length === 1
+        ? `${base}?task=${encodeURIComponent(list[0])}${dlQuery}`
+        : `${base}?tasks=${list.map(encodeURIComponent).join(',')}${dlQuery}`;
+      lines.push(`-${sk.toUpperCase()}: ${skillUrl}`);
+    });
+
+    if (deadlineMs > 0) {
+      lines.push(`HẠN NỘP: ${formatVietnameseDeadlinePhrase(deadlineMs, nowTs)}`);
+    }
+    return lines.join('\n');
+  }
+
+  function updateLinkPreview() {
+    const ids = [...state.selectedIds];
+    const cntEl = document.getElementById('teacher-dash-sel-count');
+    if (cntEl) cntEl.textContent = `Đã chọn: ${ids.length} bài`;
+    const nowTs = Date.now();
+    const resolved = resolveComposerDeadline(ids, nowTs);
+    const message = buildDailyHomeworkMessage(ids, resolved.deadlineMs, resolved.issuedAt, nowTs);
+    const inp = document.getElementById('teacher-dash-link-preview');
+    if (inp) {
+      inp.value = message;
+      if (inp.tagName === 'TEXTAREA') {
+        const lineCount = message ? message.split('\n').length : 2;
+        inp.rows = Math.min(6, Math.max(2, lineCount));
+      }
+    }
+    return { url: message, message, ...resolved };
+  }
+
+  function copySafe(txt, onDone) {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(txt).then(() => onDone?.()).catch(() => {
+        fallbackCopy(txt);
+        onDone?.();
+      });
+    } else {
+      fallbackCopy(txt);
+      onDone?.();
+    }
+  }
+
+  function fallbackCopy(txt) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+    } catch (_) {}
+  }
+
+  function copySelectedLink() {
+    const ids = [...state.selectedIds];
+    if (!ids.length) {
+      B()?.showToast?.('Vui lòng tick ít nhất 1 bài trước khi tạo mẫu gửi Zalo.');
+      return;
+    }
+    const info = updateLinkPreview();
+    if (!info.message) return;
+
+    if (info.deadlineMs > 0 && !info.fromExistingLive) {
+      const liveMap = loadLiveDeadlines();
+      const toSave = ids.filter((tid) => state.presetDirty || !(liveMap[tid] && Number(liveMap[tid].deadlineAt || 0) > Date.now()));
+      if (toSave.length) updateLiveDeadlines(toSave, info.deadlineMs);
+    } else if (info.deadlineMs === 0) {
+      const liveMap = loadLiveDeadlines();
+      const needStamp = ids.filter((tid) => !liveMap[tid]);
+      if (needStamp.length) updateLiveDeadlines(needStamp, 0);
+    }
+    state.presetDirty = false;
+    saveSentTasks(ids);
+    state.monitorTab = 'active';
+    const dlNote = info.deadlineMs > 0 ? ` (${formatVietnameseDeadlinePhrase(info.deadlineMs)})` : '';
+    copySafe(info.message, () => {
+      B()?.showToast?.(`Đã copy mẫu DAILY HOMEWORK (${ids.length} bài${dlNote}) — dán thẳng vào Zalo!`);
+      renderDashboard();
+    });
+  }
+
+  function applyLiveDeadline() {
+    const ids = [...state.selectedIds];
+    if (!ids.length) {
+      B()?.showToast?.('Vui lòng tick ít nhất 1 bài để cập nhật hạn nộp.');
+      return;
+    }
+    const dlMs = computeSelectedDeadlineMs(Date.now());
+    state.presetDirty = false;
+    updateLiveDeadlines(ids, dlMs, dlMs > 0 ? `Đã cập nhật hạn nộp mới (${formatDeadlineTs(dlMs)})!` : 'Đã chuyển sang Không giới hạn thời gian.');
+  }
+
+  function extendTaskDeadline(taskId, addMinutes = 60) {
+    const tid = normalizeAnyTaskId(taskId);
+    if (!tid) return;
+    const liveMap = loadLiveDeadlines();
+    const curDl = Number(liveMap[tid]?.deadlineAt || 0);
+    const base = Math.max(Date.now(), curDl);
+    const nextDl = base + addMinutes * 60 * 1000;
+    updateLiveDeadlines([tid], nextDl, `Đã gia hạn thêm ${addMinutes} phút (đóng ${formatDeadlineTs(nextDl)})!`);
+  }
+
+  function endTasksNow(targetIds = null) {
+    const ids = Array.isArray(targetIds) ? targetIds : [...state.selectedIds];
+    if (!ids.length) {
+      B()?.showToast?.('Vui lòng tick ít nhất 1 bài cần đóng hạn.');
+      return;
+    }
+    updateLiveDeadlines(ids, Date.now() - 1000, `Đã đóng hạn ngay ${ids.length} bài!`);
+  }
+
+  function dismissMonitorTask(taskId) {
+    const tid = normalizeAnyTaskId(taskId);
+    if (!tid) return;
+    const map = loadDismissedMap();
+    map[tid] = Date.now();
+    writeJson(DISMISSED_KEY, map);
+    renderDashboard();
+    B()?.showToast?.('Đã ẩn bài khỏi danh sách theo dõi.');
+  }
+
+  /* =========================================================
+     9. 4-SKILL TASK DETAIL MODAL & ZALO REMINDERS
+     ========================================================= */
+  function buildStudentZaloText(taskObj, row, liveDl, nowMs) {
+    const sm = skillMeta(taskObj.skill);
+    const sn = shortName(row.student.name);
+    const dlAt = Number(liveDl?.deadlineAt || 0);
+    const expired = dlAt > 0 && dlAt <= nowMs;
+    const closeStr = dlAt > 0 ? formatDeadlineTs(dlAt) : '';
+
+    if (expired) {
+      const detail = row.bucket === 'progress' ? ` (${row.progressLabel})` : '';
+      return `Chào ${sn},\nBài ${sm.label} · ${taskObj.code} (${taskObj.theme}) đã đóng hạn lúc ${closeStr} nhưng em chưa nộp${detail}. Em nhắn lại thầy/cô để sắp xếp hoàn thành bù sớm nhé!`;
+    }
+    let body = `Nhắc nhẹ em nhớ vào làm bài ${sm.label} · ${taskObj.code} (${taskObj.theme}) trước hạn nhé!`;
+    if (row.lock) {
+      body = `Bài ${sm.label} · ${taskObj.code} (${taskObj.theme}) của em hiện đang bị tạm khóa. Em nhắn thầy/cô mở khóa để hoàn thành kịp hạn nhé!`;
+    } else if (row.bucket === 'progress') {
+      body = `Em đang làm dở bài ${sm.label} · ${taskObj.code} (${row.progressLabel}). Nhớ vào hoàn thành nốt để nộp đúng hạn nhé!`;
+    }
+    const lines = [`Chào ${sn},`, body];
+    if (dlAt > nowMs) lines.push(`⏱ Hạn nộp: còn ${formatDeadlineRemaining(dlAt - nowMs)} (đóng ${closeStr})`);
+    lines.push(`🔗 Vào làm bài: ${buildDirectTaskUrl(taskObj.id, liveDl)}`);
+    return lines.join('\n');
+  }
+
+  function copyStudentReminder(taskId, studentId) {
+    const taskObj = getTaskById(taskId || state.detailTaskId);
+    const students = B()?.getStudentAccounts?.() || [];
+    const st = students.find((s) => String(s.id) === String(studentId));
+    if (!taskObj || !st) return;
+    const nowMs = Date.now();
+    const liveDl = loadLiveDeadlines()[taskObj.id] || null;
+    const row = getStudentHomeworkRow(taskObj, st, nowMs);
+    const txt = buildStudentZaloText(taskObj, row, liveDl, nowMs);
+    state.remindedKeys.add(`${taskObj.id}::${st.id}`);
+    copySafe(txt, () => {
+      B()?.showToast?.(`Đã copy tin nhắn nhắc riêng cho ${shortName(st.name)}!`);
+      if (document.getElementById('modal-teacher-task-detail')?.classList.contains('open')) renderDetailModalBody();
+    });
+  }
+
+  function copyGroupReminder(taskId, isExpiredReport = false) {
+    const taskObj = getTaskById(taskId || state.detailTaskId);
+    if (!taskObj) return;
+    const sm = skillMeta(taskObj.skill);
+    const students = B()?.getStudentAccounts?.() || [];
+    const nowMs = Date.now();
+    const rows = students.map((st) => getStudentHomeworkRow(taskObj, st, nowMs));
+    const doneRows = rows.filter((r) => r.completed);
+    const notDone = rows.filter((r) => !r.completed);
+    const liveDl = loadLiveDeadlines()[taskObj.id];
+    const dlAt = Number(liveDl?.deadlineAt || 0);
+    const expired = isExpiredReport || (dlAt > 0 && dlAt <= nowMs);
+
+    const lines = [
+      expired
+        ? `📊 THỐNG KÊ HẾT HẠN [${sm.label.toUpperCase()}] — ${taskObj.code}: ${taskObj.theme}`
+        : `📋 NHẮC NỘP BÀI [${sm.label.toUpperCase()}] — ${taskObj.code}: ${taskObj.theme}`,
+      dlAt > 0
+        ? (dlAt > nowMs ? `⏱ Hạn nộp: còn ${formatDeadlineRemaining(dlAt - nowMs)} (đóng ${formatDeadlineTs(dlAt)})` : `⏱ Đã đóng hạn lúc ${formatDeadlineTs(dlAt)}`)
+        : '',
+      `✓ Đã nộp: ${doneRows.length}/${rows.length} bạn`,
+    ].filter(Boolean);
+
+    if (notDone.length) {
+      lines.push('');
+      lines.push(`${expired ? '✗ Chưa nộp sau hạn' : '⏳ Chưa hoàn thành'} (${notDone.length}):`);
+      notDone.forEach((r) => lines.push(`• ${r.student.name} — ${r.progressLabel}`));
+    } else {
+      lines.push('🎉 Cả lớp đã hoàn thành 100%!');
+    }
+    copySafe(lines.join('\n'), () => B()?.showToast?.('Đã copy danh sách gửi nhóm Zalo!'));
+  }
+
+  function renderDetailModalBody() {
+    const titleEl = document.getElementById('teacher-task-detail-title');
+    const subEl = document.getElementById('teacher-task-detail-sub');
+    const bodyEl = document.getElementById('teacher-task-detail-body');
+    const taskObj = getTaskById(state.detailTaskId);
+    if (!bodyEl || !taskObj) return;
+
+    const sm = skillMeta(taskObj.skill);
+    const students = B()?.getStudentAccounts?.() || [];
+    const nowMs = Date.now();
+    const liveDl = loadLiveDeadlines()[taskObj.id] || null;
+    const dlAt = Number(liveDl?.deadlineAt || 0);
+    const isExpired = dlAt > 0 && dlAt <= nowMs;
+
+    const rows = students.map((st) => getStudentHomeworkRow(taskObj, st, nowMs));
+    const order = { locked: 0, done: 1, progress: 2, missing: 3 };
+    rows.sort((a, b) => (order[a.bucket] - order[b.bucket]) || String(a.student.name).localeCompare(String(b.student.name), 'vi'));
+
+    const doneCnt = rows.filter((r) => r.completed).length;
+    const lockCnt = rows.filter((r) => r.bucket === 'locked').length;
+    const progCnt = rows.filter((r) => r.bucket === 'progress').length;
+    const missCnt = rows.filter((r) => r.bucket === 'missing').length;
+    const pendingCnt = rows.length - doneCnt;
+
+    if (titleEl) {
+      titleEl.innerHTML = `<span class="ts-skill-pill is-${esc(taskObj.skill)}" style="vertical-align:middle; margin-right:6px;">${esc(sm.label.toUpperCase())}</span>${esc(taskObj.code)} — ${esc(taskObj.theme)}`;
+    }
+    if (subEl) {
+      const dlStr = dlAt > 0
+        ? (dlAt > nowMs ? `Còn ${formatDeadlineRemaining(dlAt - nowMs)} · đóng ${formatDeadlineTs(dlAt)}` : `Đã đóng lúc ${formatDeadlineTs(dlAt)}`)
+        : 'Không giới hạn';
+      subEl.textContent = `${doneCnt}/${rows.length} đã nộp · ${progCnt} đang học · ${lockCnt} bị khóa · ${missCnt} chưa làm · ${dlStr}`;
+    }
+
+    const visible = state.detailFilter === 'all'
+      ? rows
+      : (state.detailFilter === 'pending' ? rows.filter((r) => !r.completed) : rows.filter((r) => r.bucket === state.detailFilter));
+
+    const chips = [
+      { key: 'all', label: `Tất cả (${rows.length})` },
+      { key: 'pending', label: `Chưa nộp (${pendingCnt})` },
+      { key: 'done', label: `✓ Đã nộp (${doneCnt})` },
+      ...(lockCnt ? [{ key: 'locked', label: `🔒 Bị khóa (${lockCnt})` }] : []),
+      { key: 'progress', label: `Đang học (${progCnt})` },
+      { key: 'missing', label: `Chưa mở (${missCnt})` },
+    ];
+
+    const rowsHtml = visible.map((r, idx) => {
+      const pct = Math.min(100, Math.round((r.doneUnits / Math.max(1, r.totalUnits)) * 100));
+      let statusHtml = `<span class="thw-status-pill is-missing">Chưa bắt đầu</span>`;
+      if (r.completed) statusHtml = '<span class="thw-status-pill is-done">✓ Đã nộp</span>';
+      else if (r.lock) {
+        statusHtml = `<div class="ts-lock-item">
+          <span class="ts-lock-item-meta">🔒 <span class="ts-lock-time" data-ts-lock-until="${r.lock.until}">${formatMmSs(r.lock.remainingMs)}</span></span>
+          <button type="button" class="ts-btn-unlock-one" onclick="TeacherStudio.unlockStudentTask('${esc(r.student.id)}', '${esc(r.lock.lockKey)}')">Mở khóa</button>
+        </div>`;
+      } else if (r.bucket === 'progress') {
+        statusHtml = `<span class="thw-status-pill is-progress">${esc(r.progressLabel)}</span>`;
+      }
+
+      const timeStr = r.updatedAt ? formatDeadlineTs(r.updatedAt) : '—';
+      const durStr = r.rec?.durationSec ? ` · ${formatDurationCompact(r.rec.durationSec)}` : '';
+      const remKey = `${taskObj.id}::${r.student.id}`;
+      const isCopied = state.remindedKeys.has(remKey);
+
+      return `
+        <tr class="thw-row is-${r.bucket}">
+          <td><div class="teacher-student-cell"><span class="board-avatar tone-${idx % 4}">${esc(monogram(r.student.name))}</span><strong>${esc(r.student.name)}</strong></div></td>
+          <td><div class="thw-vocab-cell"><div class="thw-vocab-bar"><div class="thw-vocab-fill ${pct >= 100 ? 'is-full' : ''}" style="width:${pct}%;"></div></div><span class="thw-vocab-num tabular">${r.doneUnits}/${r.totalUnits}</span></div></td>
+          <td>${statusHtml}</td>
+          <td class="tabular"><strong>${esc(r.scoreLabel || '—')}</strong></td>
+          <td class="tabular">${esc(timeStr)}${esc(durStr)}</td>
+          <td>${r.completed ? '<span class="thw-muted">—</span>' : `<button type="button" class="btn-subtle thw-remind-btn ${isCopied ? 'is-copied' : ''}" onclick="TeacherStudio.copyStudentReminder('${esc(taskObj.id)}', '${esc(r.student.id)}')">${isCopied ? '✓ Đã copy' : 'Nhắc Zalo'}</button>`}</td>
+        </tr>
+      `;
+    }).join('') || '<tr><td colspan="6" style="text-align:center; padding:18px; color:var(--ink-3);">Không có học viên nào trong mục lọc này.</td></tr>';
+
+    bodyEl.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <div class="thw-filters-row">
+          ${chips.map((c) => `<button type="button" class="thw-filter-chip ${state.detailFilter === c.key ? 'active' : ''}" onclick="TeacherStudio.setDetailFilter('${c.key}')">${c.label}</button>`).join('')}
+        </div>
+        <button type="button" class="btn-subtle thw-act-btn" onclick="TeacherStudio.copyGroupReminder('${esc(taskObj.id)}', ${isExpired})">${isExpired ? 'Copy DS nhóm' : 'Copy gửi nhóm'}</button>
+      </div>
+      <div class="teacher-hw-table-wrap">
+        <table class="teacher-hw-table">
+          <thead><tr><th>Học viên</th><th>Tiến độ</th><th>Trạng thái</th><th>Kết quả</th><th>Cập nhật</th><th>Nhắc Zalo</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function openTaskDetailModal(taskId, filter = 'all') {
+    const tid = normalizeAnyTaskId(taskId);
+    if (!tid || !getTaskById(tid)) return;
+    state.detailTaskId = tid;
+    state.detailFilter = filter || 'all';
+    renderDetailModalBody();
+    document.getElementById('modal-teacher-task-detail')?.classList.add('open');
+  }
+
+  /* =========================================================
+     10. LIVE 1-SECOND TICKER FOR LOCKS & DEADLINES
+     ========================================================= */
+  function ensureTicker() {
+    clearInterval(state.tickerId);
+    state.tickerId = null;
+    const screen = document.getElementById('screen-teacher');
+    if (!screen) return;
+    const hasNodes = screen.querySelector('[data-ts-dl-task], [data-ts-lock-until]') || document.querySelector('#modal-teacher-task-detail.open [data-ts-lock-until]');
+    if (!hasNodes) return;
+
+    state.tickerId = setInterval(() => {
+      const sc = document.getElementById('screen-teacher');
+      if (!sc || !sc.classList.contains('active')) {
+        clearInterval(state.tickerId);
+        state.tickerId = null;
+        return;
+      }
+      const now = Date.now();
+      const liveMap = loadLiveDeadlines();
+      sc.querySelectorAll('[data-ts-dl-task]').forEach((el) => {
+        const tid = el.getAttribute('data-ts-dl-task');
+        const dlAt = Number(liveMap[tid]?.deadlineAt || 0);
+        if (!dlAt) return;
+        const rem = dlAt - now;
+        if (rem > 0) {
+          el.classList.remove('is-ended');
+          el.textContent = el.classList.contains('ts-hw-dl') ? `⏱ Còn ${formatDeadlineRemaining(rem)}` : `⏱ ${formatDeadlineRemaining(rem)}`;
+        } else {
+          el.classList.add('is-ended');
+          el.textContent = el.classList.contains('ts-hw-dl') ? `Đã đóng · ${formatDeadlineTs(dlAt)}` : 'Hết hạn';
+        }
+      });
+      document.querySelectorAll('[data-ts-lock-until]').forEach((el) => {
+        const until = Number(el.getAttribute('data-ts-lock-until') || 0);
+        const rem = until - now;
+        el.textContent = rem > 0 ? formatMmSs(rem) : '00:00';
+      });
+    }, 1000);
+  }
+
+  /* =========================================================
+     11. MASTER RENDER + PREVIEW + MULTI-SKILL STUDENT URL HANDLER
+     ========================================================= */
+  function renderDashboard() {
+    if (!B()?.isTeacherUser?.()) return;
+    const nowMs = Date.now();
+    const buckets = getMonitorBuckets(nowMs);
+    renderRosterSection(nowMs, buckets.activeList);
+    renderMonitorSection(nowMs, buckets);
+    renderPickerSection(nowMs);
+    ensureTicker();
+  }
+
+  function previewSkillTask(skillKey, taskId) {
+    if (typeof window.toggleTeacherStudyPreview === 'function') {
+      window.toggleTeacherStudyPreview(true);
+    }
+    if (skillKey === 'listening') {
+      window.TotoroUI?.enterSkillMode?.('Listening', 'task');
+      setTimeout(() => window.ListeningTasksModule?.openTaskBrief?.(taskId), 120);
+    } else if (skillKey === 'writing') {
+      window.TotoroUI?.enterSkillMode?.('Writing', 'task');
+      setTimeout(() => window.WritingStudio?.openTask?.(taskId), 120);
+    }
+  }
+
+  function openStudentSkillTask(taskId) {
+    const taskObj = getTaskById(taskId);
+    if (!taskObj) return;
+    document.getElementById('modal-student-combo-tasks')?.remove();
+    if (taskObj.skill === 'reading') {
+      window.TotoroUI?.enterSkillMode?.('Reading', 'task');
+      setTimeout(() => window.TasksModule?.openTaskBriefModal?.(taskObj.id), 120);
+    } else if (taskObj.skill === 'listening') {
+      window.TotoroUI?.enterSkillMode?.('Listening', 'task');
+      setTimeout(() => window.ListeningTasksModule?.openTaskBrief?.(taskObj.id), 120);
+    } else if (taskObj.skill === 'writing') {
+      window.TotoroUI?.enterSkillMode?.('Writing', 'task');
+      setTimeout(() => window.WritingStudio?.openTask?.(taskObj.id), 120);
+    }
+  }
+
+  function openStudentComboModal(taskIds, deadlineMs = 0) {
+    const tasks = taskIds.map(getTaskById).filter(Boolean);
+    if (!tasks.length) return;
+    if (tasks.length === 1) {
+      openStudentSkillTask(tasks[0].id);
+      return;
+    }
+    document.getElementById('modal-student-combo-tasks')?.remove();
+    const curUser = B()?.getCurrentUser?.();
+    const nowMs = Date.now();
+    const dlNote = deadlineMs > nowMs
+      ? `Hạn nộp: còn ${formatDeadlineRemaining(deadlineMs - nowMs)} (đóng ${formatDeadlineTs(deadlineMs)})`
+      : (deadlineMs > 0 ? `Đã hết hạn lúc ${formatDeadlineTs(deadlineMs)}` : 'Không giới hạn thời gian');
+
+    const rowsHtml = tasks.map((t) => {
+      const sm = skillMeta(t.skill);
+      const row = curUser ? getStudentHomeworkRow(t, curUser, nowMs) : null;
+      const done = Boolean(row?.completed);
+      const locked = Boolean(row?.lock);
+      const badge = done
+        ? '<span class="thw-status-pill is-done">✓ Đã nộp</span>'
+        : (locked ? `<span class="ts-skill-pill" style="background:var(--ts-danger-bg);color:var(--ts-danger);border-color:var(--ts-danger-bd);">🔒 Khóa ${formatMmSs(row.lock.remainingMs)}</span>` : '<span class="thw-status-pill is-missing">Chưa xong</span>');
+      return `
+        <div class="ts-combo-item is-${esc(t.skill)}">
+          <div style="min-width:0; flex:1;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:3px;">
+              <span class="ts-skill-pill is-${esc(t.skill)}">${esc(sm.label.toUpperCase())}</span>
+              <strong style="font-size:13px;">${esc(t.code)}</strong>
+              ${badge}
+            </div>
+            <div style="font-size:12.5px; color:var(--ink-2);">${esc(t.theme)}</div>
+          </div>
+          <button type="button" class="btn btn-primary" style="padding:7px 13px; font-size:12.5px; flex-shrink:0;" onclick="TeacherStudio.openStudentSkillTask('${esc(t.id)}')">
+            ${done ? 'Xem lại' : 'Vào làm →'}
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    const ov = document.createElement('div');
+    ov.id = 'modal-student-combo-tasks';
+    ov.className = 'modal-overlay open';
+    ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+    ov.innerHTML = `
+      <div class="modal-card modal-card-wide" style="max-width:620px;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <div class="modal-title">Bài tập hôm nay (${tasks.length} kỹ năng)</div>
+            <div style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">${esc(dlNote)}</div>
+          </div>
+          <button type="button" class="btn-icon-glass" style="width:32px;height:32px;" onclick="document.getElementById('modal-student-combo-tasks')?.remove()">✕</button>
+        </div>
+        <div class="modal-body" style="padding:16px 20px 20px;">
+          <div class="ts-combo-list">${rowsHtml}</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(ov);
+  }
+
+  function handleIncomingUrlIfMultiSkill() {
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      const single = sp.get('task');
+      const multi = sp.get('tasks');
+      const dl = Number(sp.get('deadline') || 0);
+      const rawList = [];
+      if (single) rawList.push(normalizeAnyTaskId(single));
+      if (multi) multi.split(',').map(normalizeAnyTaskId).filter(Boolean).forEach((x) => { if (!rawList.includes(x)) rawList.push(x); });
+      if (!rawList.length) return false;
+      const hasNonReading = rawList.some((id) => detectSkillByTaskId(id) !== 'reading');
+      if (!hasNonReading) return false;
+      // Record deadline locally if present
+      if (dl > 0) {
+        const live = loadLiveDeadlines();
+        const iss = Number(sp.get('issued') || Date.now());
+        rawList.forEach((tid) => {
+          if (!live[tid] || iss > Number(live[tid].issuedAt || 0)) live[tid] = { deadlineAt: dl, issuedAt: iss };
+        });
+        writeJson(LIVE_DL_KEY, live);
+      }
+      if (!B()?.isTeacherUser?.()) {
+        setTimeout(() => openStudentComboModal(rawList, dl), 450);
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /* =========================================================
+     12. PUBLIC CONTROLS
+     ========================================================= */
+  window.TeacherStudio = {
+    renderDashboard,
+    setTableView: (v) => { state.tableView = ['today', 'month', 'full'].includes(v) ? v : 'today'; renderDashboard(); },
+    setRosterFilter: (f) => { state.rosterFilter = ['all', 'locked', 'pending'].includes(f) ? f : 'all'; renderDashboard(); },
+    setMonitorTab: (t) => { state.monitorTab = t === 'expired' ? 'expired' : 'active'; renderDashboard(); },
+    setMonitorSkill: (sk) => { state.monitorSkill = sk || 'all'; renderDashboard(); },
+    setPickerSkill: (sk) => { state.pickerSkill = sk; state.pickerQuery = ''; const el = document.getElementById('ts-picker-search'); if (el) el.value = ''; renderPickerSection(Date.now()); },
+    setPickerSuite: (suiteKey) => { state.pickerSuite[state.pickerSkill] = suiteKey; renderPickerSection(Date.now()); },
+    onPickerSearch: (val) => { state.pickerQuery = String(val || ''); renderPickerSection(Date.now()); },
+    toggleHideAllDone: () => {
+      state.pickerHideAllDone = !state.pickerHideAllDone;
+      const btn = document.getElementById('btn-teacher-filter-pending');
+      if (btn) btn.textContent = state.pickerHideAllDone ? 'Hiện tất cả' : 'Ẩn bài đã xong hết';
+      renderPickerSection(Date.now());
+    },
+    toggleSelectTask: (tid, checked) => {
+      const id = normalizeAnyTaskId(tid);
+      if (!id) return;
+      if (checked) state.selectedIds.add(id);
+      else state.selectedIds.delete(id);
+      renderPickerSection(Date.now());
+    },
+    clearSelection: () => { state.selectedIds.clear(); renderPickerSection(Date.now()); },
+    onDeadlinePresetChange: () => {
+      state.presetDirty = true;
+      const p = document.getElementById('teacher-task-deadline-preset');
+      const c = document.getElementById('teacher-task-deadline-custom');
+      if (p && c) {
+        const isCust = p.value === 'custom';
+        c.style.display = isCust ? 'inline-block' : 'none';
+        if (isCust && !c.value) {
+          const dt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          const pad = (n) => String(n).padStart(2, '0');
+          c.value = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+        }
+      }
+      updateLinkPreview();
+    },
+    copySelectedLink,
+    applyLiveDeadline,
+    extendTaskDeadline,
+    endTasksNow,
+    dismissMonitorTask,
+    unlockStudentTask,
+    openTaskDetailModal,
+    setDetailFilter: (f) => { state.detailFilter = f || 'all'; renderDetailModalBody(); },
+    copyStudentReminder,
+    copyGroupReminder,
+    previewSkillTask,
+    openStudentSkillTask,
+    openStudentComboModal,
+    handleIncomingUrlIfMultiSkill,
+    getTaskById,
+    readStudentAllLocks,
+  };
+})();

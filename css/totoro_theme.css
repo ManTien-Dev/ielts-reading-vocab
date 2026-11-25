@@ -14325,3 +14325,224 @@ mark.rp-hl-preview {
     margin-left: 0;
   }
 }
+
+/* ==========================================================================
+   PHASE 1 UI/UX POLISH — Bottom-Right Toast, Font Scale, Header 1366px Fit,
+   Compact Chronograph (height <= 780px), Sprint Chip & Listening Mode Switch
+   ========================================================================== */
+
+/* 1. Desktop Toast: Bottom-Right (Linear / Sonner style — never covers Header/Task bar) */
+@media (min-width: 768px) {
+  .toast-notice,
+  #app-toast.toast-notice {
+    top: auto !important;
+    left: auto !important;
+    right: 22px !important;
+    bottom: 22px !important;
+    transform: translateY(14px) !important;
+    max-width: 420px !important;
+  }
+  .toast-notice.show,
+  #app-toast.toast-notice.show {
+    transform: translateY(0) !important;
+  }
+  body:has(#auth-gate:not([style*="none"])) #app-toast.toast-notice,
+  body:has(#screen-task.active) #app-toast.toast-notice {
+    top: auto !important;
+    bottom: 22px !important;
+    right: 22px !important;
+  }
+}
+
+/* 2. Global Readable Font Scale (Nhỏ / Vừa / Lớn) */
+html[data-font-scale="sm"] #screen-home,
+html[data-font-scale="sm"] #screen-study,
+html[data-font-scale="sm"] #screen-tasks-hub,
+html[data-font-scale="sm"] #screen-practice {
+  font-size: 92%;
+}
+html[data-font-scale="lg"] #screen-home,
+html[data-font-scale="lg"] #screen-study,
+html[data-font-scale="lg"] #screen-tasks-hub,
+html[data-font-scale="lg"] #screen-practice {
+  font-size: 110%;
+}
+html[data-font-scale="lg"] .rp-passage-body,
+html[data-font-scale="lg"] .ws-prac-editor,
+html[data-font-scale="lg"] .dict-sent-box {
+  font-size: 1.08em !important;
+  line-height: 1.72 !important;
+}
+html[data-font-scale="sm"] .rp-passage-body,
+html[data-font-scale="sm"] .ws-prac-editor,
+html[data-font-scale="sm"] .dict-sent-box {
+  font-size: 0.93em !important;
+}
+
+/* 3. Header Breathing Room on 1200px–1420px Laptops (prevents right-edge clipping) */
+@media (min-width: 1024px) and (max-width: 1420px) {
+  header.app-header {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    gap: 8px !important;
+  }
+  header.app-header .header-actions {
+    gap: 6px !important;
+  }
+  header.app-header .tot-nav-tab {
+    padding: 0 11px !important;
+    font-size: 13px !important;
+  }
+  header.app-header .tot-hdr-btn {
+    padding: 0 9px !important;
+  }
+  header.app-header .tot-account-trigger #header-user-id {
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* 4. Compact Left-Column Focus Timer on 1366x720 Laptops (Zero bottom clipping) */
+@media (min-width: 1100px) and (max-height: 780px) {
+  #widget-study-timer {
+    padding: 9px 12px !important;
+    gap: 6px !important;
+  }
+  #widget-study-timer .widget-header {
+    margin-bottom: 4px !important;
+  }
+  #widget-study-timer .widget-subtitle {
+    display: none !important;
+  }
+  #widget-study-timer .timer-mode-pills {
+    margin-bottom: 4px !important;
+  }
+  #widget-study-timer .timer-mode-btn {
+    padding: 4px 8px !important;
+    font-size: 11.5px !important;
+  }
+  #widget-study-timer .timer-display-box.totoro-chrono-pro {
+    width: 108px !important;
+    height: 108px !important;
+  }
+  #screen-study #widget-study-timer .totoro-chrono-pro .timer-digits.chrono-digits {
+    font-size: 18px !important;
+  }
+  #widget-study-timer .timer-actions {
+    margin-top: 5px !important;
+    gap: 6px !important;
+  }
+  #widget-study-timer .btn-timer-ctrl {
+    min-height: 29px !important;
+    padding: 3px 9px !important;
+    font-size: 12px !important;
+  }
+  #widget-study-timer .timer-footer-stat {
+    margin-top: 4px !important;
+    padding-top: 5px !important;
+    font-size: 11.5px !important;
+  }
+}
+
+/* 5. Study Plan Full-Width Field & Sprint Mode Chip */
+.tot-plan-field-full {
+  grid-column: 1 / -1;
+}
+.tot-sprint-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  background: color-mix(in srgb, var(--streak, #c46d2c) 15%, transparent);
+  color: var(--streak, #a85216);
+  border: 1px solid color-mix(in srgb, var(--streak, #c46d2c) 32%, transparent);
+  margin-top: 6px;
+}
+html[data-theme="dark"] .tot-sprint-badge {
+  background: rgba(235, 165, 92, 0.16);
+  color: #f3c185;
+  border-color: rgba(235, 165, 92, 0.34);
+}
+
+/* 6. Listening Practice Mode Switcher (Kho đề Listening | Dictation Studio) */
+.lp-mode-switch {
+  max-width: 1220px;
+  margin: 0 auto 14px;
+  padding: 0 18px;
+}
+.lp-mode-switch-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 14px;
+  background: var(--bg-subtle, #EFE6D8);
+  border: 1px solid var(--border, rgba(36, 34, 31, 0.1));
+}
+.lp-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-2, #4d4a44);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+.lp-mode-pill:hover {
+  color: var(--ink, #24221F);
+}
+.lp-mode-pill.active {
+  background: var(--surface, #FAF7F0);
+  color: var(--accent, #3B593F);
+  border-color: var(--border, rgba(36, 34, 31, 0.1));
+  box-shadow: 0 2px 8px rgba(24, 34, 24, 0.08);
+}
+.lp-mode-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent, #3B593F) 13%, transparent);
+  color: var(--accent, #3B593F);
+}
+html[data-theme="dark"] .lp-mode-switch-inner {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+html[data-theme="dark"] .lp-mode-pill.active {
+  background: var(--surface, #1d2520);
+  color: #8cc997;
+  border-color: rgba(140, 201, 151, 0.25);
+}
+@media (max-width: 640px) {
+  .lp-mode-switch {
+    padding: 0 10px;
+    margin-bottom: 10px;
+  }
+  .lp-mode-switch-inner {
+    display: flex;
+    width: 100%;
+  }
+  .lp-mode-pill {
+    flex: 1;
+    justify-content: center;
+    padding: 0 10px;
+    font-size: 12.5px;
+  }
+  .lp-mode-badge {
+    display: none;
+  }
+}

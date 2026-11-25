@@ -1,0 +1,924 @@
+/* ==========================================================================
+   TOTORO IELTS MASTER — 4-SKILL TEACHER COMMAND CENTER
+   Calm Washi Editorial Studio · Reading · Listening · Writing · Speaking
+   - Unified 4-skill progress matrix & granular per-task / unlock-all controls
+   - Active / Expired 4-skill Homework Monitor (2x2 daily card grid)
+   - Ultra-clean 4-skill Task Link Composer & Picker (zero pending/missing clutter)
+   ========================================================================== */
+
+:root {
+  --ts-r: #3D6B48;
+  --ts-r-bg: #ECF4EE;
+  --ts-r-bd: rgba(61, 107, 72, 0.28);
+
+  --ts-l: #2F5588;
+  --ts-l-bg: #EBF2FB;
+  --ts-l-bd: rgba(47, 85, 136, 0.28);
+
+  --ts-w: #9A5230;
+  --ts-w-bg: #FBF0EA;
+  --ts-w-bd: rgba(154, 82, 48, 0.28);
+
+  --ts-s: #6C4A84;
+  --ts-s-bg: #F3EEF8;
+  --ts-s-bd: rgba(108, 74, 132, 0.28);
+
+  --ts-danger: #B91C1C;
+  --ts-danger-bg: #FEF2F2;
+  --ts-danger-bd: rgba(185, 28, 28, 0.26);
+
+  --ts-warn: #B45309;
+  --ts-warn-bg: #FFFBEB;
+  --ts-warn-bd: rgba(180, 83, 9, 0.26);
+}
+
+[data-theme="dark"] {
+  --ts-r: #86C596;
+  --ts-r-bg: rgba(61, 107, 72, 0.22);
+  --ts-r-bd: rgba(134, 197, 150, 0.34);
+
+  --ts-l: #8BB6EE;
+  --ts-l-bg: rgba(47, 85, 136, 0.24);
+  --ts-l-bd: rgba(139, 182, 238, 0.34);
+
+  --ts-w: #E5A07E;
+  --ts-w-bg: rgba(154, 82, 48, 0.24);
+  --ts-w-bd: rgba(229, 160, 126, 0.34);
+
+  --ts-s: #C7A4E0;
+  --ts-s-bg: rgba(108, 74, 132, 0.24);
+  --ts-s-bd: rgba(199, 164, 224, 0.34);
+
+  --ts-danger: #FCA5A5;
+  --ts-danger-bg: rgba(185, 28, 28, 0.22);
+  --ts-danger-bd: rgba(252, 165, 165, 0.32);
+
+  --ts-warn: #FCD34D;
+  --ts-warn-bg: rgba(180, 83, 9, 0.22);
+  --ts-warn-bd: rgba(252, 211, 77, 0.32);
+}
+
+/* ---------- 0. LIVE LOCK ALERT BANNER (ONLY WHEN >= 1 LOCK ACTIVE) ---------- */
+.ts-lock-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: var(--ts-danger-bg);
+  border: 1px solid var(--ts-danger-bd);
+  border-left: 4px solid var(--ts-danger);
+  box-shadow: var(--shadow-btn);
+}
+.ts-lock-banner-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ts-lock-banner-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ts-danger);
+}
+.ts-lock-banner-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ts-lock-banner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px 5px 10px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--ts-danger-bd);
+  font-size: 12px;
+  color: var(--ink);
+}
+.ts-lock-banner-chip strong {
+  font-weight: 750;
+}
+
+/* ---------- SKILL BADGES & CHIPS ---------- */
+.ts-skill-dot,
+.ts-skill-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border-radius: 6px;
+  font-size: 10.5px;
+  line-height: 1;
+  padding: 3px 7px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.ts-skill-pill.is-reading { color: var(--ts-r); background: var(--ts-r-bg); border-color: var(--ts-r-bd); }
+.ts-skill-pill.is-listening { color: var(--ts-l); background: var(--ts-l-bg); border-color: var(--ts-l-bd); }
+.ts-skill-pill.is-writing { color: var(--ts-w); background: var(--ts-w-bg); border-color: var(--ts-w-bd); }
+.ts-skill-pill.is-speaking { color: var(--ts-s); background: var(--ts-s-bg); border-color: var(--ts-s-bd); }
+
+/* ---------- KPI ENHANCEMENTS ---------- */
+#screen-teacher .teacher-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px !important;
+  margin-bottom: 14px !important;
+}
+#screen-teacher .teacher-kpi-card.is-danger {
+  border-top: 2.5px solid var(--ts-danger) !important;
+  background: color-mix(in srgb, var(--ts-danger-bg) 55%, var(--surface)) !important;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+#screen-teacher .teacher-kpi-card.is-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.12) !important;
+}
+.ts-kpi-sub {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+/* ---------- ROSTER TOOLBAR & QUICK FILTER CHIPS ---------- */
+.ts-roster-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.ts-roster-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 320px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.ts-roster-left .teacher-search-wrap {
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+.ts-quick-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.ts-qfilter-btn {
+  height: 34px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 140ms ease;
+}
+.ts-qfilter-btn:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.ts-qfilter-btn.active {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  color: var(--accent);
+}
+.ts-qfilter-btn.is-lock-filter.has-locks {
+  color: var(--ts-danger);
+  border-color: var(--ts-danger-bd);
+  background: var(--ts-danger-bg);
+}
+.ts-qfilter-btn.is-lock-filter.active {
+  background: var(--ts-danger);
+  color: #fff;
+  border-color: var(--ts-danger);
+}
+
+/* ---------- 4-SKILL DAILY MATRIX CELL IN ROSTER TABLE ---------- */
+.ts-matrix-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.ts-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 25px;
+  padding: 0 8px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 750;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease;
+  white-space: nowrap;
+}
+.ts-slot:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+.ts-slot.is-done {
+  background: var(--ts-r-bg);
+  border-color: var(--ts-r-bd);
+  color: var(--ts-r);
+}
+.ts-slot.is-progress {
+  background: var(--ts-warn-bg);
+  border-color: var(--ts-warn-bd);
+  color: var(--ts-warn);
+}
+.ts-slot.is-locked {
+  background: var(--ts-danger-bg);
+  border-color: var(--ts-danger-bd);
+  color: var(--ts-danger);
+}
+.ts-slot.is-missing {
+  background: transparent;
+  border-style: dashed;
+  color: var(--ink-3);
+}
+.ts-slot-sk {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  font-size: 9.5px;
+  font-weight: 900;
+  color: #fff;
+}
+.ts-slot-sk.is-reading { background: var(--ts-r); }
+.ts-slot-sk.is-listening { background: var(--ts-l); }
+.ts-slot-sk.is-writing { background: var(--ts-w); }
+.ts-slot-sk.is-speaking { background: var(--ts-s); }
+
+/* ---------- GRANULAR STATUS & UNLOCK CELL (1 LOCK vs 2-4 LOCKS) ---------- */
+.ts-status-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 750;
+  background: var(--ts-r-bg);
+  color: var(--ts-r);
+  border: 1px solid var(--ts-r-bd);
+}
+.ts-locks-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 195px;
+}
+.ts-locks-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.ts-locks-count {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--ts-danger);
+}
+.ts-locks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ts-lock-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 5px 3px 7px;
+  border-radius: 8px;
+  background: var(--ts-danger-bg);
+  border: 1px solid var(--ts-danger-bd);
+  font-size: 11.5px;
+  color: var(--ts-danger);
+}
+.ts-lock-item-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-weight: 700;
+}
+.ts-lock-item-code {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 115px;
+}
+.ts-lock-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  opacity: 0.9;
+}
+.ts-btn-unlock-one {
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--ts-danger-bd);
+  background: var(--surface);
+  color: var(--ts-danger);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 120ms ease;
+}
+.ts-btn-unlock-one:hover {
+  background: var(--ts-danger);
+  color: #fff;
+  border-color: var(--ts-danger);
+}
+.ts-btn-unlock-all {
+  padding: 3px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--ts-danger);
+  background: var(--ts-danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 120ms ease;
+}
+.ts-btn-unlock-all:hover {
+  opacity: 0.9;
+}
+
+/* ---------- 4-SKILL COMPLETED SUMMARY PILLS IN ROSTER ---------- */
+.ts-done-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.ts-done-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid transparent;
+}
+.ts-done-mini.is-reading { color: var(--ts-r); background: var(--ts-r-bg); border-color: var(--ts-r-bd); }
+.ts-done-mini.is-listening { color: var(--ts-l); background: var(--ts-l-bg); border-color: var(--ts-l-bd); }
+.ts-done-mini.is-writing { color: var(--ts-w); background: var(--ts-w-bg); border-color: var(--ts-w-bd); }
+.ts-done-mini.is-speaking { color: var(--ts-s); background: var(--ts-s-bg); border-color: var(--ts-s-bd); }
+
+/* ---------- SECTION 2: ACTIVE 4-SKILL HOMEWORK MONITOR ---------- */
+.ts-monitor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.ts-monitor-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.ts-monitor-tab {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ts-monitor-tab.active {
+  background: var(--surface-panel);
+  color: var(--ink);
+  box-shadow: var(--shadow-btn);
+}
+.ts-monitor-skill-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.ts-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.ts-hw-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 15px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  box-shadow: var(--shadow-btn);
+}
+.ts-hw-card.is-reading { border-left-color: var(--ts-r); }
+.ts-hw-card.is-listening { border-left-color: var(--ts-l); }
+.ts-hw-card.is-writing { border-left-color: var(--ts-w); }
+.ts-hw-card.is-speaking { border-left-color: var(--ts-s); }
+.ts-hw-card.is-expired { opacity: 0.94; }
+
+.ts-hw-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ts-hw-title-col {
+  min-width: 0;
+  flex: 1;
+}
+.ts-hw-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.ts-hw-code {
+  font-size: 12px;
+  font-weight: 850;
+  color: var(--ink);
+}
+.ts-hw-theme {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.35;
+}
+.ts-hw-dl {
+  font-size: 11px;
+  font-weight: 750;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ts-hw-dl.is-live { background: var(--accent-soft); color: var(--accent); }
+.ts-hw-dl.is-ended { background: var(--ts-danger-bg); color: var(--ts-danger); }
+.ts-hw-dl.is-open { background: var(--surface-panel); color: var(--ink-3); border: 1px solid var(--border); }
+
+.ts-hw-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ts-hw-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border-strong) 45%, transparent);
+  overflow: hidden;
+  display: flex;
+}
+.ts-hw-seg-done { background: var(--ts-r); height: 100%; }
+.ts-hw-seg-prog { background: #D97706; height: 100%; }
+.ts-hw-seg-lock { background: var(--ts-danger); height: 100%; }
+
+.ts-hw-counts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+.ts-hw-lock-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: var(--ts-danger-bg);
+  border: 1px solid var(--ts-danger-bd);
+  font-size: 11.5px;
+  color: var(--ts-danger);
+}
+.ts-hw-rollcall {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.ts-hw-rollcall .is-done { color: var(--ts-r); }
+.ts-hw-rollcall .is-miss { color: var(--ink-2); }
+.ts-hw-rollcall .is-overdue { color: var(--ts-danger); }
+.ts-hw-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.ts-hw-btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-panel);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 120ms ease;
+}
+.ts-hw-btn:hover { border-color: var(--accent); color: var(--ink); }
+.ts-hw-btn.is-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.ts-hw-btn.is-primary:hover { opacity: 0.92; color: #fff; }
+.ts-hw-btn.is-danger {
+  color: var(--ts-danger);
+  border-color: var(--ts-danger-bd);
+}
+.ts-hw-btn.is-danger:hover {
+  background: var(--ts-danger-bg);
+}
+.ts-monitor-empty {
+  padding: 20px;
+  text-align: center;
+  border-radius: 14px;
+  border: 1px dashed var(--border-strong);
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+/* ---------- SECTION 3: 4-SKILL LINK COMPOSER & ULTRA-CLEAN PICKER ---------- */
+.ts-skill-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ts-skill-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: 13px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+  text-align: left;
+  transition: all 140ms ease;
+}
+.ts-skill-tab:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.ts-skill-tab-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ts-skill-tab-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ts-skill-tab-sub {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.ts-skill-tab-sel {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 850;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+.ts-skill-tab.is-reading.active { border-color: var(--ts-r); background: var(--ts-r-bg); }
+.ts-skill-tab.is-listening.active { border-color: var(--ts-l); background: var(--ts-l-bg); }
+.ts-skill-tab.is-writing.active { border-color: var(--ts-w); background: var(--ts-w-bg); }
+.ts-skill-tab.is-speaking.active { border-color: var(--ts-s); background: var(--ts-s-bg); }
+
+.ts-skill-tab.is-reading .ts-skill-tab-sel { background: var(--ts-r); }
+.ts-skill-tab.is-listening .ts-skill-tab-sel { background: var(--ts-l); }
+.ts-skill-tab.is-writing .ts-skill-tab-sel { background: var(--ts-w); }
+.ts-skill-tab.is-speaking .ts-skill-tab-sel { background: var(--ts-s); }
+
+/* Selected Basket Strip inside Composer */
+.ts-composer-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ts-composer-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ts-composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ts-zalo-preview {
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 13px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+  resize: vertical;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 11px !important;
+}
+.ts-basket-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+.ts-basket-empty {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.ts-basket-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px 4px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 750;
+  border: 1px solid transparent;
+}
+.ts-basket-chip.is-reading { color: var(--ts-r); background: var(--ts-r-bg); border-color: var(--ts-r-bd); }
+.ts-basket-chip.is-listening { color: var(--ts-l); background: var(--ts-l-bg); border-color: var(--ts-l-bd); }
+.ts-basket-chip.is-writing { color: var(--ts-w); background: var(--ts-w-bg); border-color: var(--ts-w-bd); }
+.ts-basket-chip.is-speaking { color: var(--ts-s); background: var(--ts-s-bg); border-color: var(--ts-s-bd); }
+.ts-basket-rm {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0.75;
+}
+.ts-basket-rm:hover { opacity: 1; }
+
+/* Sub-suite + Search bar above Picker Grid */
+.ts-picker-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.ts-picker-bar .task-suite-tabs {
+  margin-bottom: 0 !important;
+  flex: 1 1 360px;
+}
+.ts-picker-search {
+  width: 240px;
+  max-width: 100%;
+  height: 34px !important;
+  font-size: 12.5px !important;
+  padding: 0 12px !important;
+  border-radius: 10px !important;
+}
+
+/* ULTRA-CLEAN PICKER CARD (ZERO "chưa làm / đang học" TEXT!) */
+.ts-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.ts-picker-grid::-webkit-scrollbar { width: 6px; }
+.ts-picker-grid::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+
+.ts-pick-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 13px;
+  border-radius: 13px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: border-color 130ms ease, background 130ms ease, transform 130ms ease;
+  user-select: none;
+}
+.ts-pick-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.ts-pick-card.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 55%, var(--surface));
+}
+.ts-pick-card.is-reading.is-selected { border-color: var(--ts-r); background: var(--ts-r-bg); }
+.ts-pick-card.is-listening.is-selected { border-color: var(--ts-l); background: var(--ts-l-bg); }
+.ts-pick-card.is-writing.is-selected { border-color: var(--ts-w); background: var(--ts-w-bg); }
+.ts-pick-card.is-speaking.is-selected { border-color: var(--ts-s); background: var(--ts-s-bg); }
+
+.ts-pick-chk {
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.ts-pick-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ts-pick-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.ts-pick-code {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ts-pick-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ts-pick-tag.is-live { background: var(--accent-soft); color: var(--accent); }
+.ts-pick-tag.is-done { background: var(--ts-r-bg); color: var(--ts-r); }
+.ts-pick-tag.is-ended { background: var(--ts-danger-bg); color: var(--ts-danger); }
+
+.ts-pick-theme {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.38;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ts-pick-foot {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.ts-pick-mini-btn {
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-panel);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ts-pick-mini-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ts-pick-mini-btn.is-danger {
+  color: var(--ts-danger);
+}
+
+/* Speaking Coming-Soon Placeholder inside Picker */
+.ts-speaking-soon {
+  grid-column: 1 / -1;
+  padding: 28px 20px;
+  text-align: center;
+  border-radius: 14px;
+  border: 1.5px dashed var(--ts-s-bd);
+  background: color-mix(in srgb, var(--ts-s-bg) 55%, var(--surface));
+  color: var(--ink-2);
+}
+.ts-speaking-soon strong {
+  display: block;
+  font-size: 14.5px;
+  color: var(--ts-s);
+  margin-bottom: 5px;
+}
+
+/* ---------- STUDENT MULTI-SKILL DAILY ASSIGNED MODAL ---------- */
+.ts-combo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ts-combo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+}
+.ts-combo-item.is-reading { border-left-color: var(--ts-r); }
+.ts-combo-item.is-listening { border-left-color: var(--ts-l); }
+.ts-combo-item.is-writing { border-left-color: var(--ts-w); }
+.ts-combo-item.is-speaking { border-left-color: var(--ts-s); }
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 1080px) {
+  #screen-teacher .teacher-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ts-monitor-grid { grid-template-columns: 1fr; }
+  .ts-picker-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ts-skill-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .ts-picker-grid { grid-template-columns: 1fr; }
+  .ts-skill-tabs { grid-template-columns: 1fr 1fr; }
+}

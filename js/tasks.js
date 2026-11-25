@@ -506,12 +506,16 @@
     const bridge = B();
     const uid = getScopedStorageUid();
     let unlockAt = 0;
+    let perTaskUnlockAt = 0;
     if (bridge && uid && bridge.TEACHER_UNLOCK_KEY_BASE) {
       try {
         unlockAt = Number(localStorage.getItem(`${bridge.TEACHER_UNLOCK_KEY_BASE}${uid}`) || 0);
+        const perMap = JSON.parse(localStorage.getItem(`ielts_teacher_task_unlocks_v1_${uid}`) || '{}') || {};
+        perTaskUnlockAt = Number(perMap[taskId] || 0);
       } catch (_) {}
     }
-    if (unlockAt > 0 && (until - LOCK_PENALTY_MS) <= unlockAt) {
+    const effectiveUnlock = Math.max(unlockAt, perTaskUnlockAt);
+    if (effectiveUnlock > 0 && (until - LOCK_PENALTY_MS) <= effectiveUnlock) {
       return 0;
     }
     return Math.max(0, until - Date.now());
@@ -2037,6 +2041,10 @@
   }
 
   function renderTeacherDashboard() {
+    if (window.TeacherStudio?.renderDashboard) {
+      window.TeacherStudio.renderDashboard();
+      return;
+    }
     const bridge = B();
     if (!bridge?.isTeacherUser?.()) return;
     const esc = bridge.escapeHtml || ((x) => String(x));
@@ -6818,13 +6826,19 @@
       openAdminTestPreview(previewStage, assignedUrlTaskIds[0] || 'task_01');
       return;
     }
-    if (urlCheckedForUid !== account.id && assignedUrlTaskIds.length > 0) {
-      urlCheckedForUid = account.id;
-      if (!curTask || !assignedUrlTaskIds.includes(curTask.id)) {
-        if (assignedUrlTaskIds.length === 1) {
-          openTaskBriefModal(assignedUrlTaskIds[0]);
-        } else {
-          openStudentTasksModal();
+    if (urlCheckedForUid !== account.id) {
+      if (window.TeacherStudio?.handleIncomingUrlIfMultiSkill?.()) {
+        urlCheckedForUid = account.id;
+        return;
+      }
+      if (assignedUrlTaskIds.length > 0) {
+        urlCheckedForUid = account.id;
+        if (!curTask || !assignedUrlTaskIds.includes(curTask.id)) {
+          if (assignedUrlTaskIds.length === 1) {
+            openTaskBriefModal(assignedUrlTaskIds[0]);
+          } else {
+            openStudentTasksModal();
+          }
         }
       }
     }

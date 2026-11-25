@@ -220,6 +220,7 @@
     try {
       localStorage.setItem(PROGRESS_KEY_BASE + getUid(), JSON.stringify(map || {}));
     } catch (_) {}
+    window.__VOCAB_BRIDGE__?.syncPushCurrentUser?.(false);
   }
 
   function getTasksData() {

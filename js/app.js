@@ -17,6 +17,7 @@
   const TASK_PROGRESS_KEY_BASE = 'ielts_reading_task_progress_';
   const TASK_LOCKS_KEY_BASE = 'ielts_reading_task_locks_';
   const TEACHER_UNLOCK_KEY_BASE = 'ielts_teacher_unlocked_at_';
+  const TEACHER_TASK_UNLOCKS_KEY_BASE = 'ielts_teacher_task_unlocks_v1_';
   const LIST_CERTS_KEY_BASE = 'ielts_list_certs_v1_';
   const MASTER_COOLDOWN_KEY_BASE = 'ielts_master_cooldowns_';
   const RECALL_ACTIVE_KEY_BASE = 'ielts_recall_active_';
@@ -293,8 +294,10 @@
       const until = Number(tl[taskId] || 0);
       if (until <= Date.now()) return false;
       const unlockAt = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0);
+      const perUnlocks = JSON.parse(localStorage.getItem(`${TEACHER_TASK_UNLOCKS_KEY_BASE}${scoped}`) || '{}') || {};
+      const perAt = Number(perUnlocks[taskId] || 0);
       const LOCK_WINDOW_MS = 30 * 60 * 1000;
-      if (unlockAt > 0 && (until - LOCK_WINDOW_MS) <= unlockAt) return false;
+      if ((unlockAt > 0 && (until - LOCK_WINDOW_MS) <= unlockAt) || (perAt > 0 && (until - LOCK_WINDOW_MS) <= perAt)) return false;
       return true;
     } catch (_) {
       return false;
@@ -1076,9 +1079,32 @@
 
     let taskProgress = {};
     let taskLocks = {};
+    let teacherTaskUnlocks = {};
+    let listeningTaskProgress = {};
+    let writingTaskProgress = {};
+    let speakingTaskProgress = {};
     try {
       taskProgress = JSON.parse(localStorage.getItem(`${TASK_PROGRESS_KEY_BASE}${scoped}`) || '{}') || {};
       taskLocks = JSON.parse(localStorage.getItem(`${TASK_LOCKS_KEY_BASE}${scoped}`) || '{}') || {};
+      teacherTaskUnlocks = JSON.parse(localStorage.getItem(`${TEACHER_TASK_UNLOCKS_KEY_BASE}${scoped}`) || '{}') || {};
+      listeningTaskProgress = JSON.parse(localStorage.getItem(`totoro_listening_task_progress_v1_${scoped}`) || '{}') || {};
+      writingTaskProgress = JSON.parse(localStorage.getItem(`totoro_writing_task_prog_v1_${scoped}`) || '{}') || {};
+      speakingTaskProgress = JSON.parse(localStorage.getItem(`totoro_speaking_task_prog_v1_${scoped}`) || '{}') || {};
+
+      // Merge active Listening / Writing / Speaking locks into unified taskLocks for 4-skill teacher monitoring
+      const nowMs = Date.now();
+      const lLocks = JSON.parse(localStorage.getItem(`totoro_listening_task_locks_v1_${scoped}`) || '{}') || {};
+      Object.entries(lLocks).forEach(([k, u]) => { if (Number(u || 0) > nowMs) taskLocks[k] = Number(u); });
+      const sLocks = JSON.parse(localStorage.getItem(`totoro_speaking_task_locks_v1_${scoped}`) || '{}') || {};
+      Object.entries(sLocks).forEach(([k, u]) => { if (Number(u || 0) > nowMs) taskLocks[k] = Number(u); });
+      const wTaskLock = JSON.parse(localStorage.getItem(`totoro_writing_task_lock_v1_${scoped}`) || 'null');
+      if (wTaskLock && Number(wTaskLock.until || 0) > nowMs) {
+        taskLocks[wTaskLock.modId || 'w_task_lock'] = Number(wTaskLock.until);
+      }
+      const wPracLock = JSON.parse(localStorage.getItem(`totoro_writing_prac_lock_v1_${scoped}`) || 'null');
+      if (wPracLock && Number(wPracLock.until || 0) > nowMs) {
+        taskLocks.w_prac_lock = Number(wPracLock.until);
+      }
     } catch (_) {}
 
     const recogExtra = (isSelfScoped && window.RecognitionTestModule?.exportCloudRecognitionData)
@@ -1097,8 +1123,12 @@
       scopePositions: cloudScopePositions,
       currentScopeKey: cloudScopeKey,
       taskProgress,
+      listeningTaskProgress,
+      writingTaskProgress,
+      speakingTaskProgress,
       taskLocks,
       teacherUnlockedAt: Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0),
+      teacherTaskUnlocks,
       ...recogExtra,
     };
   }
@@ -1230,6 +1260,33 @@
       } catch (_) {}
     }
 
+    // Merge 4-skill Task Progress (Listening, Writing, Speaking)
+    [
+      ['listeningTaskProgress', `totoro_listening_task_progress_v1_${scoped}`],
+      ['writingTaskProgress', `totoro_writing_task_prog_v1_${scoped}`],
+      ['speakingTaskProgress', `totoro_speaking_task_prog_v1_${scoped}`],
+    ].forEach(([field, lsKey]) => {
+      if (sd[field] && typeof sd[field] === 'object') {
+        try {
+          const cur = JSON.parse(localStorage.getItem(lsKey) || '{}') || {};
+          let dirty = false;
+          Object.entries(sd[field]).forEach(([tid, rec]) => {
+            const prev = cur[tid];
+            const recDone = Boolean(rec?.completed || rec?.passed || rec?.status === 'completed');
+            const prevDone = Boolean(prev?.completed || prev?.passed || prev?.status === 'completed');
+            if (rec && (!prev || Number(rec.updatedAt || 0) > Number(prev.updatedAt || 0) || (recDone && !prevDone))) {
+              cur[tid] = rec;
+              dirty = true;
+            }
+          });
+          if (dirty) {
+            localStorage.setItem(lsKey, JSON.stringify(cur));
+            changed = true;
+          }
+        } catch (_) {}
+      }
+    });
+
     const LOCK_WINDOW_MS = 30 * 60 * 1000;
     const cloudUnlockedAt = Number(sd.teacherUnlockedAt || 0);
     let localUnlockedAt = 0;
@@ -1243,6 +1300,32 @@
       } catch (_) {}
     }
 
+    // Merge per-task teacher unlock timestamps (supports unlocking 1 of 4 tasks independently!)
+    let mergedPerUnlocks = {};
+    try {
+      const localPer = JSON.parse(localStorage.getItem(`${TEACHER_TASK_UNLOCKS_KEY_BASE}${scoped}`) || '{}') || {};
+      const cloudPer = (sd.teacherTaskUnlocks && typeof sd.teacherTaskUnlocks === 'object') ? sd.teacherTaskUnlocks : {};
+      mergedPerUnlocks = { ...localPer };
+      let perDirty = false;
+      Object.entries(cloudPer).forEach(([tid, ts]) => {
+        const nts = Number(ts || 0);
+        if (nts > Number(mergedPerUnlocks[tid] || 0)) {
+          mergedPerUnlocks[tid] = nts;
+          perDirty = true;
+        }
+      });
+      if (perDirty) {
+        localStorage.setItem(`${TEACHER_TASK_UNLOCKS_KEY_BASE}${scoped}`, JSON.stringify(mergedPerUnlocks));
+      }
+    } catch (_) {}
+
+    const isKeyUnlocked = (tid, untilMs) => {
+      const origin = Number(untilMs || 0) - LOCK_WINDOW_MS;
+      if (effectiveUnlockAt > 0 && origin <= effectiveUnlockAt) return true;
+      const perAt = Number(mergedPerUnlocks[tid] || 0);
+      return perAt > 0 && origin <= perAt;
+    };
+
     try {
       const tlKey = `${TASK_LOCKS_KEY_BASE}${scoped}`;
       const localTl = JSON.parse(localStorage.getItem(tlKey) || '{}') || {};
@@ -1250,24 +1333,44 @@
       const nowMs = Date.now();
       let unlockedActiveLock = false;
 
-      // Xóa mọi khóa đã bị giáo viên mở khóa sau thời điểm phát sinh khóa
+      // Xóa mọi khóa Reading đã bị giáo viên mở khóa (tổng hoặc riêng bài)
       Object.entries(localTl).forEach(([tid, untilMs]) => {
         const u = Number(untilMs || 0);
-        if (effectiveUnlockAt > 0 && (u - LOCK_WINDOW_MS) <= effectiveUnlockAt) {
+        if (isKeyUnlocked(tid, u)) {
           if (u > nowMs) unlockedActiveLock = true;
           delete localTl[tid];
           tlChanged = true;
         }
       });
 
+      // Xóa khóa Writing cục bộ nếu giáo viên vừa mở khóa (toàn bộ hoặc đúng bài Writing đó)
+      [
+        [`totoro_writing_task_lock_v1_${scoped}`, 'w_task_lock'],
+        [`totoro_writing_prac_lock_v1_${scoped}`, 'w_prac_lock'],
+      ].forEach(([wKey, fallbackTid]) => {
+        try {
+          const info = JSON.parse(localStorage.getItem(wKey) || 'null');
+          if (info && Number(info.until || 0) > 0) {
+            const matchKey = info.modId || fallbackTid;
+            if (isKeyUnlocked(matchKey, info.until) || isKeyUnlocked(fallbackTid, info.until)) {
+              if (Number(info.until) > nowMs) unlockedActiveLock = true;
+              localStorage.removeItem(wKey);
+              tlChanged = true;
+            }
+          }
+        } catch (_) {}
+      });
+
       if (sd.taskLocks && typeof sd.taskLocks === 'object') {
         Object.entries(sd.taskLocks).forEach(([tid, untilMs]) => {
           const cloudUntil = Number(untilMs || 0);
-          if (effectiveUnlockAt > 0 && (cloudUntil - LOCK_WINDOW_MS) <= effectiveUnlockAt) return;
-          const localUntil = Number(localTl[tid] || 0);
-          if (cloudUntil > localUntil) {
-            localTl[tid] = cloudUntil;
-            tlChanged = true;
+          if (isKeyUnlocked(tid, cloudUntil)) return;
+          if (/^(task|fnd|acd|adv)_\d+$/i.test(tid)) {
+            const localUntil = Number(localTl[tid] || 0);
+            if (cloudUntil > localUntil) {
+              localTl[tid] = cloudUntil;
+              tlChanged = true;
+            }
           }
         });
       }
@@ -1276,7 +1379,7 @@
         localStorage.setItem(tlKey, JSON.stringify(localTl));
         changed = true;
         if (unlockedActiveLock && currentUser && getScopedUid(currentUser.id) === scoped) {
-          showToast('Giáo viên vừa mở khóa Task cho bạn!');
+          showToast('Giáo viên vừa mở khóa bài tập cho bạn!');
         }
       }
     } catch (_) {}
@@ -1434,31 +1537,75 @@
     }).then((r) => Boolean(r && r.ok)).catch(() => false);
   }
 
-  function unlockStudentCloudLocks(studentId, unlockedAtTs = Date.now()) {
+  function unlockStudentCloudLocks(studentId, unlockedAtTs = Date.now(), targetTaskId = null) {
     const scoped = getScopedUid(studentId);
     if (!scoped) return;
+    const isSingle = Boolean(targetTaskId && String(targetTaskId).trim());
+    const cleanTarget = isSingle ? String(targetTaskId).trim() : '';
     const prev = cloudClassCache[scoped];
     const LOCK_WINDOW_MS = 30 * 60 * 1000;
+    const prevLocks = (prev?.syncData?.taskLocks && typeof prev.syncData.taskLocks === 'object') ? { ...prev.syncData.taskLocks } : {};
+    const prevPerUnlocks = (prev?.syncData?.teacherTaskUnlocks && typeof prev.syncData.teacherTaskUnlocks === 'object') ? { ...prev.syncData.teacherTaskUnlocks } : {};
+
     let maxLockOrigin = 0;
-    if (prev?.syncData?.taskLocks && typeof prev.syncData.taskLocks === 'object') {
-      Object.values(prev.syncData.taskLocks).forEach((until) => {
+    if (isSingle) {
+      const u = Number(prevLocks[cleanTarget] || 0);
+      if (u > 0) maxLockOrigin = u - LOCK_WINDOW_MS;
+    } else {
+      Object.values(prevLocks).forEach((until) => {
         const origin = Number(until || 0) - LOCK_WINDOW_MS;
         if (origin > maxLockOrigin) maxLockOrigin = origin;
       });
     }
     const effectiveUnlockAt = Math.max(
       Number(unlockedAtTs || Date.now()),
-      Number(prev?.syncData?.teacherUnlockedAt || 0),
+      isSingle ? Number(prevPerUnlocks[cleanTarget] || 0) : Number(prev?.syncData?.teacherUnlockedAt || 0),
       maxLockOrigin > 0 ? (maxLockOrigin + 1) : 0
     );
 
+    const nextLocks = isSingle ? { ...prevLocks } : {};
+    if (isSingle) delete nextLocks[cleanTarget];
+    const nextPerUnlocks = { ...prevPerUnlocks };
+    if (isSingle) nextPerUnlocks[cleanTarget] = effectiveUnlockAt;
+    const nextUnlockAll = isSingle ? Number(prev?.syncData?.teacherUnlockedAt || 0) : effectiveUnlockAt;
+
     let prevLocalUnlock = null;
+    let prevLocalPerUnlocks = null;
     let prevLocalLocks = null;
     try {
       prevLocalUnlock = localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`);
+      prevLocalPerUnlocks = localStorage.getItem(`${TEACHER_TASK_UNLOCKS_KEY_BASE}${scoped}`);
       prevLocalLocks = localStorage.getItem(`${TASK_LOCKS_KEY_BASE}${scoped}`);
-      localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(effectiveUnlockAt));
-      localStorage.setItem(`${TASK_LOCKS_KEY_BASE}${scoped}`, '{}');
+
+      if (isSingle) {
+        const lPer = JSON.parse(prevLocalPerUnlocks || '{}') || {};
+        lPer[cleanTarget] = effectiveUnlockAt;
+        localStorage.setItem(`${TEACHER_TASK_UNLOCKS_KEY_BASE}${scoped}`, JSON.stringify(lPer));
+
+        const lLocks = JSON.parse(prevLocalLocks || '{}') || {};
+        delete lLocks[cleanTarget];
+        localStorage.setItem(`${TASK_LOCKS_KEY_BASE}${scoped}`, JSON.stringify(lLocks));
+
+        // Clear matching local Listening/Writing/Speaking lock if offline on same browser
+        [`totoro_listening_task_locks_v1_${scoped}`, `totoro_speaking_task_locks_v1_${scoped}`].forEach((k) => {
+          const m = JSON.parse(localStorage.getItem(k) || '{}') || {};
+          if (cleanTarget in m) { delete m[cleanTarget]; localStorage.setItem(k, JSON.stringify(m)); }
+        });
+        const wTask = JSON.parse(localStorage.getItem(`totoro_writing_task_lock_v1_${scoped}`) || 'null');
+        if (wTask && (cleanTarget === 'w_task_lock' || wTask.modId === cleanTarget)) {
+          localStorage.removeItem(`totoro_writing_task_lock_v1_${scoped}`);
+        }
+        if (cleanTarget === 'w_prac_lock') {
+          localStorage.removeItem(`totoro_writing_prac_lock_v1_${scoped}`);
+        }
+      } else {
+        localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(effectiveUnlockAt));
+        localStorage.setItem(`${TASK_LOCKS_KEY_BASE}${scoped}`, '{}');
+        localStorage.removeItem(`totoro_listening_task_locks_v1_${scoped}`);
+        localStorage.removeItem(`totoro_speaking_task_locks_v1_${scoped}`);
+        localStorage.removeItem(`totoro_writing_task_lock_v1_${scoped}`);
+        localStorage.removeItem(`totoro_writing_prac_lock_v1_${scoped}`);
+      }
     } catch (_) {}
 
     if (prev && typeof prev === 'object') {
@@ -1467,8 +1614,9 @@
         ...prev,
         syncData: {
           ...prevSync,
-          taskLocks: {},
-          teacherUnlockedAt: effectiveUnlockAt,
+          taskLocks: nextLocks,
+          teacherUnlockedAt: nextUnlockAll,
+          teacherTaskUnlocks: nextPerUnlocks,
         },
       };
     }
@@ -1481,6 +1629,8 @@
       try {
         if (prevLocalUnlock === null) localStorage.removeItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`);
         else localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, prevLocalUnlock);
+        if (prevLocalPerUnlocks === null) localStorage.removeItem(`${TEACHER_TASK_UNLOCKS_KEY_BASE}${scoped}`);
+        else localStorage.setItem(`${TEACHER_TASK_UNLOCKS_KEY_BASE}${scoped}`, prevLocalPerUnlocks);
         if (prevLocalLocks === null) localStorage.removeItem(`${TASK_LOCKS_KEY_BASE}${scoped}`);
         else localStorage.setItem(`${TASK_LOCKS_KEY_BASE}${scoped}`, prevLocalLocks);
       } catch (_) {}
@@ -1508,31 +1658,37 @@
     const buildCompatPayload = () => ({
       id: acct?.id || prev?.id || studentId,
       name: acct?.name || prev?.name || studentId,
-      todayMins: Number(prev.todayMins || 0),
-      weekMins: Number(prev.weekMins || 0),
-      monthMins: Number(prev.monthMins || 0),
-      mastered: Number(prev.mastered || 0),
-      streak: Number(prev.streak || 0),
+      todayMins: Number(prev?.todayMins || 0),
+      weekMins: Number(prev?.weekMins || 0),
+      monthMins: Number(prev?.monthMins || 0),
+      mastered: Number(prev?.mastered || 0),
+      streak: Number(prev?.streak || 0),
       syncData: {
-        ...prev.syncData,
-        taskLocks: {},
-        teacherUnlockedAt: effectiveUnlockAt,
+        ...(prev?.syncData || {}),
+        taskLocks: nextLocks,
+        teacherUnlockedAt: nextUnlockAll,
+        teacherTaskUnlocks: nextPerUnlocks,
       },
     });
 
     const finalizeUnlockSuccess = (serverUnlock) => {
       try {
-        const curLocal = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0);
-        if (serverUnlock > curLocal) {
-          localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(serverUnlock));
+        if (!isSingle) {
+          const curLocal = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0);
+          if (serverUnlock > curLocal) {
+            localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(serverUnlock));
+          }
         }
       } catch (_) {}
       if (cloudClassCache[scoped]?.syncData) {
-        cloudClassCache[scoped].syncData.taskLocks = {};
-        cloudClassCache[scoped].syncData.teacherUnlockedAt = Math.max(
-          Number(cloudClassCache[scoped].syncData.teacherUnlockedAt || 0),
-          serverUnlock
-        );
+        cloudClassCache[scoped].syncData.taskLocks = nextLocks;
+        cloudClassCache[scoped].syncData.teacherTaskUnlocks = nextPerUnlocks;
+        if (!isSingle) {
+          cloudClassCache[scoped].syncData.teacherUnlockedAt = Math.max(
+            Number(cloudClassCache[scoped].syncData.teacherUnlockedAt || 0),
+            serverUnlock
+          );
+        }
       } else {
         syncPullClassData();
       }
@@ -1542,8 +1698,9 @@
       return true;
     };
 
-    // Sheet chạy Apps Script bản trước (chưa có gasVersion >= 2): gửi thẳng payload đồng bộ chuẩn như trước đây (1 click ăn ngay)
-    if (cloudGasVersion === 1 && prev && prev.syncData && typeof prev.syncData === 'object') {
+    // Single-task unlock uses direct sync payload when GAS < 3 (preserves other active locks safely!),
+    // or unlock_student with taskId when GAS supports it.
+    if ((isSingle || cloudGasVersion === 1) && prev && prev.syncData && typeof prev.syncData === 'object') {
       return fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1568,6 +1725,7 @@
         id: acct?.id || prev?.id || studentId,
         name: acct?.name || prev?.name || studentId,
         unlockedAtTs: effectiveUnlockAt,
+        taskId: cleanTarget,
       }),
     }).then(parseJsonSafe).then(async (res) => {
       const serverConfirmedUnlock = Boolean(res && res.ok && res.action === 'unlock_student' && Number(res.teacherUnlockedAt || 0) > 0);
@@ -6364,6 +6522,10 @@
   // Sync Flashcard scope automatically when switching Reading <-> Listening
   document.addEventListener('totoro:skill-changed', (ev) => {
     const nextSkill = String(ev?.detail?.skill || '').toLowerCase();
+    if (nextSkill === 'writing') {
+      try { window.speechSynthesis?.cancel?.(); } catch (_) {}
+      return;
+    }
     if (!window.APP_LISTENING_VOCAB) return;
     if (nextSkill === 'listening') {
       if (!isListeningScopeKey(currentScopeKey) && !isMyVocabScopeKey(currentScopeKey)) {

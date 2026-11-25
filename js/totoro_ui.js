@@ -10,8 +10,13 @@
   const MODE_KEY = 'ielts_totoro_mode_v1';
   const PALETTE_KEY = 'ielts_totoro_palette_v1';
   const MOTION_KEY = 'ielts_totoro_motion_v1';
+  const THEME_PREF_KEY = 'ielts_totoro_theme_pref_v1';
+  const FONT_SCALE_KEY = 'ielts_totoro_font_scale_v1';
+  const DAILY_LOG_KEY_BASE = 'totoro_daily_log_v1_';
   const ACTIVE_VIEW_SESSION_KEY = 'ielts_totoro_active_view_v1';
   const VALID_VIEWS = ['home', 'flashcard', 'task', 'practice'];
+  let activeListeningPracticeSub = 'exams'; // 'exams' | 'dictation'
+  let systemThemeMediaBound = false;
 
   const html = document.documentElement;
   function esc(s) {
@@ -71,7 +76,7 @@
   function resolveInitialView() {
     try {
       const sp = new URLSearchParams(window.location.search || '');
-      if (sp.get('task') || sp.get('tasks') || sp.get('adminTest')) return 'flashcard';
+      if (sp.get('task') || sp.get('tasks') || sp.get('wtask') || sp.get('adminTest')) return 'flashcard';
       const urlView = parseViewFromLocation();
       if (VALID_VIEWS.includes(urlView)) return urlView;
       const saved = sessionStorage.getItem(ACTIVE_VIEW_SESSION_KEY) || '';
@@ -84,28 +89,92 @@
   let activeHomeLbPeriod = 'week';
   let activeInlineTaskSuite = 'foundation';
 
-  // --- 1. PERSISTED APPEARANCE ENGINE (Calm/Vibrant x Light/Dark x 5 Palettes x 3 Motions) ---
+  // --- 1. PERSISTED APPEARANCE ENGINE (Calm/Vibrant x Light/Dark/Auto x Font Scale x 5 Palettes x 4 Motions) ---
+  function resolveSystemTheme() {
+    try {
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch (_) {
+      return 'light';
+    }
+  }
+
+  function getStoredThemePref() {
+    try {
+      const pref = localStorage.getItem(THEME_PREF_KEY);
+      if (pref === 'light' || pref === 'dark' || pref === 'auto') return pref;
+    } catch (_) {}
+    return html.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  }
+
+  function applyThemePreference(pref, silent = false) {
+    const clean = (pref === 'dark' || pref === 'auto') ? pref : 'light';
+    try { localStorage.setItem(THEME_PREF_KEY, clean); } catch (_) {}
+    const resolved = clean === 'auto' ? resolveSystemTheme() : clean;
+    html.setAttribute('data-theme', resolved);
+    try { localStorage.setItem('ielts_theme_v1', resolved); } catch (_) {}
+    if (!silent) {
+      const lbl = clean === 'auto' ? `Theo máy (${resolved === 'dark' ? 'Tối' : 'Sáng'})` : (clean === 'dark' ? 'Tối' : 'Sáng');
+      window.__VOCAB_BRIDGE__?.showToast?.(`Chế độ hiển thị: ${lbl}`);
+    }
+    syncAppearanceButtons();
+  }
+
+  function setFontScale(scale, silent = false) {
+    const clean = ['sm', 'md', 'lg'].includes(scale) ? scale : 'md';
+    if (clean === 'md') delete html.dataset.fontScale;
+    else html.dataset.fontScale = clean;
+    try { localStorage.setItem(FONT_SCALE_KEY, clean); } catch (_) {}
+    syncAppearanceButtons();
+    if (!silent) {
+      const lbl = { sm: 'Nhỏ (92%)', md: 'Vừa (100%)', lg: 'Lớn (110%)' }[clean];
+      window.__VOCAB_BRIDGE__?.showToast?.(`Cỡ chữ đọc bài: ${lbl}`);
+    }
+  }
+
   function applySavedAppearance() {
-    let mode = 'calm', palette = 'auto', motion = 'pro';
+    let mode = 'calm', palette = 'auto', motion = 'pro', fontScale = 'md';
     try {
       mode = localStorage.getItem(MODE_KEY) || 'calm';
       palette = localStorage.getItem(PALETTE_KEY) || 'auto';
       motion = localStorage.getItem(MOTION_KEY) || 'pro';
+      fontScale = localStorage.getItem(FONT_SCALE_KEY) || 'md';
     } catch (_) {}
     html.dataset.mode = (mode === 'vibrant') ? 'vibrant' : 'calm';
     if (palette && palette !== 'auto') html.dataset.palette = palette;
     else delete html.dataset.palette;
     html.dataset.motion = ['pro', 'classic', 'morph', 'original'].includes(motion) ? motion : 'pro';
+    setFontScale(fontScale, true);
+
+    const themePref = getStoredThemePref();
+    if (themePref === 'auto') {
+      html.setAttribute('data-theme', resolveSystemTheme());
+    }
+    if (!systemThemeMediaBound && window.matchMedia) {
+      systemThemeMediaBound = true;
+      try {
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        const onChange = () => {
+          if (getStoredThemePref() === 'auto') {
+            html.setAttribute('data-theme', mq.matches ? 'dark' : 'light');
+            syncAppearanceButtons();
+          }
+        };
+        if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onChange);
+        else if (typeof mq.addListener === 'function') mq.addListener(onChange);
+      } catch (_) {}
+    }
     syncAppearanceButtons();
   }
 
   function syncAppearanceButtons() {
     const mode = html.dataset.mode || 'calm';
-    const theme = html.getAttribute('data-theme') || 'light';
+    const themePref = getStoredThemePref();
     const pal = html.dataset.palette || 'auto';
     const motion = html.dataset.motion || 'pro';
+    const fontScale = html.dataset.fontScale || 'md';
     document.querySelectorAll('[data-set-mode]').forEach((b) => b.classList.toggle('active', b.dataset.setMode === mode));
-    document.querySelectorAll('[data-set-theme]').forEach((b) => b.classList.toggle('active', b.dataset.setTheme === theme));
+    document.querySelectorAll('[data-set-theme]').forEach((b) => b.classList.toggle('active', b.dataset.setTheme === themePref));
+    document.querySelectorAll('[data-set-font]').forEach((b) => b.classList.toggle('active', b.dataset.setFont === fontScale));
     document.querySelectorAll('[data-set-palette]').forEach((b) => b.classList.toggle('active', b.dataset.setPalette === pal));
     document.querySelectorAll('[data-set-motion]').forEach((b) => b.classList.toggle('active', b.dataset.setMotion === motion));
   }
@@ -434,8 +503,14 @@
     }
     if (activeView === 'task') renderInlineTaskHub();
     if (activeView === 'practice') syncPracticeScreen();
-    if (activeView === 'flashcard' && opts.fromUser && prevView !== 'flashcard' && B?.getCurrentUser?.() && B?.isAutoSpeakOn?.()) {
-      B?.speakCurrentWord?.();
+    if (activeView === 'flashcard') {
+      if (html.getAttribute('data-skill') === 'writing') {
+        window.WritingStudio?.renderFlashcardWorkspace?.();
+      } else if (html.getAttribute('data-skill') === 'speaking') {
+        window.SpeakingStudio?.renderFlashcardWorkspace?.();
+      } else if (opts.fromUser && prevView !== 'flashcard' && B?.getCurrentUser?.() && B?.isAutoSpeakOn?.()) {
+        B?.speakCurrentWord?.();
+      }
     }
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -530,9 +605,53 @@
 
   const STUDY_PLAN_KEY_BASE = 'totoro_study_plan_v1_';
 
+  function getTodayDateKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function getDailyLogKey(uidInput) {
+    const uid = String(uidInput || window.__VOCAB_BRIDGE__?.getCurrentUser?.()?.id || 'guest').toLowerCase();
+    return DAILY_LOG_KEY_BASE + uid;
+  }
+
+  function readDailyLog(uidInput) {
+    const today = getTodayDateKey();
+    try {
+      const raw = localStorage.getItem(getDailyLogKey(uidInput));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.date === today) {
+          return {
+            date: today,
+            words: Number(parsed.words) || 0,
+            mastered: Number(parsed.mastered) || 0,
+            dictation: Number(parsed.dictation) || 0,
+            exercises: Number(parsed.exercises) || 0,
+          };
+        }
+      }
+    } catch (_) {}
+    return { date: today, words: 0, mastered: 0, dictation: 0, exercises: 0 };
+  }
+
+  function recordDailyActivity(patch = {}, uidInput) {
+    const cur = readDailyLog(uidInput);
+    const next = {
+      date: cur.date,
+      words: cur.words + (Number(patch.words) || 0),
+      mastered: cur.mastered + (Number(patch.mastered) || 0),
+      dictation: cur.dictation + (Number(patch.dictation) || 0),
+      exercises: cur.exercises + (Number(patch.exercises) || 0),
+    };
+    try { localStorage.setItem(getDailyLogKey(uidInput), JSON.stringify(next)); } catch (_) {}
+    if (activeView === 'home') renderHomeDashboard();
+    return next;
+  }
+
   function getStudyPlan(uidInput) {
     const uid = String(uidInput || window.__VOCAB_BRIDGE__?.getCurrentUser?.()?.id || 'guest').toLowerCase();
-    const defaults = { targetBand: '7.5', examDate: '', dailyMins: 30, dailyWords: 20 };
+    const defaults = { targetBand: '7.5', examDate: '', dailyMins: 30, dailyWords: 20, focusSkill: 'all' };
     try {
       const raw = localStorage.getItem(STUDY_PLAN_KEY_BASE + uid);
       if (raw) {
@@ -540,8 +659,9 @@
         return {
           targetBand: ['6.0', '6.5', '7.0', '7.5', '8.0', '8.5'].includes(String(parsed.targetBand)) ? String(parsed.targetBand) : defaults.targetBand,
           examDate: typeof parsed.examDate === 'string' ? parsed.examDate : '',
-          dailyMins: [15, 30, 45, 60].includes(Number(parsed.dailyMins)) ? Number(parsed.dailyMins) : defaults.dailyMins,
+          dailyMins: [15, 30, 45, 60, 90].includes(Number(parsed.dailyMins)) ? Number(parsed.dailyMins) : defaults.dailyMins,
           dailyWords: [10, 20, 30, 50].includes(Number(parsed.dailyWords)) ? Number(parsed.dailyWords) : defaults.dailyWords,
+          focusSkill: ['all', 'rl', 'wd'].includes(String(parsed.focusSkill)) ? String(parsed.focusSkill) : defaults.focusSkill,
         };
       }
     } catch (_) {}
@@ -560,10 +680,12 @@
       const dEl = document.getElementById('plan-input-date');
       const mEl = document.getElementById('plan-input-mins');
       const wEl = document.getElementById('plan-input-words');
+      const fEl = document.getElementById('plan-input-focus');
       if (bEl) bEl.value = plan.targetBand;
       if (dEl) dEl.value = plan.examDate;
       if (mEl) mEl.value = String(plan.dailyMins);
       if (wEl) wEl.value = String(plan.dailyWords);
+      if (fEl) fEl.value = plan.focusSkill || 'all';
     }
     form.classList.toggle('hidden', !willOpen);
     view.classList.toggle('hidden', willOpen);
@@ -578,11 +700,47 @@
       examDate: document.getElementById('plan-input-date')?.value || '',
       dailyMins: Number(document.getElementById('plan-input-mins')?.value || 30),
       dailyWords: Number(document.getElementById('plan-input-words')?.value || 20),
+      focusSkill: document.getElementById('plan-input-focus')?.value || 'all',
     };
     try { localStorage.setItem(STUDY_PLAN_KEY_BASE + uid, JSON.stringify(plan)); } catch (_) {}
     togglePlanEditor(false);
     renderHomeDashboard();
     window.__VOCAB_BRIDGE__?.showToast?.(`Đã lưu mục tiêu Band ${plan.targetBand} · ${plan.dailyMins}p & ${plan.dailyWords} từ/ngày!`);
+  }
+
+  function countTodayCrossSkillExercises(snap, todayTs, dailyLog) {
+    const uid = snap.uid || 'guest';
+    const readRp = (window.ReadingPracticeStore?.getHistory?.() || []).filter((h) => (h.submittedAt || 0) >= todayTs).length;
+    const readTask = snap.completedTasks.filter(([, info]) => (info?.updatedAt || 0) >= todayTs).length;
+
+    const listenProg = window.ListeningTasksModule?.getProgressMap?.() || {};
+    const listenTask = Object.values(listenProg).filter((p) => p && p.completed && (p.updatedAt || 0) >= todayTs).length;
+
+    let listenPrac = 0;
+    try {
+      const lpRaw = localStorage.getItem(`ielts_listening_practice_v1_${uid}`);
+      if (lpRaw) {
+        const lp = JSON.parse(lpRaw);
+        listenPrac = (lp?.history || []).filter((h) => (h.submittedAt || h.completedAt || 0) >= todayTs).length;
+      }
+    } catch (_) {}
+
+    let writingCount = 0;
+    try {
+      const wpRaw = localStorage.getItem(`totoro_writing_prac_hist_v1_${uid}`);
+      if (wpRaw) {
+        const wp = JSON.parse(wpRaw);
+        writingCount += (Array.isArray(wp) ? wp : []).filter((h) => (h.completedAt || 0) >= todayTs).length;
+      }
+      const wtRaw = localStorage.getItem(`totoro_writing_task_prog_v1_${uid}`);
+      if (wtRaw) {
+        const wt = JSON.parse(wtRaw);
+        writingCount += Object.values(wt || {}).filter((v) => v && v.completed && (v.updatedAt || 0) >= todayTs).length;
+      }
+    } catch (_) {}
+
+    const dictDone = (window.DictationStudio?.getTodayDoneCount?.() || 0) + (dailyLog?.dictation || 0);
+    return readRp + readTask + listenTask + listenPrac + writingCount + Math.min(dictDone, 5) + (dailyLog?.exercises || 0);
   }
 
   function renderHomePlanAndMonitor(snap, plan) {
@@ -591,7 +749,7 @@
       attemptsCount: 0, completedUnique: 0, avgBand: 0, totalMins: 0, recent: []
     };
 
-    // 1. Target Band & Exam Countdown Card
+    // 1. Target Band & Exam Countdown Card (with Exam-Aware Pacing & Sprint Mode <=14d)
     const targetNum = parseFloat(plan.targetBand) || 7.5;
     let estBand = 0;
     if (rpStats.avgBand > 0) {
@@ -608,19 +766,23 @@
     if (tBar) tBar.style.width = `${readinessPct}%`;
 
     let daysText = 'Chưa đặt';
-    let countdownSub = 'Đặt ngày thi để theo dõi nhịp độ';
+    let countdownSub = 'Đặt ngày thi để tự tính nhịp học';
+    let diffDays = null;
+    let isSprintMode = false;
     if (plan.examDate) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const targetDt = new Date(`${plan.examDate}T00:00:00`);
       if (!Number.isNaN(targetDt.getTime())) {
-        const diffDays = Math.ceil((targetDt.getTime() - today.getTime()) / 86400000);
+        diffDays = Math.ceil((targetDt.getTime() - today.getTime()) / 86400000);
         if (diffDays > 0) {
           daysText = `${diffDays} ngày`;
           countdownSub = `Dự thi ${targetDt.toLocaleDateString('vi-VN')} · còn ${diffDays} ngày`;
+          isSprintMode = diffDays <= 14;
         } else if (diffDays === 0) {
           daysText = 'Hôm nay';
           countdownSub = 'Ngày thi IELTS đã đến — chúc bạn tự tin!';
+          isSprintMode = true;
         } else {
           daysText = 'Đã qua';
           countdownSub = 'Ngày thi cũ đã qua — cập nhật lịch thi mới';
@@ -629,24 +791,59 @@
     }
     setTxt('home-days-left-val', daysText);
     setTxt('home-target-countdown', countdownSub);
-    setTxt('home-target-pace', `Nhịp mục tiêu: ${plan.dailyMins} phút · ${plan.dailyWords} từ / ngày · 1 bài luyện`);
 
-    // 2. Daily Study Plan Checklist (live auto-checked!)
+    const paceEl = document.getElementById('home-target-pace');
+    if (paceEl) {
+      let paceHtml = `Nhịp mục tiêu: ${plan.dailyMins} phút · ${plan.dailyWords} từ / ngày`;
+      if (diffDays !== null && diffDays > 0) {
+        const weeksLeft = Math.max(1, Math.ceil(diffDays / 7));
+        const gap = Math.max(0.5, +(targetNum - (estBand || 5.5)).toFixed(1));
+        const weeklyTests = Math.min(14, Math.max(3, Math.ceil((gap * 4) / weeksLeft) + 2));
+        paceHtml = `Đề xuất: ~${weeklyTests} bài/tuần (${plan.dailyMins}p · ${plan.dailyWords} từ/ngày)`;
+        if (isSprintMode) {
+          paceHtml += `<div><span class="tot-sprint-badge">⚡ Chế độ Nước rút · Ưu tiên đề bấm giờ &amp; ôn lỗi sai</span></div>`;
+        }
+      }
+      paceEl.innerHTML = paceHtml;
+    }
+
+    // 2. Daily Study Plan Checklist (100% True Today Progress + Cross-Skill + Smart CTA)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayTs = todayStart.getTime();
-    const todayRpCount = (window.ReadingPracticeStore?.getHistory?.() || []).filter((h) => (h.submittedAt || 0) >= todayTs).length;
-    const todayTaskCount = snap.completedTasks.filter(([, info]) => (info?.updatedAt || 0) >= todayTs).length;
-    const todayExercises = todayRpCount + todayTaskCount;
-    const todayWords = Math.max(sessionGoalState?.done || 0, Math.min(snap.mastered, snap.todayMins > 0 ? Math.min(plan.dailyWords, snap.mastered) : 0));
+    const dailyLog = readDailyLog(snap.uid);
+    const todayExercises = countTodayCrossSkillExercises(snap, todayTs, dailyLog);
+    const todayWords = Math.max(dailyLog.words || 0, sessionGoalState?.done || 0);
+
+    // Smart CTA routing for Exercise Row based on Focus Skill & Sprint Mode
+    let exTitle = isSprintMode
+      ? 'Nước rút: Làm 1 đề bấm giờ (Reading / Listening / Writing)'
+      : 'Hoàn thành 1 bài luyện tập (4 kỹ năng)';
+    let exAction = "window.TotoroUI?.enterSkillMode('Reading', 'practice')";
+    if (plan.focusSkill === 'wd') {
+      exTitle = isSprintMode
+        ? 'Nước rút: 1 bài Writing hoặc 1 bài Dictation'
+        : 'Hoàn thành 1 bài Writing / Listening Dictation';
+      exAction = "window.TotoroUI?.openDictationStudio()";
+    } else if (plan.focusSkill === 'rl') {
+      exTitle = isSprintMode
+        ? 'Nước rút: Làm 1 đề Reading / Listening bấm giờ'
+        : 'Hoàn thành 1 bài Reading / Listening Practice';
+      exAction = "window.TotoroUI?.enterSkillMode('Reading', 'practice')";
+    }
+
+    const vocabTitle = snap.due > 0
+      ? `Ôn thẻ SRS đến hạn (${snap.due} thẻ chờ)`
+      : 'Ôn & học từ vựng mới hôm nay';
+    const vocabAction = "window.TotoroUI?.enterSkillMode('Reading', 'flashcard')";
 
     const items = [
       {
-        title: 'Ôn & học từ vựng mới',
+        title: vocabTitle,
         meta: `${todayWords}/${plan.dailyWords} từ`,
         pct: Math.min(100, Math.round((todayWords / Math.max(1, plan.dailyWords)) * 100)),
         done: todayWords >= plan.dailyWords,
-        action: "window.TotoroUI?.enterSkillMode(window.TotoroUI?.getActiveSkill?.() || 'Reading', 'flashcard')",
+        action: vocabAction,
       },
       {
         title: 'Tập trung thực học',
@@ -656,11 +853,11 @@
         action: "window.TotoroUI?.enterSkillMode(window.TotoroUI?.getActiveSkill?.() || 'Reading', 'flashcard')",
       },
       {
-        title: 'Hoàn thành 1 Task / bài Practice',
+        title: exTitle,
         meta: `${todayExercises}/1 bài`,
         pct: todayExercises >= 1 ? 100 : 0,
         done: todayExercises >= 1,
-        action: "window.TotoroUI?.enterSkillMode('Reading', 'practice')",
+        action: exAction,
       },
     ];
     const doneCnt = items.filter((it) => it.done).length;
@@ -688,6 +885,9 @@
       `).join('');
     }
 
+    // Return true today goal percentage synced 1:1 with the 3 checklist items!
+    const trueGoalPct = Math.round(items.reduce((acc, it) => acc + it.pct, 0) / Math.max(1, items.length));
+
     // 3. Cross-Skill Progress Monitor Card
     const B = window.__VOCAB_BRIDGE__;
     const assess = B?.getAssessmentsMap?.() || {};
@@ -702,10 +902,12 @@
     const readTaskPct = Math.min(100, Math.round((snap.completedTasks.length / 110) * 100));
     const readPracPct = Math.min(100, Math.round((rpStats.completedUnique / 30) * 100));
     const listenPct = Math.min(100, Math.round(((listenVocabDone / Math.max(1, listenVocabTotal)) * 0.5 + (listenTasksDone / Math.max(1, listenTasksTotal)) * 0.5) * 100));
-    const overallPct = Math.min(100, Math.round((snap.masteryPct + readTaskPct + readPracPct + listenPct) / 4));
+    const wsStats = window.WritingStudio?.getOverallStats?.() || { masteredCards: 0, totalCards: 0, cardPct: 0, tasksDone: 0, tasksTotal: 44, taskPct: 0 };
+    const writePct = Math.min(100, Math.round((wsStats.cardPct * 0.5) + (wsStats.taskPct * 0.5)));
+    const overallPct = Math.min(100, Math.round((snap.masteryPct + readTaskPct + readPracPct + listenPct + writePct) / 5));
 
     setTxt('home-monitor-overall-pct', `${overallPct}%`);
-    setTxt('home-monitor-summary', `${snap.mastered.toLocaleString('vi-VN')} từ Reading · ${listenVocabDone.toLocaleString('vi-VN')} từ Listening`);
+    setTxt('home-monitor-summary', `${snap.mastered.toLocaleString('vi-VN')} từ Reading · ${listenVocabDone.toLocaleString('vi-VN')} từ Listening · ${wsStats.tasksDone}/${wsStats.tasksTotal} Writing`);
 
     const barsEl = document.getElementById('home-monitor-bars');
     if (barsEl) {
@@ -713,7 +915,8 @@
         { label: 'Từ vựng Reading', val: `${snap.mastered.toLocaleString('vi-VN')} / ${snap.totalFamilies.toLocaleString('vi-VN')}`, pct: snap.masteryPct, cls: 'is-sage', action: "window.TotoroUI?.enterSkillMode('Reading', 'flashcard')" },
         { label: 'Reading Tasks', val: `${snap.completedTasks.length} / 110 bài`, pct: readTaskPct, cls: 'is-warm', action: "window.TotoroUI?.enterSkillMode('Reading', 'task')" },
         { label: 'Luyện đề Reading', val: rpStats.avgBand ? `${rpStats.completedUnique} bài · Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} bài đã nộp`, pct: readPracPct, cls: 'is-emerald', action: "window.TotoroUI?.enterSkillMode('Reading', 'practice')" },
-        { label: 'Listening & Shadowing', val: `${listenVocabDone.toLocaleString('vi-VN')} từ · ${listenTasksDone}/${listenTasksTotal} Task`, pct: listenPct, cls: 'is-indigo', action: "window.TotoroUI?.enterSkillMode('Listening', 'home')" },
+        { label: 'Listening & Dictation', val: `${listenVocabDone.toLocaleString('vi-VN')} từ · ${listenTasksDone}/${listenTasksTotal} Task`, pct: listenPct, cls: 'is-indigo', action: "window.TotoroUI?.enterSkillMode('Listening', 'home')" },
+        { label: 'Writing & Flow Ideas', val: `${wsStats.masteredCards} thẻ · ${wsStats.tasksDone}/${wsStats.tasksTotal} Task`, pct: writePct, cls: 'is-sage', action: "window.TotoroUI?.enterSkillMode('Writing', 'home')" },
       ];
       barsEl.innerHTML = meters.map((m) => `
         <button type="button" class="tot-mon-meter tot-mon-meter-btn" onclick="${m.action}">
@@ -725,6 +928,7 @@
         </button>
       `).join('');
     }
+    return trueGoalPct;
   }
 
   function renderHomeDashboard() {
@@ -748,18 +952,15 @@
       subEl.innerHTML = `Còn <strong style="color:var(--streak)">${snap.due} từ đến hạn ôn</strong> · ${rankTxt}`;
     }
 
-    // Daily goal ring (synced with user's Study Plan target minutes!)
+    // Render Plan, Target Band & Progress Monitor Strip first to get true today goal %
     const goalMins = plan.dailyMins || 30;
-    const goalPct = Math.min(100, Math.round(((Math.min(snap.todayMins, goalMins) / goalMins) * 0.6 + (snap.completedTasks.length > 0 ? 0.4 : 0)) * 100));
+    const goalPct = renderHomePlanAndMonitor(snap, plan);
     setTxt('home-goal-pct', `${goalPct}%`);
     const ring = document.getElementById('home-goal-arc');
     if (ring) ring.setAttribute('stroke-dashoffset', String(201 * (1 - goalPct / 100)));
     setTxt('home-goal-mastered', snap.mastered.toLocaleString('vi-VN'));
     setTxt('home-goal-tasks', `${snap.completedTasks.length}`);
     setTxt('home-goal-mins', `${snap.todayMins}/${goalMins}p`);
-
-    // Render Plan, Target Band & Progress Monitor Strip
-    renderHomePlanAndMonitor(snap, plan);
 
     // Study Rhythm Chart (Exact demo_v3: Tuần / Tháng / Năm + Dashed Target Line + Real localStorage data)
     const chartEl = document.getElementById('home-chart-bars');
@@ -1066,16 +1267,72 @@
   function syncPracticeScreen() {
     const rpRoot = document.getElementById('rp-app-root');
     const lpRoot = document.getElementById('lp-app-root');
-    const isListening = html.getAttribute('data-skill') === 'listening';
-    if (isListening) {
+    const lpDictRoot = document.getElementById('lp-dictation-root');
+    const lpSwitch = document.getElementById('lp-mode-switch');
+    const wpRoot = document.getElementById('wp-app-root');
+    const spRoot = document.getElementById('sp-app-root');
+    const curSkill = html.getAttribute('data-skill');
+    if (curSkill === 'speaking') {
       if (rpRoot) rpRoot.style.display = 'none';
-      if (lpRoot) lpRoot.style.display = '';
-      window.ListeningTasksModule?.renderPracticeScreen?.();
-    } else {
+      if (lpSwitch) lpSwitch.style.display = 'none';
       if (lpRoot) lpRoot.style.display = 'none';
+      if (lpDictRoot) lpDictRoot.style.display = 'none';
+      if (wpRoot) wpRoot.style.display = 'none';
+      if (spRoot) spRoot.style.display = '';
+      window.SpeakingStudio?.renderPracticeHub?.();
+    } else if (curSkill === 'writing') {
+      if (rpRoot) rpRoot.style.display = 'none';
+      if (lpSwitch) lpSwitch.style.display = 'none';
+      if (lpRoot) lpRoot.style.display = 'none';
+      if (lpDictRoot) lpDictRoot.style.display = 'none';
+      if (spRoot) spRoot.style.display = 'none';
+      if (wpRoot) wpRoot.style.display = '';
+      window.WritingStudio?.renderPracticeHub?.();
+    } else if (curSkill === 'listening') {
+      if (rpRoot) rpRoot.style.display = 'none';
+      if (wpRoot) wpRoot.style.display = 'none';
+      if (spRoot) spRoot.style.display = 'none';
+      if (lpSwitch) lpSwitch.style.display = '';
+      document.querySelectorAll('#lp-mode-switch [data-lp-sub]').forEach((b) => {
+        const on = b.dataset.lpSub === activeListeningPracticeSub;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if (activeListeningPracticeSub === 'dictation') {
+        if (lpRoot) lpRoot.style.display = 'none';
+        if (lpDictRoot) lpDictRoot.style.display = '';
+        window.DictationStudio?.render?.();
+      } else {
+        if (lpDictRoot) lpDictRoot.style.display = 'none';
+        if (lpRoot) lpRoot.style.display = '';
+        window.ListeningTasksModule?.renderPracticeScreen?.();
+      }
+    } else {
+      if (lpSwitch) lpSwitch.style.display = 'none';
+      if (lpRoot) lpRoot.style.display = 'none';
+      if (lpDictRoot) lpDictRoot.style.display = 'none';
+      if (wpRoot) wpRoot.style.display = 'none';
+      if (spRoot) spRoot.style.display = 'none';
       if (rpRoot) rpRoot.style.display = '';
       window.ReadingPracticeApp?.render?.();
     }
+  }
+
+  function setListeningPracticeSub(sub) {
+    activeListeningPracticeSub = sub === 'dictation' ? 'dictation' : 'exams';
+    if (activeListeningPracticeSub !== 'dictation') {
+      window.DictationStudio?.pausePlayback?.();
+    }
+    syncPracticeScreen();
+  }
+
+  function openDictationStudio(lessonId) {
+    activeListeningPracticeSub = 'dictation';
+    if (typeof window.__TOTORO_SET_SKILL__ === 'function') {
+      window.__TOTORO_SET_SKILL__('Listening', { silent: true });
+    }
+    switchView('practice', { fromUser: true });
+    if (lessonId) window.DictationStudio?.openLesson?.(lessonId);
   }
 
   function renderListeningHomePanel(el) {
@@ -1179,7 +1436,8 @@
               </div>
               <div class="rh-decks-grid-4">${barsHtml}</div>
               <div class="rh-hero-actions" style="margin-top:12px;">
-                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">PRACTICE →</button>
+                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice')">PRACTICE →</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openDictationStudio()">Dictation Studio</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Flashcard</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">Tasks</button>
               </div>
@@ -1234,6 +1492,14 @@
     if (!el) return;
     if (scope === 'listening') {
       renderListeningHomePanel(el);
+      return;
+    }
+    if (scope === 'writing' && typeof window.WritingStudio?.renderWritingHomePanel === 'function') {
+      window.WritingStudio.renderWritingHomePanel(el);
+      return;
+    }
+    if (scope === 'speaking' && typeof window.SpeakingStudio?.renderSpeakingHomePanel === 'function') {
+      window.SpeakingStudio.renderSpeakingHomePanel(el);
       return;
     }
     const meta = {
@@ -1297,13 +1563,26 @@
     const gridEl = document.getElementById('inline-tasks-grid');
     if (!gridEl) return;
 
+    if (html.getAttribute('data-skill') === 'speaking' && typeof window.SpeakingStudio?.renderTaskHub === 'function') {
+      gridEl.classList.remove('is-listening-grid', 'is-writing-grid');
+      gridEl.classList.add('is-speaking-grid');
+      window.SpeakingStudio.renderTaskHub(tabsEl, gridEl);
+      return;
+    }
+    if (html.getAttribute('data-skill') === 'writing' && typeof window.WritingStudio?.renderTaskHub === 'function') {
+      gridEl.classList.remove('is-listening-grid', 'is-speaking-grid');
+      gridEl.classList.add('is-writing-grid');
+      window.WritingStudio.renderTaskHub(tabsEl, gridEl);
+      return;
+    }
     if (html.getAttribute('data-skill') === 'listening' && typeof window.ListeningTasksModule?.renderHub === 'function') {
+      gridEl.classList.remove('is-writing-grid', 'is-speaking-grid');
       gridEl.classList.add('is-listening-grid');
       window.ListeningTasksModule.renderHub(tabsEl, gridEl);
       return;
     }
 
-    gridEl.classList.remove('is-listening-grid');
+    gridEl.classList.remove('is-listening-grid', 'is-writing-grid', 'is-speaking-grid');
     const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
     if (titleEl) titleEl.textContent = 'Task bài tập · Reading';
 
@@ -1546,10 +1825,9 @@
     // Appearance controls
     document.querySelectorAll('[data-set-mode]').forEach((b) => b.addEventListener('click', () => setStyleMode(b.dataset.setMode)));
     document.querySelectorAll('[data-set-theme]').forEach((b) => b.addEventListener('click', () => {
-      if (typeof window.setThemeMode === 'function') window.setThemeMode(b.dataset.setTheme);
-      else html.setAttribute('data-theme', b.dataset.setTheme);
-      syncAppearanceButtons();
+      applyThemePreference(b.dataset.setTheme, false);
     }));
+    document.querySelectorAll('[data-set-font]').forEach((b) => b.addEventListener('click', () => setFontScale(b.dataset.setFont, false)));
     document.querySelectorAll('[data-set-palette]').forEach((b) => b.addEventListener('click', () => setPalette(b.dataset.setPalette)));
     document.querySelectorAll('[data-set-motion]').forEach((b) => b.addEventListener('click', () => setMotion(b.dataset.setMotion)));
 
@@ -1564,13 +1842,13 @@
       }
     });
 
-    // Active Skill persistence (Reading | Listening)
+    // Active Skill persistence (Reading | Listening | Writing)
     const SKILL_STORAGE_KEY = 'totoro_active_skill_v1';
     let activeSkill = 'Reading';
-    let activeMode = 'Overview'; // 'Overview' (Home chung) | 'Reading' | 'Listening'
+    let activeMode = 'Overview'; // 'Overview' (Home chung) | 'Reading' | 'Listening' | 'Writing'
     try {
       const savedSkill = localStorage.getItem(SKILL_STORAGE_KEY);
-      if (savedSkill === 'Listening' || savedSkill === 'Reading') activeSkill = savedSkill;
+      if (savedSkill === 'Listening' || savedSkill === 'Reading' || savedSkill === 'Writing' || savedSkill === 'Speaking') activeSkill = savedSkill;
     } catch (_) {}
 
     function syncSkillDropdownUI(modeVal) {
@@ -1592,7 +1870,7 @@
         const isCurrent = s === modeVal;
         btn.classList.toggle('active', isCurrent);
         const tag = btn.querySelector('.tot-tag');
-        if (tag && (s === 'Overview' || s === 'Reading' || s === 'Listening')) {
+        if (tag && (s === 'Overview' || s === 'Reading' || s === 'Listening' || s === 'Writing' || s === 'Speaking')) {
           tag.classList.remove('soon');
           tag.textContent = isCurrent ? 'Đang mở' : 'Sẵn sàng';
         }
@@ -1607,12 +1885,13 @@
         switchHomeScope('global');
         if (!opts.keepView) switchView('home', { fromUser: false });
         if (!opts.silent) {
-          window.__VOCAB_BRIDGE__?.showToast?.('🏠 Đang ở HOME — Tổng quan mục tiêu, kế hoạch & tiến độ học');
+          window.__VOCAB_BRIDGE__?.showToast?.('Đang ở HOME — Tổng quan mục tiêu, kế hoạch & tiến độ học');
         }
         return;
       }
 
-      const next = (skill === 'Listening' || String(skill || '').toLowerCase() === 'listening') ? 'Listening' : 'Reading';
+      const low = String(skill || '').toLowerCase();
+      const next = low === 'speaking' ? 'Speaking' : (low === 'writing' ? 'Writing' : (low === 'listening' ? 'Listening' : 'Reading'));
       activeSkill = next;
       activeMode = next;
       html.setAttribute('data-skill', next.toLowerCase());
@@ -1622,17 +1901,23 @@
       switchHomeScope(next.toLowerCase());
 
       const coreId = next.toLowerCase();
-      if (window.AppCore?.skills && window.AppCore.skills.getActiveId?.() !== coreId) {
+      if ((coreId === 'reading' || coreId === 'listening') && window.AppCore?.skills && window.AppCore.skills.getActiveId?.() !== coreId) {
         window.AppCore.skills.switchTo(coreId).then(() => window.AppCore?.renderSkillModesMenu?.()).catch(() => {});
       }
 
       if (!opts.silent) {
-        if (next === 'Listening') {
-          window.__VOCAB_BRIDGE__?.showToast?.('🎧 Đã chuyển sang IELTS Listening — 3.864 từ & 131 Task thực chiến!');
+        if (next === 'Speaking') {
+          window.__VOCAB_BRIDGE__?.showToast?.('Đã chuyển sang IELTS Speaking — Story 01, 30 Spoken Chunks, Task 4 Bước & 14 Cue Cards!');
+        } else if (next === 'Writing') {
+          window.__VOCAB_BRIDGE__?.showToast?.('Đã chuyển sang IELTS Writing — 41 Module Flow Ideas, Grammar & 57 đề Task 2!');
+        } else if (next === 'Listening') {
+          window.__VOCAB_BRIDGE__?.showToast?.('Đã chuyển sang IELTS Listening — 3.864 từ & 131 Task thực chiến!');
         } else {
-          window.__VOCAB_BRIDGE__?.showToast?.('📖 Đã chuyển sang IELTS Reading (Reading Home · Flashcard · Task · Practice)');
+          window.__VOCAB_BRIDGE__?.showToast?.('Đã chuyển sang IELTS Reading (Reading Home · Flashcard · Task · Practice)');
         }
       }
+      if (activeView === 'flashcard' && next === 'Writing') window.WritingStudio?.renderFlashcardWorkspace?.();
+      if (activeView === 'flashcard' && next === 'Speaking') window.SpeakingStudio?.renderFlashcardWorkspace?.();
       if (activeView === 'task') renderInlineTaskHub();
       if (activeView === 'practice') syncPracticeScreen();
       document.dispatchEvent(new CustomEvent('totoro:skill-changed', { detail: { skill: next } }));
@@ -1651,7 +1936,7 @@
         closePopovers();
         if (s === 'Overview') {
           setActiveSkill('Overview', { silent: false });
-        } else if (s === 'Reading' || s === 'Listening') {
+        } else if (s === 'Reading' || s === 'Listening' || s === 'Writing' || s === 'Speaking') {
           setActiveSkill(s, { silent: false });
           if (activeView === 'home') renderHomeDashboard();
         } else {
@@ -1785,6 +2070,7 @@
       sessionGoalState.done += 1;
       if (lvl === 3) sessionGoalState.mastered += 1;
       else sessionGoalState.review += 1;
+      recordDailyActivity({ words: 1, mastered: lvl === 3 ? 1 : 0 });
       syncStudyFocusWidgets();
     });
     // Auto-jump to Flashcard stage whenever a Task study session starts!
@@ -1951,12 +2237,17 @@
     getActiveHomeScope: () => activeHomeScope,
     getActiveMode: () => (typeof window.__TOTORO_GET_MODE__ === 'function' ? window.__TOTORO_GET_MODE__() : 'Overview'),
     getActiveView: () => activeView,
-    getActiveSkill: () => (typeof window.__TOTORO_GET_SKILL__ === 'function' ? window.__TOTORO_GET_SKILL__() : (html.getAttribute('data-skill') === 'listening' ? 'Listening' : 'Reading')),
+    getActiveSkill: () => (typeof window.__TOTORO_GET_SKILL__ === 'function' ? window.__TOTORO_GET_SKILL__() : (html.getAttribute('data-skill') === 'writing' ? 'Writing' : (html.getAttribute('data-skill') === 'listening' ? 'Listening' : 'Reading'))),
     setActiveSkill: (skill, opts) => (typeof window.__TOTORO_SET_SKILL__ === 'function' ? window.__TOTORO_SET_SKILL__(skill, opts) : undefined),
     onUserEntered,
     setStyleMode,
     setPalette,
     setMotion,
+    setFontScale,
+    applyThemePreference,
+    setListeningPracticeSub,
+    openDictationStudio,
+    recordDailyActivity,
     renderHomeDashboard,
     togglePlanEditor,
     saveStudyPlan,

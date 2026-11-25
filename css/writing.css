@@ -45,9 +45,9 @@ html[data-skill="writing"] #wp-app-root {
   text-shadow: none !important;
   letter-spacing: -0.015em !important;
 }
-#writing-flashcard-root .ws-word-sm { font-size: clamp(30px, 3.0vw, 38px) !important; line-height: 1.22 !important; }
-#writing-flashcard-root .ws-word-md { font-size: clamp(26px, 2.5vw, 32px) !important; line-height: 1.28 !important; max-width: 92%; }
-#writing-flashcard-root .ws-word-lg { font-size: clamp(22px, 2.1vw, 27px) !important; line-height: 1.34 !important; max-width: 94%; }
+#writing-flashcard-root .ws-word-sm { font-size: clamp(42px, 4.4vw, 58px) !important; line-height: 1.15 !important; max-width: 94%; }
+#writing-flashcard-root .ws-word-md { font-size: clamp(34px, 3.3vw, 44px) !important; line-height: 1.2 !important; max-width: 94%; }
+#writing-flashcard-root .ws-word-lg { font-size: clamp(26px, 2.5vw, 34px) !important; line-height: 1.28 !important; max-width: 94%; }
 #writing-flashcard-root .ws-word-formula {
   font-family: var(--font-mono) !important;
   font-size: clamp(17px, 1.65vw, 20px) !important;
@@ -71,12 +71,12 @@ html[data-skill="writing"] #wp-app-root {
 }
 #writing-flashcard-root .fc-back-meta-row .fc-word {
   font-family: var(--font-ui) !important;
-  font-size: clamp(19px, 1.9vw, 23px) !important;
+  font-size: clamp(25px, 2.5vw, 31px) !important;
   font-weight: 700 !important;
-  line-height: 1.32 !important;
+  line-height: 1.25 !important;
   color: var(--ink) !important;
   text-shadow: none !important;
-  letter-spacing: -0.01em !important;
+  letter-spacing: -0.015em !important;
   text-align: left;
   flex: 1 1 auto;
   min-width: 0;
@@ -85,31 +85,43 @@ html[data-skill="writing"] #wp-app-root {
   flex-shrink: 0;
   margin-top: 0 !important;
 }
+#writing-flashcard-root .fc-back-body-stack {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: stretch !important;
+  flex: 1 1 auto !important;
+  padding: 6px 0 !important;
+  gap: 18px !important;
+}
 #writing-flashcard-root .fc-back-meaning {
   font-family: var(--font-ui) !important;
-  font-size: clamp(20px, 2.0vw, 24px) !important;
+  font-size: clamp(27px, 2.7vw, 33px) !important;
   font-weight: 700 !important;
-  line-height: 1.4 !important;
-  color: var(--accent-hover, var(--accent)) !important;
+  line-height: 1.32 !important;
+  color: var(--accent) !important;
   text-shadow: none !important;
   text-align: left !important;
-  margin-bottom: 14px !important;
+  margin: 0 !important;
 }
 html[data-theme="dark"] #writing-flashcard-root .fc-back-meaning {
   color: var(--accent-2, #A6D0A2) !important;
 }
 #writing-flashcard-root .fc-sentence-box {
   display: block !important;
-  text-align: justify !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  text-align: left !important;
   font-family: var(--font-ui) !important;
-  font-size: 16px !important;
+  font-size: 19.5px !important;
   font-weight: 400 !important;
-  line-height: 1.72 !important;
+  line-height: 1.62 !important;
   color: var(--ink) !important;
   background: var(--surface-item) !important;
   border: 1.5px dashed var(--border-strong) !important;
-  border-radius: 14px !important;
-  padding: 18px 22px !important;
+  border-radius: 13px !important;
+  padding: 16px 20px !important;
 }
 html[data-theme="dark"] #writing-flashcard-root .fc-sentence-box {
   background: var(--surface-muted) !important;
@@ -868,71 +880,450 @@ html[data-theme="dark"] .ws-branch-detail-vi {
   gap: 8px;
 }
 
-/* Task Test 1: Inline Editable Smart Flow Boxes (Type EN directly inside each node!) */
-.ws-sf-node.is-editable,
-.ws-sf-station.is-editable {
+/* Task Test 1: Totoro Editorial x Monkeytype Inline Tab-Controlled Smart Flow */
+.ws-t1-stage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ws-t1-stage-head > div:first-child {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+.ws-t1-stage-title {
+  font-size: 16.5px;
+  font-weight: 750;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.ws-t1-stage-sub {
+  font-size: 12.8px;
+  color: var(--ink-2);
+  margin-top: 3px;
+  line-height: 1.45;
+}
+.ws-t1-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.ws-t1-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-panel, var(--bg-subtle));
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 5px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.ws-t1-stat strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+.ws-t1-stat.is-accent strong { color: var(--accent); }
+.ws-t1-stat.is-err {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 32%, transparent);
+  color: var(--danger);
+}
+.ws-t1-stat.is-err strong { color: var(--danger); }
+.ws-t1-ring {
+  width: 17px;
+  height: 17px;
+  transform: rotate(-90deg);
+  flex-shrink: 0;
+}
+.ws-t1-ring-bg {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 2.6;
+}
+.ws-t1-ring-fg {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-dasharray: 44;
+  stroke-dashoffset: 44;
+  transition: stroke-dashoffset 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ws-t1-board {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 8px;
-  padding: 12px 14px;
-  text-align: left;
-}
-.ws-sf-node.is-editable.is-ok,
-.ws-sf-station.is-editable.is-ok {
-  border-color: var(--ok) !important;
-  background: color-mix(in srgb, var(--ok-soft) 55%, var(--surface)) !important;
-}
-.ws-sf-node.is-editable.is-bad,
-.ws-sf-station.is-editable.is-bad {
-  border-color: var(--danger) !important;
-  background: color-mix(in srgb, var(--danger-soft) 38%, var(--surface)) !important;
-}
-.ws-sf-node-cue {
-  font-size: 13.8px;
-  font-weight: 750;
-  line-height: 1.42;
-  color: var(--ink);
-  text-align: left;
-}
-.ws-sf-node-input {
+  gap: 12px;
   width: 100%;
-  min-height: 78px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1.5px solid var(--border-strong);
+}
+.ws-t1-row {
+  display: grid;
+  grid-template-columns: 112px 1fr 22px 1fr 22px 1fr;
+  align-items: stretch;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 17px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 10px -2px rgba(24, 37, 28, 0.05);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.ws-t1-row:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border-strong));
+  box-shadow: 0 10px 28px -12px rgba(28, 44, 33, 0.12);
+}
+.ws-t1-chain-grid {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr;
+  gap: 12px 8px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.ws-t1-tag {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  border-radius: 12px;
+  padding: 10px 8px;
+  overflow: hidden;
+  background: var(--accent-soft);
+  color: #205B3C;
+}
+.ws-t1-tag::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3.5px;
+  border-radius: 0 4px 4px 0;
+  background: currentColor;
+  opacity: 0.65;
+}
+.ws-t1-tag.tone-amber { background: var(--streak-soft); color: #845322; }
+.ws-t1-tag.tone-teal { background: var(--info-soft, #ECE7F7); color: #4E3E82; }
+html[data-theme="dark"] .ws-t1-tag { background: rgba(92, 196, 140, 0.13); color: #7FD9A8; }
+html[data-theme="dark"] .ws-t1-tag.tone-amber { background: rgba(226, 174, 102, 0.13); color: #E8BA78; }
+html[data-theme="dark"] .ws-t1-tag.tone-teal { background: rgba(167, 146, 232, 0.14); color: #C0B0F5; }
+.ws-t1-tag-num {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  opacity: 0.7;
+  letter-spacing: 0.08em;
+}
+.ws-t1-tag-name {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+
+.ws-t1-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  opacity: 0.55;
+  transition: color 240ms ease, opacity 240ms ease, transform 240ms ease;
+  user-select: none;
+}
+.ws-t1-arrow.is-lit {
+  color: var(--accent);
+  opacity: 1;
+  transform: translateX(1px);
+}
+
+.ws-t1-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--surface-panel, var(--bg-subtle)) 46%, var(--surface));
+  border: 1.5px solid transparent;
+  box-shadow: inset 0 0 0 1px var(--border);
+  border-radius: 13px;
+  padding: 25px 14px 12px;
+  min-height: 98px;
+  cursor: text;
+  text-align: left;
+  transition: border-color 170ms ease, background 200ms ease, box-shadow 180ms ease, transform 150ms ease;
+}
+.ws-t1-cell:hover:not(.is-focused) {
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  transform: translateY(-1px);
+}
+.ws-t1-cell.is-focused {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--accent) 14%, transparent), 0 10px 24px -10px color-mix(in srgb, var(--accent) 26%, transparent);
+  transform: translateY(-1px);
+}
+.ws-t1-cell.is-done,
+.ws-t1-cell.is-ok {
+  background: color-mix(in srgb, var(--ok-soft, var(--accent-soft)) 58%, var(--surface));
+  border-color: color-mix(in srgb, var(--ok, var(--accent)) 45%, transparent);
+  box-shadow: none;
+}
+.ws-t1-cell.is-done.is-focused {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.ws-t1-cell.is-bad {
+  border-color: var(--danger) !important;
+  background: color-mix(in srgb, var(--danger-soft) 36%, var(--surface)) !important;
+  box-shadow: none;
+}
+
+.ws-t1-step {
+  position: absolute;
+  top: 8px;
+  left: 14px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  pointer-events: none;
+  transition: color 180ms ease;
+}
+.ws-t1-cell.is-focused .ws-t1-step,
+.ws-t1-cell.is-done .ws-t1-step,
+.ws-t1-cell.is-ok .ws-t1-step {
+  color: var(--accent);
+}
+.ws-t1-cell.is-bad .ws-t1-step {
+  color: var(--danger);
+}
+
+.ws-t1-check {
+  position: absolute;
+  top: 7px;
+  right: 10px;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--ok, var(--accent));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.ws-t1-cell.is-done .ws-t1-check,
+.ws-t1-cell.is-ok .ws-t1-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.ws-t1-wrap {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+}
+.ws-t1-mirror,
+.ws-t1-ta {
+  font-family: var(--font-ui);
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.72;
+  letter-spacing: 0.004em;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  text-align: left;
+}
+.ws-t1-mirror {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  min-height: 54px;
+  user-select: none;
+}
+.ws-t1-ta,
+.ws-t1-ta:focus,
+.ws-t1-ta:focus-visible {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  resize: none;
+  background: transparent !important;
+  color: transparent !important;
+  caret-color: transparent !important;
+  overflow: hidden;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.ws-t1-ta::selection {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.ws-t1-tok-ok {
+  color: var(--ink);
+}
+.ws-t1-tok-err {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border-radius: 4px;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--danger) 72%, transparent);
+  text-decoration-style: wavy;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+.ws-t1-anchor {
+  display: inline-block;
+  width: 0;
+  height: 1.12em;
+  vertical-align: text-bottom;
+}
+.ws-t1-caret {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2.2px;
+  height: 19px;
+  background: var(--accent);
+  border-radius: 3px;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 42%, transparent);
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  transition: transform 65ms cubic-bezier(0.22, 1, 0.36, 1), opacity 140ms ease;
+  will-change: transform;
+}
+.ws-t1-caret.is-visible { opacity: 1; }
+.ws-t1-caret.is-visible.is-idle { animation: wsT1CaretPulse 1.05s ease-in-out infinite; }
+@keyframes wsT1CaretPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+.ws-t1-gap {
+  display: inline-block;
+  width: 0.36em;
+}
+.ws-t1-pad {
+  display: inline-block;
+  width: 6px;
+}
+.ws-t1-vi-active {
+  color: var(--ink-2);
+  background-image: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--accent) 20%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 20%, transparent) 34%,
+    transparent 34%
+  );
+  padding: 0 2px 1px;
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: color 180ms ease;
+}
+.ws-t1-cell:not(.is-focused) .ws-t1-vi-active {
+  color: var(--ink-2);
+  background-image: none;
+  padding: 0;
+  opacity: 0.82;
+}
+.ws-t1-vi-upcoming {
+  color: var(--ink-3);
+  opacity: 0.72;
+}
+
+.ws-t1-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: 12.2px;
+  color: var(--ink-2);
+}
+.ws-t1-kb-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ws-t1-kb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--ink);
   font-family: var(--font-ui);
-  font-size: 14.8px;
-  font-weight: 500;
-  line-height: 1.56;
-  resize: vertical;
-  outline: none;
-  text-align: left;
+  font-size: 12px;
+  font-weight: 650;
+  padding: 5px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 150ms ease;
 }
-.ws-sf-node-input:focus {
+.ws-t1-kb-btn:hover {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  background: var(--accent-soft);
 }
-.ws-sf-node-input.is-ok {
-  border-color: var(--ok);
-  background: color-mix(in srgb, var(--ok-soft) 35%, var(--surface));
+.ws-t1-kb-btn.is-primary {
+  border-color: color-mix(in srgb, var(--accent) 36%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
-.ws-sf-node-input.is-bad {
-  border-color: var(--danger);
+.ws-t1-kb-btn.is-primary:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.ws-t1-kb-btn kbd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: inherit;
+  background: color-mix(in srgb, var(--surface-panel) 80%, transparent);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.ws-t1-kb-btn.is-primary:hover kbd {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 .ws-sf-node-err {
   font-size: 11.8px;
   font-weight: 700;
   color: var(--danger);
   line-height: 1.4;
+  margin-top: 6px;
 }
-.ws-sf-node-ok {
-  font-size: 11.8px;
-  font-weight: 750;
-  color: var(--ok);
+@media (max-width: 860px) {
+  .ws-t1-row { grid-template-columns: 1fr; gap: 6px; }
+  .ws-t1-chain-grid { grid-template-columns: 1fr; }
+  .ws-t1-arrow { transform: rotate(90deg); height: 18px; }
 }
 .ws-unscramble-vi {
   font-size: 13.5px;
@@ -1137,6 +1528,49 @@ html[data-theme="dark"] .ws-gram-skel-formula {
   font-weight: 800;
   flex-shrink: 0;
   margin-top: 0;
+}
+#writing-flashcard-root .ws-para-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#writing-flashcard-root .ws-para-lbl {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: left;
+}
+#writing-flashcard-root .ws-para-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+#writing-flashcard-root .ws-para-chip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 11px;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  text-align: left;
+}
+#writing-flashcard-root .ws-para-chip-en {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-hover, var(--accent));
+  line-height: 1.3;
+}
+#writing-flashcard-root .ws-para-chip-vi {
+  font-size: 12.2px;
+  font-weight: 500;
+  color: var(--ink-2);
+  line-height: 1.3;
+}
+html[data-theme="dark"] #writing-flashcard-root .ws-para-chip-en {
+  color: var(--accent-2, #B9E4B4);
 }
 #writing-flashcard-root .ws-para-list {
   display: flex;
@@ -1897,6 +2331,7 @@ html[data-motion="original"] .ws-fc-card { transition: transform 0.45s cubic-bez
   z-index: 1200;
 }
 .ws-modal-overlay.open { display: flex; }
+#ws-ac-modal { z-index: 2500 !important; }
 .ws-modal-card {
   width: 100%;
   max-width: 780px;
@@ -1957,18 +2392,26 @@ html[data-motion="original"] .ws-fc-card { transition: transform 0.45s cubic-bez
 }
 .ws-underline-input {
   width: 100%;
-  background: transparent;
-  border: none;
-  border-bottom: 2.5px dashed var(--border-strong);
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 2.5px dashed var(--border-strong) !important;
+  border-radius: 0 !important;
   padding: 10px 6px;
   text-align: center;
   font-family: var(--font-ui);
   font-size: 21px;
   font-weight: 700;
   color: var(--ink);
-  outline: none;
+  outline: none !important;
+  box-shadow: none !important;
 }
-.ws-underline-input:focus { border-bottom-color: var(--accent); border-bottom-style: solid; }
+.ws-underline-input:focus,
+.ws-underline-input:focus-visible {
+  border: none !important;
+  border-bottom: 2.5px solid var(--accent) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
 .ws-feedback {
   padding: 11px 14px;
   border-radius: 12px;
@@ -2467,291 +2910,627 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
   gap: 10px;
 }
 
-/* ================= WRITING ROOM: PRACTICE STUDIO vs EXAM INSPERA ================= */
+/* ================= 1:1 OFFICIAL CD-IELTS INSPERA WRITING ROOM ================= */
 .ws-exam-room {
-  position: fixed;
-  inset: 0;
-  background: #F4F6F8;
-  color: #1A1D21;
+  display: none !important;
+}
+.ws-exam-room.open {
+  display: flex !important;
+  z-index: 1300 !important;
+}
+
+/* Inspera Options Popover (4 Contrast Presets + 3 Text Sizes) */
+.ws-ins-opt-wrap {
+  position: relative;
+}
+.ws-ins-opt-pop {
   display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 268px;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--ins-bg, #ffffff);
+  border: 1px solid var(--ins-border, #d9dad9);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+  z-index: 30;
   flex-direction: column;
-  z-index: 1300;
-  font-family: var(--font-ui), 'Inter', 'Segoe UI', system-ui, sans-serif;
+  gap: 12px;
+  text-align: left;
 }
-.ws-exam-room.open { display: flex; }
+.ws-ins-opt-pop.open {
+  display: flex;
+}
+.ws-ins-opt-lbl {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ins-muted, #555);
+  margin-bottom: 6px;
+}
+.ws-ins-opt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.ws-ins-opt-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.ws-ins-opt-choice {
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--ins-border, #d9dad9);
+  background: var(--ins-banner, #f4f5f4);
+  color: var(--ins-ink, #111);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+.ws-ins-opt-choice.active {
+  background: var(--ins-active-ring, #2b7bd6);
+  border-color: var(--ins-active-ring, #2b7bd6);
+  color: #ffffff;
+  font-weight: 700;
+}
 
-/* Practice Mode: Warm Totoro Washi Editorial Studio (supports Light & Dark theme) */
-.ws-exam-room.is-practice {
-  background: var(--bg-canvas, #F5F1E7);
-  color: var(--ink);
+/* Flat Inspera Left Prompt Pane */
+.ws-ins-left {
+  padding: 20px 28px 40px !important;
+  text-align: left;
+  color: var(--ins-ink);
+  font-size: var(--ins-fs, 15px);
+  line-height: 1.65;
 }
-.ws-exam-room.is-practice .ws-exam-bar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+.ws-ins-lead {
+  margin: 0 0 14px;
+  font-size: var(--ins-fs, 15px);
+  color: var(--ins-ink);
 }
-.ws-exam-room.is-practice .ws-exam-left {
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  color: var(--ink);
+.ws-ins-prompt-text {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border-left: 3px solid var(--ins-border, #d9dad9);
+  background: var(--ins-banner, #f4f5f4);
+  font-size: calc(var(--ins-fs, 15px) + 1px);
+  font-weight: 700;
+  line-height: 1.62;
+  color: var(--ins-ink);
 }
-.ws-exam-room.is-practice .ws-exam-right {
-  background: var(--bg-canvas, #F5F1E7);
-}
-.ws-exam-room.is-practice .ws-exam-prompt-box {
-  background: var(--surface-panel);
-  border: 1px solid var(--border-strong);
-}
-.ws-exam-room.is-practice .ws-exam-textarea {
-  background: var(--surface);
-  color: var(--ink);
-  border: 1.5px solid var(--border-strong);
-  border-radius: 14px;
-  box-shadow: var(--shadow-panel);
-}
-.ws-exam-room.is-practice .ws-exam-textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+.ws-ins-inst {
+  margin: 0 0 14px;
+  font-size: calc(var(--ins-fs, 15px) - 0.5px);
+  line-height: 1.56;
+  color: var(--ins-muted, #555555);
 }
 
-/* Exam Mode: Crisp Light-Only CD-IELTS Inspera */
-.ws-exam-room.is-exam {
-  background: #EEF2F5;
-  color: #182026;
-}
-.ws-exam-room.is-exam .ws-exam-bar {
-  background: #FFFFFF;
-  border-bottom: 1px solid #D5DCE3;
-}
-.ws-exam-room.is-exam .ws-exam-left {
-  background: #FFFFFF;
-  border-right: 1px solid #D5DCE3;
-  color: #182026;
-}
-.ws-exam-room.is-exam .ws-exam-right {
-  background: #F4F6F9;
-}
-.ws-exam-room.is-exam .ws-exam-prompt-box {
-  background: #F8FAFC;
-  border: 1.5px solid #D8E0E8;
-}
-.ws-exam-room.is-exam .ws-exam-textarea {
-  background: #FFFFFF;
-  color: #182026;
-  border: 1.5px solid #CBD5E1;
+/* Balanced 1-2-1 Practice Planning Scratchpad (Intro -> Body 1 | Body 2 -> Conclusion) */
+.ws-ins-plan-card {
+  margin-top: 14px;
+  border: 1px solid var(--ins-border, #d8d0bf);
   border-radius: 10px;
+  background: var(--ins-banner, #efe9dc);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
-.ws-exam-room.is-exam .ws-exam-textarea:focus {
-  border-color: #2F663D;
-  box-shadow: 0 0 0 3px rgba(47, 102, 61, 0.14);
-}
-
-.ws-exam-bar {
-  min-height: 58px;
-  padding: 8px 20px;
+.ws-ins-plan-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--ins-border, #d8d0bf);
 }
-.ws-exam-bar-left,
-.ws-exam-bar-right {
+.ws-ins-plan-title-wrap {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.ws-exam-mode-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 11px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.ws-exam-mode-badge.is-practice {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.ws-exam-mode-badge.is-exam {
-  background: #FEF2F2;
-  color: #B91C1C;
-  border: 1px solid #FECACA;
-}
-.ws-exam-wc-pill {
-  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 12px;
-  border-radius: 999px;
+}
+.ws-ins-plan-title {
   font-size: 12.5px;
-  font-weight: 750;
-  background: var(--bg-subtle, #EDF2F7);
-  color: var(--ink-2, #475569);
-  border: 1px solid var(--border, #CBD5E1);
-  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ins-ink);
 }
-.ws-exam-room.is-exam .ws-exam-wc-pill {
-  background: #F1F5F9;
-  color: #334155;
-  border-color: #CBD5E1;
+.ws-ins-plan-hint {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ins-muted);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--ins-bg);
+  border: 1px solid var(--ins-border);
 }
-.ws-exam-wc-pill.is-mid {
-  background: #FEF3C7;
-  color: #B45309;
-  border-color: #FCD34D;
-}
-.ws-exam-wc-pill.is-ok {
-  background: #DCFCE7;
-  color: #166534;
-  border-color: #86EFAC;
-}
-.ws-exam-timer-pill {
-  display: inline-flex;
+.ws-ins-plan-actions {
+  display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 13px;
-  border-radius: 9px;
-  background: var(--bg-subtle, #EDF2F7);
-  border: 1px solid var(--border, #CBD5E1);
-  font-weight: 800;
-  font-size: 13.5px;
-  font-variant-numeric: tabular-nums;
 }
-.ws-exam-room.is-exam .ws-exam-timer-pill {
-  background: #F1F5F9;
-  border-color: #CBD5E1;
-  color: #0F172A;
-}
-.ws-exam-timer-pill.urgent {
-  background: #FEE2E2 !important;
-  border-color: #FCA5A5 !important;
-  color: #B91C1C !important;
-}
-
-.ws-exam-split {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(340px, 0.92fr) 1.28fr;
-  overflow: hidden;
-}
-.ws-exam-left {
-  padding: 24px 28px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  text-align: left;
-}
-.ws-exam-part-lbl {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #2F663D;
-}
-.ws-exam-prompt-box {
-  padding: 18px 20px;
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.ws-exam-prompt-text {
-  font-size: 16px;
+.ws-ins-plan-btn {
+  border: 1px solid var(--ins-border);
+  background: var(--ins-bg);
+  color: var(--ins-muted);
+  font-size: 11.5px;
   font-weight: 700;
-  line-height: 1.62;
-  margin: 0;
-  text-align: left;
+  padding: 3px 9px;
+  border-radius: 6px;
+  cursor: pointer;
 }
-.ws-exam-instructions {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--ink-2, #475569);
+.ws-ins-plan-btn:hover {
+  color: var(--ins-ink);
+  border-color: var(--ins-active-ring);
+}
+.ws-ins-plan-body {
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ws-ins-plan-body.is-collapsed {
+  display: none;
+}
+.ws-ins-plan-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.ws-ins-plan-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.ws-exam-room.is-exam .ws-exam-instructions { color: #475569; }
-.ws-exam-hint-details {
-  border-radius: 13px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface-panel);
-  padding: 12px 15px;
+.ws-ins-plan-lbl {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ins-ink);
+  letter-spacing: 0.01em;
 }
-.ws-exam-hint-details summary {
-  cursor: pointer;
+.ws-ins-plan-ta {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--ins-border, #d8d0bf);
+  background: var(--ins-input-bg, #fffdf9);
+  color: var(--ins-ink);
+  font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
-  font-weight: 750;
-  color: var(--accent);
-  user-select: none;
+  line-height: 1.5;
+  resize: none;
+  outline: none !important;
+  text-align: left;
 }
-.ws-exam-hint-body {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-  font-size: 13px;
-  line-height: 1.58;
-  color: var(--ink);
+.ws-ins-plan-ta.is-compact { min-height: 54px; }
+.ws-ins-plan-ta.is-tall { min-height: 112px; }
+.ws-ins-plan-ta:focus {
+  border-color: var(--ins-active-ring, #3f6d52);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ins-active-ring, #3f6d52) 18%, transparent);
+}
+@media (max-width: 960px) {
+  .ws-ins-plan-2col { grid-template-columns: 1fr; }
+}
+
+/* Flat Inspera Right Essay Editor Pane */
+.ws-ins-right {
+  padding: 20px 28px 28px !important;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
-.ws-exam-hint-list {
-  margin: 4px 0 0;
-  padding-left: 16px;
+.ws-ins-editor-wrap {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 8px;
 }
-.ws-exam-right {
-  padding: 20px 26px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow-y: auto;
+.ws-ins-editor {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 360px;
+  padding: 14px 16px;
+  border: 1px solid var(--ins-input-bd, #888888);
+  border-radius: 2px;
+  background: var(--ins-input-bg, #ffffff);
+  color: var(--ins-ink, #111111);
+  font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--ins-fs, 15px);
+  line-height: 1.65;
+  resize: none;
+  outline: none !important;
+  text-align: left;
 }
-.ws-exam-editor-head {
+.ws-ins-editor:focus {
+  border-color: var(--ins-active-ring, #2b7bd6);
+  box-shadow: 0 0 0 1px var(--ins-active-ring, #2b7bd6);
+}
+.ws-ins-wc-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
+  gap: 10px;
+}
+.ws-ins-wc-val {
+  font-size: 13.5px;
   font-weight: 700;
-  color: var(--ink-3, #64748B);
+  color: var(--ins-ink, #111111);
+  font-variant-numeric: tabular-nums;
 }
-.ws-exam-room.is-exam .ws-exam-editor-head { color: #64748B; }
-.ws-exam-textarea {
-  flex: 1;
-  min-height: 360px;
+.ws-ins-wc-val.is-ok {
+  color: #1f8a4c;
+}
+
+/* Custom Practice Studio Header, Anti-Cheat Top Chip, Single-Box Planning & Spacious 63% Editor */
+.ws-prac-brand-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--ins-active-ring, #3f6d52) 13%, var(--ins-input-bg, #fffefb));
+  border: 1px solid color-mix(in srgb, var(--ins-active-ring, #3f6d52) 24%, transparent);
+  flex-shrink: 0;
+}
+.ws-hdr-ac-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--ins-active-ring, #2f5b3f);
+  background: color-mix(in srgb, var(--ins-active-ring, #3f6d52) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ins-active-ring, #3f6d52) 28%, transparent);
+  white-space: nowrap;
+}
+.ws-hdr-ac-chip.is-warn {
+  background: rgba(208, 114, 34, 0.16);
+  color: #a64d0b;
+  border-color: rgba(208, 114, 34, 0.42);
+}
+.ins-contrast-dark .ws-hdr-ac-chip,
+.ins-contrast-yellow .ws-hdr-ac-chip {
+  background: rgba(140, 201, 151, 0.14);
+  color: #9be0a9;
+  border-color: rgba(140, 201, 151, 0.32);
+}
+.ins-contrast-dark .ws-hdr-ac-chip.is-warn,
+.ins-contrast-yellow .ws-hdr-ac-chip.is-warn {
+  background: rgba(242, 169, 80, 0.2);
+  color: #ffd089;
+  border-color: rgba(242, 169, 80, 0.44);
+}
+
+.ws-prac-prompt-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ins-muted, #5c564c);
+}
+.ws-prac-part-badge {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--ins-active-ring, #3f6d52) 14%, transparent);
+  color: var(--ins-active-ring, #2f5b3f);
+}
+
+/* Single-Box Planning Card (spacious 1 textarea instead of 4 cramped boxes) */
+.ws-plan-single-card {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 220px;
+}
+.ws-plan-single-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+.ws-plan-single-ta {
+  flex: 1 1 auto;
+  min-height: 210px !important;
+  font-size: 14.5px !important;
+  line-height: 1.7 !important;
+  padding: 12px 14px !important;
+}
+.ws-plan-single-card .ws-ins-plan-head {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.ws-plan-single-card .ws-ins-plan-title {
+  white-space: nowrap;
+}
+.ws-plan-single-card .ws-ins-plan-actions {
+  flex-shrink: 0;
+  gap: 5px;
+}
+.ws-plan-single-card .ws-ins-plan-btn {
+  white-space: nowrap;
+  padding: 4px 9px;
+  font-size: 12px;
+}
+.ws-ins-plan-btn.is-accent {
+  color: var(--ins-active-ring, #2f5b3f);
+  border-color: color-mix(in srgb, var(--ins-active-ring, #3f6d52) 35%, transparent);
+  font-weight: 750;
+}
+
+/* Maximize Right Editor Canvas in Practice Mode (fills 63% width x full viewport height) */
+.ws-exam-room.is-practice .ws-ins-left {
+  padding: 14px 18px 16px !important;
+  display: flex;
+  flex-direction: column;
+}
+.ws-exam-room.is-practice .ws-ins-right.ws-prac-right-wide {
+  padding: 10px 14px 12px !important;
+}
+.ws-exam-room.is-practice.ins-size-regular .ws-ins-editor.ws-prac-editor {
+  font-size: 17px !important;
+  line-height: 1.85 !important;
+}
+.ws-exam-room.is-practice.ins-size-large .ws-ins-editor.ws-prac-editor {
+  font-size: 19px !important;
+  line-height: 1.88 !important;
+}
+.ws-exam-room.is-practice.ins-size-regular .ws-ins-prompt-text {
+  font-size: 15.5px !important;
+  line-height: 1.62 !important;
+}
+.ws-exam-room.is-practice.ins-size-large .ws-ins-prompt-text {
+  font-size: 17px !important;
+  line-height: 1.65 !important;
+}
+
+/* Custom Editorial Writing Paper Card (Practice Studio Mode — full-height spacious canvas) */
+.ws-prac-paper-card {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--ins-border, #d8d1c2) 85%, rgba(36, 34, 31, 0.14));
+  background: var(--ins-input-bg, #fffefb);
+  box-shadow: 0 10px 28px -18px rgba(34, 42, 34, 0.22), 0 2px 6px rgba(34, 42, 34, 0.05);
+  overflow: hidden;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.ws-prac-paper-card:focus-within {
+  border-color: color-mix(in srgb, var(--ins-active-ring, #3f6d52) 68%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ins-active-ring, #3f6d52) 13%, transparent), 0 12px 30px -18px rgba(34, 42, 34, 0.24);
+}
+.ws-prac-paper-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 11px 16px;
+  background: var(--ins-banner, #efe8da);
+  border-bottom: 1px solid color-mix(in srgb, var(--ins-border, #d8d1c2) 78%, transparent);
+}
+.ws-prac-paper-title-grp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ws-prac-paper-ico {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--ins-active-ring, #3f6d52) 14%, transparent);
+  color: var(--ins-active-ring, #3f6d52);
+}
+.ws-prac-paper-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--ins-ink, #24221f);
+}
+.ws-prac-para-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ins-muted, #5c564c);
+  background: color-mix(in srgb, var(--ins-input-bg, #ffffff) 75%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ins-border, #d8d1c2) 85%, transparent);
+}
+.ws-prac-paper-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.ws-prac-ac-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 750;
+  background: color-mix(in srgb, var(--ins-active-ring, #3f6d52) 13%, transparent);
+  color: var(--ins-active-ring, #315c42);
+  border: 1px solid color-mix(in srgb, var(--ins-active-ring, #3f6d52) 28%, transparent);
+}
+.ws-prac-ac-pill.is-warn {
+  background: rgba(208, 114, 34, 0.16);
+  color: #a64d0b;
+  border-color: rgba(208, 114, 34, 0.38);
+}
+.ws-prac-wc-pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--ins-input-bg, #ffffff);
+  color: var(--ins-ink, #24221f);
+  border: 1px solid color-mix(in srgb, var(--ins-border, #d8d1c2) 90%, transparent);
+}
+.ws-prac-wc-pill.is-mid {
+  color: #9e5d10;
+  border-color: rgba(208, 140, 34, 0.45);
+}
+.ws-prac-wc-pill.is-ok {
+  background: #e6f4ea;
+  color: #1d6433;
+  border-color: rgba(34, 138, 72, 0.42);
+}
+.ws-prac-paper-meter {
+  height: 3px;
   width: 100%;
-  padding: 18px 20px;
-  font-family: var(--font-ui), 'Inter', 'Segoe UI', system-ui, sans-serif;
-  font-size: 15px;
-  line-height: 1.75;
-  resize: none;
-  outline: none;
-  text-align: left;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  background: color-mix(in srgb, var(--ins-border, #d8d1c2) 55%, transparent);
+  overflow: hidden;
 }
-.ws-exam-result-card {
+.ws-prac-paper-meter-fill {
+  display: block;
+  height: 100%;
+  background: color-mix(in srgb, var(--ins-active-ring, #3f6d52) 72%, #b5893a);
+  transition: width 180ms ease, background-color 180ms ease;
+}
+.ws-prac-paper-meter-fill.is-mid { background: #cc8b2c; }
+.ws-prac-paper-meter-fill.is-ok { background: #268c4c; }
+
+.ws-ins-editor.ws-prac-editor {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 20px 24px !important;
+  font-family: "Be Vietnam Pro", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: calc(var(--ins-fs, 15px) + 0.5px);
+  line-height: 1.82;
+  letter-spacing: 0.005em;
+  background: transparent;
+  min-height: 320px;
+}
+.ws-ins-editor.ws-prac-editor::placeholder {
+  color: color-mix(in srgb, var(--ins-muted, #767066) 72%, transparent);
+  font-style: normal;
+  line-height: 1.75;
+}
+.ws-prac-paper-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: color-mix(in srgb, var(--ins-banner, #efe8da) 65%, var(--ins-input-bg, #fffefb));
+  border-top: 1px solid color-mix(in srgb, var(--ins-border, #d8d1c2) 72%, transparent);
+}
+.ws-prac-paper-foot-l {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--ins-muted, #5c564c);
+}
+.ws-prac-wc-note { font-weight: 700; }
+.ws-prac-wc-note.is-ok { color: #1f7a3f; }
+.ws-prac-ac-hint { opacity: 0.85; font-size: 12px; }
+.ws-prac-submit-pill {
+  height: 32px;
+  padding: 0 15px;
+  border-radius: 9px;
+  border: none;
+  background: var(--ins-active-ring, #3f6d52);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 130ms ease, filter 130ms ease;
+}
+.ws-prac-submit-pill:hover { filter: brightness(1.06); transform: translateY(-1px); }
+
+/* Dark & High-Contrast harmony for Custom Writing Paper Card */
+.ins-contrast-dark .ws-prac-ac-pill,
+.ins-contrast-yellow .ws-prac-ac-pill {
+  background: rgba(140, 201, 151, 0.14);
+  color: #9be0a9;
+  border-color: rgba(140, 201, 151, 0.3);
+}
+.ins-contrast-dark .ws-prac-ac-pill.is-warn,
+.ins-contrast-yellow .ws-prac-ac-pill.is-warn {
+  background: rgba(242, 169, 80, 0.2);
+  color: #ffd089;
+  border-color: rgba(242, 169, 80, 0.42);
+}
+.ins-contrast-dark .ws-prac-wc-pill.is-ok,
+.ins-contrast-yellow .ws-prac-wc-pill.is-ok {
+  background: rgba(46, 152, 86, 0.22);
+  color: #9ce8b2;
+}
+.ins-contrast-yellow .ws-prac-submit-pill {
+  background: #f5d842;
+  color: #111111;
+}
+
+/* Inspera Bottom Part 2 Tab */
+.ws-ins-part-tab {
+  position: relative;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 6px;
+}
+.ws-ins-part-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--ins-active-ring, #2b7bd6);
+}
+.ws-ins-part-bar.is-ready {
+  background: #22a052;
+}
+.ws-ins-footer-wc {
+  font-size: 12.5px;
+  color: var(--ins-muted, #555);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Post-Submission Review Box */
+.ws-ins-result-card {
   display: none;
-  background: var(--surface, #FFFFFF);
-  color: var(--ink, #182026);
-  border: 1.5px solid var(--ok, #2F6E49);
-  border-radius: 13px;
-  padding: 16px 18px;
+  padding: 14px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--ins-border, #d9dad9);
+  background: var(--ins-banner, #f4f5f4);
+  color: var(--ins-ink, #111111);
   font-size: 13.5px;
   line-height: 1.6;
+  text-align: left;
 }
-.ws-exam-room.is-exam .ws-exam-result-card {
-  background: #FFFFFF;
-  color: #182026;
+.ws-ins-res-title {
+  font-weight: 800;
+  color: #1f8a4c;
+  margin-bottom: 8px;
+}
+.ws-exam-hint-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 /* Responsive */
@@ -2763,13 +3542,15 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
   .ws-home-st-right { width: 100%; justify-content: space-between; }
   .ws-t3-head-row { display: none; }
   .ws-t3-pair-row, .ws-write-2col { grid-template-columns: 1fr; }
+  .ws-exam-room .ins-split-body { flex-direction: column; overflow-y: auto; }
+  .ws-exam-room .ins-resizer { display: none; }
+  .ws-ins-left { flex: 0 0 auto !important; padding: 14px 16px !important; }
+  .ws-ins-right { padding: 14px 16px !important; }
+  .ws-ins-editor { min-height: 260px; }
 }
 @media (max-width: 760px) {
   .ws-select { width: 100%; max-width: none; }
   .ws-prac-search-wrap { flex: 1 1 100%; min-width: 0; }
-  .ws-dnd-2col, .ws-sq-grid, .ws-trap-grid, .ws-prac-grid, .ws-exam-split { grid-template-columns: 1fr; }
+  .ws-dnd-2col, .ws-sq-grid, .ws-trap-grid, .ws-prac-grid { grid-template-columns: 1fr; }
   .ws-para-editor { min-height: 260px; font-size: 15px; }
-  .ws-exam-left { border-right: none; border-bottom: 1px solid var(--border, #D5DCE3); padding: 16px; }
-  .ws-exam-right { padding: 16px; }
-  .ws-exam-textarea { min-height: 240px; }
 }

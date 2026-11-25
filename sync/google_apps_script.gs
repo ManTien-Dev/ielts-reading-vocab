@@ -245,8 +245,12 @@ function compactSyncData_(sd, maxChars) {
   var slim = {
     resetEpoch: Number(sd.resetEpoch || 0),
     teacherUnlockedAt: Number(sd.teacherUnlockedAt || 0),
+    teacherTaskUnlocks: (sd.teacherTaskUnlocks && typeof sd.teacherTaskUnlocks === 'object') ? sd.teacherTaskUnlocks : {},
     taskLocks: (sd.taskLocks && typeof sd.taskLocks === 'object') ? sd.taskLocks : {},
     taskProgress: (sd.taskProgress && typeof sd.taskProgress === 'object') ? sd.taskProgress : {},
+    listeningTaskProgress: (sd.listeningTaskProgress && typeof sd.listeningTaskProgress === 'object') ? sd.listeningTaskProgress : {},
+    writingTaskProgress: (sd.writingTaskProgress && typeof sd.writingTaskProgress === 'object') ? sd.writingTaskProgress : {},
+    speakingTaskProgress: (sd.speakingTaskProgress && typeof sd.speakingTaskProgress === 'object') ? sd.speakingTaskProgress : {},
     listFinalCheckpoints: (sd.listFinalCheckpoints && typeof sd.listFinalCheckpoints === 'object') ? sd.listFinalCheckpoints : {},
     listMasteryCerts: (sd.listMasteryCerts && typeof sd.listMasteryCerts === 'object') ? sd.listMasteryCerts : {},
     timerByDay: (sd.timerByDay && typeof sd.timerByDay === 'object') ? sd.timerByDay : {},
@@ -380,19 +384,33 @@ function doPost(e) {
       var existingRow = targetRow > 0 ? values[targetRow - 1] : null;
       var existingSync = existingRow ? parseSyncJsonSafe_(existingRow[8]) : {};
       var oldLocks = (existingSync.taskLocks && typeof existingSync.taskLocks === 'object') ? existingSync.taskLocks : {};
+      var targetTaskId = String(payload.taskId || '').trim();
+      var perUnlocks = (existingSync.teacherTaskUnlocks && typeof existingSync.teacherTaskUnlocks === 'object') ? existingSync.teacherTaskUnlocks : {};
       var maxLockOrigin = 0;
-      Object.keys(oldLocks).forEach(function(tid) {
-        var origin = Number(oldLocks[tid] || 0) - LOCK_WINDOW_MS;
-        if (origin > maxLockOrigin) maxLockOrigin = origin;
-      });
+      if (targetTaskId) {
+        var uOne = Number(oldLocks[targetTaskId] || 0);
+        if (uOne > 0) maxLockOrigin = uOne - LOCK_WINDOW_MS;
+      } else {
+        Object.keys(oldLocks).forEach(function(tid) {
+          var origin = Number(oldLocks[tid] || 0) - LOCK_WINDOW_MS;
+          if (origin > maxLockOrigin) maxLockOrigin = origin;
+        });
+      }
       var effectiveUnlock = Math.max(
         Number(payload.unlockedAtTs || 0),
         Date.now(),
-        Number(existingSync.teacherUnlockedAt || 0),
+        targetTaskId ? Number(perUnlocks[targetTaskId] || 0) : Number(existingSync.teacherUnlockedAt || 0),
         maxLockOrigin > 0 ? (maxLockOrigin + 1) : 0
       );
-      existingSync.taskLocks = {};
-      existingSync.teacherUnlockedAt = effectiveUnlock;
+      if (targetTaskId) {
+        delete oldLocks[targetTaskId];
+        perUnlocks[targetTaskId] = effectiveUnlock;
+        existingSync.taskLocks = oldLocks;
+        existingSync.teacherTaskUnlocks = perUnlocks;
+      } else {
+        existingSync.taskLocks = {};
+        existingSync.teacherUnlockedAt = effectiveUnlock;
+      }
       var unlockSyncJson = compactSyncData_(existingSync, MAX_SYNC_CELL_CHARS);
 
       if (targetRow > 0) {
@@ -442,18 +460,30 @@ function doPost(e) {
         });
       }
 
-      // Guard 2: preserve newer teacherUnlockedAt & strip superseded taskLocks unless epoch increased
+      // Guard 2: preserve newer teacherUnlockedAt + teacherTaskUnlocks & strip superseded taskLocks unless epoch increased
       if (incomingEpoch === existingEpoch) {
         var existingUnlockAt = Number(curSync.teacherUnlockedAt || 0);
         var incomingUnlockAt = Number(incomingSync.teacherUnlockedAt || 0);
         var mergedUnlockAt = Math.max(existingUnlockAt, incomingUnlockAt);
         incomingSync.teacherUnlockedAt = mergedUnlockAt;
 
+        var existingPer = (curSync.teacherTaskUnlocks && typeof curSync.teacherTaskUnlocks === 'object') ? curSync.teacherTaskUnlocks : {};
+        var incomingPer = (incomingSync.teacherTaskUnlocks && typeof incomingSync.teacherTaskUnlocks === 'object') ? incomingSync.teacherTaskUnlocks : {};
+        var mergedPer = {};
+        Object.keys(existingPer).forEach(function(k) { mergedPer[k] = Number(existingPer[k] || 0); });
+        Object.keys(incomingPer).forEach(function(k) {
+          var v = Number(incomingPer[k] || 0);
+          if (v > Number(mergedPer[k] || 0)) mergedPer[k] = v;
+        });
+        incomingSync.teacherTaskUnlocks = mergedPer;
+
         var rawLocks = (incomingSync.taskLocks && typeof incomingSync.taskLocks === 'object') ? incomingSync.taskLocks : {};
         var cleanLocks = {};
         Object.keys(rawLocks).forEach(function(tid) {
           var untilMs = Number(rawLocks[tid] || 0);
-          if (untilMs > 0 && (mergedUnlockAt <= 0 || (untilMs - LOCK_WINDOW_MS) > mergedUnlockAt)) {
+          var origin = untilMs - LOCK_WINDOW_MS;
+          var perAt = Number(mergedPer[tid] || 0);
+          if (untilMs > 0 && (mergedUnlockAt <= 0 || origin > mergedUnlockAt) && (perAt <= 0 || origin > perAt)) {
             cleanLocks[tid] = untilMs;
           }
         });

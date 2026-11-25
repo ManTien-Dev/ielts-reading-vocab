@@ -85,7 +85,10 @@
   function getCooldownMap() { return readJson(COOLDOWN_KEY_BASE + getUid(), {}); }
   function saveCooldownMap(m) { writeJson(COOLDOWN_KEY_BASE + getUid(), m); }
   function getTaskProgMap() { return readJson(TASK_PROG_KEY_BASE + getUid(), {}); }
-  function saveTaskProgMap(m) { writeJson(TASK_PROG_KEY_BASE + getUid(), m); }
+  function saveTaskProgMap(m) {
+    writeJson(TASK_PROG_KEY_BASE + getUid(), m);
+    window.__VOCAB_BRIDGE__?.syncPushCurrentUser?.(false);
+  }
   function getSpeedUnlockMap() { return readJson(SPEED_UNLOCK_KEY_BASE + getUid(), {}); }
   function saveSpeedUnlockMap(m) { writeJson(SPEED_UNLOCK_KEY_BASE + getUid(), m); }
   function getPracticeHist() { return readJson(PRAC_HIST_KEY_BASE + getUid(), []); }
@@ -96,17 +99,33 @@
       try { localStorage.removeItem(keyBase + getUid()); } catch (_) {}
       return null;
     }
-    const info = readJson(keyBase + getUid(), null);
+    const uid = getUid();
+    const info = readJson(keyBase + uid, null);
     if (!info || !info.until) return null;
-    const rem = Number(info.until) - Date.now();
+    const until = Number(info.until || 0);
+    const origin = until - LOCK_PENALTY_MS;
+    // Respect Teacher Unlock All & Per-Task Unlock!
+    try {
+      const unlockAll = Number(localStorage.getItem(`ielts_teacher_unlocked_at_${uid}`) || 0);
+      const perMap = readJson(`ielts_teacher_task_unlocks_v1_${uid}`, {});
+      const lockKey = keyBase === PRAC_LOCK_KEY_BASE ? 'w_prac_lock' : (info.modId || 'w_task_lock');
+      const perUnlock = Math.max(Number(perMap[lockKey] || 0), Number(perMap.w_task_lock || 0));
+      if ((unlockAll > 0 && origin <= unlockAll) || (perUnlock > 0 && origin <= perUnlock)) {
+        localStorage.removeItem(keyBase + uid);
+        return null;
+      }
+    } catch (_) {}
+    const rem = until - Date.now();
     if (rem > 0) return { ...info, remainingMs: rem };
-    try { localStorage.removeItem(keyBase + getUid()); } catch (_) {}
+    try { localStorage.removeItem(keyBase + uid); } catch (_) {}
     return null;
   }
-  function setLockout(keyBase, reason) {
+  function setLockout(keyBase, reason, modId = '') {
     if (isTeacherBypass()) return null;
-    const payload = { until: Date.now() + LOCK_PENALTY_MS, reason: reason || 'Vi phạm quy chế' };
+    const resolvedModId = modId || examState?.mod?.id || state?.activeTaskModId || state?.selectedModId || '';
+    const payload = { until: Date.now() + LOCK_PENALTY_MS, reason: reason || 'Vi phạm quy chế', modId: resolvedModId };
     writeJson(keyBase + getUid(), payload);
+    window.__VOCAB_BRIDGE__?.syncPushCurrentUser?.(false, { force: true });
     return payload;
   }
 
@@ -156,20 +175,17 @@
     w_st02_m13: 'Ngăn chặn chảy máu chất xám',
     w_st02_m14: 'Đi làm sớm sau lớp 12',
     w_st02_m15: 'Phá trần sự nghiệp đi làm sớm',
-    w_st03_m01: 'Convenience & Flexibility',
+    w_st03_m01: 'Convenience & Dual Productivity',
     w_st03_m02: 'Loss of Interaction & Isolation',
-    w_st03_m03: 'Automation, AI & Job Displacement',
-    w_st03_m04: 'Human Creativity & Adaptation',
-    w_st03_m05: 'Always-On Stress & Burnout',
+    w_st03_m03: 'Automation, AI & Workforce Shift',
+    w_st03_m04: 'AI Limits & Human Creativity',
+    w_st03_m05: 'Always-On Stress & Disconnect',
     w_st03_m06: 'Self-Employment Trade-Offs',
-    w_st03_m07: 'Công nghệ, Màn hình & Gia đình',
-    w_st03_m08: 'Kỷ luật thiết bị số',
-    w_st03_m09: 'Học trực tuyến vs. Trường lớp',
-    w_st03_m10: 'Kết hợp học trực tuyến & trực tiếp',
-    w_st03_m11: 'Rủi ro dữ liệu & Tội phạm mạng',
-    w_st03_m12: 'Bảo mật dữ liệu & Chống lừa đảo',
-    w_st03_m13: 'Giãn doanh nghiệp ra vùng ven',
-    w_st03_m14: 'Hạ tầng vùng ven & Nhân lực'
+    w_st03_m07: 'Màn hình & Gia đình / Trẻ em',
+    w_st03_m08: 'Học trực tuyến & Sách số',
+    w_st03_m09: 'Rủi ro dữ liệu & Tội phạm mạng',
+    w_st03_m10: 'Bảo mật dữ liệu & Chống lừa đảo',
+    w_st03_m11: 'Giãn doanh nghiệp ra vùng ven'
   };
 
   function flowLabel(mod) {
@@ -198,19 +214,23 @@
       steps: mod.viFlowSteps || []
     });
 
-    const makeVocabCard = (v, i) => ({
-      id: `${mod.id}_v${i + 1}`,
-      modId: mod.id,
-      kind: 'vocab',
-      pos: String(v.pos || 'phr').toUpperCase(),
-      lesson: label,
-      en: v.en,
-      vi: v.vi,
-      example: v.example || '',
-      viPrompt: v.viPrompt || '',
-      enRef: v.enRef || '',
-      trapOpts: v.trapOpts || []
-    });
+    const posMapVi = { phr: 'CỤM TỪ', phrase: 'CỤM TỪ', n: 'DANH TỪ', noun: 'DANH TỪ', v: 'ĐỘNG TỪ', verb: 'ĐỘNG TỪ', adj: 'TÍNH TỪ', adv: 'TRẠNG TỪ' };
+    const makeVocabCard = (v, i) => {
+      const rawPos = String(v.pos || 'phr').trim().toLowerCase();
+      return {
+        id: `${mod.id}_v${i + 1}`,
+        modId: mod.id,
+        kind: 'vocab',
+        pos: posMapVi[rawPos] || 'CỤM TỪ',
+        lesson: label,
+        en: v.en,
+        vi: v.vi,
+        example: v.example || '',
+        viPrompt: v.viPrompt || '',
+        enRef: v.enRef || '',
+        trapOpts: v.trapOpts || []
+      };
+    };
 
     // 2. Multi-branch modules: Overview Vocab (-1) -> Branch Flow card -> Vocab of that exact branch!
     if (isMultiBranch) {
@@ -313,6 +333,20 @@
     if (Array.isArray(window.RAW_VOCAB_DATA)) {
       window.RAW_VOCAB_DATA.forEach((it) => { addTokens(it.word); addTokens(it.example); });
     }
+    const extraIeltsValid = (
+      'fierce stagnant skyrocketing soaring mounting escalating pressing intense severe acute ' +
+      'relentless cutthroat unspoken implicit constant perpetual prolong prolonging prolonged ' +
+      'extend extending extended overtime workday burnout exhaustion fatigue decline declining ' +
+      'declined refuse refusing refused dedication commitment loyalty prospects advancement ' +
+      'reachable available assign assigning assigned delegate delegating delegated supplementary ' +
+      'secondary essentials necessities expenses affordable unaffordable metropolitan urban ' +
+      'corporate workplace employees employers workers salaries wages income living costs ' +
+      'financial pressure strain burden stress anxiety depression productivity efficiency ' +
+      'automation technological digital connectivity smartphones messaging platforms devices ' +
+      'routine manual labor labour displaced displacement unemployment retraining reskilling ' +
+      'legislation regulation enforcement subsidies incentives initiatives awareness campaigns'
+    );
+    addTokens(extraIeltsValid);
     cachedValidLexicon = lex;
     return lex;
   }
@@ -460,9 +494,25 @@
       window.addEventListener(ev, () => { state.lastActivityAt = Date.now(); }, { passive: true });
     });
 
-    // Global anti-cheat listener for Writing Recall, Task 3-Test & Practice Exam
+    // Global anti-cheat listener for Writing Recall, Task 3-Test & Practice/Exam Room
+    let lastAcLeaveAt = 0;
+    const triggerAcLeave = (reason) => {
+      const now = Date.now();
+      if (now - lastAcLeaveAt < 1500) return;
+      lastAcLeaveAt = now;
+      handleGlobalAntiCheatLeave(reason);
+    };
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) handleGlobalAntiCheatLeave('Chuyển tab trình duyệt');
+      if (document.hidden) triggerAcLeave('Chuyển tab trình duyệt');
+    });
+    window.addEventListener('blur', () => {
+      if (pracState && !pracState.submitted) {
+        setTimeout(() => {
+          if (!document.hasFocus() && pracState && !pracState.submitted) {
+            triggerAcLeave('Rời cửa sổ làm bài');
+          }
+        }, 180);
+      }
     });
 
     // Keyboard shortcuts on Writing Flashcard
@@ -552,6 +602,21 @@
     };
   }
 
+  function splitFlowCueClauses(cueText) {
+    const raw = String(cueText || '').trim();
+    if (!raw) return [''];
+    const sepRe = /(\s*\/\s*|\s*,\s*|\s+—\s+|\s+→\s+)/;
+    const m = raw.match(sepRe);
+    if (m && m.index !== undefined) {
+      const left = raw.slice(0, m.index + m[0].length).trim();
+      const right = raw.slice(m.index + m[0].length).trim();
+      const lw = left.replace(/[^\p{L}\p{N}\s]/gu, '').trim().split(/\s+/).filter(Boolean).length;
+      const rw = right.replace(/[^\p{L}\p{N}\s]/gu, '').trim().split(/\s+/).filter(Boolean).length;
+      if (lw >= 2 && rw >= 2) return [left, right];
+    }
+    return [raw];
+  }
+
   function renderSmartFlowDiagram(mod, opts = {}) {
     const sf = mod?.smartFlow;
     if (!sf) {
@@ -566,23 +631,32 @@
       opts.targets.forEach((t) => { targetMap[t.key] = t; });
     }
 
-    const renderEditableNode = (key, cueText, isOutcome, extraHeaderHtml) => {
+    const T1_STEP_LABELS = ['01 · Nguyên nhân', '02 · Cơ chế', '03 · Hệ quả', '04 · Kết quả'];
+    const T1_ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
+    const T1_CHECK_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+    const renderEditableNode = (key, cueText, isOutcome, stepLabel) => {
       const val = opts.drafts?.[key] || '';
       const locked = Boolean(opts.locked?.[key]);
       const aud = opts.audit?.[key] || null;
-      const boxCls = locked ? 'is-ok' : (aud && !aud.pass ? 'is-bad' : '');
+      const clauses = splitFlowCueClauses(cueText);
+      const clauseIdx = locked ? clauses.length : Number(opts.clauseIdx?.[key] || 0);
+      const isDone = locked || (clauseIdx >= clauses.length && val.trim().length > 0);
+      const boxCls = locked ? 'is-ok is-done' : (aud && !aud.pass ? 'is-bad' : (isDone ? 'is-done' : ''));
       const pasteGuard = !isTeacherBypass()
         ? "event.preventDefault(); WritingStudio.toastMsg('Không được dán bài — hãy tự gõ tiếng Anh để nhớ chính tả!');"
         : '';
       return `
-        <div class="${extraHeaderHtml ? 'ws-sf-station' : 'ws-sf-node'} is-editable ${isOutcome ? 'is-outcome' : ''} ${boxCls}">
-          ${extraHeaderHtml || ''}
-          <div class="ws-sf-node-cue">${esc(cueText)}</div>
-          <textarea class="ws-sf-node-input ${boxCls}" id="ws-t1-node-${key}" ${locked ? 'readonly' : ''}
-            placeholder="Gõ cụm / vế tiếng Anh..."
-            oninput="WritingStudio.saveT1NodeDraft('${key}', this.value)"
-            onpaste="${pasteGuard}">${esc(val)}</textarea>
-          ${locked ? '<div class="ws-sf-node-ok">✓ Đạt chuẩn chính tả &amp; ý nghĩa</div>' : ''}
+        <div class="ws-t1-cell ${isOutcome ? 'is-outcome' : ''} ${boxCls}" data-t1-key="${key}">
+          <span class="ws-t1-step">${esc(stepLabel)}</span>
+          <span class="ws-t1-check" aria-hidden="true">${T1_CHECK_SVG}</span>
+          <div class="ws-t1-wrap">
+            <div class="ws-t1-mirror" aria-hidden="true"></div>
+            <div class="ws-t1-caret" aria-hidden="true"></div>
+            <textarea class="ws-t1-ta" id="ws-t1-node-${key}" data-t1-key="${key}" ${locked ? 'readonly' : ''}
+              spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+              onpaste="${pasteGuard}">${esc(val)}</textarea>
+          </div>
           ${!locked && aud && !aud.pass ? `<div class="ws-sf-node-err">${esc(aud.msg)}</div>` : ''}
         </div>
       `;
@@ -600,6 +674,28 @@
     };
 
     if (sf.mode === 'branches') {
+      if (isEditable) {
+        return `
+          <div class="ws-t1-board" onclick="event.stopPropagation()">
+            ${(sf.rows || []).map((row, rIdx) => `
+              <div class="ws-t1-row">
+                <div class="ws-t1-tag tone-${esc(row.tone || 'sage')}">
+                  <span class="ws-t1-tag-num">NHÁNH 0${rIdx + 1}</span>
+                  <span class="ws-t1-tag-name">${esc(row.label)}</span>
+                </div>
+                ${(row.nodes || []).map((nd, cIdx) => {
+                  const key = `${rIdx}_${cIdx}`;
+                  const prevKey = cIdx > 0 ? `${rIdx}_${cIdx - 1}` : '';
+                  const arrow = cIdx > 0 ? `<div class="ws-t1-arrow" data-t1-arrow-after="${prevKey}" aria-hidden="true">${T1_ARROW_SVG}</div>` : '';
+                  const isOutcome = cIdx === row.nodes.length - 1;
+                  const stepLbl = T1_STEP_LABELS[cIdx] || `0${cIdx + 1}`;
+                  return `${arrow}${renderEditableNode(key, nd, isOutcome, stepLbl)}`;
+                }).join('')}
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
       return `
         <div class="ws-sf-wrap" onclick="event.stopPropagation()">
           <div class="ws-sf-branches">
@@ -611,9 +707,6 @@
                     const key = `${rIdx}_${cIdx}`;
                     const arrow = cIdx > 0 ? '<span class="ws-sf-arrow" aria-hidden="true">→</span>' : '';
                     const isOutcome = cIdx === row.nodes.length - 1;
-                    if (isEditable) {
-                      return `${arrow}${renderEditableNode(key, nd, isOutcome, '')}`;
-                    }
                     if (isQuiz && targetMap[key]) {
                       return `${arrow}${renderSlotBtn(targetMap[key])}`;
                     }
@@ -632,6 +725,32 @@
 
     // Mode B: 2x2 Connected 4-Station Chain
     const stages = sf.stages || [];
+    if (isEditable) {
+      const renderEditableStation = (st, idx) => {
+        const key = `s_${idx}`;
+        const isOutcome = idx === stages.length - 1;
+        const stepLbl = `0${idx + 1} · ${st.role || 'Bước'}`;
+        return renderEditableNode(key, st.text, isOutcome, stepLbl);
+      };
+      if (stages.length === 4) {
+        return `
+          <div class="ws-t1-chain-grid" onclick="event.stopPropagation()">
+            ${renderEditableStation(stages[0], 0)}
+            <div class="ws-t1-arrow" data-t1-arrow-after="s_0" aria-hidden="true">${T1_ARROW_SVG}</div>
+            ${renderEditableStation(stages[1], 1)}
+            ${renderEditableStation(stages[2], 2)}
+            <div class="ws-t1-arrow" data-t1-arrow-after="s_2" aria-hidden="true">${T1_ARROW_SVG}</div>
+            ${renderEditableStation(stages[3], 3)}
+          </div>
+        `;
+      }
+      return `
+        <div class="ws-t1-chain-grid" onclick="event.stopPropagation()">
+          ${stages.map((st, idx) => renderEditableStation(st, idx)).join('')}
+        </div>
+      `;
+    }
+
     const renderStation = (st, idx) => {
       const key = `s_${idx}`;
       const isOutcome = idx === stages.length - 1;
@@ -641,9 +760,6 @@
           <span class="ws-sf-role">${esc(st.role)}</span>
         </div>
       `;
-      if (isEditable) {
-        return renderEditableNode(key, st.text, isOutcome, roleHeader);
-      }
       let innerHtml = '';
       if (isQuiz && targetMap[key]) {
         innerHtml = renderSlotBtn(targetMap[key]);
@@ -853,11 +969,11 @@
       `;
     }).join('');
 
-    // Adaptive word sizing inside Reading's .fc-word
+    // Adaptive word sizing inside Reading's .fc-word (matches Reading bold hero scale)
     const wc = String(card.en || '').split(/\s+/).length;
     let wordSizeCls = 'ws-word-sm';
     if (card.kind === 'grammar') wordSizeCls = 'ws-word-formula';
-    else if (wc >= 6) wordSizeCls = 'ws-word-lg';
+    else if (wc >= 5) wordSizeCls = 'ws-word-lg';
     else if (wc >= 3) wordSizeCls = 'ws-word-md';
 
     const statusCls = stLevel === 3 ? 'mastered' : (stLevel === 2 ? 'slow' : (stLevel === 1 ? 'unremembered' : ''));
@@ -881,8 +997,16 @@
       const primaryTarget = card.items?.[0]?.en || '';
       backBodyHtml = `
         <div class="fc-back-meaning">${esc(card.vi)}</div>
-        <div class="ws-para-list" style="margin-bottom:10px;">
-          ${(card.items || []).map((it) => `<div class="ws-para-item"><strong>${esc(it.en)}</strong> — ${esc(it.vi)}</div>`).join('')}
+        <div class="ws-para-section">
+          <div class="ws-para-lbl">PARAPHRASE C1–C2</div>
+          <div class="ws-para-chips">
+            ${(card.items || []).map((it) => `
+              <div class="ws-para-chip">
+                <span class="ws-para-chip-en">${esc(it.en)}</span>
+                <span class="ws-para-chip-vi">${esc(it.vi)}</span>
+              </div>
+            `).join('')}
+          </div>
         </div>
         ${card.example ? `<div class="fc-sentence-box">${highlightInExample(card.example, primaryTarget)}</div>` : ''}
       `;
@@ -2031,6 +2155,7 @@
       const tierCls = m.tier === 'cross' ? 'is-cross' : (m.tier === 'solution' ? 'is-solution' : 'is-core');
       const pillCls = isDone ? 'ok' : (m.tier === 'cross' ? 'warm' : (m.tier === 'solution' ? 'info' : ''));
       const tierLabel = m.tier === 'cross' ? 'Cross-Topic' : (m.tier === 'solution' ? 'Solution' : 'Core Flow');
+      const firstPromptId = (m.linkedPromptIds && m.linkedPromptIds[0]) || (getModulePrompts(m)[0]?.id) || '';
       return `
         <article class="ws-task-card ${tierCls} ${isDone ? 'is-done' : ''}">
           <div>
@@ -2046,12 +2171,14 @@
               <div class="ws-task-prog-track"><div class="ws-task-prog-fill" style="width:${mStat.pct}%;"></div></div>
               <span class="ws-task-prog-pct">${mStat.pct}%</span>
             </div>
-            <div class="ws-task-foot" style="margin-top:10px;">
+            <div class="ws-task-foot" style="margin-top:10px;gap:6px;">
               ${isTeacherBypass()
-                ? `<button type="button" class="btn" style="padding:6px 10px;font-size:11.5px;" onclick="WritingStudio.copyTaskLink('${esc(m.id)}')">Copy link</button>`
-                : `<span class="ws-task-steps-hint">${isDone ? 'Đã hoàn thành ✓' : 'Flow · Gram · Write'}</span>`}
-              <button type="button" class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="WritingStudio.openTask('${esc(m.id)}')">
-                ${isDone ? 'Xem / Làm lại' : 'Vào Task →'}
+                ? `<button type="button" class="btn" style="padding:6px 9px;font-size:11.5px;" onclick="WritingStudio.copyTaskLink('${esc(m.id)}')">Copy link</button>`
+                : (firstPromptId
+                  ? `<button type="button" class="btn" style="padding:6px 10px;font-size:12px;" onclick="WritingStudio.launchPracticeFromTask('${esc(firstPromptId)}', 'practice')" title="Thực hành viết bài hoàn chỉnh ngay trên đề thật của Flow này">Viết đề thật</button>`
+                  : `<span class="ws-task-steps-hint">${isDone ? 'Đã hoàn thành ✓' : 'Flow · Gram · Write'}</span>`)}
+              <button type="button" class="btn btn-primary" style="padding:7px 13px;font-size:12.5px;" onclick="WritingStudio.openTask('${esc(m.id)}')">
+                ${isDone ? 'Làm lại Task' : 'Vào Task →'}
               </button>
             </div>
           </div>
@@ -2081,8 +2208,10 @@
   }
 
   function copyTaskLink(modId) {
-    const url = `${window.location.origin}${window.location.pathname}?wtask=${encodeURIComponent(modId)}`;
-    navigator.clipboard?.writeText?.(url).then(() => toast('Đã sao chép link giao Task Writing!')).catch(() => toast(url));
+    const base = `${window.location.origin}${window.location.pathname}`;
+    const url = `${base}?task=${encodeURIComponent(modId)}`;
+    const msg = `DAILY HOMEWORK\n-WRITING: ${url}`;
+    navigator.clipboard?.writeText?.(msg).then(() => toast('Đã copy mẫu DAILY HOMEWORK (Writing) gửi Zalo!')).catch(() => toast(msg));
   }
 
   function openTask(modId) {
@@ -2284,10 +2413,12 @@
       stage: 1, // 1: VI Flow -> EN (3m/4m) | 2: Grammar Skeleton -> Paragraph (8m) | 3: Real Exam Prompt -> Body (12m)
       strikes: 0,
       stageSecsLeft: getTaskStageLimitSec(mod, 1),
-      // Stage 1 state (Inline Editable Smart Flow Nodes)
+      // Stage 1 state (Inline Editable Smart Flow Nodes · 100% Tab-controlled)
       t1NodeDrafts: {},
       t1NodeAudit: {},
       t1NodeLocked: {},
+      t1NodeClauseIdx: {},
+      t1FocusedKey: null,
       // Stage 2 state (Grammar Skeleton -> Full Paragraph)
       t2Paragraph: '',
       t2Audit: null,
@@ -2364,20 +2495,40 @@
     let bodyHtml = '';
 
     if (stage === 1) {
+      const t1Total = getFlowNodeSpecList(mod).length;
       bodyHtml = `
-        <div class="ws-modal-head">
+        <div class="ws-t1-stage-head">
           <div>
-            <div style="font-size:17px;font-weight:750;">Test 1 · Viết Tiếng Anh Trực Tiếp Trong Sơ Đồ Flow</div>
-            <div style="font-size:13.5px;color:var(--ink-2);margin-top:2px;">Gõ cụm từ hoặc vế tiếng Anh tương ứng ngay bên dưới từng mắt xích tiếng Việt trong sơ đồ (tự động soi chính tả).</div>
+            <div class="ws-t1-stage-title">Test 1 · Viết Tiếng Anh Trực Tiếp Trong Sơ Đồ Flow</div>
+            <div class="ws-t1-stage-sub">Gõ tiếng Anh ngay trên từng mắt xích — chữ Tiếng Việt giữ nguyên 100% lúc gõ; dịch xong ý nào nhấn <strong>Tab</strong> hoặc <strong>Enter</strong> để ẩn và sang bước tiếp.</div>
           </div>
-          <button type="button" class="btn btn-primary" onclick="WritingStudio.checkTaskTest1()">Kiểm tra &amp; Sang Test 2 →</button>
+          <div class="ws-t1-telemetry">
+            <div class="ws-t1-stat is-accent">
+              <svg class="ws-t1-ring" viewBox="0 0 18 18" aria-hidden="true">
+                <circle class="ws-t1-ring-bg" cx="9" cy="9" r="7" />
+                <circle class="ws-t1-ring-fg" id="ws-t1-ring-fg" cx="9" cy="9" r="7" />
+              </svg>
+              <strong id="ws-t1-stat-done">0/${t1Total}</strong><span>ô</span>
+            </div>
+            <div class="ws-t1-stat"><strong id="ws-t1-stat-words">0</strong><span>từ</span></div>
+            <div class="ws-t1-stat" id="ws-t1-stat-err-wrap"><strong id="ws-t1-stat-typos">0</strong><span>lỗi</span></div>
+            <button type="button" class="btn btn-primary" onclick="WritingStudio.checkTaskTest1()">Kiểm tra &amp; Sang Test 2 →</button>
+          </div>
         </div>
         ${renderSmartFlowDiagram(mod, {
           editable: true,
           drafts: examState.t1NodeDrafts,
           audit: examState.t1NodeAudit,
-          locked: examState.t1NodeLocked
+          locked: examState.t1NodeLocked,
+          clauseIdx: examState.t1NodeClauseIdx
         })}
+        <div class="ws-t1-footer">
+          <span class="ws-t1-footer-note">Tự do paraphrase hoặc đổi cấu trúc câu — chữ Tiếng Việt chỉ ẩn khi tự bạn xác nhận.</span>
+          <div class="ws-t1-kb-group">
+            <button type="button" class="ws-t1-kb-btn is-primary" id="ws-t1-btn-next">Xong ý này <kbd>Tab</kbd></button>
+            <button type="button" class="ws-t1-kb-btn" id="ws-t1-btn-prev">Hiện lại / Lùi ô <kbd>Shift</kbd>+<kbd>Tab</kbd></button>
+          </div>
+        </div>
       `;
     } else if (stage === 2) {
       const wc = String(examState.t2Paragraph || '').trim() ? String(examState.t2Paragraph).trim().split(/\s+/).length : 0;
@@ -2443,10 +2594,16 @@
             <div style="font-size:17px;font-weight:750;">Test 3 · Đề Thi Thật &amp; Viết Đoạn Body Thực Chiến</div>
             <div style="font-size:13.5px;color:var(--ink-2);margin-top:2px;">Vận dụng độc lập Flow, Grammar và Vocab vừa luyện để viết 01 đoạn Body hoàn chỉnh tối thiểu 85 từ.</div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             ${!examState.t3Finalized
               ? `<button type="button" class="btn btn-primary" onclick="WritingStudio.submitTaskTest3()">${aud ? `Nộp lại đoạn Body · Còn ${examState.t3RetriesLeft} lượt` : 'Nộp đoạn Body & Chấm bài'}</button>`
-              : `<button type="button" class="btn btn-primary" onclick="WritingStudio.closeTaskExamModal(true)">Hoàn tất Task ✓</button>`}
+              : `
+                ${curPrompt.id ? `
+                  <button type="button" class="btn btn-primary" onclick="WritingStudio.launchPracticeFromTask('${esc(curPrompt.id)}', 'practice')">Viết bài hoàn chỉnh (Luyện tập) →</button>
+                  <button type="button" class="btn" onclick="WritingStudio.launchPracticeFromTask('${esc(curPrompt.id)}', 'exam')">Thi thật 40p</button>
+                ` : ''}
+                <button type="button" class="btn" onclick="WritingStudio.closeTaskExamModal(true)">Hoàn tất Task ✓</button>
+              `}
           </div>
         </div>
 
@@ -2536,6 +2693,7 @@
       </div>
       ${bodyHtml}
     `;
+    if (stage === 1) bindT1InlineFlow();
   }
 
   function teacherJumpExam(stageNum) {
@@ -2543,7 +2701,9 @@
     advanceTaskStage(stageNum);
   }
 
-  /* Stage 1 Handlers: Inline Smart Flow Node VI -> EN + Spelling Check */
+  /* Stage 1 Handlers: Inline Tab-Controlled Monkeytype Flow + Live Spelling Check */
+  const t1IdleTimers = new WeakMap();
+
   function saveT1NodeDraft(nodeKey, val) {
     if (examState) examState.t1NodeDrafts[nodeKey] = val;
   }
@@ -2554,22 +2714,244 @@
     if (!sf) return list;
     if (sf.mode === 'branches') {
       (sf.rows || []).forEach((row, rIdx) => {
-        (row.nodes || []).forEach((_, cIdx) => {
+        (row.nodes || []).forEach((nd, cIdx) => {
           list.push({
             key: `${rIdx}_${cIdx}`,
+            cue: nd,
             keys: sf.nodeKeys?.[rIdx]?.[cIdx] || []
           });
         });
       });
     } else {
-      (sf.stages || []).forEach((_, sIdx) => {
+      (sf.stages || []).forEach((st, sIdx) => {
         list.push({
           key: `s_${sIdx}`,
+          cue: st.text || '',
           keys: sf.nodeKeys?.[sIdx] || []
         });
       });
     }
     return list;
+  }
+
+  function renderT1MirrorTokens(text, isAtEnd, targetPhrases) {
+    if (!text) return { html: '', typos: 0 };
+    const parts = text.match(/(\s+|\S+)/g) || [];
+    const typoList = detectSpellingTypos(text, targetPhrases);
+    const typoSet = new Set(typoList.map((w) => w.toLowerCase()));
+    let typos = 0;
+    const html = parts.map((part, idx) => {
+      if (/^\s+$/.test(part)) return esc(part);
+      const isLastActiveWord = isAtEnd && idx === parts.length - 1 && !/[.,;:!?)]$/.test(part);
+      const cleanWord = part.toLowerCase().replace(/^[^a-z'-]+|[^a-z'-]+$/g, '');
+      const isBad = !isLastActiveWord && cleanWord.length >= 3 && (COMMON_IELTS_TYPOS.has(cleanWord) || typoSet.has(cleanWord));
+      if (isBad) {
+        typos++;
+        return `<span class="ws-t1-tok-err">${esc(part)}</span>`;
+      }
+      return `<span class="ws-t1-tok-ok">${esc(part)}</span>`;
+    }).join('');
+    return { html, typos };
+  }
+
+  function positionT1Caret(wrapEl, caretEl, isFocused, isTypingEvent) {
+    if (!wrapEl || !caretEl) return;
+    if (!isFocused) {
+      clearTimeout(t1IdleTimers.get(caretEl));
+      t1IdleTimers.delete(caretEl);
+      caretEl.classList.remove('is-visible', 'is-idle');
+      return;
+    }
+    const anchor = wrapEl.querySelector('.ws-t1-anchor');
+    if (!anchor) return;
+    const wrapRect = wrapEl.getBoundingClientRect();
+    const anchorRect = anchor.getBoundingClientRect();
+    const x = Math.round(anchorRect.left - wrapRect.left);
+    const y = Math.round(anchorRect.top - wrapRect.top + (anchorRect.height - caretEl.offsetHeight) * 0.5);
+    caretEl.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    caretEl.classList.add('is-visible');
+    if (isTypingEvent) {
+      caretEl.classList.remove('is-idle');
+      clearTimeout(t1IdleTimers.get(caretEl));
+      t1IdleTimers.set(caretEl, setTimeout(() => caretEl.classList.add('is-idle'), 450));
+    } else if (!t1IdleTimers.has(caretEl)) {
+      caretEl.classList.add('is-idle');
+    }
+  }
+
+  function bindT1InlineFlow() {
+    if (!examState || examState.stage !== 1) return;
+    const mod = examState.mod;
+    const specs = getFlowNodeSpecList(mod);
+    const specMap = {};
+    specs.forEach((s) => { specMap[s.key] = s; });
+    const allPhrases = (mod.vocab || []).map((v) => v.en);
+    const card = document.getElementById('ws-task-exam-card');
+    if (!card) return;
+
+    const entries = [];
+    const typoByNode = {};
+
+    const updateTelemetry = () => {
+      let doneCnt = 0;
+      let wordCnt = 0;
+      let typoCnt = 0;
+      entries.forEach((en) => {
+        const val = en.ta.value.trim();
+        if (val) wordCnt += val.split(/\s+/).length;
+        const locked = Boolean(examState.t1NodeLocked[en.key]);
+        const cIdx = Number(examState.t1NodeClauseIdx[en.key] || 0);
+        if (locked || (cIdx >= en.clauses.length && val.length > 0)) doneCnt++;
+        typoCnt += typoByNode[en.key] || 0;
+      });
+      const total = entries.length || 1;
+      const doneEl = document.getElementById('ws-t1-stat-done');
+      const wordEl = document.getElementById('ws-t1-stat-words');
+      const typoEl = document.getElementById('ws-t1-stat-typos');
+      const errWrap = document.getElementById('ws-t1-stat-err-wrap');
+      const ringFg = document.getElementById('ws-t1-ring-fg');
+      if (doneEl) doneEl.textContent = `${doneCnt}/${entries.length}`;
+      if (wordEl) wordEl.textContent = String(wordCnt);
+      if (typoEl) typoEl.textContent = String(typoCnt);
+      if (errWrap) errWrap.classList.toggle('is-err', typoCnt > 0);
+      if (ringFg) ringFg.style.strokeDashoffset = (44 * (1 - doneCnt / total)).toFixed(2);
+    };
+
+    const syncEntry = (en, isTypingEvent) => {
+      if (!examState) return;
+      const val = en.ta.value;
+      examState.t1NodeDrafts[en.key] = val;
+      const locked = Boolean(examState.t1NodeLocked[en.key]);
+      if (!val.trim() && !locked) examState.t1NodeClauseIdx[en.key] = 0;
+      const activeIdx = locked ? en.clauses.length : Number(examState.t1NodeClauseIdx[en.key] || 0);
+
+      const sel = en.ta.selectionStart ?? val.length;
+      const before = val.slice(0, sel);
+      const after = val.slice(sel);
+      const tBefore = renderT1MirrorTokens(before, after.length === 0, en.targetPhrases);
+      const tAfter = renderT1MirrorTokens(after, true, en.targetPhrases);
+      typoByNode[en.key] = tBefore.typos + tAfter.typos;
+
+      let viHtml = '';
+      if (activeIdx < en.clauses.length) {
+        const gap = val.length > 0 ? (!/\s$/.test(val) ? '<span class="ws-t1-gap"></span>' : '<span class="ws-t1-pad"></span>') : '';
+        const activeTxt = `<span class="ws-t1-vi-active">${esc(en.clauses[activeIdx])}</span>`;
+        const restTxt = en.clauses.slice(activeIdx + 1).map((c) => esc(c)).join(' ');
+        viHtml = `${gap}${activeTxt}${restTxt ? ` <span class="ws-t1-vi-upcoming">${restTxt}</span>` : ''}`;
+      }
+
+      en.mirror.innerHTML = `${tBefore.html}<span class="ws-t1-anchor"></span>${tAfter.html}${viHtml}`;
+      en.ta.style.height = `${Math.max(54, en.mirror.scrollHeight)}px`;
+
+      const isDone = locked || (activeIdx >= en.clauses.length && val.trim().length > 0);
+      en.cell.classList.toggle('is-done', isDone);
+      if (en.arrowAfter) en.arrowAfter.classList.toggle('is-lit', isDone);
+
+      updateTelemetry();
+      requestAnimationFrame(() => positionT1Caret(en.wrap, en.caret, en.focused && !locked, isTypingEvent));
+    };
+
+    const stepFocusedNode = (dir) => {
+      const idx = entries.findIndex((e) => e.key === examState.t1FocusedKey);
+      const targetIdx = idx >= 0 ? idx : 0;
+      const en = entries[targetIdx];
+      if (!en) return;
+      const locked = Boolean(examState.t1NodeLocked[en.key]);
+      let cIdx = Number(examState.t1NodeClauseIdx[en.key] || 0);
+      if (dir < 0) {
+        if (!locked && cIdx > 0) {
+          examState.t1NodeClauseIdx[en.key] = cIdx - 1;
+          syncEntry(en, true);
+          en.ta.focus();
+        } else if (targetIdx > 0) {
+          entries[targetIdx - 1].ta.focus();
+        }
+      } else {
+        if (!locked && en.ta.value.trim().length > 0 && cIdx < en.clauses.length) {
+          if (cIdx < en.clauses.length - 1 && !/\s$/.test(en.ta.value)) {
+            en.ta.value += ' ';
+            en.ta.selectionStart = en.ta.selectionEnd = en.ta.value.length;
+          }
+          examState.t1NodeClauseIdx[en.key] = cIdx + 1;
+          syncEntry(en, true);
+          if (examState.t1NodeClauseIdx[en.key] >= en.clauses.length && targetIdx < entries.length - 1) {
+            entries[targetIdx + 1].ta.focus();
+          }
+        } else if (targetIdx < entries.length - 1) {
+          entries[targetIdx + 1].ta.focus();
+        }
+      }
+    };
+
+    card.querySelectorAll('.ws-t1-cell[data-t1-key]').forEach((cell) => {
+      const key = cell.getAttribute('data-t1-key');
+      const spec = specMap[key] || { cue: '', keys: [] };
+      const wrap = cell.querySelector('.ws-t1-wrap');
+      const mirror = cell.querySelector('.ws-t1-mirror');
+      const caret = cell.querySelector('.ws-t1-caret');
+      const ta = cell.querySelector('.ws-t1-ta');
+      if (!wrap || !mirror || !caret || !ta) return;
+
+      const entry = {
+        key,
+        cell,
+        wrap,
+        mirror,
+        caret,
+        ta,
+        clauses: splitFlowCueClauses(spec.cue),
+        targetPhrases: [...(spec.keys || []), ...allPhrases],
+        arrowAfter: card.querySelector(`.ws-t1-arrow[data-t1-arrow-after="${key}"]`),
+        focused: false
+      };
+      entries.push(entry);
+
+      cell.addEventListener('mousedown', (e) => {
+        if (e.target !== ta && !ta.readOnly) {
+          e.preventDefault();
+          ta.focus();
+        }
+      });
+      ta.addEventListener('focus', () => {
+        entry.focused = true;
+        examState.t1FocusedKey = key;
+        cell.classList.add('is-focused');
+        syncEntry(entry, false);
+      });
+      ta.addEventListener('blur', () => {
+        entry.focused = false;
+        cell.classList.remove('is-focused');
+        syncEntry(entry, false);
+      });
+      ta.addEventListener('input', () => {
+        if (examState.t1NodeAudit && examState.t1NodeAudit[key] && !examState.t1NodeAudit[key].pass) {
+          cell.classList.remove('is-bad');
+          const errEl = cell.querySelector('.ws-sf-node-err');
+          if (errEl) errEl.remove();
+        }
+        syncEntry(entry, true);
+      });
+      ta.addEventListener('keyup', (e) => {
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) {
+          syncEntry(entry, true);
+        }
+      });
+      ta.addEventListener('click', () => syncEntry(entry, true));
+      ta.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab' || e.key === 'Enter') {
+          e.preventDefault();
+          examState.t1FocusedKey = key;
+          stepFocusedNode(e.key === 'Tab' && e.shiftKey ? -1 : 1);
+        }
+      });
+    });
+
+    const btnNext = document.getElementById('ws-t1-btn-next');
+    const btnPrev = document.getElementById('ws-t1-btn-prev');
+    if (btnNext) btnNext.addEventListener('mousedown', (e) => { e.preventDefault(); stepFocusedNode(1); });
+    if (btnPrev) btnPrev.addEventListener('mousedown', (e) => { e.preventDefault(); stepFocusedNode(-1); });
+
+    entries.forEach((en) => syncEntry(en, false));
   }
 
   function checkTaskTest1() {
@@ -2613,6 +2995,7 @@
         return;
       }
       examState.t1NodeLocked[n.key] = true;
+      examState.t1NodeClauseIdx[n.key] = 99;
       auditMap[n.key] = { pass: true, msg: '' };
     });
 
@@ -2842,7 +3225,7 @@
         <div class="tot-shell-head">
           <div>
             <h2 class="tot-shell-title">Luyện Đề IELTS Writing Task 2</h2>
-            <p class="tot-shell-sub">Ngân hàng ${prompts.length} đề thi thật giai đoạn 2020–2026 liên kết trực tiếp với 44 Module Flow Idea.</p>
+            <p class="tot-shell-sub">Ngân hàng ${prompts.length} đề thi thật giai đoạn 2020–2026 liên kết trực tiếp với ${(DATA().MODULES || []).length} Module Flow Idea.</p>
           </div>
           <span class="ws-pill tabular">${doneSet.size} / ${prompts.length} đề đã luyện</span>
         </div>
@@ -2924,127 +3307,399 @@
   function setPracQuery(v) { state.pracQuery = String(v || ''); renderPracticeHub(); }
   function resetPracFilters() { state.pracSubtopic = 'all'; state.pracType = 'all'; state.pracQuery = ''; renderPracticeHub(); }
 
+  function launchPracticeFromTask(promptId, mode) {
+    if (!promptId) return;
+    if (examState) closeTaskExamModal(true);
+    startPracticePrompt(promptId, mode || 'practice');
+  }
+
   function startPracticePrompt(promptId, mode) {
     ensureOverlays();
-    if (mode === 'exam') {
-      const lock = getLockout(PRAC_LOCK_KEY_BASE);
-      if (lock) {
-        showAntiCheatModal('TẠM KHÓA PHÒNG THI WRITING', `Phòng thi thật đang bị tạm khóa. Mở lại sau ${fmtMmSs(lock.remainingMs / 1000)}.`, true);
-        return;
-      }
+    const lock = getLockout(PRAC_LOCK_KEY_BASE);
+    if (lock) {
+      showAntiCheatModal(
+        mode === 'exam' ? 'TẠM KHÓA PHÒNG THI WRITING' : 'TẠM KHÓA PHÒNG LUYỆN WRITING',
+        `Phòng viết đang bị tạm khóa do vi phạm chống gian lận. Mở lại sau ${fmtMmSs(lock.remainingMs / 1000)}.`,
+        true
+      );
+      return;
     }
     const p = (DATA().PRACTICE_PROMPTS || []).find((x) => x.id === promptId);
     if (!p) return;
 
     pracState = {
       prompt: p,
-      mode, // Fixed upfront: 'practice' | 'exam'
+      mode, // 'practice' | 'exam'
       secsLeft: 40 * 60,
       startedAt: Date.now(),
       strikes: 0,
       submitted: false,
-      timerId: null
+      timerId: null,
+      contrast: mode === 'exam' ? 'cd' : 'totoro', // Practice: 'totoro' | 'dark'; Exam: 'cd' | 'totoro' | 'dark' | 'yellow'
+      textSize: 'regular', // Practice: 'regular' (Vừa 17px) | 'large' (Lớn 19px)
+      showExactSec: false,
+      optionsOpen: false,
+      planningOpen: true,
+      splitRatio: mode === 'exam' ? 46 : 37
     };
 
     const isExam = mode === 'exam';
-    const paras = cleanPromptParaphrases(p);
-    const bodyGuides = p.bodyGuide || [];
-    const subObj = (DATA().SUBTOPICS || []).find((s) => s.key === p.subtopic);
+    const initContrast = pracState.contrast;
+    const acGuardAttrs = !isTeacherBypass()
+      ? `onpaste="event.preventDefault(); WritingStudio.toastMsg('Chống gian lận: Không được dán văn bản vào phòng viết!');" ondrop="event.preventDefault(); WritingStudio.toastMsg('Chống gian lận: Không được kéo thả văn bản!');"`
+      : '';
+    const editorAcAttrs = !isTeacherBypass()
+      ? `${acGuardAttrs} oncopy="event.preventDefault(); WritingStudio.toastMsg('Chống gian lận: Không sao chép trong lúc làm bài!');" oncut="event.preventDefault();" oncontextmenu="event.preventDefault();"`
+      : '';
 
-    const practiceHintsHtml = !isExam && (bodyGuides.length || paras.length || p.review) ? `
-      <details class="ws-exam-hint-details">
-        <summary>Gợi ý dàn ý &amp; Paraphrase đề bài</summary>
-        <div class="ws-exam-hint-body">
-          ${p.review ? `<div><strong>Chiến lược lập luận:</strong> ${esc(p.review)}</div>` : ''}
-          ${bodyGuides.length ? `
-            <div>
-              <strong>Hướng dẫn ráp Body:</strong>
-              <ul class="ws-exam-hint-list">${bodyGuides.map((g) => `<li>${esc(g)}</li>`).join('')}</ul>
-            </div>
-          ` : ''}
-          ${paras.length ? `
-            <div>
-              <strong>Paraphrase đề thi:</strong>
-              <ul class="ws-exam-hint-list">${paras.map((g) => `<li>${esc(g)}</li>`).join('')}</ul>
-            </div>
-          ` : ''}
+    const DEFAULT_PLAN_TEMPLATE = [
+      '1. Intro (Paraphrase + Thesis):',
+      '- ',
+      '',
+      '2. Body 1 (Ý chính → Cơ chế → Hệ quả):',
+      '- ',
+      '',
+      '3. Body 2 (Ý chính → Cơ chế → Ví dụ):',
+      '- ',
+      '',
+      '4. Conclusion (Tóm tắt & chốt lập trường):',
+      '- '
+    ].join('\n');
+
+    const planningHtml = !isExam ? `
+      <div class="ws-ins-plan-card ws-plan-single-card" id="ws-ins-plan-card">
+        <div class="ws-ins-plan-head">
+          <div class="ws-ins-plan-title-wrap">
+            <span class="ws-ins-plan-title">Planning · Dàn ý</span>
+          </div>
+          <div class="ws-ins-plan-actions">
+            <button type="button" class="ws-ins-plan-btn" onclick="WritingStudio.clearPracPlan()" title="Đặt lại khung dàn ý trống">Đặt lại</button>
+            <button type="button" class="ws-ins-plan-btn" id="ws-ins-plan-toggle" onclick="WritingStudio.togglePracPlan()">Thu gọn</button>
+          </div>
         </div>
-      </details>
+        <div class="ws-ins-plan-body ws-plan-single-body" id="ws-ins-plan-body">
+          <textarea class="ws-ins-plan-ta ws-plan-single-ta" id="ws-plan-notes" spellcheck="false" ${acGuardAttrs}>${esc(DEFAULT_PLAN_TEMPLATE)}</textarea>
+        </div>
+      </div>
     ` : '';
 
-    const room = document.getElementById('ws-practice-room');
-    room.className = `ws-exam-room open ${isExam ? 'is-exam' : 'is-practice'}`;
-    room.innerHTML = `
-      <div class="ws-exam-bar">
-        <div class="ws-exam-bar-left">
-          <button type="button" class="btn" style="padding:6px 12px;font-size:12.5px;" onclick="WritingStudio.requestExitPractice()">← Thoát</button>
-          <span class="ws-exam-mode-badge ${isExam ? 'is-exam' : 'is-practice'}">
-            ${isExam ? 'THI THẬT · ANTI-CHEAT' : 'LUYỆN TẬP · WRITING STUDIO'}
-          </span>
-          ${subObj ? `<span style="font-size:12.5px;font-weight:650;opacity:0.78;">${esc(subObj.shortTitle)}</span>` : ''}
-        </div>
-        <div class="ws-exam-bar-right">
-          <span id="ws-prac-wc" class="ws-exam-wc-pill">0 / 250 words</span>
-          <span id="ws-prac-timer" class="ws-exam-timer-pill">40:00</span>
-          <button type="button" class="btn btn-primary" id="ws-prac-submit" style="padding:7px 16px;font-size:13px;" onclick="WritingStudio.submitPracticeEssay(false)">Nộp bài</button>
-        </div>
-      </div>
-      <div class="ws-exam-split">
-        <div class="ws-exam-left">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-            <span class="ws-exam-part-lbl">IELTS WRITING TASK 2</span>
-            <span class="ws-type-pill is-${classifyPromptType(p.type)}">${esc(p.type)}</span>
+    const acBadgeText = isTeacherBypass() ? 'Chống gian lận · GV' : 'Chống gian lận · 0/2';
+    const headerBrandHtml = isExam
+      ? `<span class="ins-brand-mark">IELTS</span>`
+      : `<span class="ws-prac-brand-badge" aria-hidden="true">
+           <svg viewBox="2 2 24 24" width="22" height="22" fill="none">
+             <path d="M8.5 11.2L7 5.6L11.2 9C12.5 8.5 14 8.5 15.3 9L19.5 5.6L18 11.2C20.2 12.8 21.2 15.2 21 18.2C20.7 21.5 17.8 23.2 13.2 23.2C8.6 23.2 5.7 21.5 5.4 18.2C5.2 15.2 6.2 12.8 8.5 11.2Z" fill="#6F6B64" stroke="#484540" stroke-width="1.1"/>
+             <path d="M13.2 8.4C14.8 5.4 17.5 5 19.2 6.6C17.4 8.3 15 8.8 13.2 8.4Z" fill="#52A063" stroke="#2D6A3B" stroke-width="0.9"/>
+             <ellipse cx="13.2" cy="18.8" rx="5.2" ry="3.4" fill="#FBF6E8"/>
+             <circle cx="10.6" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="10.8" cy="13.5" r="0.75" fill="#181A1F"/>
+             <circle cx="15.8" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="15.6" cy="13.5" r="0.75" fill="#181A1F"/>
+           </svg>
+         </span>`;
+
+    const headerAcChipHtml = `
+      <span class="ws-hdr-ac-chip" id="ws-prac-ac-pill" title="Đang bật chống gian lận: chặn dán, sao chép &amp; rời tab (vi phạm 2/2 sẽ tự nộp và khóa 30 phút)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span id="ws-prac-ac-text">${acBadgeText}</span>
+      </span>
+    `;
+
+    const optionsPopoverHtml = isExam
+      ? `
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Contrast</div>
+          <div class="ws-ins-opt-grid">
+            <button type="button" class="ws-ins-opt-choice ${initContrast === 'cd' ? 'active' : ''}" data-contrast="cd" onclick="WritingStudio.setPracContrast('cd')">Black on White</button>
+            <button type="button" class="ws-ins-opt-choice ${initContrast === 'totoro' ? 'active' : ''}" data-contrast="totoro" onclick="WritingStudio.setPracContrast('totoro')">Totoro Washi</button>
+            <button type="button" class="ws-ins-opt-choice" data-contrast="dark" onclick="WritingStudio.setPracContrast('dark')">White on Black</button>
+            <button type="button" class="ws-ins-opt-choice" data-contrast="yellow" onclick="WritingStudio.setPracContrast('yellow')">Yellow on Black</button>
           </div>
-          <div class="ws-exam-prompt-box">
-            <p class="ws-exam-prompt-text">${esc(p.prompt)}</p>
-            <ul class="ws-exam-instructions">
-              <li>You should spend about <strong>40 minutes</strong> on this task.</li>
-              <li>Give reasons for your answer and include any relevant examples from your own knowledge or experience.</li>
-              <li>Write at least <strong>250 words</strong>.</li>
-            </ul>
-          </div>
-          ${practiceHintsHtml}
         </div>
-        <div class="ws-exam-right">
-          <div class="ws-exam-editor-head">
-            <span>BÀI VIẾT CỦA BẠN</span>
-            <span id="ws-prac-wc-note">Mục tiêu tối thiểu: 250 từ</span>
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Text size</div>
+          <div class="ws-ins-opt-row">
+            <button type="button" class="ws-ins-opt-choice active" data-size="regular" onclick="WritingStudio.setPracTextSize('regular')">Regular</button>
+            <button type="button" class="ws-ins-opt-choice" data-size="large" onclick="WritingStudio.setPracTextSize('large')">Large</button>
+            <button type="button" class="ws-ins-opt-choice" data-size="xlarge" onclick="WritingStudio.setPracTextSize('xlarge')">Extra large</button>
           </div>
-          <textarea class="ws-exam-textarea" id="ws-prac-editor" placeholder="Bắt đầu viết bài IELTS Writing Task 2 tại đây..."
+        </div>
+      `
+      : `
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Màu sắc</div>
+          <div class="ws-ins-opt-row">
+            <button type="button" class="ws-ins-opt-choice ${initContrast === 'totoro' ? 'active' : ''}" data-contrast="totoro" onclick="WritingStudio.setPracContrast('totoro')">Totoro Sáng</button>
+            <button type="button" class="ws-ins-opt-choice ${initContrast === 'dark' ? 'active' : ''}" data-contrast="dark" onclick="WritingStudio.setPracContrast('dark')">Chế độ Tối</button>
+          </div>
+        </div>
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Cỡ chữ viết</div>
+          <div class="ws-ins-opt-row">
+            <button type="button" class="ws-ins-opt-choice active" data-size="regular" onclick="WritingStudio.setPracTextSize('regular')">Vừa</button>
+            <button type="button" class="ws-ins-opt-choice" data-size="large" onclick="WritingStudio.setPracTextSize('large')">Lớn</button>
+          </div>
+        </div>
+      `;
+
+    const rightEditorHtml = isExam
+      ? `
+        <div class="ws-ins-editor-wrap">
+          <textarea class="ws-ins-editor" id="ws-prac-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+            aria-label="IELTS Writing Task 2 response"
             oninput="WritingStudio.updatePracWC()"
-            onpaste="${!isTeacherBypass() ? "event.preventDefault(); WritingStudio.toastMsg('Không được dán bài trong phòng viết!');" : ''}"></textarea>
-          <div id="ws-prac-result" class="ws-exam-result-card"></div>
+            ${editorAcAttrs}></textarea>
+          <div class="ws-ins-wc-row">
+            <span class="ws-ins-wc-val" id="ws-prac-wc">Words: 0</span>
+          </div>
         </div>
+      `
+      : `
+        <div class="ws-prac-paper-card" id="ws-prac-paper-card">
+          <div class="ws-prac-paper-head">
+            <div class="ws-prac-paper-title-grp">
+              <span class="ws-prac-paper-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </span>
+              <span class="ws-prac-paper-title">Bài viết Task 2</span>
+              <span class="ws-prac-para-pill tabular" id="ws-prac-paras">0 đoạn</span>
+            </div>
+            <div class="ws-prac-paper-badges">
+              <span class="ws-prac-wc-pill tabular" id="ws-prac-wc">0 / 250 từ</span>
+            </div>
+          </div>
+          <div class="ws-prac-paper-meter" aria-hidden="true">
+            <span class="ws-prac-paper-meter-fill" id="ws-prac-wc-bar" style="width:0%"></span>
+          </div>
+          <textarea class="ws-ins-editor ws-prac-editor" id="ws-prac-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+            aria-label="IELTS Writing Task 2 response"
+            placeholder="Bắt đầu viết bài Task 2 của bạn tại đây...&#10;&#10;• Mở bài: Paraphrase đề bài &amp; nêu lập trường rõ ràng&#10;• Thân bài 1 &amp; 2: Triển khai theo mạch lập luận A → B → C kèm ví dụ&#10;• Kết bài: Tóm tắt 2 ý chính &amp; khẳng định lại quan điểm"
+            oninput="WritingStudio.updatePracWC()"
+            ${editorAcAttrs}></textarea>
+          <div class="ws-prac-paper-foot">
+            <div class="ws-prac-paper-foot-l">
+              <span class="ws-prac-wc-note" id="ws-prac-wc-note">Còn thiếu 250 từ để đạt mốc chuẩn IELTS</span>
+            </div>
+            <button type="button" class="ws-prac-submit-pill" id="ws-prac-paper-submit" onclick="WritingStudio.submitPracticeEssay(false)">Nộp bài →</button>
+          </div>
+        </div>
+      `;
+
+    const room = document.getElementById('ws-practice-room');
+    room.className = `ws-exam-room open ins-shell ins-contrast-${initContrast} ins-size-regular ${isExam ? 'is-exam' : 'is-practice'}`;
+    room.innerHTML = `
+      <div class="ins-main-col" onclick="WritingStudio.togglePracOptions(false)">
+        <header class="ins-header ${isExam ? '' : 'ws-prac-custom-hdr'}">
+          <div class="ins-hdr-left">
+            ${headerBrandHtml}
+            <div class="ins-hdr-meta">
+              <div class="ins-hdr-title">${isExam ? 'Test taker · Academic Writing Task 2' : 'Writing Studio · Luyện tập Task 2'}</div>
+              <button type="button" class="ins-hdr-timer" id="ws-prac-timer" onclick="event.stopPropagation(); WritingStudio.togglePracTimerExact()" title="Nhấn để hiện / ẩn số giây">
+                <span>40 minutes remaining</span>
+              </button>
+            </div>
+          </div>
+          <div class="ins-hdr-right">
+            ${headerAcChipHtml}
+            <div class="ws-ins-opt-wrap" onclick="event.stopPropagation()">
+              <button type="button" class="ins-hdr-ico" id="ws-prac-opt-btn" onclick="WritingStudio.togglePracOptions()" title="Màu sắc &amp; Cỡ chữ" aria-label="Options">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+              </button>
+              <div class="ws-ins-opt-pop" id="ws-prac-opt-pop">
+                ${optionsPopoverHtml}
+              </div>
+            </div>
+            <button type="button" class="ins-hdr-exit" onclick="WritingStudio.requestExitPractice()">Thoát</button>
+          </div>
+        </header>
+
+        ${isExam ? `
+        <div class="ins-part-banner">
+          <strong>Part 2</strong>
+          <span>You should spend about 40 minutes on this task. Write at least 250 words.</span>
+        </div>` : ''}
+
+        <div class="ins-split-body" id="ws-ins-split">
+          <section class="ins-pane ins-pane-left ws-ins-left" id="ws-ins-left" style="flex: 0 0 ${pracState.splitRatio}%;">
+            ${isExam
+              ? `<p class="ws-ins-lead">Write about the following topic:</p>`
+              : `<div class="ws-prac-prompt-meta"><span class="ws-prac-part-badge">Task 2</span><span>~40 phút · Tối thiểu 250 từ</span></div>`}
+            <div class="ws-ins-prompt-text">${esc(p.prompt)}</div>
+            <p class="ws-ins-inst">Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.</p>
+            ${planningHtml}
+          </section>
+
+          <div class="ins-resizer" id="ws-ins-resizer" title="Kéo để chia lại khung đề và khung viết" onmousedown="WritingStudio.startPracResize(event)">
+            <span class="ins-resizer-box" aria-hidden="true">↔</span>
+          </div>
+
+          <section class="ins-pane ins-pane-right ws-ins-right ${isExam ? '' : 'ws-prac-right-wide'}">
+            ${rightEditorHtml}
+            <div id="ws-prac-result" class="ws-ins-result-card"></div>
+          </section>
+        </div>
+
+        <footer class="ins-footer">
+          <div class="ins-footer-parts">
+            <div class="ws-ins-part-tab is-active" id="ws-ins-part-tab">
+              <span class="ws-ins-part-bar" id="ws-ins-part-bar"></span>
+              <span class="ins-part-lbl">Part 2</span>
+              <span class="ws-ins-footer-wc" id="ws-prac-footer-wc">0 words</span>
+            </div>
+          </div>
+          <button type="button" class="ins-submit-check-btn" id="ws-prac-submit" onclick="WritingStudio.submitPracticeEssay(false)" title="Nộp bài / Submit" aria-label="Submit">✓</button>
+        </footer>
       </div>
     `;
+
+    document.body.classList.add('rp-exam-fullscreen');
+    updatePracTimerDisplay();
+    setTimeout(() => document.getElementById('ws-prac-editor')?.focus(), 50);
 
     pracState.timerId = setInterval(() => {
       if (!pracState || pracState.submitted) return;
       pracState.secsLeft--;
-      const el = document.getElementById('ws-prac-timer');
-      if (el) {
-        el.textContent = fmtMmSs(pracState.secsLeft);
-        el.classList.toggle('urgent', pracState.secsLeft <= 300);
-      }
+      updatePracTimerDisplay();
       if (pracState.secsLeft <= 0) submitPracticeEssay(true);
     }, 1000);
   }
 
+  function updatePracTimerDisplay() {
+    if (!pracState) return;
+    const el = document.getElementById('ws-prac-timer');
+    if (!el) return;
+    const secs = Math.max(0, pracState.secsLeft);
+    const mins = Math.ceil(secs / 60);
+    const mainTxt = mins === 1 ? '1 minute remaining' : `${mins} minutes remaining`;
+    el.innerHTML = pracState.showExactSec
+      ? `<span>${mainTxt}</span> <span class="ins-timer-exact">(${fmtMmSs(secs)})</span>`
+      : `<span>${mainTxt}</span>`;
+    el.classList.toggle('is-warn', secs <= 600 && secs > 300);
+    el.classList.toggle('is-critical', secs <= 300);
+  }
+
+  function togglePracTimerExact() {
+    if (!pracState) return;
+    pracState.showExactSec = !pracState.showExactSec;
+    updatePracTimerDisplay();
+  }
+
+  function togglePracOptions(forceVal) {
+    if (!pracState) return;
+    pracState.optionsOpen = typeof forceVal === 'boolean' ? forceVal : !pracState.optionsOpen;
+    document.getElementById('ws-prac-opt-pop')?.classList.toggle('open', pracState.optionsOpen);
+    document.getElementById('ws-prac-opt-btn')?.classList.toggle('active', pracState.optionsOpen);
+  }
+
+  function setPracContrast(c) {
+    if (!pracState) return;
+    pracState.contrast = c;
+    const room = document.getElementById('ws-practice-room');
+    if (room) {
+      room.classList.remove('ins-contrast-cd', 'ins-contrast-totoro', 'ins-contrast-dark', 'ins-contrast-yellow');
+      room.classList.add(`ins-contrast-${c}`);
+    }
+    document.querySelectorAll('#ws-prac-opt-pop [data-contrast]').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-contrast') === c);
+    });
+  }
+
+  function setPracTextSize(sz) {
+    if (!pracState) return;
+    pracState.textSize = sz;
+    const room = document.getElementById('ws-practice-room');
+    if (room) {
+      room.classList.remove('ins-size-regular', 'ins-size-large', 'ins-size-xlarge');
+      room.classList.add(`ins-size-${sz}`);
+    }
+    document.querySelectorAll('#ws-prac-opt-pop [data-size]').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-size') === sz);
+    });
+  }
+
+  function togglePracPlan() {
+    if (!pracState) return;
+    pracState.planningOpen = !pracState.planningOpen;
+    const body = document.getElementById('ws-ins-plan-body');
+    const btn = document.getElementById('ws-ins-plan-toggle');
+    if (body) body.classList.toggle('is-collapsed', !pracState.planningOpen);
+    if (btn) btn.textContent = pracState.planningOpen ? 'Thu gọn' : 'Mở Planning';
+  }
+
+  function clearPracPlan() {
+    const single = document.getElementById('ws-plan-notes');
+    if (single) {
+      single.value = [
+        '1. Intro (Paraphrase + Thesis):',
+        '- ',
+        '',
+        '2. Body 1 (Ý chính → Cơ chế → Hệ quả):',
+        '- ',
+        '',
+        '3. Body 2 (Ý chính → Cơ chế → Ví dụ):',
+        '- ',
+        '',
+        '4. Conclusion (Tóm tắt & chốt lập trường):',
+        '- '
+      ].join('\n');
+    }
+    ['ws-plan-intro', 'ws-plan-b1', 'ws-plan-b2', 'ws-plan-conc'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
+
+  function startPracResize(e) {
+    if (e) e.preventDefault();
+    const split = document.getElementById('ws-ins-split');
+    const left = document.getElementById('ws-ins-left');
+    if (!split || !left) return;
+    const onMove = (ev) => {
+      const rect = split.getBoundingClientRect();
+      const pct = Math.max(28, Math.min(68, ((ev.clientX - rect.left) / Math.max(1, rect.width)) * 100));
+      left.style.flex = `0 0 ${pct.toFixed(1)}%`;
+      if (pracState) pracState.splitRatio = pct;
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
   function updatePracWC() {
-    const v = (document.getElementById('ws-prac-editor')?.value || '').trim();
+    const raw = document.getElementById('ws-prac-editor')?.value || '';
+    const v = raw.trim();
     const wc = v ? v.split(/\s+/).length : 0;
+    const paras = v ? v.split(/\n+/).map((x) => x.trim()).filter(Boolean).length : 0;
+    const pct = Math.min(100, Math.round((wc / 250) * 100));
+    const isExam = pracState?.mode === 'exam';
+
     const el = document.getElementById('ws-prac-wc');
-    const note = document.getElementById('ws-prac-wc-note');
+    const paraEl = document.getElementById('ws-prac-paras');
+    const meterEl = document.getElementById('ws-prac-wc-bar');
+    const noteEl = document.getElementById('ws-prac-wc-note');
+    const footEl = document.getElementById('ws-prac-footer-wc');
+    const barEl = document.getElementById('ws-ins-part-bar');
+
     if (el) {
-      el.textContent = wc >= 250 ? `${wc} / 250 words ✓` : `${wc} / 250 words`;
+      el.textContent = isExam ? `Words: ${wc}` : `${wc} / 250 từ`;
       el.classList.toggle('is-ok', wc >= 250);
       el.classList.toggle('is-mid', wc >= 160 && wc < 250);
     }
-    if (note) {
-      note.textContent = wc >= 250
-        ? `Đạt chuẩn độ dài (+${wc - 250} từ)`
-        : `Còn thiếu ${250 - wc} từ để đạt mốc 250 từ`;
+    if (paraEl) paraEl.textContent = `${paras} đoạn`;
+    if (meterEl) {
+      meterEl.style.width = `${pct}%`;
+      meterEl.classList.toggle('is-ok', wc >= 250);
+      meterEl.classList.toggle('is-mid', wc >= 160 && wc < 250);
     }
+    if (noteEl) {
+      noteEl.textContent = wc >= 250
+        ? `✓ Đạt chuẩn độ dài (+${wc - 250} từ)`
+        : `Còn thiếu ${250 - wc} từ để đạt mốc chuẩn IELTS`;
+      noteEl.classList.toggle('is-ok', wc >= 250);
+    }
+    if (footEl) footEl.textContent = `${wc} ${wc === 1 ? 'word' : 'words'}`;
+    if (barEl) barEl.classList.toggle('is-ready', wc >= 250);
   }
 
   function submitPracticeEssay(forced) {
@@ -3073,13 +3728,25 @@
     });
     savePracticeHist(hist);
 
+    const submitBtn = document.getElementById('ws-prac-submit');
+    if (submitBtn) {
+      submitBtn.textContent = '←';
+      submitBtn.title = 'Quay về kho đề';
+      submitBtn.onclick = () => closePracticeRoom();
+    }
+    const paperSubmitBtn = document.getElementById('ws-prac-paper-submit');
+    if (paperSubmitBtn) {
+      paperSubmitBtn.textContent = '← Về kho đề';
+      paperSubmitBtn.onclick = () => closePracticeRoom();
+    }
+
     const p = pracState.prompt;
     const paras = cleanPromptParaphrases(p);
     const box = document.getElementById('ws-prac-result');
     if (box) {
       box.style.display = 'block';
       box.innerHTML = `
-        <div style="font-weight:800;color:var(--ok,#2F6E49);margin-bottom:10px;">Đã nộp bài (${wc} từ) · Hướng dẫn Flow &amp; Paraphrase chuẩn giáo trình</div>
+        <div class="ws-ins-res-title">Đã nộp bài (${wc} words) · Tham khảo Flow &amp; Paraphrase chuẩn giáo trình</div>
         ${p.bodyGuide?.length ? `<div style="margin-bottom:8px;"><strong>Hướng dẫn ráp Body:</strong><ul class="ws-exam-hint-list">${p.bodyGuide.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>` : ''}
         ${paras.length ? `<div><strong>Paraphrase đề thi:</strong><ul class="ws-exam-hint-list">${paras.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>` : ''}
       `;
@@ -3101,7 +3768,9 @@
   function closePracticeRoom() {
     if (pracState?.timerId) clearInterval(pracState.timerId);
     pracState = null;
-    document.getElementById('ws-practice-room')?.classList.remove('open');
+    document.body.classList.remove('rp-exam-fullscreen');
+    const room = document.getElementById('ws-practice-room');
+    if (room) room.className = 'ws-exam-room';
   }
 
   /* ================= ANTI-CHEAT HANDLER ================= */
@@ -3123,16 +3792,21 @@
       }
       return;
     }
-    if (pracState && !pracState.submitted && pracState.mode === 'exam') {
+    if (pracState && !pracState.submitted) {
       pracState.strikes++;
+      const acPill = document.getElementById('ws-prac-ac-pill');
+      const acText = document.getElementById('ws-prac-ac-text');
+      if (acText) acText.textContent = `Chống gian lận · ${Math.min(2, pracState.strikes)}/2`;
+      if (acPill) acPill.classList.add('is-warn');
+      const modeLbl = pracState.mode === 'exam' ? 'thi thật' : 'luyện viết';
       if (pracState.strikes >= 2) {
         // Locked rule: keep current answers, grade immediately, lock 30 minutes!
         submitPracticeEssay(true);
         setLockout(PRAC_LOCK_KEY_BASE, `Vi phạm 2/2 (${reason})`);
         closePracticeRoom();
-        showAntiCheatModal('VI PHẠM 2/2 · KHÓA 30 PHÚT', `Hệ thống ghi nhận vi phạm 2/2 (${reason}). Bài viết của bạn được giữ nguyên để chấm điểm, lượt thi đã kết thúc và tạm khóa 30 phút.`, true);
+        showAntiCheatModal('VI PHẠM 2/2 · KHÓA 30 PHÚT', `Hệ thống ghi nhận vi phạm 2/2 (${reason}). Bài viết của bạn được giữ nguyên để chấm điểm, phiên ${modeLbl} đã kết thúc và tạm khóa 30 phút.`, true);
       } else {
-        showAntiCheatModal('CẢNH CÁO 1/2', `Không chuyển tab khi đang thi thật (${reason}). Vi phạm thêm 1 lần nữa bài làm sẽ kết thúc ngay và khóa 30 phút.`, false);
+        showAntiCheatModal('CẢNH CÁO 1/2', `Không rời màn hình khi đang ${modeLbl} (${reason}). Vi phạm thêm 1 lần nữa bài làm sẽ kết thúc ngay và khóa 30 phút.`, false);
       }
     }
   }
@@ -3338,6 +4012,7 @@
   });
 
   window.WritingStudio = {
+    getShortFlowTitle: (modId) => SHORT_FLOW_TITLES[modId] || '',
     renderFlashcardWorkspace,
     renderTaskHub,
     renderPracticeHub,
@@ -3385,7 +4060,15 @@
     setPracType,
     setPracQuery,
     resetPracFilters,
+    launchPracticeFromTask,
     startPracticePrompt,
+    togglePracTimerExact,
+    togglePracOptions,
+    setPracContrast,
+    setPracTextSize,
+    togglePracPlan,
+    clearPracPlan,
+    startPracResize,
     updatePracWC,
     submitPracticeEssay,
     requestExitPractice,
