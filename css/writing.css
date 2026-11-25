@@ -100,22 +100,23 @@ html[data-theme="dark"] #writing-flashcard-root .fc-back-meaning {
 }
 #writing-flashcard-root .fc-sentence-box {
   display: block !important;
-  text-align: left !important;
+  text-align: justify !important;
   font-family: var(--font-ui) !important;
   font-size: 16px !important;
   font-weight: 400 !important;
-  line-height: 1.64 !important;
+  line-height: 1.72 !important;
   color: var(--ink) !important;
   background: var(--surface-item) !important;
   border: 1.5px dashed var(--border-strong) !important;
   border-radius: 14px !important;
-  padding: 16px 20px !important;
+  padding: 18px 22px !important;
 }
 html[data-theme="dark"] #writing-flashcard-root .fc-sentence-box {
   background: var(--surface-muted) !important;
   color: var(--ink) !important;
 }
-html #screen-study #writing-flashcard-root .fc-target-mark {
+html #screen-study #writing-flashcard-root .fc-target-mark,
+#ws-recall-modal .fc-target-mark {
   background: #DCEAD6 !important;
   background-image: none !important;
   color: #1B4B26 !important;
@@ -125,7 +126,8 @@ html #screen-study #writing-flashcard-root .fc-target-mark {
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
-html[data-theme="dark"] #screen-study #writing-flashcard-root .fc-target-mark {
+html[data-theme="dark"] #screen-study #writing-flashcard-root .fc-target-mark,
+html[data-theme="dark"] #ws-recall-modal .fc-target-mark {
   background: rgba(138, 184, 134, 0.24) !important;
   background-image: none !important;
   color: #C4EBC0 !important;
@@ -143,8 +145,10 @@ html[data-theme="dark"] #screen-study #writing-flashcard-root .fc-target-mark {
   color: var(--ink) !important;
 }
 #writing-flashcard-root .ws-mod-dropdown-menu {
-  max-height: 410px;
+  max-height: 420px;
   min-width: 340px;
+  width: max-content;
+  max-width: 420px;
 }
 #writing-flashcard-root .ws-deck-scroll {
   display: flex;
@@ -689,6 +693,415 @@ html[data-theme="dark"] .ws-sf-node.is-outcome {
   margin-bottom: 5px;
 }
 
+/* Single-Branch Detailed Flow Card Back (Full-Width 4-Node Chain, NO Redundant Label Box) */
+.ws-branch-focus-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  margin: auto 0;
+}
+.ws-sf-detail-track {
+  display: grid;
+  align-items: stretch;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 15px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+}
+.ws-sf-detail-track.is-4 {
+  grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+}
+.ws-sf-detail-track.is-3 {
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+}
+.ws-sf-detail-node {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 11px 12px;
+  border-radius: 11px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  min-height: 92px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.ws-sf-detail-node.is-outcome {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+}
+.ws-sf-detail-txt {
+  font-size: 13.4px;
+  font-weight: 650;
+  line-height: 1.42;
+  color: var(--ink);
+  text-align: left;
+}
+.ws-sf-detail-node.is-outcome .ws-sf-detail-txt {
+  color: #1D4B26;
+  font-weight: 700;
+}
+html[data-theme="dark"] .ws-sf-detail-node.is-outcome .ws-sf-detail-txt {
+  color: var(--ink);
+}
+@media (max-width: 860px) {
+  .ws-sf-detail-track.is-4,
+  .ws-sf-detail-track.is-3 {
+    grid-template-columns: 1fr;
+  }
+  .ws-sf-detail-track .ws-sf-arrow {
+    transform: rotate(90deg);
+    padding: 2px 0;
+  }
+}
+.ws-branch-detail-vi {
+  padding: 14px 18px;
+  border-radius: 13px;
+  background: var(--surface-item);
+  border: 1.5px dashed var(--border-strong);
+  font-size: 14.8px;
+  font-weight: 500;
+  line-height: 1.68;
+  color: var(--ink);
+  text-align: justify;
+}
+html[data-theme="dark"] .ws-branch-detail-vi {
+  background: var(--surface-muted);
+}
+
+/* Flow Map CTA bar on Flashcard Back (No Đã thuộc test on Idea Flow card!) */
+.ws-flow-guide-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 8px;
+}
+.ws-flow-guide-btn {
+  width: 100%;
+  max-width: 440px;
+  height: 44px;
+  border-radius: 13px;
+  font-size: 14px;
+  font-weight: 750;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Stage 1 (Traps) & Stage 2 (VI -> EN Sentence) of Đã thuộc */
+.ws-trap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.ws-trap-opt {
+  padding: 16px 18px;
+  border-radius: 13px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.14s, transform 0.1s;
+}
+.ws-trap-opt:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+.ws-trap-opt.ok {
+  border-color: var(--ok) !important;
+  background: var(--ok-soft) !important;
+  color: var(--ok) !important;
+}
+.ws-trap-opt.bad {
+  border-color: var(--danger) !important;
+  background: var(--danger-soft) !important;
+  color: var(--danger) !important;
+}
+.ws-recall-vi-prompt {
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 32%, var(--border));
+  font-size: 16.5px;
+  font-weight: 700;
+  line-height: 1.58;
+  color: var(--ink);
+  text-align: justify;
+}
+.ws-recall-sent-input {
+  width: 100%;
+  min-height: 145px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.72;
+  resize: vertical;
+  outline: none;
+  text-align: justify;
+}
+.ws-recall-sent-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.ws-recall-model-box {
+  padding: 14px 18px;
+  border-radius: 13px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-left: 3.5px solid var(--accent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Task Test 1: Inline Editable Smart Flow Boxes (Type EN directly inside each node!) */
+.ws-sf-node.is-editable,
+.ws-sf-station.is-editable {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  text-align: left;
+}
+.ws-sf-node.is-editable.is-ok,
+.ws-sf-station.is-editable.is-ok {
+  border-color: var(--ok) !important;
+  background: color-mix(in srgb, var(--ok-soft) 55%, var(--surface)) !important;
+}
+.ws-sf-node.is-editable.is-bad,
+.ws-sf-station.is-editable.is-bad {
+  border-color: var(--danger) !important;
+  background: color-mix(in srgb, var(--danger-soft) 38%, var(--surface)) !important;
+}
+.ws-sf-node-cue {
+  font-size: 13.8px;
+  font-weight: 750;
+  line-height: 1.42;
+  color: var(--ink);
+  text-align: left;
+}
+.ws-sf-node-input {
+  width: 100%;
+  min-height: 78px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14.8px;
+  font-weight: 500;
+  line-height: 1.56;
+  resize: vertical;
+  outline: none;
+  text-align: left;
+}
+.ws-sf-node-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.ws-sf-node-input.is-ok {
+  border-color: var(--ok);
+  background: color-mix(in srgb, var(--ok-soft) 35%, var(--surface));
+}
+.ws-sf-node-input.is-bad {
+  border-color: var(--danger);
+}
+.ws-sf-node-err {
+  font-size: 11.8px;
+  font-weight: 700;
+  color: var(--danger);
+  line-height: 1.4;
+}
+.ws-sf-node-ok {
+  font-size: 11.8px;
+  font-weight: 750;
+  color: var(--ok);
+}
+.ws-unscramble-vi {
+  font-size: 13.5px;
+  font-weight: 650;
+  line-height: 1.5;
+  color: var(--ink);
+  padding: 10px 13px;
+  border-radius: 11px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  text-align: justify;
+}
+.ws-unscramble-drop {
+  min-height: 76px;
+  padding: 12px;
+  border-radius: 13px;
+  border: 1.5px dashed var(--accent);
+  background: var(--surface);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  gap: 7px;
+}
+.ws-unscramble-ph {
+  font-size: 13px;
+  color: var(--ink-3);
+  font-style: italic;
+}
+.ws-chip.is-placed {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-hover, var(--accent));
+  font-weight: 700;
+}
+html[data-theme="dark"] .ws-chip.is-placed {
+  color: var(--ink);
+}
+.ws-chip.is-bad {
+  background: var(--danger-soft) !important;
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
+}
+
+/* 3-Stage Task Exam: Wide Roomy 2-Column Split, Grammar Skeleton & Real Exam Body Editor */
+.ws-write-2col {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.80fr) 1.38fr;
+  gap: 20px;
+  align-items: stretch;
+}
+.ws-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.ws-gram-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ws-gram-skel-item {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ws-gram-skel-item.is-ok {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+}
+.ws-gram-skel-item.is-bad {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+.ws-gram-skel-vi {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.5;
+  text-align: left;
+}
+.ws-gram-skel-formula {
+  font-family: var(--font-mono);
+  font-size: 12.8px;
+  font-weight: 700;
+  color: var(--accent-hover, var(--accent));
+  line-height: 1.48;
+}
+html[data-theme="dark"] .ws-gram-skel-formula {
+  color: var(--accent-2, #B9E4B4);
+}
+.ws-para-editor {
+  width: 100%;
+  flex: 1;
+  min-height: 430px;
+  padding: 18px 22px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.8;
+  resize: vertical;
+  outline: none;
+  text-align: justify;
+}
+.ws-para-editor:focus {
+  border-color: var(--accent);
+}
+.ws-para-editor.is-submitted {
+  flex: 0 0 auto;
+  min-height: 112px;
+  max-height: 132px;
+  font-size: 13.5px;
+  line-height: 1.58;
+  background: var(--surface-panel);
+}
+.ws-prompt-box {
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+.ws-prompt-q {
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.58;
+  color: var(--ink);
+  text-align: justify;
+}
+.ws-criteria-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.ws-crit-cell {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  text-align: center;
+}
+.ws-crit-lbl {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+.ws-crit-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-top: 2px;
+}
+@media (max-width: 760px) {
+  .ws-criteria-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 760px) {
   .ws-sf-branch-row { grid-template-columns: 1fr; gap: 6px; }
   .ws-sf-nodes-track { grid-template-columns: 1fr; gap: 5px; }
@@ -766,7 +1179,51 @@ html[data-theme="dark"] .ws-sf-node.is-outcome {
 }
 .ws-select:focus { border-color: var(--accent); }
 
-/* Active Writing Task Study Bar */
+/* Active Writing Task Inline Bar (Single-Row — Zero Vertical Push on Laptop Viewports) */
+.ws-inline-task-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 11px 0 6px;
+  border-radius: 11px;
+  background: var(--surface);
+  border: 1.5px solid var(--accent);
+  box-shadow: var(--shadow-btn);
+  max-width: 100%;
+}
+.ws-inline-task-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.ws-topbar-test-btn {
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 13px !important;
+  font-size: 12.5px !important;
+  white-space: nowrap;
+}
+.ws-topbar-exit-btn {
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 11px !important;
+  font-size: 12.5px !important;
+  white-space: nowrap;
+}
+@media (max-height: 760px) and (min-width: 1024px) {
+  #writing-flashcard-root .study-top-bar {
+    margin-bottom: 6px !important;
+  }
+  #writing-flashcard-root .ws-deck-scroll {
+    max-height: 132px;
+  }
+}
+
 .ws-task-banner {
   display: flex;
   align-items: center;
@@ -1442,19 +1899,19 @@ html[data-motion="original"] .ws-fc-card { transition: transform 0.45s cubic-bez
 .ws-modal-overlay.open { display: flex; }
 .ws-modal-card {
   width: 100%;
-  max-width: 680px;
+  max-width: 780px;
   background: var(--surface);
   border: 1.5px solid var(--border-strong);
   border-radius: 22px;
   box-shadow: var(--shadow-card);
-  padding: 24px 28px;
+  padding: 26px 30px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-height: 92vh;
+  max-height: 94vh;
   overflow-y: auto;
 }
-.ws-modal-card.is-wide { max-width: 1140px; padding: 20px 24px; }
+.ws-modal-card.is-wide { max-width: min(96vw, 1360px); padding: 22px 28px; }
 .ws-modal-head {
   display: flex;
   align-items: center;
@@ -1704,12 +2161,13 @@ html[data-motion="original"] .ws-fc-card { transition: transform 0.45s cubic-bez
   background: var(--surface);
   border: 1px solid var(--border);
   font-size: 13.2px;
-  line-height: 1.52;
-  text-align: left;
+  line-height: 1.56;
+  text-align: justify;
   color: var(--ink);
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
 }
 .ws-vi-row strong {
   color: var(--accent);
@@ -2304,12 +2762,13 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
   .ws-home-st-row { flex-direction: column; align-items: flex-start; }
   .ws-home-st-right { width: 100%; justify-content: space-between; }
   .ws-t3-head-row { display: none; }
-  .ws-t3-pair-row { grid-template-columns: 1fr; }
+  .ws-t3-pair-row, .ws-write-2col { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
   .ws-select { width: 100%; max-width: none; }
   .ws-prac-search-wrap { flex: 1 1 100%; min-width: 0; }
-  .ws-dnd-2col, .ws-sq-grid, .ws-prac-grid, .ws-exam-split { grid-template-columns: 1fr; }
+  .ws-dnd-2col, .ws-sq-grid, .ws-trap-grid, .ws-prac-grid, .ws-exam-split { grid-template-columns: 1fr; }
+  .ws-para-editor { min-height: 260px; font-size: 15px; }
   .ws-exam-left { border-right: none; border-bottom: 1px solid var(--border, #D5DCE3); padding: 16px; }
   .ws-exam-right { padding: 16px; }
   .ws-exam-textarea { min-height: 240px; }

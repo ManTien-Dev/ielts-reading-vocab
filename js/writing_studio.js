@@ -124,59 +124,145 @@
     saveCooldownMap(map);
   }
 
-  /* ================= UNIFIED DECK BUILDER (1 DECK PER MODULE) ================= */
+  /* ================= SHORT CLEAN FLOW TITLES (NO LESSON 1.1 / NHÁNH 1 CLUTTER) ================= */
+  const SHORT_FLOW_TITLES = {
+    w_st01_m01: 'Causes',
+    w_st01_m02: 'Effects',
+    w_st01_m03: 'Solutions',
+    w_st01_m04: 'Benefits',
+    w_st01_m05: 'Nutrition',
+    w_st01_m06: 'Physical Health',
+    w_st01_m07: 'Family Communication',
+    w_st01_m08: 'Family Conflict',
+    w_st01_m09: "Children's Mental Health",
+    w_st01_m10: 'Education & Parental Support',
+    w_st01_m11: 'Crime & Juvenile Delinquency',
+    w_st01_m12: 'Technology Use',
+    w_st01_m13: 'Childcare',
+    w_st01_m14: 'Marriage',
+    w_st01_m15: 'Fertility',
+    w_st02_m01: 'Salary & Financial Security',
+    w_st02_m02: 'Meaningful Work & Motivation',
+    w_st02_m03: 'Career Mobility & Skills',
+    w_st02_m04: 'Company Loyalty & Trust',
+    w_st02_m05: 'Supportive Workplace Culture',
+    w_st02_m06: 'Lương cao & Cái giá Overwork',
+    w_st02_m07: 'Chống làm việc quá sức',
+    w_st02_m08: 'Khoảng cách lương lãnh đạo',
+    w_st02_m09: 'Thu hẹp khoảng cách lương',
+    w_st02_m10: 'Lệch ngành & Khoa học cơ bản',
+    w_st02_m11: 'Khuyến khích khoa học cơ bản',
+    w_st02_m12: 'Chảy máu chất xám',
+    w_st02_m13: 'Ngăn chặn chảy máu chất xám',
+    w_st02_m14: 'Đi làm sớm sau lớp 12',
+    w_st02_m15: 'Phá trần sự nghiệp đi làm sớm',
+    w_st03_m01: 'Convenience & Flexibility',
+    w_st03_m02: 'Loss of Interaction & Isolation',
+    w_st03_m03: 'Automation, AI & Job Displacement',
+    w_st03_m04: 'Human Creativity & Adaptation',
+    w_st03_m05: 'Always-On Stress & Burnout',
+    w_st03_m06: 'Self-Employment Trade-Offs',
+    w_st03_m07: 'Công nghệ, Màn hình & Gia đình',
+    w_st03_m08: 'Kỷ luật thiết bị số',
+    w_st03_m09: 'Học trực tuyến vs. Trường lớp',
+    w_st03_m10: 'Kết hợp học trực tuyến & trực tiếp',
+    w_st03_m11: 'Rủi ro dữ liệu & Tội phạm mạng',
+    w_st03_m12: 'Bảo mật dữ liệu & Chống lừa đảo',
+    w_st03_m13: 'Giãn doanh nghiệp ra vùng ven',
+    w_st03_m14: 'Hạ tầng vùng ven & Nhân lực'
+  };
+
+  function flowLabel(mod) {
+    if (!mod) return '';
+    return SHORT_FLOW_TITLES[mod.id] || mod.title || '';
+  }
+
+  /* ================= UNIFIED DECK BUILDER (OVERVIEW -> BRANCH FLOW + BRANCH VOCAB -> PARAPHRASE · NO GRAMMAR) ================= */
   function buildModuleCards(mod) {
     if (!mod) return [];
     const cards = [];
-    // 1. Idea Flow card first
+    const label = flowLabel(mod);
+    const sf = mod.smartFlow || {};
+    const isMultiBranch = sf.mode === 'branches' && Array.isArray(sf.rows) && sf.rows.length > 0;
+
+    // 1. Overview Idea Flow card first (Orientation Map ONLY — NOT tested with Đã thuộc!)
     cards.push({
       id: `${mod.id}_flow`,
       modId: mod.id,
       kind: 'flow',
+      untested: true,
       pos: 'IDEA FLOW',
-      lesson: `${mod.code} · ${mod.title}`,
-      en: mod.title,
-      vi: mod.viFlowSteps.join(' ➔ '),
-      steps: mod.viFlowSteps
+      lesson: label,
+      en: label,
+      vi: (mod.viFlowSteps || []).join(' ➔ '),
+      steps: mod.viFlowSteps || []
     });
-    // 2. Vocab cards
-    (mod.vocab || []).forEach((v, i) => {
-      cards.push({
-        id: `${mod.id}_v${i + 1}`,
-        modId: mod.id,
-        kind: 'vocab',
-        pos: String(v.pos || 'phr').toUpperCase(),
-        lesson: `${mod.code} · ${mod.title}`,
-        en: v.en,
-        vi: v.vi,
-        example: v.example || ''
+
+    const makeVocabCard = (v, i) => ({
+      id: `${mod.id}_v${i + 1}`,
+      modId: mod.id,
+      kind: 'vocab',
+      pos: String(v.pos || 'phr').toUpperCase(),
+      lesson: label,
+      en: v.en,
+      vi: v.vi,
+      example: v.example || '',
+      viPrompt: v.viPrompt || '',
+      enRef: v.enRef || '',
+      trapOpts: v.trapOpts || []
+    });
+
+    // 2. Multi-branch modules: Overview Vocab (-1) -> Branch Flow card -> Vocab of that exact branch!
+    if (isMultiBranch) {
+      const vocabs = mod.vocab || [];
+      vocabs.forEach((v, i) => {
+        if (v.branchIdx === -1) {
+          cards.push(makeVocabCard(v, i));
+        }
       });
-    });
-    // 3. Paraphrase cards (if any)
+      sf.rows.forEach((row, rIdx) => {
+        cards.push({
+          id: `${mod.id}_bf_${rIdx}`,
+          modId: mod.id,
+          kind: 'branch_flow',
+          branchIdx: rIdx,
+          branchTotal: sf.rows.length,
+          branchRow: row,
+          untested: true,
+          pos: `NHÁNH ${rIdx + 1} / ${sf.rows.length}`,
+          lesson: label,
+          en: row.label,
+          vi: ((row.detailNodes || row.nodes) || []).join(' → ')
+        });
+        vocabs.forEach((v, i) => {
+          if ((v.branchIdx ?? 0) === rIdx) {
+            cards.push(makeVocabCard(v, i));
+          }
+        });
+      });
+    } else {
+      // Single-chain modules: Overview 4-station card -> all Vocab cards
+      (mod.vocab || []).forEach((v, i) => {
+        cards.push(makeVocabCard(v, i));
+      });
+    }
+
+    // 3. Paraphrase cards at the end (if any)
     (mod.paraphrases || []).forEach((p, i) => {
       cards.push({
         id: `${mod.id}_p${i + 1}`,
         modId: mod.id,
         kind: 'paraphrase',
         pos: 'PARAPHRASE',
-        lesson: `${mod.code} · ${mod.title}`,
+        lesson: label,
         en: p.en,
         vi: p.vi,
         items: p.items || [],
-        accepted: p.accepted || []
-      });
-    });
-    // 4. Grammar cards
-    (mod.grammar || []).forEach((g, i) => {
-      cards.push({
-        id: `${mod.id}_g${i + 1}`,
-        modId: mod.id,
-        kind: 'grammar',
-        pos: 'GRAMMAR',
-        lesson: `${mod.code} · ${mod.title}`,
-        en: g.formula,
-        vi: g.meaning,
-        example: g.example || ''
+        accepted: p.accepted || [],
+        example: p.example || '',
+        viPrompt: p.viPrompt || '',
+        enRef: p.enRef || '',
+        trapOpts: p.trapOpts || []
       });
     });
     return cards;
@@ -186,11 +272,114 @@
     return (DATA().MODULES || []).find((m) => m.id === id) || null;
   }
 
+  function getLearnableCards(mod) {
+    return buildModuleCards(mod).filter((c) => !c.untested);
+  }
+
   function getModMasteryStats(mod) {
-    const cards = buildModuleCards(mod);
+    const cards = getLearnableCards(mod);
     const mmap = getMasteryMap();
     const done = cards.filter((c) => mmap[c.id]?.level === 3).length;
     return { done, total: cards.length, pct: Math.round((done / Math.max(1, cards.length)) * 100) };
+  }
+
+  /* Fuzzy Spelling & Levenshtein Detector for Writing Accuracy (Zero False Positives on Real Words) */
+  let cachedValidLexicon = null;
+  function getValidEnglishLexicon() {
+    if (cachedValidLexicon) return cachedValidLexicon;
+    const lex = new Set();
+    const addTokens = (str) => {
+      const m = String(str || '').match(/[A-Za-z'-]{3,}/g);
+      if (!m) return;
+      for (let i = 0; i < m.length; i++) lex.add(m[i].toLowerCase());
+    };
+    const d = DATA();
+    (d.MODULES || []).forEach((mod) => {
+      addTokens(mod.title);
+      (mod.sentences || []).forEach((s) => { addTokens(s.enKey); addTokens(s.grammar); });
+      (mod.vocab || []).forEach((v) => { addTokens(v.en); addTokens(v.example); });
+      (mod.paraphrases || []).forEach((p) => {
+        addTokens(p.rootEn);
+        (p.items || []).forEach((it) => addTokens(it.en));
+      });
+    });
+    (d.PRACTICE_PROMPTS || []).forEach((p) => {
+      addTokens(p.prompt);
+      (p.paraphrases || []).forEach(addTokens);
+    });
+    if (window.IPA_DICT && typeof window.IPA_DICT === 'object') {
+      Object.keys(window.IPA_DICT).forEach((k) => lex.add(k.toLowerCase()));
+    }
+    if (Array.isArray(window.RAW_VOCAB_DATA)) {
+      window.RAW_VOCAB_DATA.forEach((it) => { addTokens(it.word); addTokens(it.example); });
+    }
+    cachedValidLexicon = lex;
+    return lex;
+  }
+
+  function addInflections(word, set) {
+    set.add(word);
+    set.add(`${word}s`);
+    set.add(`${word}es`);
+    set.add(`${word}d`);
+    set.add(`${word}ed`);
+    set.add(`${word}ing`);
+    set.add(`${word}ly`);
+    if (word.endsWith('y') && word.length > 3) {
+      set.add(`${word.slice(0, -1)}ies`);
+      set.add(`${word.slice(0, -1)}ied`);
+    }
+    if (word.endsWith('e') && word.length > 3) {
+      set.add(`${word.slice(0, -1)}ing`);
+    }
+  }
+
+  function editDistance(a, b) {
+    const m = a.length, n = b.length;
+    if (Math.abs(m - n) > 2) return 9;
+    const dp = Array.from({ length: m + 1 }, (_, i) => i);
+    for (let j = 1; j <= n; j++) {
+      let prev = dp[0];
+      dp[0] = j;
+      for (let i = 1; i <= m; i++) {
+        const tmp = dp[i];
+        dp[i] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[i], dp[i - 1]);
+        prev = tmp;
+      }
+    }
+    return dp[m];
+  }
+
+  function detectSpellingTypos(userText, targetPhrases) {
+    const userWords = (String(userText || '').match(/[A-Za-z'-]{5,}/g) || []);
+    const validLex = getValidEnglishLexicon();
+    const targetWords = new Set();
+    const validForms = new Set();
+    (targetPhrases || []).forEach((ph) => {
+      (String(ph || '').match(/[A-Za-z'-]{5,}/g) || []).forEach((w) => {
+        const lowW = w.toLowerCase();
+        targetWords.add(lowW);
+        addInflections(lowW, validForms);
+      });
+    });
+    const typos = [];
+    const seen = new Set();
+    for (const uw of userWords) {
+      const low = uw.toLowerCase();
+      if (targetWords.has(low) || validForms.has(low) || validLex.has(low) || seen.has(low)) continue;
+      for (const tw of targetWords) {
+        if (Math.abs(low.length - tw.length) <= 2 && low[0] === tw[0]) {
+          const dist = editDistance(low, tw);
+          const maxDist = tw.length >= 8 ? 2 : 1;
+          if (dist > 0 && dist <= maxDist) {
+            typos.push(uw);
+            seen.add(low);
+            break;
+          }
+        }
+      }
+    }
+    return typos;
   }
 
   /* ================= STATE ================= */
@@ -199,6 +388,8 @@
     unmasteredOnly: false,
     cardIdx: 0,
     flipped: false,
+    flowMaskOn: false,
+    flowRevealed: {},
     activeTaskModId: null, // When studying inside an assigned/opened Task
     taskHubSubtopic: 'st01',
     pracSubtopic: 'all',
@@ -321,6 +512,176 @@
     return unm.length ? unm : list;
   }
 
+  function toggleFlowMask(e) {
+    if (e) e.stopPropagation();
+    state.flowMaskOn = !state.flowMaskOn;
+    state.flowRevealed = {};
+    renderFlashcardWorkspace();
+  }
+  function revealFlowNode(nodeKey, e) {
+    if (e) e.stopPropagation();
+    state.flowRevealed[nodeKey] = true;
+    renderFlashcardWorkspace();
+  }
+
+  function buildFlowGapSetup(mod, includeDistractors) {
+    const sf = mod?.smartFlow;
+    if (!sf) return { targets: [], slots: [], bank: [], activeSlot: 0 };
+    const targets = [];
+    if (sf.mode === 'branches') {
+      (sf.blanks || []).forEach((b, idx) => {
+        const txt = sf.rows?.[b.r]?.nodes?.[b.c] || '';
+        if (txt) targets.push({ slotIdx: idx, key: `${b.r}_${b.c}`, ans: txt });
+      });
+    } else {
+      (sf.blanks || []).forEach((stIdx, idx) => {
+        const txt = sf.stages?.[stIdx]?.text || '';
+        if (txt) targets.push({ slotIdx: idx, key: `s_${stIdx}`, ans: txt });
+      });
+    }
+    const extra = includeDistractors ? (sf.distractors || []) : [];
+    const bank = shuffle([
+      ...targets.map((t, i) => ({ id: `fg_ok_${i}`, text: t.ans })),
+      ...extra.map((d, i) => ({ id: `fg_tr_${i}`, text: d }))
+    ]);
+    return {
+      targets,
+      slots: new Array(targets.length).fill(null),
+      bank,
+      activeSlot: 0
+    };
+  }
+
+  function renderSmartFlowDiagram(mod, opts = {}) {
+    const sf = mod?.smartFlow;
+    if (!sf) {
+      return `<div class="ws-flow-list">${(mod?.viFlowSteps || []).map((s, idx) => `<div class="ws-flow-step"><span class="ws-flow-num">${idx + 1}</span><span>${esc(s)}</span></div>`).join('')}</div>`;
+    }
+    const isEditable = Boolean(opts.editable);
+    const isQuiz = Boolean(opts.quiz);
+    const maskOn = Boolean(opts.maskOn);
+    const revealed = opts.revealed || {};
+    const targetMap = {};
+    if (isQuiz && opts.targets) {
+      opts.targets.forEach((t) => { targetMap[t.key] = t; });
+    }
+
+    const renderEditableNode = (key, cueText, isOutcome, extraHeaderHtml) => {
+      const val = opts.drafts?.[key] || '';
+      const locked = Boolean(opts.locked?.[key]);
+      const aud = opts.audit?.[key] || null;
+      const boxCls = locked ? 'is-ok' : (aud && !aud.pass ? 'is-bad' : '');
+      const pasteGuard = !isTeacherBypass()
+        ? "event.preventDefault(); WritingStudio.toastMsg('Không được dán bài — hãy tự gõ tiếng Anh để nhớ chính tả!');"
+        : '';
+      return `
+        <div class="${extraHeaderHtml ? 'ws-sf-station' : 'ws-sf-node'} is-editable ${isOutcome ? 'is-outcome' : ''} ${boxCls}">
+          ${extraHeaderHtml || ''}
+          <div class="ws-sf-node-cue">${esc(cueText)}</div>
+          <textarea class="ws-sf-node-input ${boxCls}" id="ws-t1-node-${key}" ${locked ? 'readonly' : ''}
+            placeholder="Gõ cụm / vế tiếng Anh..."
+            oninput="WritingStudio.saveT1NodeDraft('${key}', this.value)"
+            onpaste="${pasteGuard}">${esc(val)}</textarea>
+          ${locked ? '<div class="ws-sf-node-ok">✓ Đạt chuẩn chính tả &amp; ý nghĩa</div>' : ''}
+          ${!locked && aud && !aud.pass ? `<div class="ws-sf-node-err">${esc(aud.msg)}</div>` : ''}
+        </div>
+      `;
+    };
+
+    const renderSlotBtn = (t) => {
+      const si = t.slotIdx;
+      const filled = opts.slots?.[si];
+      let cls = 'ws-sf-slot';
+      if (si === opts.activeSlot && !opts.checked) cls += ' active-slot';
+      if (filled) cls += ' filled';
+      if (opts.checked && filled) cls += (filled.text === t.ans ? ' is-ok' : ' is-bad');
+      const dropAttr = opts.dropHandler ? `ondragover="event.preventDefault()" ondrop="${opts.dropHandler}(event, ${si})"` : '';
+      return `<button type="button" class="${cls}" ${dropAttr} onclick="${opts.clickHandler}(${si})">${filled ? esc(filled.text) : `Ô ${si + 1}`}</button>`;
+    };
+
+    if (sf.mode === 'branches') {
+      return `
+        <div class="ws-sf-wrap" onclick="event.stopPropagation()">
+          <div class="ws-sf-branches">
+            ${(sf.rows || []).map((row, rIdx) => `
+              <div class="ws-sf-branch-row">
+                <span class="ws-sf-branch-lbl tone-${esc(row.tone || 'sage')}">${esc(row.label)}</span>
+                <div class="ws-sf-nodes-track">
+                  ${(row.nodes || []).map((nd, cIdx) => {
+                    const key = `${rIdx}_${cIdx}`;
+                    const arrow = cIdx > 0 ? '<span class="ws-sf-arrow" aria-hidden="true">→</span>' : '';
+                    const isOutcome = cIdx === row.nodes.length - 1;
+                    if (isEditable) {
+                      return `${arrow}${renderEditableNode(key, nd, isOutcome, '')}`;
+                    }
+                    if (isQuiz && targetMap[key]) {
+                      return `${arrow}${renderSlotBtn(targetMap[key])}`;
+                    }
+                    if (!isQuiz && maskOn && cIdx >= 1 && !revealed[key]) {
+                      return `${arrow}<button type="button" class="ws-sf-masked-btn" onclick="WritingStudio.revealFlowNode('${key}', event)">Chạm mở mắt xích</button>`;
+                    }
+                    return `${arrow}<div class="ws-sf-node ${isOutcome ? 'is-outcome' : ''}">${esc(nd)}</div>`;
+                  }).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Mode B: 2x2 Connected 4-Station Chain
+    const stages = sf.stages || [];
+    const renderStation = (st, idx) => {
+      const key = `s_${idx}`;
+      const isOutcome = idx === stages.length - 1;
+      const roleHeader = `
+        <div class="ws-sf-role-row">
+          <span class="ws-sf-num">${idx + 1}</span>
+          <span class="ws-sf-role">${esc(st.role)}</span>
+        </div>
+      `;
+      if (isEditable) {
+        return renderEditableNode(key, st.text, isOutcome, roleHeader);
+      }
+      let innerHtml = '';
+      if (isQuiz && targetMap[key]) {
+        innerHtml = renderSlotBtn(targetMap[key]);
+      } else if (!isQuiz && maskOn && idx >= 1 && !revealed[key]) {
+        innerHtml = `<button type="button" class="ws-sf-masked-btn" onclick="WritingStudio.revealFlowNode('${key}', event)">Chạm mở mắt xích</button>`;
+      } else {
+        innerHtml = `<div class="ws-sf-text">${esc(st.text)}</div>`;
+      }
+      return `
+        <div class="ws-sf-station ${isOutcome ? 'is-outcome' : ''}">
+          ${roleHeader}
+          ${innerHtml}
+        </div>
+      `;
+    };
+
+    if (stages.length === 4) {
+      return `
+        <div class="ws-sf-wrap" onclick="event.stopPropagation()">
+          <div class="ws-sf-chain-grid">
+            ${renderStation(stages[0], 0)}
+            <span class="ws-sf-arrow" aria-hidden="true">→</span>
+            ${renderStation(stages[1], 1)}
+            ${renderStation(stages[2], 2)}
+            <span class="ws-sf-arrow" aria-hidden="true">→</span>
+            ${renderStation(stages[3], 3)}
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="ws-sf-wrap" onclick="event.stopPropagation()">
+        <div class="ws-sf-chain-grid">
+          ${stages.map((st, idx) => renderStation(st, idx)).join('')}
+        </div>
+      </div>
+    `;
+  }
   function closeModDropdown() {
     const w = document.getElementById('ws-scope-wrap');
     if (w) w.classList.remove('is-open');
@@ -330,18 +691,49 @@
     const w = document.getElementById('ws-scope-wrap');
     if (w) w.classList.toggle('is-open');
   }
+  function renderSingleBranchCard(card, opts = {}) {
+    const row = card.branchRow || {};
+    const nodes = (row.detailNodes && row.detailNodes.length) ? row.detailNodes : (row.nodes || []);
+    const maskOn = Boolean(opts.maskOn);
+    const revealed = opts.revealed || {};
+    const rIdx = card.branchIdx || 0;
+    const isFour = nodes.length === 4;
+    return `
+      <div class="ws-branch-focus-box" onclick="event.stopPropagation()">
+        <div class="ws-sf-detail-track ${isFour ? 'is-4' : 'is-3'}">
+          ${nodes.map((nd, cIdx) => {
+            const key = `b_${rIdx}_${cIdx}`;
+            const arrow = cIdx > 0 ? '<span class="ws-sf-arrow" aria-hidden="true">→</span>' : '';
+            const isOutcome = cIdx === nodes.length - 1;
+            if (maskOn && cIdx >= 1 && !revealed[key]) {
+              return `${arrow}<button type="button" class="ws-sf-masked-btn" onclick="WritingStudio.revealFlowNode('${key}', event)">Mắt xích ${cIdx + 1}</button>`;
+            }
+            return `
+              ${arrow}
+              <div class="ws-sf-detail-node ${isOutcome ? 'is-outcome' : ''}">
+                <span class="ws-sf-num">${cIdx + 1}</span>
+                <span class="ws-sf-detail-txt">${esc(nd)}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        ${row.detailVi ? `<div class="ws-branch-detail-vi">${esc(row.detailVi)}</div>` : ''}
+      </div>
+    `;
+  }
+
   function shuffleDeck() {
     const mod = getActiveMod();
     if (!mod) return;
     const base = buildModuleCards(mod);
     const flow = base.filter((c) => c.kind === 'flow');
-    const rest = shuffle(base.filter((c) => c.kind !== 'flow'));
+    const rest = shuffle(base.filter((c) => !c.untested));
     state.shuffledModId = mod.id;
     state.shuffledOrder = [...flow, ...rest].map((c) => c.id);
     state.cardIdx = 0;
     state.flipped = false;
     renderFlashcardWorkspace();
-    toast('Đã trộn ngẫu nhiên thứ tự thẻ trong bài!');
+    toast('Đã trộn ngẫu nhiên thứ tự thẻ từ vựng trong bài!');
   }
 
   function openCardListModal() {
@@ -353,17 +745,20 @@
     const cardEl = document.getElementById('ws-ac-card');
     cardEl.innerHTML = `
       <div class="ws-modal-head">
-        <div class="ws-modal-title">${esc(mod.code)} · ${esc(mod.title)}</div>
+        <div class="ws-modal-title">${esc(flowLabel(mod))}</div>
         <button type="button" class="btn" style="padding:6px 12px;" onclick="WritingStudio.closeAcModal()">Đóng</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;max-height:58vh;overflow-y:auto;padding-right:4px;">
         ${cards.map((c, idx) => {
           const lv = mmap[c.id]?.level || 0;
-          const badge = c.kind === 'flow' ? 'FLOW' : (c.kind === 'grammar' ? 'GRAM' : (c.kind === 'paraphrase' ? 'PARA' : 'VOCAB'));
-          const status = lv === 3 ? '<span class="ws-pill ok">Đã thuộc</span>' : (lv === 2 ? '<span class="ws-pill">Nhớ chậm</span>' : '<span style="font-size:11.5px;color:var(--ink-3);">Chưa thuộc</span>');
+          const isAnyFlow = c.kind === 'flow' || c.kind === 'branch_flow';
+          const badge = c.kind === 'flow' ? 'FLOW' : (c.kind === 'branch_flow' ? `NHÁNH ${(c.branchIdx || 0) + 1}` : (c.kind === 'paraphrase' ? 'PARA' : 'VOCAB'));
+          const status = c.untested
+            ? '<span class="ws-pill">Bản đồ</span>'
+            : (lv === 3 ? '<span class="ws-pill ok">Đã thuộc</span>' : (lv === 2 ? '<span class="ws-pill">Nhớ chậm</span>' : '<span style="font-size:11.5px;color:var(--ink-3);">Chưa thuộc</span>'));
           return `
             <button type="button" class="ws-mini-row" style="padding:9px 11px;font-size:12.5px;" onclick="WritingStudio.closeAcModal(); WritingStudio.jumpCard(${idx});">
-              <span class="ws-kind-badge ${c.kind === 'flow' ? 'is-flow' : (c.kind === 'grammar' ? 'is-gram' : (c.kind === 'paraphrase' ? 'is-para' : ''))}">${badge}</span>
+              <span class="ws-kind-badge ${isAnyFlow ? 'is-flow' : (c.kind === 'paraphrase' ? 'is-para' : '')}">${badge}</span>
               <span style="flex:1;min-width:0;text-align:left;">
                 <strong style="display:block;color:var(--ink);">${esc(c.en)}</strong>
                 <span style="font-size:11.5px;color:var(--ink-2);">${esc(c.vi)}</span>
@@ -416,7 +811,7 @@
       return;
     }
 
-    const allModCards = buildModuleCards(mod);
+    const allModCards = getLearnableCards(mod);
     const cards = getVisibleCards(mod);
     if (state.cardIdx >= cards.length) state.cardIdx = 0;
     if (state.cardIdx < 0) state.cardIdx = cards.length - 1;
@@ -438,25 +833,10 @@
     const isTaskMode = Boolean(state.activeTaskModId);
     const canStartTest = isTeacherBypass() || mStats.done >= mStats.total;
     const idleElapsedSec = Math.floor((Date.now() - state.lastActivityAt) / 1000);
+    // Keep Task Study controls merged cleanly into the single .study-top-bar (zero extra row pushing Flashcard controls off-screen!)
+    const taskBannerHtml = '';
 
-    const taskBannerHtml = isTaskMode ? `
-      <div class="ws-task-banner">
-        <div class="ws-task-banner-info">
-          <span class="ws-pill">TASK</span>
-          <span>${esc(mod.code)} · ${esc(mod.title)}</span>
-          <span class="ws-pill ${canStartTest ? 'ok' : ''}">Đã thuộc ${mStats.done} / ${mStats.total}</span>
-          ${!isTeacherBypass() ? `<span class="ws-pill" id="ws-idle-clock">${fmtMmSs(idleElapsedSec)} / 10:00</span>` : ''}
-        </div>
-        <div class="ws-task-banner-actions">
-          <button type="button" class="btn btn-primary" style="padding:7px 16px;font-size:13px;" ${canStartTest ? '' : 'disabled'} onclick="WritingStudio.startTaskExam('${esc(mod.id)}')">
-            ${canStartTest ? 'Vào Test →' : `Thuộc đủ ${mStats.total}/${mStats.total} để mở Test`}
-          </button>
-          <button type="button" class="btn" style="padding:7px 13px;font-size:13px;" onclick="WritingStudio.exitTaskStudyMode()">Thoát</button>
-        </div>
-      </div>
-    ` : '';
-
-    // Custom Totoro Scope Dropdown (matches Reading 1-to-1)
+    // Custom Totoro Scope Dropdown (matches Reading 1-to-1, clean short flow titles)
     const modMenuHtml = (DATA().SUBTOPICS || []).map((st) => {
       const stMods = (DATA().MODULES || []).filter((m) => m.subtopic === st.key);
       return `
@@ -465,7 +845,7 @@
           const active = m.id === mod.id;
           return `
             <button type="button" class="tot-scope-item ${active ? 'is-active' : ''}" role="option" aria-selected="${active ? 'true' : 'false'}" onclick="WritingStudio.selectModule('${esc(m.id)}')">
-              <span class="tot-scope-item-txt">${esc(m.code)} · ${esc(m.title)}</span>
+              <span class="tot-scope-item-txt">${esc(flowLabel(m))}</span>
               ${active ? '<svg class="tot-scope-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
             </button>
           `;
@@ -483,37 +863,41 @@
     const statusCls = stLevel === 3 ? 'mastered' : (stLevel === 2 ? 'slow' : (stLevel === 1 ? 'unremembered' : ''));
     const statusTxt = stLevel === 3 ? 'Đã thuộc' : (stLevel === 2 ? 'Nhớ chậm' : (stLevel === 1 ? 'Chưa nhớ' : ''));
     const showAudio = card.kind === 'vocab' || card.kind === 'paraphrase';
-    const metaTag = card.kind === 'flow' ? `${(card.steps || []).length} bước Domino` : (card.kind === 'grammar' ? 'Cấu trúc Band 8.5+' : (card.kind === 'paraphrase' ? 'Paraphrase đề thi' : 'C1–C2 Collocation'));
+    const isAnyFlow = card.kind === 'flow' || card.kind === 'branch_flow';
+    const flowSubMeta = mod.smartFlow?.mode === 'branches'
+      ? `${(mod.smartFlow.rows || []).length} nhánh nhân quả · Bản đồ tổng quan`
+      : 'Chuỗi 4 trạm nhân quả · Bản đồ định hướng';
+    const metaTag = card.kind === 'flow'
+      ? flowSubMeta
+      : (card.kind === 'branch_flow' ? `Mạch lập luận chi tiết · Nhánh ${(card.branchIdx || 0) + 1}` : '');
 
-    // Back body — exact Reading clean hierarchy (Green bold Meaning + Warm dashed Example box, ZERO extra clutter!)
+    // Back body — exact Reading clean hierarchy (NO Vietnamese example translation!)
     let backBodyHtml = '';
     if (card.kind === 'flow') {
-      backBodyHtml = `
-        <div class="ws-flow-list">
-          ${(card.steps || []).map((s, idx) => `<div class="ws-flow-step"><span class="ws-flow-num">${idx + 1}</span><span>${esc(s)}</span></div>`).join('')}
-        </div>
-      `;
+      backBodyHtml = renderSmartFlowDiagram(mod, { maskOn: state.flowMaskOn, revealed: state.flowRevealed });
+    } else if (card.kind === 'branch_flow') {
+      backBodyHtml = renderSingleBranchCard(card, { maskOn: state.flowMaskOn, revealed: state.flowRevealed });
     } else if (card.kind === 'paraphrase') {
+      const primaryTarget = card.items?.[0]?.en || '';
       backBodyHtml = `
         <div class="fc-back-meaning">${esc(card.vi)}</div>
-        <div class="fc-sentence-box">
-          <div class="ws-para-list">
-            ${(card.items || []).map((it) => `<div class="ws-para-item"><strong>${esc(it.en)}</strong> — ${esc(it.vi)}</div>`).join('')}
-          </div>
+        <div class="ws-para-list" style="margin-bottom:10px;">
+          ${(card.items || []).map((it) => `<div class="ws-para-item"><strong>${esc(it.en)}</strong> — ${esc(it.vi)}</div>`).join('')}
         </div>
+        ${card.example ? `<div class="fc-sentence-box">${highlightInExample(card.example, primaryTarget)}</div>` : ''}
       `;
     } else {
       backBodyHtml = `
         <div class="fc-back-meaning">${esc(card.vi)}</div>
-        ${card.example ? `<div class="fc-sentence-box">${highlightInExample(card.example, card.kind === 'vocab' ? card.en : '')}</div>` : ''}
+        ${card.example ? `<div class="fc-sentence-box">${highlightInExample(card.example, card.en)}</div>` : ''}
       `;
     }
 
-    const kindBadge = (k) => k === 'flow'
+    const kindBadge = (c) => c.kind === 'flow'
       ? '<span class="ws-kind-badge is-flow">Flow</span>'
-      : k === 'grammar'
-        ? '<span class="ws-kind-badge is-gram">Gram</span>'
-        : k === 'paraphrase'
+      : c.kind === 'branch_flow'
+        ? `<span class="ws-kind-badge is-flow">N${(c.branchIdx || 0) + 1}</span>`
+        : c.kind === 'paraphrase'
           ? '<span class="ws-kind-badge is-para">Para</span>'
           : '<span class="ws-kind-badge">Vocab</span>';
 
@@ -521,7 +905,7 @@
       const lv = mmap[c.id]?.level || 0;
       return `
         <button type="button" class="ws-mini-row ${idx === state.cardIdx ? 'active' : ''}" onclick="WritingStudio.jumpCard(${idx})">
-          ${kindBadge(c.kind)}
+          ${kindBadge(c)}
           <span class="ws-mini-txt">${esc(c.en)}</span>
           <span class="ws-mini-dot ${lv === 3 ? 'ok' : (lv === 2 ? 'warn' : '')}"></span>
         </button>
@@ -539,16 +923,24 @@
     root.innerHTML = `
       ${taskBannerHtml}
 
-      <!-- 1. TOP BAR — 100% Reading Totoro Editorial Parity -->
-      <div class="study-top-bar">
+      <!-- 1. TOP BAR — 100% Reading Totoro Editorial Parity (Single Row Even in Task Mode!) -->
+      <div class="study-top-bar ${isTaskMode ? 'is-ws-task-bar' : ''}">
         <div class="study-bar-left">
-          <div class="scope-select-wrap has-custom-scope" id="ws-scope-wrap">
-            <button type="button" class="tot-scope-trigger" id="ws-scope-trigger" aria-haspopup="listbox" onclick="WritingStudio.toggleModDropdown(event)" ${isTaskMode ? 'disabled' : ''}>
-              <span class="tot-scope-trigger-label">${esc(mod.code)} · ${esc(mod.title)}</span>
-              <svg class="tot-scope-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            <div class="tot-scope-menu ws-mod-dropdown-menu" role="listbox" aria-label="Chọn bài học Writing">${modMenuHtml}</div>
-          </div>
+          ${isTaskMode ? `
+            <div class="ws-inline-task-badge">
+              <span class="ws-pill">TASK</span>
+              <strong class="ws-inline-task-name">${esc(flowLabel(mod))}</strong>
+              <span class="ws-pill ${canStartTest ? 'ok' : ''}" title="Số thẻ từ vựng/paraphrase đã thuộc (không tính thẻ bản đồ Flow)">Thuộc ${mStats.done}/${mStats.total}</span>
+            </div>
+          ` : `
+            <div class="scope-select-wrap has-custom-scope" id="ws-scope-wrap">
+              <button type="button" class="tot-scope-trigger" id="ws-scope-trigger" aria-haspopup="listbox" onclick="WritingStudio.toggleModDropdown(event)">
+                <span class="tot-scope-trigger-label">${esc(flowLabel(mod))}</span>
+                <svg class="tot-scope-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="tot-scope-menu ws-mod-dropdown-menu" role="listbox" aria-label="Chọn bài học Writing">${modMenuHtml}</div>
+            </div>
+          `}
 
           <div class="tot-idle-clock-pill" id="ws-idle-clock-pill" role="status" aria-live="off" title="Thời gian không thao tác">
             <span class="tot-idle-left">
@@ -557,7 +949,7 @@
               <span class="tot-idle-lbl">Không thao tác</span>
             </span>
             <span class="tot-idle-readout tabular">
-              <strong id="ws-idle-clock-val">${esc(curIdleVal)}</strong>
+              <strong id="${isTaskMode ? 'ws-idle-clock' : 'ws-idle-clock-val'}">${esc(isTaskMode ? fmtMmSs(idleElapsedSec) : curIdleVal)}</strong>
               <span class="tot-idle-limit">/ 10:00</span>
             </span>
             <span class="tot-idle-progress-track" aria-hidden="true"><span class="tot-idle-progress-fill" id="ws-idle-clock-bar"></span></span>
@@ -573,15 +965,22 @@
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             <span>Chưa thuộc</span>
           </button>
-          <button type="button" class="btn-deck-tool tot-tool-quiet" onclick="WritingStudio.shuffleDeck()" title="Trộn ngẫu nhiên thứ tự thẻ">
-            <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="16 3 21 3 21 8"/><line x1="4" x2="21" y1="20" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" x2="21" y1="15" y2="21"/></svg>
-            <span>Trộn</span>
-          </button>
-          <button type="button" class="btn-deck-tool tot-tool-quiet btn-focus-toggle ${isFocusActive ? 'active' : ''}" onclick="typeof toggleFocusMode === 'function' && toggleFocusMode()" title="Thu gọn 2 cột bên để tập trung học Flashcard">
-            <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
-            <span>Tập trung</span>
-          </button>
-          <div class="study-progress-wrap">
+          ${isTaskMode ? `
+            <button type="button" class="btn btn-primary ws-topbar-test-btn" ${canStartTest ? '' : 'disabled'} onclick="WritingStudio.startTaskExam('${esc(mod.id)}')" title="${canStartTest ? 'Bắt đầu bài Test 3 bước' : `Cần thuộc đủ ${mStats.total}/${mStats.total} thẻ`}">
+              ${canStartTest ? 'Vào Test →' : `Còn ${Math.max(0, mStats.total - mStats.done)} thẻ`}
+            </button>
+            <button type="button" class="btn ws-topbar-exit-btn" onclick="WritingStudio.exitTaskStudyMode()">Thoát</button>
+          ` : `
+            <button type="button" class="btn-deck-tool tot-tool-quiet" onclick="WritingStudio.shuffleDeck()" title="Trộn ngẫu nhiên thứ tự thẻ">
+              <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="16 3 21 3 21 8"/><line x1="4" x2="21" y1="20" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" x2="21" y1="15" y2="21"/></svg>
+              <span>Trộn</span>
+            </button>
+            <button type="button" class="btn-deck-tool tot-tool-quiet btn-focus-toggle ${isFocusActive ? 'active' : ''}" onclick="typeof toggleFocusMode === 'function' && toggleFocusMode()" title="Thu gọn 2 cột bên để tập trung học Flashcard">
+              <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+              <span>Tập trung</span>
+            </button>
+          `}
+          <div class="study-progress-wrap" title="Vị trí thẻ hiện tại (gồm thẻ bản đồ Flow + thẻ từ vựng)">
             <span class="study-progress tabular">${state.cardIdx + 1} / ${cards.length}</span>
           </div>
         </div>
@@ -705,17 +1104,17 @@
               </span>
               <div class="widget-title-group">
                 <div class="widget-title">Task · 3 Bước</div>
-                <div class="widget-subtitle">Flow → Grammar → Tự viết</div>
+                <div class="widget-subtitle">Flow VI → Grammar → Body</div>
               </div>
             </div>
             <div class="tot-speedquiz-meta">
               <div class="tot-sq-badge">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9.5 2h5" stroke-linecap="round"/></svg>
-                <span>Domino 60s</span>
+                <span>Soi chính tả</span>
               </div>
               <div class="tot-sq-badge">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                <span>Soi chuẩn Key</span>
+                <span>Đề thi thật</span>
               </div>
             </div>
             ${isTaskMode
@@ -748,7 +1147,7 @@
                       <path d="M24 12.2C58 9.2 106 8.8 138 10.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.55"/>
                     </svg>
                     <div class="fc-pronounce-row" onclick="event.stopPropagation()">
-                      <span class="fc-ipa-badge">${esc(metaTag)}</span>
+                      ${metaTag ? `<span class="fc-ipa-badge">${esc(metaTag)}</span>` : ''}
                       ${showAudio ? `
                         <button type="button" class="btn-voice-speak" onclick="WritingStudio.speakCurrent('en-GB', event)" title="Nghe Anh - Anh (UK)"><span>UK</span></button>
                         <button type="button" class="btn-voice-speak" onclick="WritingStudio.speakCurrent('en-US', event)" title="Nghe Anh - Mỹ (US)"><span>US</span></button>
@@ -811,7 +1210,8 @@
                       <div class="fc-back-top-row">
                         <span class="fc-pos">${esc(card.pos)}</span>
                         <div class="fc-back-header-right">
-                          <span class="fc-status-tag ${statusCls}">${esc(statusTxt)}</span>
+                          ${isAnyFlow ? `<button type="button" class="btn-reading-tip ${state.flowMaskOn ? 'is-active' : ''}" onclick="WritingStudio.toggleFlowMask(event)">${state.flowMaskOn ? 'Hiện toàn bộ' : 'Ẩn mắt xích để nhẩm'}</button>` : ''}
+                          ${!card.untested ? `<span class="fc-status-tag ${statusCls}">${esc(statusTxt)}</span>` : `<span class="fc-status-tag">${card.kind === 'branch_flow' ? 'Mạch nhánh' : 'Bản đồ tổng quan'}</span>`}
                         </div>
                       </div>
                       <div class="fc-back-meta-row">
@@ -845,39 +1245,47 @@
                     <span class="hanko-seal-txt">Đã thuộc</span>
                   </div>
 
-                  <div class="assessment-row" onclick="event.stopPropagation()">
-                    <button type="button" class="btn-assess btn-assess-unremembered" onclick="WritingStudio.assessCard(1)" aria-label="Đánh giá 1: Chưa nhớ">
-                      <svg class="assess-totoro-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <circle cx="12" cy="12" r="6.8" fill="#2A2C32"/>
-                        <path d="M12 3.2V5.5M12 18.5V20.8M3.2 12H5.5M18.5 12H20.8M5.8 5.8L7.4 7.4M16.6 16.6L18.2 18.2M18.2 5.8L16.6 7.4M7.4 16.6L5.8 18.2" stroke="#2A2C32" stroke-width="1.6" stroke-linecap="round"/>
-                        <circle cx="9.6" cy="11.5" r="2.1" fill="#FFFFFF"/><circle cx="9.8" cy="11.5" r="0.95" fill="#111111"/>
-                        <circle cx="14.4" cy="11.5" r="2.1" fill="#FFFFFF"/><circle cx="14.2" cy="11.5" r="0.95" fill="#111111"/>
-                      </svg>
-                      <span>Chưa nhớ <small class="anki-ivl-tag">Ôn ngay</small></span>
-                      <span class="kbd-badge">1</span>
-                    </button>
-                    <button type="button" class="btn-assess btn-assess-slow" onclick="WritingStudio.assessCard(2)" aria-label="Đánh giá 2: Nhớ chậm">
-                      <svg class="assess-totoro-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M7.5 10L6 4.8L10 8.2C11.3 7.7 12.7 7.7 14 8.2L18 4.8L16.5 10C18.8 11.7 19.8 14.3 19.6 17.2C19.3 20.2 16.5 21.8 12 21.8C7.5 21.8 4.7 20.2 4.4 17.2C4.2 14.3 5.2 11.7 7.5 10Z" fill="#FFFFFF" stroke="#5B5852" stroke-width="1.4" stroke-linejoin="round"/>
-                        <circle cx="9.6" cy="13.2" r="1.25" fill="#1E2126"/><circle cx="14.4" cy="13.2" r="1.25" fill="#1E2126"/>
-                        <ellipse cx="7.8" cy="15.2" rx="1.3" ry="0.7" fill="#F29B9B" opacity="0.7"/>
-                        <ellipse cx="16.2" cy="15.2" rx="1.3" ry="0.7" fill="#F29B9B" opacity="0.7"/>
-                      </svg>
-                      <span>Nhớ chậm <small class="anki-ivl-tag">1 ngày</small></span>
-                      <span class="kbd-badge">2</span>
-                    </button>
-                    <button type="button" class="btn-assess btn-assess-mastered" id="ws-btn-master" ${cdSec > 0 ? 'disabled' : ''} onclick="WritingStudio.assessCard(3)" aria-label="Đánh giá 3: Đã thuộc">
-                      <svg class="assess-totoro-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M7.2 10L5.6 4.2L10.1 8C11.3 7.6 12.7 7.6 13.9 8L18.4 4.2L16.8 10C19.2 11.7 20.2 14.2 20 17.2C19.7 20.3 16.8 22 12 22C7.2 22 4.3 20.3 4 17.2C3.8 14.2 4.8 11.7 7.2 10Z" fill="#6D6962" stroke="#484540" stroke-width="1.15" stroke-linejoin="round"/>
-                        <path d="M12 7.5C13.4 4.5 16 4.1 17.6 5.6C15.9 7.2 13.7 7.8 12 7.5Z" fill="#52A063" stroke="#2D6A3B" stroke-width="0.9"/>
-                        <ellipse cx="12" cy="17.8" rx="5.2" ry="3.2" fill="#FBF6E8"/>
-                        <circle cx="9.3" cy="12.6" r="1.5" fill="#FFFFFF"/><circle cx="9.4" cy="12.6" r="0.75" fill="#181A1F"/>
-                        <circle cx="14.7" cy="12.6" r="1.5" fill="#FFFFFF"/><circle cx="14.6" cy="12.6" r="0.75" fill="#181A1F"/>
-                      </svg>
-                      <span id="ws-btn-master-lbl">${cdSec > 0 ? `Chờ ${cdSec}s` : 'Đã thuộc <small class="anki-ivl-tag">4 ngày</small>'}</span>
-                      <span class="kbd-badge">3</span>
-                    </button>
-                  </div>
+                  ${isAnyFlow ? `
+                    <div class="ws-flow-guide-cta" onclick="event.stopPropagation()">
+                      <button type="button" class="btn btn-primary ws-flow-guide-btn" onclick="WritingStudio.stepCard(1)">
+                        <span>${card.kind === 'branch_flow' ? 'Đã nắm nhánh này · Học từ vựng của nhánh →' : ((mod.vocab || []).some((v) => v.branchIdx === -1) ? 'Đã nắm tổng quan · Học cụm mở đoạn →' : (mod.smartFlow?.mode === 'branches' ? 'Đã nắm tổng quan · Vào Nhánh 1 →' : 'Đã nắm mạch Flow · Học từ vựng của bài →'))}</span>
+                      </button>
+                    </div>
+                  ` : `
+                    <div class="assessment-row" onclick="event.stopPropagation()">
+                      <button type="button" class="btn-assess btn-assess-unremembered" onclick="WritingStudio.assessCard(1)" aria-label="Đánh giá 1: Chưa nhớ">
+                        <svg class="assess-totoro-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <circle cx="12" cy="12" r="6.8" fill="#2A2C32"/>
+                          <path d="M12 3.2V5.5M12 18.5V20.8M3.2 12H5.5M18.5 12H20.8M5.8 5.8L7.4 7.4M16.6 16.6L18.2 18.2M18.2 5.8L16.6 7.4M7.4 16.6L5.8 18.2" stroke="#2A2C32" stroke-width="1.6" stroke-linecap="round"/>
+                          <circle cx="9.6" cy="11.5" r="2.1" fill="#FFFFFF"/><circle cx="9.8" cy="11.5" r="0.95" fill="#111111"/>
+                          <circle cx="14.4" cy="11.5" r="2.1" fill="#FFFFFF"/><circle cx="14.2" cy="11.5" r="0.95" fill="#111111"/>
+                        </svg>
+                        <span>Chưa nhớ <small class="anki-ivl-tag">Ôn ngay</small></span>
+                        <span class="kbd-badge">1</span>
+                      </button>
+                      <button type="button" class="btn-assess btn-assess-slow" onclick="WritingStudio.assessCard(2)" aria-label="Đánh giá 2: Nhớ chậm">
+                        <svg class="assess-totoro-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M7.5 10L6 4.8L10 8.2C11.3 7.7 12.7 7.7 14 8.2L18 4.8L16.5 10C18.8 11.7 19.8 14.3 19.6 17.2C19.3 20.2 16.5 21.8 12 21.8C7.5 21.8 4.7 20.2 4.4 17.2C4.2 14.3 5.2 11.7 7.5 10Z" fill="#FFFFFF" stroke="#5B5852" stroke-width="1.4" stroke-linejoin="round"/>
+                          <circle cx="9.6" cy="13.2" r="1.25" fill="#1E2126"/><circle cx="14.4" cy="13.2" r="1.25" fill="#1E2126"/>
+                          <ellipse cx="7.8" cy="15.2" rx="1.3" ry="0.7" fill="#F29B9B" opacity="0.7"/>
+                          <ellipse cx="16.2" cy="15.2" rx="1.3" ry="0.7" fill="#F29B9B" opacity="0.7"/>
+                        </svg>
+                        <span>Nhớ chậm <small class="anki-ivl-tag">1 ngày</small></span>
+                        <span class="kbd-badge">2</span>
+                      </button>
+                      <button type="button" class="btn-assess btn-assess-mastered" id="ws-btn-master" ${cdSec > 0 ? 'disabled' : ''} onclick="WritingStudio.assessCard(3)" aria-label="Đánh giá 3: Đã thuộc">
+                        <svg class="assess-totoro-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M7.2 10L5.6 4.2L10.1 8C11.3 7.6 12.7 7.6 13.9 8L18.4 4.2L16.8 10C19.2 11.7 20.2 14.2 20 17.2C19.7 20.3 16.8 22 12 22C7.2 22 4.3 20.3 4 17.2C3.8 14.2 4.8 11.7 7.2 10Z" fill="#6D6962" stroke="#484540" stroke-width="1.15" stroke-linejoin="round"/>
+                          <path d="M12 7.5C13.4 4.5 16 4.1 17.6 5.6C15.9 7.2 13.7 7.8 12 7.5Z" fill="#52A063" stroke="#2D6A3B" stroke-width="0.9"/>
+                          <ellipse cx="12" cy="17.8" rx="5.2" ry="3.2" fill="#FBF6E8"/>
+                          <circle cx="9.3" cy="12.6" r="1.5" fill="#FFFFFF"/><circle cx="9.4" cy="12.6" r="0.75" fill="#181A1F"/>
+                          <circle cx="14.7" cy="12.6" r="1.5" fill="#FFFFFF"/><circle cx="14.6" cy="12.6" r="0.75" fill="#181A1F"/>
+                        </svg>
+                        <span id="ws-btn-master-lbl">${cdSec > 0 ? `Chờ ${cdSec}s` : 'Đã thuộc <small class="anki-ivl-tag">4 ngày</small>'}</span>
+                        <span class="kbd-badge">3</span>
+                      </button>
+                    </div>
+                  `}
                 </div>
               </div>
             </div>
@@ -886,7 +1294,7 @@
           <div class="study-controls">
             <div class="nav-buttons-group">
               <button type="button" class="btn" ${state.cardIdx === 0 ? 'disabled' : ''} onclick="WritingStudio.stepCard(-1)">← Trước</button>
-              <button type="button" class="btn btn-primary btn-flip-action" id="ws-btn-flip" onclick="WritingStudio.flipCard()">${state.flipped ? 'Mặt trước' : (card.kind === 'flow' ? 'Xem mạch Flow' : 'Xem nghĩa')}</button>
+              <button type="button" class="btn btn-primary btn-flip-action" id="ws-btn-flip" onclick="WritingStudio.flipCard()">${state.flipped ? 'Mặt trước' : (isAnyFlow ? 'Xem mạch Flow' : 'Xem nghĩa')}</button>
               <button type="button" class="btn" ${state.cardIdx >= cards.length - 1 ? 'disabled' : ''} onclick="WritingStudio.stepCard(1)">Tiếp →</button>
             </div>
           </div>
@@ -917,7 +1325,7 @@
               </span>
               <div class="widget-title-group">
                 <div class="widget-title">Tiến Độ Thuộc Thẻ</div>
-                <div class="widget-subtitle">${esc(mod.code)}</div>
+                <div class="widget-subtitle">${esc(flowLabel(mod))}</div>
               </div>
             </div>
 
@@ -998,7 +1406,7 @@
               </span>
               <div class="widget-title-group">
                 <div class="widget-title">Danh Sách Thẻ</div>
-                <div class="widget-subtitle">Flow → Vocab → Para → Gram</div>
+                <div class="widget-subtitle">Flow → Vocab → Paraphrase</div>
               </div>
             </div>
             <div class="ws-deck-scroll">${miniListHtml}</div>
@@ -1041,7 +1449,7 @@
       if (!state.activeTaskModId || isTeacherBypass()) return;
       const elapsed = Date.now() - state.lastActivityAt;
       const el = document.getElementById('ws-idle-clock');
-      if (el) el.textContent = `${fmtMmSs(elapsed / 1000)} / 10:00`;
+      if (el) el.textContent = fmtMmSs(elapsed / 1000);
       if (elapsed >= IDLE_LIMIT_MS) {
         setLockout(TASK_LOCK_KEY_BASE, 'Không thao tác quá 10 phút trong Task');
         exitTaskStudyMode();
@@ -1051,28 +1459,44 @@
     }, 1000);
   }
 
+  function autoSpeakFrontCard(card) {
+    if (!card || state.flipped) return;
+    if (card.kind === 'vocab' || card.kind === 'paraphrase') {
+      speakText(card.en, 'en-US');
+    }
+  }
+
   function selectModule(modId) {
     state.selectedModId = modId;
     state.cardIdx = 0;
     state.flipped = false;
     renderFlashcardWorkspace();
+    const mod = getActiveMod();
+    autoSpeakFrontCard(getVisibleCards(mod)[state.cardIdx]);
   }
   function toggleUnmastered() {
     state.unmasteredOnly = !state.unmasteredOnly;
     state.cardIdx = 0;
     state.flipped = false;
     renderFlashcardWorkspace();
+    const mod = getActiveMod();
+    autoSpeakFrontCard(getVisibleCards(mod)[state.cardIdx]);
   }
   function flipCard() {
     const mod = getActiveMod();
     const card = getVisibleCards(mod)[state.cardIdx];
+    const isAnyFlow = card?.kind === 'flow' || card?.kind === 'branch_flow';
     state.flipped = !state.flipped;
     document.getElementById('ws-fc-card')?.classList.toggle('flipped', state.flipped);
     const btn = document.getElementById('ws-btn-flip');
-    if (btn) btn.textContent = state.flipped ? 'Mặt trước' : (card?.kind === 'flow' ? 'Xem mạch Flow' : 'Xem nghĩa');
-    if (state.flipped && card && (card.kind === 'vocab' || card.kind === 'paraphrase')) {
-      const txt = card.kind === 'paraphrase' ? (card.items?.[0]?.en || card.en) : card.en;
-      speakText(txt, 'en-GB');
+    if (btn) btn.textContent = state.flipped ? 'Mặt trước' : (isAnyFlow ? 'Xem mạch Flow' : 'Xem nghĩa');
+    if (card && (card.kind === 'vocab' || card.kind === 'paraphrase')) {
+      if (state.flipped) {
+        const txt = card.kind === 'paraphrase' ? (card.items?.[0]?.en || card.en) : card.en;
+        speakText(txt, 'en-GB');
+      } else {
+        speakText(card.en, 'en-US');
+      }
     }
   }
   function stepCard(delta) {
@@ -1083,12 +1507,16 @@
       state.cardIdx = nxt;
       state.flipped = false;
       renderFlashcardWorkspace();
+      autoSpeakFrontCard(cards[nxt]);
     }
   }
   function jumpCard(idx) {
+    const mod = getActiveMod();
+    const cards = getVisibleCards(mod);
     state.cardIdx = idx;
     state.flipped = false;
     renderFlashcardWorkspace();
+    autoSpeakFrontCard(cards[idx]);
   }
   function speakCurrent(accent, e) {
     if (e) e.stopPropagation();
@@ -1096,7 +1524,7 @@
     const card = getVisibleCards(mod)[state.cardIdx];
     if (!card) return;
     const txt = (card.kind === 'paraphrase' && state.flipped) ? (card.items?.[0]?.en || card.en) : card.en;
-    speakText(txt, accent);
+    speakText(txt, accent || (state.flipped ? 'en-GB' : 'en-US'));
   }
 
   function commitCardMastery(card, level) {
@@ -1115,7 +1543,10 @@
   function assessCard(level) {
     const mod = getActiveMod();
     const card = getVisibleCards(mod)[state.cardIdx];
-    if (!card) return;
+    if (!card || card.untested) {
+      if (card?.untested) stepCard(1);
+      return;
+    }
     if (level !== 3) {
       commitCardMastery(card, level);
       toast(level === 2 ? 'Đã xếp vào Nhớ chậm.' : 'Đã xếp vào Chưa nhớ.');
@@ -1134,23 +1565,197 @@
     openRecallModal(card);
   }
 
-  /* ================= ULTRA-STRICT RECALL MODAL (EXACT TYPING + 35s FLOW ORDER) ================= */
+  /* ================= 2-STAGE ĐÃ THUỘC RECALL (TEST 1 IELTS TRAP -> TEST 2 VI->EN SENTENCE + GRAMMAR & SPELLING) ================= */
+  const COMMON_IELTS_TYPOS = new Set([
+    'neccessary', 'neccessity', 'goverment', 'enviroment', 'enviromental', 'bussiness', 'becuase', 'beacuse',
+    'peopel', 'studnets', 'childern', 'chidlren', 'sociaty', 'econmic', 'healt', 'helth', 'wrok', 'overwrok', 'alwyas',
+    'definately', 'seperate', 'occured', 'recieve', 'beleive', 'acheive', 'managment', 'developement', 'improvment',
+    'knowlege', 'exprience', 'oportunity', 'benifit', 'tecnology', 'communcation', 'profesional', 'responsiblity',
+    'stressfull', 'sucessful', 'finacial', 'presssure', 'compettition', 'collegue', 'balence', 'salery', 'expences',
+    'famly', 'eductaion', 'mentel', 'physicl', 'nutriton', 'deliquency', 'marraige', 'fertillity', 'displacment',
+    'isolaton', 'boundries', 'flexiblity', 'independant', 'conveniance', 'creativty', 'adaptaton', 'alot', 'teh',
+    'thier', 'wich', 'wher', 'pepole', 'importent', 'diffrent', 'probelm', 'soluton', 'efffect', 'causess'
+  ]);
+
+  const ENGLISH_PREDICATE_MARKERS = new Set([
+    'is', 'are', 'was', 'were', 'be', 'been', 'being', 'am',
+    'have', 'has', 'had', 'do', 'does', 'did',
+    'can', 'could', 'will', 'would', 'shall', 'should', 'may', 'might', 'must',
+    'make', 'makes', 'made', 'take', 'takes', 'took', 'give', 'gives', 'gave',
+    'create', 'creates', 'created', 'cause', 'causes', 'caused', 'lead', 'leads', 'led',
+    'drive', 'drives', 'drove', 'force', 'forces', 'forced', 'help', 'helps', 'helped',
+    'need', 'needs', 'needed', 'want', 'wants', 'wanted', 'feel', 'feels', 'felt',
+    'face', 'faces', 'faced', 'suffer', 'suffers', 'suffered', 'work', 'works', 'worked',
+    'spend', 'spends', 'spent', 'use', 'uses', 'used', 'allow', 'allows', 'allowed',
+    'provide', 'provides', 'provided', 'improve', 'improves', 'improved', 'reduce', 'reduces', 'reduced',
+    'increase', 'increases', 'increased', 'prevent', 'prevents', 'prevented', 'protect', 'protects', 'protected',
+    'affect', 'affects', 'affected', 'harm', 'harms', 'harmed', 'become', 'becomes', 'became', 'remain', 'remains', 'remained',
+    'find', 'finds', 'found', 'get', 'gets', 'got', 'keep', 'keeps', 'kept', 'bring', 'brings', 'brought',
+    'show', 'shows', 'showed', 'play', 'plays', 'played', 'offer', 'offers', 'offered', 'require', 'requires', 'required',
+    'encourage', 'encourages', 'encouraged', 'promote', 'promotes', 'promoted', 'support', 'supports', 'supported',
+    'result', 'results', 'resulted', 'contribute', 'contributes', 'contributed', 'depend', 'depends', 'depended',
+    'tend', 'tends', 'tended', 'struggle', 'struggles', 'struggled', 'fail', 'fails', 'failed', 'fear', 'fears', 'feared',
+    'try', 'tries', 'tried', 'choose', 'chooses', 'chose', 'care', 'cares', 'cared', 'live', 'lives', 'lived'
+  ]);
+
+  function escapeRegExp(s) {
+    return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function detectIeltsGrammarErrors(rawText) {
+    const text = String(rawText || '').trim();
+    const errs = [];
+    const addErr = (msg) => { if (!errs.includes(msg)) errs.push(msg); };
+
+    if (/^[a-z]/.test(text)) {
+      addErr('Chưa viết hoa chữ cái đầu câu.');
+    }
+    const dup = text.match(/\b(the|a|an|is|are|to|of|in|for|and|that|many|more)\s+\1\b/i);
+    if (dup) addErr(`Lặp từ liền nhau: "${dup[0]}".`);
+
+    const modalTo = text.match(/\b(can|could|will|would|should|may|might|must)\s+to\s+[a-z]+\b/i);
+    if (modalTo) addErr(`Lỗi động từ khuyết thiếu "${modalTo[0]}" → sau ${modalTo[1]} dùng động từ nguyên mẫu không "to".`);
+
+    const modalIng = text.match(/\b(can|could|will|would|should|may|might|must)\s+[a-z]{3,}ing\b/i);
+    if (modalIng) addErr(`Lỗi ngữ pháp "${modalIng[0]}" → sau ${modalIng[1]} dùng V nguyên mẫu (hoặc "be + V-ing").`);
+
+    const beBase = text.match(/\b(is|are|was|were)\s+(affect|cause|create|make|harm|reduce|increase|improve|suffer|face|force|drive|help|need|want|work|spend|live|lead|allow|prevent|protect|depend|lack|fail|remain|try|choose)\b/i);
+    if (beBase) addErr(`Lỗi chia động từ "${beBase[0]}" → sau "${beBase[1]}" dùng V-ing hoặc bị động V3/ed.`);
+
+    const auxBad = text.match(/\b(does|did)\s+(?:not\s+)?([a-z]{3,}(?:s|es|ed))\b/i);
+    if (auxBad && !/^(is|as|us|its|this|always|often|never|sometimes|needs|less|stress|business)$/i.test(auxBad[2])) {
+      addErr(`Lỗi trợ động từ "${auxBad[0]}" → sau "${auxBad[1]}" dùng động từ nguyên mẫu.`);
+    }
+
+    const aVowel = text.match(/\ba\s+(economic|economy|urban|implicit|emotional|intense|important|overtime|office|online|issue|impact|effect|effort|income|adult|employee|employer|environment|education|opportunity|essential|abundant|unfair)\b/i);
+    if (aVowel) addErr(`Lỗi mạo từ "${aVowel[0]}" → trước nguyên âm dùng "an".`);
+
+    const anCons = text.match(/\ban\s+(culture|workplace|company|worker|family|child|parent|job|career|salary|problem|solution|benefit|health|system|market|society|person|pressure|driver|cost|stress|burden|limit)\b/i);
+    if (anCons) addErr(`Lỗi mạo từ "${anCons[0]}" → trước phụ âm dùng "a".`);
+
+    if (/\b(although|though|even though)\b[^.!?]+\bbut\b/i.test(text)) {
+      addErr('Không dùng đồng thời "Although/Though" và "but" trong cùng một câu.');
+    }
+    if (/\bbecause\b[^.!?]+\bso\b/i.test(text)) {
+      addErr('Không dùng đồng thời "Because" và "so" trong cùng một câu.');
+    }
+    if (/\bdespite\s+of\b/i.test(text)) {
+      addErr('Lỗi giới từ "despite of" → chỉ dùng "despite" hoặc "in spite of".');
+    }
+    if (/\bdiscuss\s+about\b/i.test(text)) {
+      addErr('Lỗi giới từ "discuss about" → dùng trực tiếp "discuss + O".');
+    }
+    if (/\b(make|makes|made|let|lets)\s+(people|workers|employees|students|children|families|us|them)\s+to\s+[a-z]+\b/i.test(text)) {
+      addErr('Cấu trúc "make/let + O + V nguyên mẫu" không dùng "to".');
+    }
+    if (/\bthere\s+is\s+(many|several|various|numerous|two|three|four|five)\b/i.test(text)) {
+      addErr('Lỗi hòa hợp Chủ–Vị: dùng "There are" trước danh từ số nhiều.');
+    }
+    if (/\bthere\s+are\s+(a|an)\s+/i.test(text)) {
+      addErr('Lỗi hòa hợp Chủ–Vị: dùng "There is" trước danh từ số ít "a/an".');
+    }
+    return errs;
+  }
+
+  function phraseMatchesSentence(sentenceLow, targetPhrase) {
+    const cleanTarget = normStr(targetPhrase).replace(/^to\s+/, '');
+    if (!cleanTarget) return true;
+    if (sentenceLow.includes(cleanTarget)) return true;
+    const parts = cleanTarget.split(' ');
+    const head = parts[0];
+    const rest = parts.slice(1).join(' ');
+    const headVariants = new Set([head, `${head}s`, `${head}es`, `${head}d`, `${head}ed`, `${head}ing`]);
+    if (head.endsWith('y') && head.length > 3) {
+      headVariants.add(`${head.slice(0, -1)}ies`);
+      headVariants.add(`${head.slice(0, -1)}ied`);
+    }
+    if (head.endsWith('e') && head.length > 3) {
+      headVariants.add(`${head.slice(0, -1)}ing`);
+    }
+    for (const hv of headVariants) {
+      const cand = rest ? `${hv} ${rest}` : hv;
+      if (new RegExp(`\\b${escapeRegExp(cand)}\\b`, 'i').test(sentenceLow)) return true;
+    }
+    return false;
+  }
+
+  function validateRecallSentence(rawSentence, card, mod) {
+    const text = String(rawSentence || '').trim();
+    const low = normStr(text);
+    const words = (text.match(/[A-Za-z'-]+/g) || []);
+    const acceptedList = card.kind === 'paraphrase'
+      ? (card.accepted && card.accepted.length ? card.accepted : [card.items?.[0]?.en || card.en])
+      : [card.en];
+    const primaryPhrase = acceptedList[0] || card.en;
+    const phraseWords = normStr(primaryPhrase).replace(/^to\s+/, '').split(' ').filter(Boolean);
+    const minWords = Math.max(6, phraseWords.length + 3);
+
+    if (!text) return { ok: false, errors: ['Hãy viết lại câu tiếng Anh hoàn chỉnh.'] };
+
+    const errors = [];
+    // 1. Gibberish check
+    const gibberish = words.find((w) => /[bcdfghjklmnpqrstvwxz]{5,}/i.test(w) || /(.)\1\1/i.test(w));
+    if (gibberish) errors.push(`Từ không hợp lệ: "${gibberish}".`);
+
+    // 2. Spelling check
+    const modPhrases = [...acceptedList, ...(mod?.vocab || []).map((v) => v.en)];
+    const typos = detectSpellingTypos(text, modPhrases);
+    words.forEach((w) => {
+      const lw = w.toLowerCase();
+      if (COMMON_IELTS_TYPOS.has(lw) && !typos.some((t) => t.toLowerCase() === lw)) typos.push(w);
+    });
+    if (typos.length > 0) {
+      errors.push(`Sai chính tả: ${typos.map((t) => `"${t}"`).join(', ')}.`);
+    }
+
+    // 3. Grammar check
+    const gramErrs = detectIeltsGrammarErrors(text);
+    gramErrs.forEach((g) => errors.push(`Lỗi ngữ pháp: ${g}`));
+
+    // 4. Target phrase inclusion check (ZERO English leak!)
+    const matched = acceptedList.some((ph) => phraseMatchesSentence(low, ph));
+    if (!matched) {
+      errors.push('Câu chưa sử dụng đúng cụm từ tiếng Anh vừa học cho ý trên (hoặc bị sai chính tả trong cụm).');
+    }
+
+    // 5. Length & anti-repeat & predicate check
+    if (words.length < minWords) {
+      errors.push(`Câu còn quá ngắn (${words.length} từ) — cần diễn đạt trọn vẹn câu Tiếng Việt trên.`);
+    }
+    const uniqueCount = new Set(words.map((w) => w.toLowerCase())).size;
+    if (words.length >= 6 && uniqueCount < Math.ceil(words.length * 0.6)) {
+      errors.push('Câu bị lặp từ quá nhiều — hãy viết tự nhiên.');
+    }
+    const hasVerb = words.some((w) => {
+      const lw = w.toLowerCase();
+      return ENGLISH_PREDICATE_MARKERS.has(lw) || /(ed|ing|ize|ise|ate|ify)$/.test(lw);
+    });
+    if (words.length >= 4 && !hasVerb) {
+      errors.push('Lỗi ngữ pháp: Câu chưa có động từ chính hoàn chỉnh.');
+    }
+
+    return errors.length === 0 ? { ok: true, errors: [] } : { ok: false, errors };
+  }
+
   function openRecallModal(card) {
     ensureOverlays();
     const mmap = getMasteryMap();
     const isStrictSrs = (mmap[card.id]?.reviews || 0) >= 1;
-    const isFlow = card.kind === 'flow';
-    const limitSec = isFlow ? 35 : (card.kind === 'grammar' ? 40 : 30);
+    const mod = getModById(card.modId) || getActiveMod();
+    const correctAns = card.kind === 'paraphrase' ? (card.items?.[0]?.en || card.en) : card.en;
 
     recallState = {
       card,
-      isFlow,
+      mod,
+      stage: 1, // 1: Hint-Free Exact Typing (30s, 2 tries) -> 2: VI->EN Sentence (90s, 3 tries)
       isStrictSrs,
-      attemptsLeft: isFlow ? 1 : (isStrictSrs ? 1 : 2),
-      secLeft: limitSec,
+      attemptsLeft: isStrictSrs ? 1 : 2,
+      secLeft: 30,
       timerId: null,
-      flowBank: isFlow ? shuffle((card.steps || []).map((t, i) => ({ id: i, text: t }))) : [],
-      flowPicked: [],
+      targetPhrase: correctAns,
+      sentenceDraft: '',
+      lastErrors: [],
+      passedModel: false,
       done: false
     };
 
@@ -1165,8 +1770,8 @@
       recallState.secLeft--;
       const pill = document.getElementById('ws-recall-timer');
       if (pill) {
-        pill.textContent = `${Math.max(0, recallState.secLeft)}s`;
-        pill.classList.toggle('urgent', recallState.secLeft <= 8);
+        pill.textContent = recallState.stage === 2 ? fmtMmSs(recallState.secLeft) : `${Math.max(0, recallState.secLeft)}s`;
+        pill.classList.toggle('urgent', recallState.secLeft <= (recallState.stage === 2 ? 15 : 8));
       }
       if (recallState.secLeft <= 0) {
         failRecall('Hết giờ!');
@@ -1176,42 +1781,78 @@
 
   function renderRecallModal() {
     if (!recallState) return;
-    const { card, isFlow, isStrictSrs, attemptsLeft, secLeft } = recallState;
-    const abortPen = isStrictSrs ? 90 : 60;
+    const { card, stage, attemptsLeft, secLeft, targetPhrase, passedModel, lastErrors } = recallState;
     const cardEl = document.getElementById('ws-recall-card');
+    cardEl.classList.toggle('is-wide', false);
 
-    if (isFlow) {
-      const nextStepNum = recallState.flowPicked.length + 1;
+    if (stage === 2) {
+      const curWc = String(recallState.sentenceDraft || '').trim()
+        ? String(recallState.sentenceDraft).trim().split(/\s+/).length
+        : 0;
+      const viPromptText = card.viPrompt || `Hãy viết một câu tiếng Anh hoàn chỉnh diễn đạt ý: "${card.vi}".`;
+      const enRefText = card.enRef || '';
+      const exampleSentence = card.example || '';
+
       cardEl.innerHTML = `
         <div class="ws-modal-head">
-          <div class="ws-modal-title">KIỂM TRA NHỚ FLOW</div>
+          <div class="ws-modal-title">KIỂM TRA ĐÃ THUỘC · TEST 2 · VIẾT CÂU TIẾNG ANH</div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <span class="ws-pill">Bước ${Math.min(nextStepNum, card.steps.length)} / ${card.steps.length}</span>
-            <span class="ws-pill ${secLeft <= 8 ? 'urgent' : ''}" id="ws-recall-timer">${secLeft}s</span>
+            ${!passedModel ? `<span class="ws-pill">Còn ${attemptsLeft} lượt</span>` : '<span class="ws-pill ok">Đã chốt Đã thuộc ✓</span>'}
+            ${!passedModel ? `<span class="ws-pill ${secLeft <= 15 ? 'urgent' : ''}" id="ws-recall-timer">${fmtMmSs(secLeft)}</span>` : ''}
           </div>
         </div>
-        <div class="ws-col-stack">
-          <div class="ws-col-lbl">Bấm chọn lần lượt các mắt xích từ bước 1 đến bước ${card.steps.length}</div>
-          ${recallState.flowBank.map((item) => `
-            <button type="button" class="ws-drag-chip" style="text-align:left;width:100%;" onclick="WritingStudio.pickRecallFlowStep(${item.id})">${esc(item.text)}</button>
-          `).join('')}
+        <div class="ws-recall-vi-prompt">${esc(viPromptText)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div class="ws-col-lbl" style="margin:0;">Viết lại câu trên bằng Tiếng Anh đúng chính tả &amp; ngữ pháp</div>
+          <span class="ws-pill tabular" id="ws-recall-sent-wc">${curWc} words</span>
         </div>
-        <div class="ws-feedback" id="ws-recall-fb"></div>
+        <textarea class="ws-recall-sent-input" id="ws-recall-sent-input" ${passedModel ? 'readonly' : ''}
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          placeholder="Viết câu tiếng Anh của bạn tại đây..."
+          oninput="WritingStudio.updateRecallSentenceDraft(this.value)"
+          onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); WritingStudio.submitRecallSentence(); }"
+          onpaste="event.preventDefault(); WritingStudio.toastMsg('Không được dán khi đang kiểm tra!');">${esc(recallState.sentenceDraft || '')}</textarea>
+        ${!passedModel && lastErrors && lastErrors.length ? `
+          <div class="ws-feedback err" id="ws-recall-fb">
+            ${lastErrors.map((er) => `<div>✕ ${esc(er)}</div>`).join('')}
+            <div style="margin-top:4px;opacity:0.9;">Còn ${attemptsLeft} lượt sửa.</div>
+          </div>
+        ` : `<div class="ws-feedback ${passedModel ? 'ok' : ''}" id="ws-recall-fb">${passedModel ? 'Đạt chuẩn chính tả & ngữ pháp! Đã chốt Đã thuộc.' : ''}</div>`}
+        ${passedModel ? `
+          <div class="ws-recall-model-box">
+            ${enRefText ? `
+              <div>
+                <div class="ws-col-lbl" style="color:var(--accent);margin-bottom:3px;">Câu Tiếng Anh tham khảo</div>
+                <div style="font-size:14.5px;line-height:1.62;color:var(--ink);text-align:justify;">${highlightInExample(enRefText, targetPhrase)}</div>
+              </div>
+            ` : ''}
+            ${exampleSentence ? `
+              <div style="${enRefText ? 'padding-top:8px;border-top:1px dashed var(--border);' : ''}">
+                <div class="ws-col-lbl" style="color:var(--ink-2);margin-bottom:3px;">Câu học thuật Band 8.5+ đối chiếu</div>
+                <div style="font-size:14.2px;line-height:1.62;color:var(--ink);text-align:justify;">${highlightInExample(exampleSentence, targetPhrase)}</div>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
         <div style="display:flex;justify-content:flex-end;gap:10px;">
-          <button type="button" class="btn" onclick="WritingStudio.abortRecall()">Bỏ bài (-${abortPen}s)</button>
+          ${passedModel
+            ? `<button type="button" class="btn btn-primary" id="ws-recall-finish-btn" onclick="WritingStudio.finishRecallPass()">Tiếp tục →</button>`
+            : `
+              <button type="button" class="btn" onclick="WritingStudio.abortRecall()">Bỏ kiểm tra</button>
+              <button type="button" class="btn btn-primary" id="ws-recall-sent-submit" onclick="WritingStudio.submitRecallSentence()">Xác nhận câu</button>
+            `}
         </div>
       `;
+      if (!passedModel) setTimeout(() => document.getElementById('ws-recall-sent-input')?.focus(), 40);
     } else {
-      const promptLine = card.kind === 'grammar'
-        ? `Gõ chính xác công thức cấu trúc vừa học · Còn ${attemptsLeft} lần thử`
-        : (card.kind === 'paraphrase'
-          ? `Gõ chính xác 1 cụm Paraphrase C1-C2 vừa học · Còn ${attemptsLeft} lần thử`
-          : `Gõ chính xác cụm từ tiếng Anh vừa học · Còn ${attemptsLeft} lần thử`);
+      const promptLine = card.kind === 'paraphrase'
+        ? `Gõ chính xác 1 cụm Paraphrase C1-C2 vừa học · còn ${attemptsLeft} lần.`
+        : `Gõ chính xác cụm từ tiếng Anh vừa học · còn ${attemptsLeft} lần.`;
       cardEl.innerHTML = `
         <div class="ws-modal-head">
-          <div class="ws-modal-title">KIỂM TRA NHỚ TỪ</div>
+          <div class="ws-modal-title">KIỂM TRA ĐÃ THUỘC · TEST 1</div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <span class="ws-pill">${isStrictSrs ? 'Ôn tập · 1 lượt' : 'Test 1'}</span>
+            <span class="ws-pill">Bước 1 / 2</span>
             <span class="ws-pill ${secLeft <= 8 ? 'urgent' : ''}" id="ws-recall-timer">${secLeft}s</span>
           </div>
         </div>
@@ -1220,32 +1861,16 @@
             <input type="text" class="ws-underline-input" id="ws-recall-input" placeholder="_ _ _ _"
               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
               onpaste="event.preventDefault(); WritingStudio.toastMsg('Không được dán khi đang kiểm tra!');" />
-            <div style="font-size:13px;color:var(--ink-2);text-align:center;" id="ws-recall-sub">${promptLine}</div>
+            <div style="font-size:13.5px;color:var(--ink-2);text-align:center;" id="ws-recall-sub">${promptLine}</div>
           </div>
           <div class="ws-feedback" id="ws-recall-fb" style="margin-top:12px;"></div>
           <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
-            <button type="button" class="btn" onclick="WritingStudio.abortRecall()">Bỏ bài (-${abortPen}s)</button>
-            <button type="submit" class="btn btn-primary" id="ws-recall-submit">Xác nhận</button>
+            <button type="button" class="btn" onclick="WritingStudio.abortRecall()">Bỏ kiểm tra</button>
+            <button type="submit" class="btn btn-primary" id="ws-recall-submit">Tiếp sang Test 2 →</button>
           </div>
         </form>
       `;
       setTimeout(() => document.getElementById('ws-recall-input')?.focus(), 40);
-    }
-  }
-
-  function pickRecallFlowStep(stepId) {
-    if (!recallState || recallState.done) return;
-    const expectedIdx = recallState.flowPicked.length;
-    if (stepId === expectedIdx) {
-      recallState.flowPicked.push(stepId);
-      recallState.flowBank = recallState.flowBank.filter((x) => x.id !== stepId);
-      if (recallState.flowBank.length === 0) {
-        passRecall();
-      } else {
-        renderRecallModal();
-      }
-    } else {
-      failRecall('Sai thứ tự mắt xích Flow!');
     }
   }
 
@@ -1254,7 +1879,8 @@
     if (!recallState || recallState.done) return;
     const inp = document.getElementById('ws-recall-input');
     const fb = document.getElementById('ws-recall-fb');
-    const typed = normStr(inp?.value || '');
+    const rawTyped = String(inp?.value || '').trim();
+    const typed = normStr(rawTyped);
     if (!typed) { inp?.focus(); return; }
 
     const card = recallState.card;
@@ -1263,14 +1889,21 @@
       : [normStr(card.en)];
 
     if (accepted.includes(typed)) {
-      passRecall();
+      recallState.stage = 2;
+      recallState.secLeft = 90;
+      recallState.attemptsLeft = recallState.isStrictSrs ? 2 : 3;
+      recallState.targetPhrase = card.kind === 'paraphrase' ? rawTyped : card.en;
+      recallState.sentenceDraft = '';
+      recallState.lastErrors = [];
+      renderRecallModal();
+      toast('Chính tả chuẩn xác! Bây giờ hãy viết lại câu Tiếng Việt sang Tiếng Anh.');
       return;
     }
 
     recallState.attemptsLeft--;
     if (recallState.attemptsLeft > 0) {
       const sub = document.getElementById('ws-recall-sub');
-      if (sub) sub.textContent = `Chưa chính xác · Còn ${recallState.attemptsLeft} lần thử`;
+      if (sub) sub.textContent = `Chưa chính xác · còn ${recallState.attemptsLeft} lần.`;
       if (fb) {
         fb.className = 'ws-feedback err';
         fb.textContent = `Chưa chính xác! Bạn còn ${recallState.attemptsLeft} lần thử lại.`;
@@ -1282,21 +1915,49 @@
     }
   }
 
-  function passRecall() {
+  function updateRecallSentenceDraft(val) {
     if (!recallState) return;
-    recallState.done = true;
-    clearInterval(recallState.timerId);
-    const fb = document.getElementById('ws-recall-fb');
-    if (fb) {
-      fb.className = 'ws-feedback ok';
-      fb.textContent = 'Chính xác tuyệt đối! Đã chốt Đã thuộc.';
+    recallState.sentenceDraft = String(val || '');
+    const wc = recallState.sentenceDraft.trim() ? recallState.sentenceDraft.trim().split(/\s+/).length : 0;
+    const pill = document.getElementById('ws-recall-sent-wc');
+    if (pill) pill.textContent = `${wc} words`;
+  }
+
+  function submitRecallSentence() {
+    if (!recallState || recallState.done) return;
+    const inp = document.getElementById('ws-recall-sent-input');
+    const raw = inp ? inp.value : recallState.sentenceDraft;
+    recallState.sentenceDraft = raw;
+    const check = validateRecallSentence(raw, recallState.card, recallState.mod);
+    if (check.ok) {
+      recallState.lastErrors = [];
+      passRecall();
+      return;
     }
+    recallState.attemptsLeft--;
+    recallState.lastErrors = check.errors;
+    if (recallState.attemptsLeft > 0) {
+      renderRecallModal();
+      setTimeout(() => document.getElementById('ws-recall-sent-input')?.focus(), 40);
+    } else {
+      failRecall(check.errors[0] || 'Chưa đạt yêu cầu!');
+    }
+  }
+
+  function passRecall() {
+    if (!recallState || recallState.done) return;
+    recallState.done = true;
+    recallState.passedModel = true;
+    clearInterval(recallState.timerId);
     const card = recallState.card;
-    setTimeout(() => {
-      closeRecallModalSilent();
-      commitCardMastery(card, 3);
-      toast('Đã chốt Đã thuộc!');
-    }, 550);
+    commitCardMastery(card, 3);
+    renderRecallModal();
+    toast('Đã chốt Đã thuộc!');
+  }
+
+  function finishRecallPass() {
+    closeRecallModalSilent();
+    renderFlashcardWorkspace();
   }
 
   function failRecall(reason) {
@@ -1369,14 +2030,15 @@
       const isDone = p?.status === 'completed';
       const tierCls = m.tier === 'cross' ? 'is-cross' : (m.tier === 'solution' ? 'is-solution' : 'is-core');
       const pillCls = isDone ? 'ok' : (m.tier === 'cross' ? 'warm' : (m.tier === 'solution' ? 'info' : ''));
+      const tierLabel = m.tier === 'cross' ? 'Cross-Topic' : (m.tier === 'solution' ? 'Solution' : 'Core Flow');
       return `
         <article class="ws-task-card ${tierCls} ${isDone ? 'is-done' : ''}">
           <div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-              <span class="ws-task-code">${esc(m.code)}</span>
+              <span class="ws-task-code">${tierLabel}</span>
               ${isDone ? `<span class="ws-pill ok">Band ${Number(p.band || 7.5).toFixed(1)}</span>` : `<span class="ws-pill ${pillCls}">${mStat.done}/${mStat.total} thẻ</span>`}
             </div>
-            <div class="ws-task-title">${esc(m.title)}</div>
+            <div class="ws-task-title">${esc(flowLabel(m))}</div>
             <div class="ws-task-meta">${esc((m.viFlowSteps || []).slice(0, 2).join(' → '))}</div>
           </div>
           <div>
@@ -1459,7 +2121,7 @@
     state.lastActivityAt = Date.now();
     window.TotoroUI?.enterSkillMode?.('Writing', 'flashcard');
     renderFlashcardWorkspace();
-    toast(`Đã vào Task: ${mod.code} · Học thuộc 100% thẻ để mở khóa Test!`);
+    toast(`Đã vào Task: ${flowLabel(mod)} · Học thuộc 100% thẻ để mở khóa Test!`);
   }
 
   function exitTaskStudyMode() {
@@ -1581,7 +2243,25 @@
     document.getElementById('ws-sq-modal')?.classList.remove('open');
   }
 
-  /* ================= 3-TEST SEQUENTIAL TASK EXAM (ANTI-CHEAT + RETRY GATE) ================= */
+  /* ================= 3-STAGE SEQUENTIAL TASK EXAM =================
+     Stage 1: Vietnamese Idea Flow -> Write in English (Spelling + Core Collocations)
+     Stage 2: Grammar Skeleton -> Write Cohesive Paragraph
+     Stage 3: Real IELTS Task 2 Prompt -> Write Full Body Paragraph + Model Key Compare
+     ================================================================== */
+  function getModulePrompts(mod) {
+    const allP = DATA().PRACTICE_PROMPTS || [];
+    const ids = mod?.linkedPromptIds || [];
+    const list = ids.map((id) => allP.find((p) => p.id === id)).filter(Boolean);
+    if (list.length) return list;
+    return allP.filter((p) => p.subtopic === mod?.subtopic).slice(0, 2);
+  }
+
+  function getTaskStageLimitSec(mod, stageNum) {
+    if (stageNum === 1) return mod?.smartFlow?.mode === 'branches' ? 4 * 60 : 3 * 60;
+    if (stageNum === 2) return 8 * 60;
+    return 12 * 60;
+  }
+
   function startTaskExam(modId) {
     ensureOverlays();
     const lock = getLockout(TASK_LOCK_KEY_BASE);
@@ -1596,25 +2276,27 @@
       toast(`Cần thuộc đủ ${stats.total}/${stats.total} thẻ trước khi vào bài Test!`);
       return;
     }
-    if (!isTeacherBypass() && B()?.syncExamLock?.(true, `Writing Task ${mod.code}`) === false) return;
+    if (!isTeacherBypass() && B()?.syncExamLock?.(true, `Writing Task ${flowLabel(mod)}`) === false) return;
 
+    const prompts = getModulePrompts(mod);
     examState = {
       mod,
-      stage: 1, // 1: Flow Domino 60s -> 2: Grammar Builder 35s/q -> 3: Writing + Retry Gate
+      stage: 1, // 1: VI Flow -> EN (3m/4m) | 2: Grammar Skeleton -> Paragraph (8m) | 3: Real Exam Prompt -> Body (12m)
       strikes: 0,
-      t1Bank: shuffle((mod.viFlowSteps || []).map((t, i) => ({ id: `f_${i}`, order: i, text: t }))),
-      t1Slots: new Array((mod.viFlowSteps || []).length).fill(null),
-      t1Picked: null,
-      t1SecLeft: T1_TIME_LIMIT_SEC,
-      t2Idx: 0,
-      t2Bank: [],
-      t2Slots: [],
-      t2ActiveBlank: 0,
-      t2SecLeft: T2_PER_SENT_SEC,
-      t3Drafts: (mod.sentences || []).map(() => ''),
+      stageSecsLeft: getTaskStageLimitSec(mod, 1),
+      // Stage 1 state (Inline Editable Smart Flow Nodes)
+      t1NodeDrafts: {},
+      t1NodeAudit: {},
+      t1NodeLocked: {},
+      // Stage 2 state (Grammar Skeleton -> Full Paragraph)
+      t2Paragraph: '',
+      t2Audit: null,
+      // Stage 3 state (Real Exam Prompt -> Body Paragraph)
+      prompts,
+      promptIdx: 0,
+      t3Body: '',
       t3Audit: null,
       t3RetriesLeft: 2,
-      t3LockedOk: {},
       t3Finalized: false,
       timerId: null
     };
@@ -1624,65 +2306,52 @@
     renderExamModal();
   }
 
+  function advanceTaskStage(nextStage) {
+    if (!examState) return;
+    examState.stage = nextStage;
+    examState.stageSecsLeft = getTaskStageLimitSec(examState.mod, nextStage);
+    startStageTimer();
+    renderExamModal();
+  }
+
   function startStageTimer() {
     if (!examState) return;
     clearInterval(examState.timerId);
     examState.timerId = setInterval(() => {
-      if (!examState) return;
-      if (examState.stage === 1) {
-        examState.t1SecLeft--;
-        const el = document.getElementById('ws-exam-timer');
-        if (el) {
-          el.textContent = `${Math.max(0, examState.t1SecLeft)}s`;
-          el.classList.toggle('urgent', examState.t1SecLeft <= 10);
-        }
-        if (examState.t1SecLeft <= 0) {
-          toast('Hết 60 giây Test 1! Đã xáo lại mạch Flow — hãy làm lại nhanh và chính xác.');
-          resetT1();
-        }
-      } else if (examState.stage === 2) {
-        examState.t2SecLeft--;
-        const el = document.getElementById('ws-exam-timer');
-        if (el) {
-          el.textContent = `${Math.max(0, examState.t2SecLeft)}s`;
-          el.classList.toggle('urgent', examState.t2SecLeft <= 8);
-        }
-        if (examState.t2SecLeft <= 0) {
-          toast('Hết 35 giây câu này! Đã xáo lại kho mảnh ghép — hãy lắp lại.');
-          setupT2Sentence();
-          renderExamModal();
+      if (!examState || examState.t3Finalized) return;
+      if (!isTeacherBypass()) {
+        examState.stageSecsLeft = Math.max(0, (examState.stageSecsLeft || 0) - 1);
+      }
+      const el = document.getElementById('ws-exam-timer');
+      if (el) {
+        el.textContent = fmtMmSs(examState.stageSecsLeft);
+        el.classList.toggle('urgent', examState.stageSecsLeft <= 60);
+      }
+      if (!isTeacherBypass() && examState.stageSecsLeft <= 0) {
+        clearInterval(examState.timerId);
+        if (examState.stage === 3) {
+          const raw = String(examState.t3Body || '').trim();
+          if (raw && raw.split(/\s+/).length >= 10) {
+            examState.t3RetriesLeft = 0;
+            toast('Hết 12 phút — hệ thống tự động nộp và chấm đoạn Body hiện tại!');
+            submitTaskTest3();
+          } else {
+            closeTaskExamModal(true);
+            showAntiCheatModal('HẾT THỜI GIAN · TEST 3', 'Đã hết 12 phút viết đoạn Body nhưng chưa có nội dung. Hãy ôn kỹ bài và thử lại.', true);
+          }
+        } else {
+          const stNum = examState.stage;
+          closeTaskExamModal(true);
+          showAntiCheatModal(`HẾT THỜI GIAN · TEST ${stNum}`, `Bạn đã hết thời gian hoàn thành Test ${stNum}. Hãy ôn lại Flow và từ vựng trước khi làm lại.`, true);
         }
       }
     }, 1000);
   }
 
-  function resetT1() {
-    if (!examState) return;
-    const steps = examState.mod.viFlowSteps || [];
-    examState.t1Bank = shuffle(steps.map((t, i) => ({ id: `f_${i}`, order: i, text: t })));
-    examState.t1Slots = new Array(steps.length).fill(null);
-    examState.t1Picked = null;
-    examState.t1SecLeft = T1_TIME_LIMIT_SEC;
-    renderExamModal();
-  }
-
-  function setupT2Sentence() {
-    if (!examState) return;
-    const s = examState.mod.sentences[examState.t2Idx];
-    const parts = s?.builder?.parts || [];
-    const blanks = parts.filter((p) => typeof p === 'object');
-    examState.t2Slots = new Array(blanks.length).fill(null);
-    examState.t2ActiveBlank = 0;
-    examState.t2SecLeft = T2_PER_SENT_SEC;
-    examState.t2Bank = shuffle([
-      ...blanks.map((bl, i) => ({ id: `ok_${i}`, text: bl.ans })),
-      ...(s?.builder?.distractors || []).map((d, i) => ({ id: `tr_${i}`, text: d }))
-    ]);
-  }
-
-  function renderExamModal(checked = false) {
+  function renderExamModal() {
     if (!examState) return;
     const { mod, stage } = examState;
+    const sents = mod.sentences || [];
     const card = document.getElementById('ws-task-exam-card');
     const teacherJump = isTeacherBypass() ? `
       <div style="display:flex;gap:5px;">
@@ -1692,125 +2361,160 @@
       </div>
     ` : '';
 
-    const timerText = stage === 1 ? `${examState.t1SecLeft}s` : (stage === 2 ? `${examState.t2SecLeft}s` : 'Không giới hạn');
     let bodyHtml = '';
 
     if (stage === 1) {
       bodyHtml = `
         <div class="ws-modal-head">
-          <div style="font-size:16px;font-weight:700;">Test 1 · Sắp xếp chuỗi Idea Flow</div>
+          <div>
+            <div style="font-size:17px;font-weight:750;">Test 1 · Viết Tiếng Anh Trực Tiếp Trong Sơ Đồ Flow</div>
+            <div style="font-size:13.5px;color:var(--ink-2);margin-top:2px;">Gõ cụm từ hoặc vế tiếng Anh tương ứng ngay bên dưới từng mắt xích tiếng Việt trong sơ đồ (tự động soi chính tả).</div>
+          </div>
           <button type="button" class="btn btn-primary" onclick="WritingStudio.checkTaskTest1()">Kiểm tra &amp; Sang Test 2 →</button>
         </div>
-        <div class="ws-dnd-2col">
-          <div class="ws-col-stack">
-            <div class="ws-col-lbl">Các mắt xích rời</div>
-            ${examState.t1Bank.length === 0
-              ? '<div style="padding:14px;border-radius:11px;background:var(--ok-soft);color:var(--ok);font-size:13px;font-weight:700;">Đã xếp hết các mắt xích vào mạch Domino.</div>'
-              : examState.t1Bank.map((it) => `
-                <div class="ws-drag-chip ${examState.t1Picked === it.id ? 'selected' : ''}" draggable="true"
-                  ondragstart="event.dataTransfer.setData('text/plain','${it.id}'); WritingStudio.setT1Picked('${it.id}')"
-                  onclick="WritingStudio.pickT1Chip('${it.id}')">${esc(it.text)}</div>
-              `).join('')}
-          </div>
-          <div class="ws-col-stack">
-            <div class="ws-col-lbl">Mạch Domino · 1 → ${examState.t1Slots.length}</div>
-            ${examState.t1Slots.map((sl, idx) => {
-              let cls = sl ? 'filled' : '';
-              if (checked && sl) cls += (sl.order === idx ? ' is-ok' : ' is-bad');
-              return `
-                <div class="ws-drop-slot ${cls}" ondragover="event.preventDefault()" ondrop="WritingStudio.dropT1(event, ${idx})" onclick="WritingStudio.clickT1Slot(${idx})">
-                  <span class="ws-slot-num">${idx + 1}</span>
-                  ${sl ? `<span class="ws-slot-txt">${esc(sl.text)}</span>` : `<span class="ws-slot-ph">Kéo hoặc bấm mắt xích thả vào bước ${idx + 1}</span>`}
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
+        ${renderSmartFlowDiagram(mod, {
+          editable: true,
+          drafts: examState.t1NodeDrafts,
+          audit: examState.t1NodeAudit,
+          locked: examState.t1NodeLocked
+        })}
       `;
     } else if (stage === 2) {
-      const s = mod.sentences[examState.t2Idx];
-      let cursor = 0;
-      const frameHtml = (s.builder?.parts || []).map((p) => {
-        if (typeof p === 'string') return esc(p);
-        const bi = cursor++;
-        const filled = examState.t2Slots[bi];
-        let cls = 'ws-blank';
-        if (bi === examState.t2ActiveBlank && !checked) cls += ' active-slot';
-        if (filled) cls += ' filled';
-        if (checked && filled) cls += (filled.text === p.ans ? ' is-ok' : ' is-bad');
-        return `<span class="${cls}" ondragover="event.preventDefault()" ondrop="WritingStudio.dropT2(event, ${bi})" onclick="WritingStudio.clickT2Blank(${bi})">${filled ? esc(filled.text) : `Ô ${bi + 1}`}</span>`;
-      }).join('');
-
+      const wc = String(examState.t2Paragraph || '').trim() ? String(examState.t2Paragraph).trim().split(/\s+/).length : 0;
+      const aud = examState.t2Audit;
       bodyHtml = `
         <div class="ws-modal-head">
-          <div style="font-size:16px;font-weight:700;">Test 2 · Lắp Grammar &amp; Vocab · Câu ${examState.t2Idx + 1} / ${mod.sentences.length}</div>
-          <button type="button" class="btn btn-primary" onclick="WritingStudio.checkTaskTest2()">Kiểm tra câu này →</button>
+          <div>
+            <div style="font-size:17px;font-weight:750;">Test 2 · Dựng Nguyên Đoạn Theo Khung Sườn Grammar</div>
+            <div style="font-size:13.5px;color:var(--ink-2);margin-top:2px;">Kết nối các ý tiếng Việt bên trái vào đúng công thức ngữ pháp để viết thành một đoạn văn tiếng Anh liền mạch.</div>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="WritingStudio.checkTaskTest2()">Kiểm tra đoạn văn &amp; Sang Test 3 →</button>
         </div>
-        <div class="ws-t2-box">
-          <div class="ws-t2-vi">[0${examState.t2Idx + 1}] ${esc(s.vi)}</div>
-          ${s.grammar ? `<div class="ws-t2-gram">${esc(s.grammar)}</div>` : ''}
-          <div class="ws-t2-frame">${frameHtml}</div>
-        </div>
-        <div class="ws-col-lbl">Kho mảnh ghép</div>
-        <div class="ws-bank">
-          ${examState.t2Bank.map((ch) => `
-            <button type="button" class="ws-chip" draggable="true"
-              ondragstart="event.dataTransfer.setData('text/plain','${ch.id}')"
-              onclick="WritingStudio.pickT2Chip('${ch.id}')">${esc(ch.text)}</button>
-          `).join('')}
+        <div class="ws-write-2col">
+          <div class="ws-pane">
+            <div class="ws-col-lbl">Ý tiếng Việt &amp; Khung sườn Grammar bắt buộc</div>
+            <div class="ws-gram-skeleton-list">
+              ${sents.map((s, idx) => {
+                const gRow = aud?.rows?.[idx];
+                const cls = gRow ? (gRow.ok ? 'is-ok' : 'is-bad') : '';
+                return `
+                  <div class="ws-gram-skel-item ${cls}">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                      <strong style="font-size:12.5px;color:var(--accent);">Câu ${idx + 1}</strong>
+                      ${gRow ? `<strong style="font-size:12px;color:${gRow.ok ? 'var(--ok)' : 'var(--danger)'};">${gRow.ok ? '✓ Đạt khung' : `Thiếu: ${esc(gRow.missing.join(' / '))}`}</strong>` : ''}
+                    </div>
+                    <div class="ws-gram-skel-vi">${esc(s.vi || s.viBrief || '')}</div>
+                    <div class="ws-gram-skel-formula">${esc(s.grammar || 'S + V + O')}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <div class="ws-pane">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div class="ws-col-lbl">Đoạn văn hoàn chỉnh của bạn</div>
+              <span class="ws-pill tabular" id="ws-t2-wc">${wc} words</span>
+            </div>
+            <textarea class="ws-para-editor" id="ws-t2-para"
+              placeholder="Viết liền mạch nguyên đoạn văn tiếng Anh gồm ${sents.length} câu bám sát ý và khung sườn Grammar bên trái..."
+              oninput="WritingStudio.saveT2Paragraph(this.value)"
+              onpaste="${!isTeacherBypass() ? "event.preventDefault(); WritingStudio.toastMsg('Không được dán bài — hãy tự gõ trực tiếp!');" : ''}">${esc(examState.t2Paragraph || '')}</textarea>
+            ${(aud?.typos?.length || aud?.gramErrs?.length) ? `
+              <div class="ws-chk-tags">
+                ${(aud.typos || []).map((tp) => `<span class="ws-chk-tag miss">✕ Sai chính tả: "${esc(tp)}"</span>`).join('')}
+                ${(aud.gramErrs || []).map((ge) => `<span class="ws-chk-tag miss">✕ ${esc(ge)}</span>`).join('')}
+              </div>
+            ` : ''}
+          </div>
         </div>
       `;
     } else {
-      const sents = mod.sentences || [];
+      const prompts = examState.prompts || [];
+      const curPrompt = prompts[examState.promptIdx] || { type: 'IELTS Writing Task 2', prompt: mod.title, bodyGuide: [], paraphrases: [] };
+      const wc = String(examState.t3Body || '').trim() ? String(examState.t3Body).trim().split(/\s+/).length : 0;
       const aud = examState.t3Audit;
+      const modelParagraph = sents.map((s) => s.enKey).join(' ');
+      const cleanParas = cleanPromptParaphrases(curPrompt);
+      const focusVi = mod.bodyFocusVi || `mạch lập luận của ${flowLabel(mod)}`;
+
       bodyHtml = `
         <div class="ws-modal-head">
-          <div style="font-size:16px;font-weight:700;">Test 3 · Tự viết &amp; Soi đúng cấu trúc</div>
+          <div>
+            <div style="font-size:17px;font-weight:750;">Test 3 · Đề Thi Thật &amp; Viết Đoạn Body Thực Chiến</div>
+            <div style="font-size:13.5px;color:var(--ink-2);margin-top:2px;">Vận dụng độc lập Flow, Grammar và Vocab vừa luyện để viết 01 đoạn Body hoàn chỉnh tối thiểu 85 từ.</div>
+          </div>
           <div style="display:flex;gap:8px;align-items:center;">
             ${!examState.t3Finalized
-              ? `<button type="button" class="btn btn-primary" onclick="WritingStudio.submitTaskTest3()">${aud ? `Nộp lại câu đỏ (còn ${examState.t3RetriesLeft} lượt)` : 'Nộp bài & Soi Grammar'}</button>`
+              ? `<button type="button" class="btn btn-primary" onclick="WritingStudio.submitTaskTest3()">${aud ? `Nộp lại đoạn Body · Còn ${examState.t3RetriesLeft} lượt` : 'Nộp đoạn Body & Chấm bài'}</button>`
               : `<button type="button" class="btn btn-primary" onclick="WritingStudio.closeTaskExamModal(true)">Hoàn tất Task ✓</button>`}
           </div>
         </div>
-        <div class="ws-t3-head-row">
-          <div class="ws-col-lbl">Khung ý tiếng Việt</div>
-          <div class="ws-col-lbl">Bài viết tiếng Anh từng câu</div>
-        </div>
-        <div class="ws-t3-pairs">
-          ${sents.map((s, idx) => {
-            const lockedOk = Boolean(examState.t3LockedOk[idx]);
-            const rowAud = aud ? aud[idx] : null;
-            const cls = lockedOk ? 'is-ok' : (rowAud && !rowAud.pass ? 'is-bad' : '');
-            return `
-              <div class="ws-t3-pair-row">
-                <div class="ws-vi-row"><strong>[0${idx + 1}]</strong><span>${esc(s.vi)}</span></div>
-                <div class="ws-sent-input-wrap">
-                  <textarea class="ws-sent-textarea ${cls}" id="ws-t3-in-${idx}" ${lockedOk || examState.t3Finalized ? 'readonly' : ''}
-                    placeholder="[0${idx + 1}] Tự viết câu tiếng Anh chuẩn Flow, Grammar và Vocab..."
-                    oninput="WritingStudio.saveT3Draft(${idx}, this.value)"
-                    onpaste="event.preventDefault(); WritingStudio.toastMsg('Không được dán bài — hãy tự viết trực tiếp!');">${esc(examState.t3Drafts[idx] || '')}</textarea>
-                  ${rowAud ? `
-                    <div class="ws-chk-tags">
-                      ${rowAud.gHits.map((x) => `<span class="ws-chk-tag ${x.ok ? 'ok' : 'miss'}">${x.ok ? '✓' : '✕'} Grammar: ${esc(x.k)}</span>`).join('')}
-                      ${rowAud.vHits.map((x) => `<span class="ws-chk-tag ${x.ok ? 'ok' : 'miss'}">${x.ok ? '✓' : '✕'} Vocab: ${esc(x.k)}</span>`).join('')}
-                    </div>
-                  ` : ''}
+
+        <div class="ws-write-2col">
+          <div class="ws-pane">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+              <div class="ws-col-lbl">Đề thi thật IELTS Task 2</div>
+              ${prompts.length > 1 && !examState.t3Finalized ? `
+                <div style="display:flex;gap:4px;">
+                  ${prompts.map((_, pIdx) => `<button type="button" class="ws-pill" style="cursor:pointer;border:1px solid ${pIdx === examState.promptIdx ? 'var(--accent)' : 'var(--border)'};background:${pIdx === examState.promptIdx ? 'var(--accent-soft)' : 'var(--surface)'};" onclick="WritingStudio.selectT3Prompt(${pIdx})">Đề ${pIdx + 1}</button>`).join('')}
                 </div>
+              ` : ''}
+            </div>
+            <div class="ws-prompt-box">
+              <span class="ws-branch-tag" style="margin-bottom:0;">${esc(curPrompt.type || 'Task 2')}</span>
+              <div class="ws-prompt-q">${esc(curPrompt.prompt)}</div>
+              <div style="font-size:13px;line-height:1.58;color:var(--ink-2);border-top:1px dashed var(--border-strong);padding-top:10px;text-align:left;">
+                <strong>Trọng tâm đoạn Body:</strong> Viết 01 đoạn Body hoàn chỉnh từ 90 đến 140 từ giải quyết phần <strong>${esc(focusVi)}</strong> của đề bài trên bằng mạch lập luận vừa học. Không hiển thị gợi ý công thức.
               </div>
-            `;
-          }).join('')}
-        </div>
-        ${examState.t3Finalized ? `
-          <div class="ws-key-box">
-            <div style="font-size:14px;font-weight:700;color:var(--ok);">Kết quả Task: Band ${Number(examState.finalBand || 7.5).toFixed(1)} · Đối chiếu Đáp án chuẩn Band 8.5+</div>
-            ${sents.map((s, idx) => `
-              <div class="ws-key-row">
-                <span class="ws-key-en">[0${idx + 1}] ${esc(s.enKey)}</span>
-                <span>${esc(s.vi)}</span>
-              </div>
-            `).join('')}
+            </div>
           </div>
-        ` : ''}
+
+          <div class="ws-pane">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div class="ws-col-lbl">Bài viết đoạn Body của bạn</div>
+              <span class="ws-pill tabular ${wc >= 85 ? 'ok' : ''}" id="ws-t3-wc">${wc} / 85+ words</span>
+            </div>
+            <textarea class="ws-para-editor ${examState.t3Finalized ? 'is-submitted' : ''}" id="ws-t3-body" ${examState.t3Finalized ? 'readonly' : ''}
+              placeholder="Viết đoạn Body hoàn chỉnh tại đây: Mở đoạn Paraphrase đề bài → Triển khai nhân quả theo Flow → Từ vựng và cấu trúc học thuật..."
+              oninput="WritingStudio.saveT3Body(this.value)"
+              onpaste="${!isTeacherBypass() ? "event.preventDefault(); WritingStudio.toastMsg('Không được dán bài — hãy tự viết như thi thật!');" : ''}">${esc(examState.t3Body || '')}</textarea>
+
+            ${aud && !examState.t3Finalized ? `
+              <div class="ws-chk-tags">
+                ${aud.typos.map((tp) => `<span class="ws-chk-tag miss">✕ Sai chính tả: "${esc(tp)}"</span>`).join('')}
+                ${!aud.lenOk ? '<span class="ws-chk-tag miss">✕ Đoạn Body cần tối thiểu 85 từ</span>' : ''}
+                ${!aud.vocabOk ? '<span class="ws-chk-tag miss">✕ Hãy vận dụng ít nhất 3 cụm từ học thuật của bài</span>' : ''}
+                ${!aud.gramOk ? '<span class="ws-chk-tag miss">✕ Hãy vận dụng ít nhất 2 cấu trúc Grammar của bài</span>' : ''}
+              </div>
+            ` : ''}
+
+            ${examState.t3Finalized ? `
+              <div class="ws-key-box">
+                <div style="font-size:14.5px;font-weight:800;color:var(--ok);">Chấm điểm Đoạn Body: Band ${Number(examState.finalBand || 7.5).toFixed(1)}</div>
+                <div class="ws-criteria-grid">
+                  <div class="ws-crit-cell"><div class="ws-crit-lbl">Task Response</div><div class="ws-crit-val">${Number(aud?.tr || 7.5).toFixed(1)}</div></div>
+                  <div class="ws-crit-cell"><div class="ws-crit-lbl">Coherence &amp; Flow</div><div class="ws-crit-val">${Number(aud?.cc || 7.5).toFixed(1)}</div></div>
+                  <div class="ws-crit-cell"><div class="ws-crit-lbl">Lexical &amp; Spelling</div><div class="ws-crit-val">${Number(aud?.lr || 7.5).toFixed(1)}</div></div>
+                  <div class="ws-crit-cell"><div class="ws-crit-lbl">Grammar Range</div><div class="ws-crit-val">${Number(aud?.gra || 7.5).toFixed(1)}</div></div>
+                </div>
+                <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+                  <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--accent);margin-bottom:5px;">Đoạn Body Mẫu Band 8.5+ · Giáo Trình Gốc</div>
+                  <p style="font-size:13.8px;line-height:1.68;color:var(--ink);text-align:left;">${esc(modelParagraph)}</p>
+                </div>
+                ${curPrompt.bodyGuide?.length ? `
+                  <div style="margin-top:8px;font-size:12.5px;line-height:1.55;color:var(--ink-2);">
+                    <strong>Gợi ý ráp vào đề thi này:</strong><br>${curPrompt.bodyGuide.map((g) => `• ${esc(g)}`).join('<br>')}
+                  </div>
+                ` : ''}
+                ${cleanParas.length ? `
+                  <div style="margin-top:6px;font-size:12.5px;line-height:1.55;color:var(--ink-2);">
+                    <strong>Paraphrase đề thi:</strong> ${cleanParas.slice(0, 4).map(esc).join(' · ')}
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        </div>
       `;
     }
 
@@ -1818,16 +2522,16 @@
       <div class="ws-modal-head" style="padding-bottom:10px;border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <button type="button" class="btn" style="padding:6px 11px;" onclick="WritingStudio.requestExitTaskExam()">←</button>
-          <div class="ws-modal-title">${esc(mod.code)} · ${esc(mod.title)}</div>
+          <div class="ws-modal-title">${esc(flowLabel(mod))}</div>
         </div>
         <div class="ws-step-pills">
-          <span class="ws-step-pill ${stage === 1 ? 'active' : 'done'}">Test 1 · Idea Flow</span>
-          <span class="ws-step-pill ${stage === 2 ? 'active' : (stage > 2 ? 'done' : '')}">Test 2 · Grammar</span>
-          <span class="ws-step-pill ${stage === 3 ? 'active' : ''}">Test 3 · Writing</span>
+          <span class="ws-step-pill ${stage === 1 ? 'active' : 'done'}">Test 1 · Flow VI → EN</span>
+          <span class="ws-step-pill ${stage === 2 ? 'active' : (stage > 2 ? 'done' : '')}">Test 2 · Khung Grammar</span>
+          <span class="ws-step-pill ${stage === 3 ? 'active' : ''}">Test 3 · Viết Body Đề Thật</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           ${teacherJump}
-          <span class="ws-pill" id="ws-exam-timer">${timerText}</span>
+          <span class="ws-pill tabular ${examState.stageSecsLeft <= 60 ? 'urgent' : ''}" id="ws-exam-timer">${fmtMmSs(examState.stageSecsLeft)}</span>
         </div>
       </div>
       ${bodyHtml}
@@ -1836,176 +2540,204 @@
 
   function teacherJumpExam(stageNum) {
     if (!examState || !isTeacherBypass()) return;
-    examState.stage = stageNum;
-    if (stageNum === 2) { examState.t2Idx = 0; setupT2Sentence(); }
-    renderExamModal();
+    advanceTaskStage(stageNum);
   }
 
-  /* Test 1 handlers */
-  function setT1Picked(id) { if (examState) examState.t1Picked = id; }
-  function pickT1Chip(id) {
-    if (!examState) return;
-    examState.t1Picked = examState.t1Picked === id ? null : id;
-    renderExamModal();
+  /* Stage 1 Handlers: Inline Smart Flow Node VI -> EN + Spelling Check */
+  function saveT1NodeDraft(nodeKey, val) {
+    if (examState) examState.t1NodeDrafts[nodeKey] = val;
   }
-  function placeT1(id, slotIdx) {
-    if (!examState) return;
-    const idx = examState.t1Bank.findIndex((x) => x.id === id);
-    if (idx === -1) return;
-    const [moved] = examState.t1Bank.splice(idx, 1);
-    if (examState.t1Slots[slotIdx]) examState.t1Bank.push(examState.t1Slots[slotIdx]);
-    examState.t1Slots[slotIdx] = moved;
-    examState.t1Picked = null;
-    renderExamModal();
-  }
-  function dropT1(e, slotIdx) {
-    e.preventDefault();
-    const id = e.dataTransfer.getData('text/plain') || examState?.t1Picked;
-    if (id) placeT1(id, slotIdx);
-  }
-  function clickT1Slot(slotIdx) {
-    if (!examState) return;
-    if (examState.t1Picked) {
-      placeT1(examState.t1Picked, slotIdx);
-    } else if (examState.t1Slots[slotIdx]) {
-      examState.t1Bank.push(examState.t1Slots[slotIdx]);
-      examState.t1Slots[slotIdx] = null;
-      renderExamModal();
+
+  function getFlowNodeSpecList(mod) {
+    const sf = mod?.smartFlow;
+    const list = [];
+    if (!sf) return list;
+    if (sf.mode === 'branches') {
+      (sf.rows || []).forEach((row, rIdx) => {
+        (row.nodes || []).forEach((_, cIdx) => {
+          list.push({
+            key: `${rIdx}_${cIdx}`,
+            keys: sf.nodeKeys?.[rIdx]?.[cIdx] || []
+          });
+        });
+      });
+    } else {
+      (sf.stages || []).forEach((_, sIdx) => {
+        list.push({
+          key: `s_${sIdx}`,
+          keys: sf.nodeKeys?.[sIdx] || []
+        });
+      });
     }
+    return list;
   }
+
   function checkTaskTest1() {
     if (!examState) return;
-    if (examState.t1Slots.some((s) => !s)) {
-      toast('Hãy xếp đủ toàn bộ các mắt xích trước khi kiểm tra.');
+    const mod = examState.mod;
+    const nodes = getFlowNodeSpecList(mod);
+    const allPhrases = (mod.vocab || []).map((v) => v.en);
+    const allDraftVals = nodes.map((n) => String(examState.t1NodeDrafts[n.key] || '').trim());
+
+    if (isTeacherBypass() && allDraftVals.every((v) => !v)) {
+      advanceTaskStage(2);
       return;
     }
-    const ok = examState.t1Slots.every((s, idx) => s.order === idx);
-    renderExamModal(true);
-    if (ok) {
-      toast('Mạch Idea Flow chính xác 100%! Chuyển sang Test 2.');
+
+    const auditMap = {};
+    let allPass = true;
+    nodes.forEach((n) => {
+      const raw = String(examState.t1NodeDrafts[n.key] || '').trim();
+      const low = raw.toLowerCase();
+      const words = (raw.match(/[A-Za-z'-]+/g) || []);
+      if (!raw) {
+        auditMap[n.key] = { pass: false, msg: '✕ Chưa gõ tiếng Anh' };
+        allPass = false;
+        return;
+      }
+      const typos = detectSpellingTypos(raw, [...n.keys, ...allPhrases]);
+      words.forEach((w) => {
+        const lw = w.toLowerCase();
+        if (COMMON_IELTS_TYPOS.has(lw) && !typos.some((t) => t.toLowerCase() === lw)) typos.push(w);
+      });
+      if (typos.length > 0) {
+        auditMap[n.key] = { pass: false, msg: `✕ Sai chính tả: ${typos.map((t) => `"${t}"`).join(', ')}` };
+        allPass = false;
+        return;
+      }
+      const keyHit = n.keys.length === 0 || n.keys.some((k) => low.includes(String(k).toLowerCase()))
+        || allPhrases.some((ph) => low.includes(ph.toLowerCase()));
+      if (words.length < 2 || !keyHit) {
+        auditMap[n.key] = { pass: false, msg: '✕ Chưa thể hiện đúng từ khóa cốt lõi của mắt xích này' };
+        allPass = false;
+        return;
+      }
+      examState.t1NodeLocked[n.key] = true;
+      auditMap[n.key] = { pass: true, msg: '' };
+    });
+
+    examState.t1NodeAudit = auditMap;
+    if (allPass) {
+      toast('Diễn đạt toàn bộ sơ đồ Flow sang Tiếng Anh chuẩn xác! Mở khóa Test 2.');
       setTimeout(() => {
         if (!examState) return;
-        examState.stage = 2;
-        examState.t2Idx = 0;
-        setupT2Sentence();
-        renderExamModal();
-      }, 650);
+        advanceTaskStage(2);
+      }, 450);
     } else {
-      toast('Sai thứ tự mắt xích Flow! Xáo lại từ đầu để làm lại.');
-      setTimeout(() => resetT1(), 1000);
+      renderExamModal();
+      toast('Một số ô trong sơ đồ còn thiếu hoặc sai chính tả (báo đỏ) — hãy sửa lại ngay trong ô đó!');
     }
   }
 
-  /* Test 2 handlers */
-  function placeT2(chipId, blankIdx) {
+  /* Stage 2 Handlers: Grammar Skeleton -> Cohesive Paragraph */
+  function saveT2Paragraph(val) {
     if (!examState) return;
-    const idx = examState.t2Bank.findIndex((c) => c.id === chipId);
-    if (idx === -1) return;
-    const [moved] = examState.t2Bank.splice(idx, 1);
-    if (examState.t2Slots[blankIdx]) examState.t2Bank.push(examState.t2Slots[blankIdx]);
-    examState.t2Slots[blankIdx] = moved;
-    const nxt = examState.t2Slots.findIndex((s) => !s);
-    examState.t2ActiveBlank = nxt !== -1 ? nxt : blankIdx;
-    renderExamModal();
+    examState.t2Paragraph = val;
+    const wc = String(val || '').trim() ? String(val).trim().split(/\s+/).length : 0;
+    const el = document.getElementById('ws-t2-wc');
+    if (el) el.textContent = `${wc} words`;
   }
-  function pickT2Chip(chipId) {
-    if (!examState) return;
-    const target = examState.t2Slots[examState.t2ActiveBlank] ? examState.t2Slots.findIndex((s) => !s) : examState.t2ActiveBlank;
-    placeT2(chipId, target !== -1 ? target : examState.t2ActiveBlank);
-  }
-  function dropT2(e, blankIdx) {
-    e.preventDefault();
-    const id = e.dataTransfer.getData('text/plain');
-    if (id) placeT2(id, blankIdx);
-  }
-  function clickT2Blank(blankIdx) {
-    if (!examState) return;
-    if (examState.t2Slots[blankIdx]) {
-      examState.t2Bank.push(examState.t2Slots[blankIdx]);
-      examState.t2Slots[blankIdx] = null;
-    }
-    examState.t2ActiveBlank = blankIdx;
-    renderExamModal();
-  }
+
   function checkTaskTest2() {
     if (!examState) return;
-    const s = examState.mod.sentences[examState.t2Idx];
-    const blanks = (s.builder?.parts || []).filter((p) => typeof p === 'object');
-    if (examState.t2Slots.some((x) => !x)) {
-      toast('Hãy điền đủ tất cả các ô trống trong khung câu.');
+    const raw = String(examState.t2Paragraph || '').trim();
+    if (isTeacherBypass() && !raw) {
+      advanceTaskStage(3);
       return;
     }
-    const ok = blanks.every((bl, i) => examState.t2Slots[i]?.text === bl.ans);
-    renderExamModal(true);
-    if (ok) {
-      if (examState.t2Idx + 1 < examState.mod.sentences.length) {
-        toast('Chuẩn cấu trúc! Sang câu tiếp theo.');
-        setTimeout(() => {
-          if (!examState) return;
-          examState.t2Idx++;
-          setupT2Sentence();
-          renderExamModal();
-        }, 550);
-      } else {
-        toast('Hoàn thành 100% Test 2! Mở khóa Test 3 Viết thực chiến.');
-        setTimeout(() => {
-          if (!examState) return;
-          examState.stage = 3;
-          renderExamModal();
-        }, 650);
-      }
+    const low = raw.toLowerCase();
+    const sents = examState.mod.sentences || [];
+    const allPhrases = (examState.mod.vocab || []).map((v) => v.en);
+    const typos = detectSpellingTypos(raw, allPhrases);
+    const gramErrs = detectIeltsGrammarErrors(raw);
+
+    const rows = sents.map((s) => {
+      const gList = s.mustGrammar || [];
+      const ok = gList.length === 0 || gList.some((g) => low.includes(g.toLowerCase()));
+      const missing = ok ? [] : gList;
+      return { ok, missing };
+    });
+
+    const passedRows = rows.filter((r) => r.ok).length;
+    const minNeed = Math.max(1, sents.length - 1);
+    const wc = raw ? raw.split(/\s+/).length : 0;
+    examState.t2Audit = { rows, typos, gramErrs };
+
+    if (wc >= sents.length * 8 && passedRows >= minNeed && typos.length === 0 && gramErrs.length === 0) {
+      toast('Đoạn văn bám sát Khung Grammar & chuẩn chính tả! Mở khóa Test 3 Đề thi thật.');
+      setTimeout(() => {
+        if (!examState) return;
+        advanceTaskStage(3);
+      }, 550);
     } else {
-      toast('Có mảnh bị sai dạng từ / ngữ pháp (ô đỏ) — bấm ô đỏ để sửa lại!');
+      renderExamModal();
+      if (typos.length > 0) toast(`Phát hiện từ gõ sai chính tả (${typos.join(', ')}) — hãy sửa lại!`);
+      else if (gramErrs.length > 0) toast(`Còn lỗi ngữ pháp: ${gramErrs[0]}`);
+      else toast('Hãy viết đủ độ dài đoạn văn và vận dụng các công thức trong Khung Grammar bên trái.');
     }
   }
 
-  /* Test 3 handlers (Layer 1 Mandatory Structure Audit + Retry Gate -> Layer 2 Band & Key Compare) */
-  function saveT3Draft(idx, val) {
-    if (examState) examState.t3Drafts[idx] = val;
+  /* Stage 3 Handlers: Real Exam Prompt -> Full Body Paragraph */
+  function selectT3Prompt(idx) {
+    if (!examState || examState.t3Finalized) return;
+    examState.promptIdx = idx;
+    renderExamModal();
+  }
+
+  function saveT3Body(val) {
+    if (!examState) return;
+    examState.t3Body = val;
+    const wc = String(val || '').trim() ? String(val).trim().split(/\s+/).length : 0;
+    const el = document.getElementById('ws-t3-wc');
+    if (el) {
+      el.textContent = `${wc} / 85+ words`;
+      el.classList.toggle('ok', wc >= 85);
+    }
   }
 
   function submitTaskTest3() {
     if (!examState || examState.t3Finalized) return;
-    const sents = examState.mod.sentences || [];
-    const emptyIdx = sents.findIndex((_, i) => String(examState.t3Drafts[i] || '').trim().split(/\s+/).filter(Boolean).length < 4);
-    if (!isTeacherBypass() && emptyIdx !== -1) {
-      toast(`Câu [0${emptyIdx + 1}] đang quá ngắn — hãy tự viết đủ ý trước khi nộp.`);
-      document.getElementById(`ws-t3-in-${emptyIdx}`)?.focus();
-      return;
-    }
+    const raw = String(examState.t3Body || '').trim();
+    const low = raw.toLowerCase();
+    const wc = raw ? raw.split(/\s+/).length : 0;
+    const mod = examState.mod;
+    const sents = mod.sentences || [];
+    const allPhrases = (mod.vocab || []).map((v) => v.en);
+    const allGram = sents.flatMap((s) => s.mustGrammar || []);
 
-    const audit = sents.map((s, idx) => {
-      const txt = String(examState.t3Drafts[idx] || '').toLowerCase();
-      const gHits = (s.mustGrammar || []).map((k) => ({ k, ok: txt.includes(k.toLowerCase()) }));
-      const vHits = (s.mustVocab || []).map((k) => ({ k, ok: txt.includes(k.toLowerCase()) }));
-      const gOk = gHits.length === 0 || gHits.some((x) => x.ok);
-      const vOk = vHits.length === 0 || vHits.some((x) => x.ok);
-      const pass = isTeacherBypass() || (gOk && vOk && txt.split(/\s+/).filter(Boolean).length >= 7);
-      if (pass) examState.t3LockedOk[idx] = true;
-      return { pass, gHits, vHits };
-    });
+    const typos = detectSpellingTypos(raw, allPhrases);
+    const vocabHits = allPhrases.filter((ph) => low.includes(ph.toLowerCase())).length;
+    const gramHits = allGram.filter((g) => low.includes(g.toLowerCase())).length;
+    const lenOk = wc >= 85;
+    const vocabOk = vocabHits >= Math.min(3, Math.max(1, allPhrases.length));
+    const gramOk = gramHits >= Math.min(2, Math.max(1, allGram.length));
 
-    examState.t3Audit = audit;
-    const passedCount = audit.filter((a) => a.pass).length;
+    const tr = lenOk ? (wc >= 105 ? 8.0 : 7.5) : 6.0;
+    const cc = gramOk ? 8.0 : 6.5;
+    const lr = (vocabHits >= 4 && typos.length === 0) ? 8.0 : (vocabOk && typos.length === 0 ? 7.5 : 6.0);
+    const gra = (gramHits >= 3) ? 8.0 : (gramOk ? 7.5 : 6.0);
 
-    if (passedCount < sents.length && examState.t3RetriesLeft > 0 && !isTeacherBypass()) {
+    examState.t3Audit = { typos, lenOk, vocabOk, gramOk, tr, cc, lr, gra };
+
+    const allPass = lenOk && vocabOk && gramOk && typos.length === 0;
+    if (!allPass && examState.t3RetriesLeft > 0 && !isTeacherBypass()) {
       examState.t3RetriesLeft--;
       renderExamModal();
-      toast(`Đạt ${passedCount}/${sents.length} câu! Hãy viết lại các câu màu đỏ theo đúng Grammar & Vocab (còn ${examState.t3RetriesLeft + 1} lượt).`);
+      if (typos.length > 0) toast(`Còn lỗi chính tả ("${typos[0]}") — hãy sửa lại (còn ${examState.t3RetriesLeft + 1} lượt)!`);
+      else toast(`Đoạn Body chưa đủ chuẩn (cần ≥85 từ, vận dụng cụm từ & Grammar của bài) — hãy hoàn thiện thêm!`);
       return;
     }
 
-    // Finalize & score!
-    const ratio = passedCount / Math.max(1, sents.length);
-    const band = Math.round((5.5 + ratio * 3.0) * 2) / 2;
+    const avg = (tr + cc + lr + gra) / 4;
+    const band = isTeacherBypass() && !raw ? 8.5 : (Math.round(avg * 2) / 2);
     examState.finalBand = band;
     examState.t3Finalized = true;
     clearInterval(examState.timerId);
 
     const prog = getTaskProgMap();
-    prog[examState.mod.id] = {
+    prog[mod.id] = {
       status: 'completed',
-      score: passedCount,
+      score: vocabHits + gramHits,
       total: sents.length,
       band,
       completedAt: Date.now()
@@ -2013,7 +2745,7 @@
     saveTaskProgMap(prog);
     B()?.syncExamLock?.(false);
     renderExamModal();
-    toast(`Hoàn thành Task ${examState.mod.code} · Band ${band.toFixed(1)}! Đã mở Đáp án chuẩn Band 8.5+.`);
+    toast(`Hoàn thành Task ${flowLabel(mod)} · Band ${band.toFixed(1)}! Đã mở Đoạn Body Mẫu Band 8.5+ & Paraphrase đề thi.`);
   }
 
   function requestExitTaskExam() {
@@ -2110,7 +2842,7 @@
         <div class="tot-shell-head">
           <div>
             <h2 class="tot-shell-title">Luyện Đề IELTS Writing Task 2</h2>
-            <p class="tot-shell-sub">Ngân hàng ${prompts.length} đề thi thật (2020–2026) liên kết trực tiếp với 44 Module Flow Idea.</p>
+            <p class="tot-shell-sub">Ngân hàng ${prompts.length} đề thi thật giai đoạn 2020–2026 liên kết trực tiếp với 44 Module Flow Idea.</p>
           </div>
           <span class="ws-pill tabular">${doneSet.size} / ${prompts.length} đề đã luyện</span>
         </div>
@@ -2118,10 +2850,9 @@
         <div class="ws-prac-toolbar">
           <div class="ws-prac-toolbar-top">
             <div class="ws-prac-subtabs" role="tablist" aria-label="Lọc theo Subtopic">
-              <button type="button" class="ws-prac-subtab ${state.pracSubtopic === 'all' ? 'active' : ''}" onclick="WritingStudio.setPracSubtopic('all')">Tất cả (${prompts.length})</button>
+              <button type="button" class="ws-prac-subtab ${state.pracSubtopic === 'all' ? 'active' : ''}" onclick="WritingStudio.setPracSubtopic('all')">Tất cả</button>
               ${subtopics.map((st) => {
-                const cnt = prompts.filter((p) => p.subtopic === st.key).length;
-                return `<button type="button" class="ws-prac-subtab ${state.pracSubtopic === st.key ? 'active' : ''}" onclick="WritingStudio.setPracSubtopic('${esc(st.key)}')">${esc(st.shortTitle)} (${cnt})</button>`;
+                return `<button type="button" class="ws-prac-subtab ${state.pracSubtopic === st.key ? 'active' : ''}" onclick="WritingStudio.setPracSubtopic('${esc(st.key)}')">${esc(st.shortTitle)}</button>`;
               }).join('')}
             </div>
 
@@ -2222,7 +2953,7 @@
 
     const practiceHintsHtml = !isExam && (bodyGuides.length || paras.length || p.review) ? `
       <details class="ws-exam-hint-details">
-        <summary>Gợi ý dàn ý &amp; Paraphrase (Chỉ hiện ở chế độ Luyện tập)</summary>
+        <summary>Gợi ý dàn ý &amp; Paraphrase đề bài</summary>
         <div class="ws-exam-hint-body">
           ${p.review ? `<div><strong>Chiến lược lập luận:</strong> ${esc(p.review)}</div>` : ''}
           ${bodyGuides.length ? `
@@ -2443,7 +3174,7 @@
     let totalCards = 0;
     let masteredCards = 0;
     mods.forEach((m) => {
-      const cs = buildModuleCards(m);
+      const cs = getLearnableCards(m);
       totalCards += cs.length;
       masteredCards += cs.filter((c) => mmap[c.id]?.level === 3).length;
     });
@@ -2624,8 +3355,12 @@
     jumpCard,
     speakCurrent,
     assessCard,
-    pickRecallFlowStep,
+    toggleFlowMask,
+    revealFlowNode,
     submitRecallTyping,
+    updateRecallSentenceDraft,
+    submitRecallSentence,
+    finishRecallPass,
     abortRecall,
     switchTaskHubSubtopic,
     copyTaskLink,
@@ -2633,16 +3368,12 @@
     exitTaskStudyMode,
     startTaskExam,
     teacherJumpExam,
-    setT1Picked,
-    pickT1Chip,
-    dropT1,
-    clickT1Slot,
+    saveT1NodeDraft,
     checkTaskTest1,
-    pickT2Chip,
-    dropT2,
-    clickT2Blank,
+    saveT2Paragraph,
     checkTaskTest2,
-    saveT3Draft,
+    selectT3Prompt,
+    saveT3Body,
     submitTaskTest3,
     requestExitTaskExam,
     closeTaskExamModal,
