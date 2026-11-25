@@ -3809,7 +3809,7 @@
 
         <div class="rp-res-sheet">
           <div class="rp-res-sheet-head">
-            <span class="rp-res-sheet-title">Bảng đáp án của học sinh</span>
+            <span class="rp-res-sheet-title">Table Answer</span>
             <span class="rp-res-legend">
               <span class="rp-res-leg-ok">✓ Đúng (${report.score})</span>
               <span class="rp-res-leg-bad">✕ Sai (${wrongCnt})</span>
