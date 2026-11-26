@@ -1137,16 +1137,8 @@
   }
 
   function renderStatusUnlockCell(student, locks, nowMs) {
-    const busy = state.unlockingIds.has(String(student.id));
     if (!locks.length) {
-      return `
-        <div class="ts-status-row">
-          <span class="ts-status-ok">Bình thường</span>
-          <button type="button" class="ts-btn-force-unlock" ${busy ? 'disabled' : ''} onclick="TeacherStudio.unlockStudentTask('${esc(student.id)}')" title="Gửi lệnh mở khóa toàn bộ 4 kỹ năng (Reading Task, Reading Practice, Listening, Writing, Speaking) lên Google Sheet cho học viên này">
-            ${busy ? 'Đang mở...' : 'Mở khóa'}
-          </button>
-        </div>
-      `;
+      return '<span class="ts-status-ok">Bình thường</span>';
     }
     if (locks.length === 1) {
       const lk = locks[0];

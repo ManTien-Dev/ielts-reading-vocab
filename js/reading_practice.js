@@ -306,7 +306,13 @@
       };
       try { localStorage.setItem(this._lockKey(), JSON.stringify(payload)); } catch (_) {}
       try { window.dispatchEvent(new CustomEvent('reading-practice-updated')); } catch (_) {}
-      try { window.__VOCAB_BRIDGE__?.syncPushCurrentUser?.(false, { force: true }); } catch (_) {}
+      try {
+        if (window.__VOCAB_BRIDGE__?.syncPushCurrentUser) {
+          window.__VOCAB_BRIDGE__.syncPushCurrentUser(false, { force: true });
+        } else {
+          window.__VOCAB_BRIDGE__?.saveAndSync?.({ force: true });
+        }
+      } catch (_) {}
       return payload;
     },
 
@@ -1603,6 +1609,7 @@
             <div class="rp-lock-hub-sub">Tự động mở khóa lúc <strong>${esc(unlockAt)}</strong> · Còn <strong class="tabular" id="rp-lock-banner-countdown">${esc(formatLockCountdown(lock.remainingMs))}</strong></div>
           </div>
         </div>
+        <button type="button" class="btn-subtle" style="padding:6px 12px;font-size:12.5px;flex-shrink:0;" onclick="window.__VOCAB_BRIDGE__?.syncPullClassData?.()?.then?.(() => { window.ReadingPracticeApp?.render?.(); if (!window.ReadingPracticeApp?.isLocked?.()) window.__VOCAB_BRIDGE__?.showToast?.('Đã mở khóa luyện đề Reading!'); else window.__VOCAB_BRIDGE__?.showToast?.('Chưa thấy lệnh mở khóa từ giáo viên!'); })">Kiểm tra mở khóa</button>
       </div>
     `;
   }
@@ -3649,7 +3656,7 @@
 
     const parsed = lines.map((line) => {
       const multi = splitInlineLetterRow(line);
-      const romM = /^(x?(?:ix|iv|v?i{1,3})|x|xi|xii|xiii|xiv|xv)(?:\.\s*|\s+)(.+)$/i.exec(line);
+      const romM = /^(xv|xiv|xiii|xii|xi|x|ix|viii|vii|vi|v|iv|iii|ii|i)(?:\.\s*|\s+)(.+)$/i.exec(line.replace(/^¡(?=[ivx])/i, 'i'));
       const singleRoman = (romM && RP_ROMAN_ORDER[romM[1].toLowerCase()] && !/^Paragraph\b/i.test(line))
         ? [{ key: romM[1].toLowerCase(), text: romM[2].trim() }]
         : null;
@@ -5983,6 +5990,10 @@
 
     ensureSourceBankLoaded(src) {
       return ensureSourceBankLoaded(src);
+    },
+
+    isLocked() {
+      return Boolean(ReadingPracticeStore.getLockoutInfo());
     },
 
     async openAssignedItem(itemId, isFull, mode = 'practice') {

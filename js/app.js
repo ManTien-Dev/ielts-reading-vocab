@@ -7146,6 +7146,7 @@
       dueCount: fullScopeList.filter((it) => isWordDueNow(it)).length,
     }),
     scheduleCloudPush,
+    syncPushCurrentUser,
     saveAndSync: (opts = {}) => {
       saveState();
       return syncPushCurrentUser(false, opts);
