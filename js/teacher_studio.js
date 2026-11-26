@@ -715,6 +715,10 @@
       Object.entries(localL).forEach(([k, until]) => addLock(k, until));
       const localS = readJson(`${SPEAKING_LOCK_BASE}${uid}`, {});
       Object.entries(localS).forEach(([k, until]) => addLock(k, until));
+      const rpPracLock = readJson(`ielts_rp_anticheat_lock_v1_${uid}`, null);
+      if (rpPracLock && Number(rpPracLock.until || 0) > nowMs) {
+        addLock('rp_prac_lock', rpPracLock.until, { reason: rpPracLock.reason || '' });
+      }
       const wTaskLock = readJson(`${WRITING_LOCK_BASE}${uid}`, null);
       if (wTaskLock && Number(wTaskLock.until || 0) > nowMs) {
         const wKey = wTaskLock.modId ? String(wTaskLock.modId) : 'w_task_lock';
@@ -730,7 +734,10 @@
       const tid = entry.lockKey;
       let skill = detectSkillByTaskId(tid);
       let label = tid;
-      if (tid === 'w_task_lock') {
+      if (tid === 'rp_prac_lock') {
+        skill = 'reading';
+        label = 'Reading Practice';
+      } else if (tid === 'w_task_lock') {
         skill = 'writing';
         label = 'Writing Task';
       } else if (tid === 'w_prac_lock') {

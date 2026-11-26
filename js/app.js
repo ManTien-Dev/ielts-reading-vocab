@@ -1090,10 +1090,16 @@
       teacherTaskUnlocks = JSON.parse(localStorage.getItem(`${TEACHER_TASK_UNLOCKS_KEY_BASE}${scoped}`) || '{}') || {};
       listeningTaskProgress = JSON.parse(localStorage.getItem(`totoro_listening_task_progress_v1_${scoped}`) || '{}') || {};
       writingTaskProgress = JSON.parse(localStorage.getItem(`totoro_writing_task_prog_v1_${scoped}`) || '{}') || {};
-      speakingTaskProgress = JSON.parse(localStorage.getItem(`totoro_speaking_task_prog_v1_${scoped}`) || '{}') || {};
+      const spDone = JSON.parse(localStorage.getItem(`totoro_speaking_task_done_v1_${scoped}`) || '{}') || {};
+      const spLegacy = JSON.parse(localStorage.getItem(`totoro_speaking_task_prog_v1_${scoped}`) || '{}') || {};
+      speakingTaskProgress = { ...spLegacy, ...spDone };
 
-      // Merge active Listening / Writing / Speaking locks into unified taskLocks for 4-skill teacher monitoring
+      // Merge active Reading Practice / Listening / Writing / Speaking locks into unified taskLocks for 4-skill teacher monitoring
       const nowMs = Date.now();
+      const rpPracLock = JSON.parse(localStorage.getItem(`ielts_rp_anticheat_lock_v1_${scoped}`) || 'null');
+      if (rpPracLock && Number(rpPracLock.until || 0) > nowMs) {
+        taskLocks.rp_prac_lock = Number(rpPracLock.until);
+      }
       const lLocks = JSON.parse(localStorage.getItem(`totoro_listening_task_locks_v1_${scoped}`) || '{}') || {};
       Object.entries(lLocks).forEach(([k, u]) => { if (Number(u || 0) > nowMs) taskLocks[k] = Number(u); });
       const sLocks = JSON.parse(localStorage.getItem(`totoro_speaking_task_locks_v1_${scoped}`) || '{}') || {};
@@ -1354,8 +1360,9 @@
         }
       });
 
-      // Xóa khóa Writing cục bộ nếu giáo viên vừa mở khóa (toàn bộ hoặc đúng bài Writing đó)
+      // Xóa khóa Reading Practice & Writing cục bộ nếu giáo viên vừa mở khóa (toàn bộ hoặc riêng mục)
       [
+        [`ielts_rp_anticheat_lock_v1_${scoped}`, 'rp_prac_lock'],
         [`totoro_writing_task_lock_v1_${scoped}`, 'w_task_lock'],
         [`totoro_writing_prac_lock_v1_${scoped}`, 'w_prac_lock'],
       ].forEach(([wKey, fallbackTid]) => {
@@ -1367,6 +1374,10 @@
               if (Number(info.until) > nowMs) unlockedActiveLock = true;
               localStorage.removeItem(wKey);
               tlChanged = true;
+              if (fallbackTid === 'rp_prac_lock') {
+                try { window.dispatchEvent(new CustomEvent('reading-practice-updated')); } catch (_) {}
+                window.ReadingPracticeApp?.render?.();
+              }
             }
           }
         } catch (_) {}
@@ -1617,9 +1628,13 @@
         if (cleanTarget === 'w_prac_lock') {
           localStorage.removeItem(`totoro_writing_prac_lock_v1_${scoped}`);
         }
+        if (cleanTarget === 'rp_prac_lock') {
+          localStorage.removeItem(`ielts_rp_anticheat_lock_v1_${scoped}`);
+        }
       } else {
         localStorage.setItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`, String(effectiveUnlockAt));
         localStorage.setItem(`${TASK_LOCKS_KEY_BASE}${scoped}`, '{}');
+        localStorage.removeItem(`ielts_rp_anticheat_lock_v1_${scoped}`);
         localStorage.removeItem(`totoro_listening_task_locks_v1_${scoped}`);
         localStorage.removeItem(`totoro_speaking_task_locks_v1_${scoped}`);
         localStorage.removeItem(`totoro_writing_task_lock_v1_${scoped}`);

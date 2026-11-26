@@ -269,6 +269,16 @@
         if (!raw) return null;
         const parsed = JSON.parse(raw);
         const until = Number(parsed?.until) || 0;
+        const uid = getUid();
+        const origin = Number(parsed?.createdAt || (until - ANTI_CHEAT_LOCKOUT_MINS * 60 * 1000));
+        // Respect Teacher Unlock All & Per-Task Unlock (rp_prac_lock) from Cloud Sync!
+        const unlockAll = Number(localStorage.getItem(`ielts_teacher_unlocked_at_${uid}`) || 0);
+        const perMap = JSON.parse(localStorage.getItem(`ielts_teacher_task_unlocks_v1_${uid}`) || '{}') || {};
+        const perUnlock = Number(perMap.rp_prac_lock || 0);
+        if ((unlockAll > 0 && origin <= unlockAll) || (perUnlock > 0 && origin <= perUnlock)) {
+          localStorage.removeItem(this._lockKey());
+          return null;
+        }
         const remainingMs = until - Date.now();
         if (remainingMs > 0) {
           return { ...parsed, until, remainingMs };
@@ -296,6 +306,7 @@
       };
       try { localStorage.setItem(this._lockKey(), JSON.stringify(payload)); } catch (_) {}
       try { window.dispatchEvent(new CustomEvent('reading-practice-updated')); } catch (_) {}
+      try { window.__VOCAB_BRIDGE__?.syncPushCurrentUser?.(false, { force: true }); } catch (_) {}
       return payload;
     },
 
@@ -979,7 +990,7 @@
     }
   }
 
-  const BANK_VERSION = '20261125a';
+  const BANK_VERSION = '20261126a';
   const SOL_VERSION = '20261125a';
   const _loadedBanks = {};
   const _bankPromises = {};
@@ -3459,11 +3470,359 @@
   }
 
   /* ---------- FLAT INSPERA / PRACTICE PRO QUESTION GROUP & ITEM RENDERER ---------- */
+  const RP_ROMAN_ORDER = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12, xiii: 13, xiv: 14, xv: 15 };
+
+  function normInstWs(s) {
+    return String(s || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function dedupeScrapedInstructionLines(rawLines) {
+    const lines = rawLines.map(normInstWs).filter(Boolean);
+    const out = [];
+    let i = 0;
+    while (i < lines.length) {
+      const cur = lines[i];
+      const curCompact = cur.replace(/\s+/g, '').toLowerCase();
+
+      // Case 1: HTML <tr> row followed immediately by echoed <td> lines
+      let matchedLen = 0;
+      let acc = '';
+      for (let j = i + 1; j < Math.min(lines.length, i + 14); j++) {
+        acc += lines[j].replace(/\s+/g, '').toLowerCase();
+        if (acc === curCompact) {
+          matchedLen = j - i;
+          break;
+        }
+        if (!curCompact.startsWith(acc)) break;
+      }
+      if (matchedLen >= 2) {
+        if (/^(?:list of|types of|collection types)\b/i.test(cur) && lines[i + 1].length < cur.length && cur.toLowerCase().startsWith(lines[i + 1].toLowerCase())) {
+          for (let k = i + 1; k <= i + matchedLen; k++) out.push(lines[k]);
+        } else {
+          out.push(cur);
+        }
+        i += matchedLen + 1;
+        continue;
+      }
+
+      // Case 2: Exact duplicate, suffix echo ("AT Artefact Types" -> "Artefact Types"), or truncated end echo
+      if (i + 1 < lines.length) {
+        const next = lines[i + 1];
+        const nextCompact = next.replace(/\s+/g, '').toLowerCase();
+        if (nextCompact === curCompact) {
+          out.push(cur);
+          i += 2;
+          continue;
+        }
+        const keyValMatch = /^([A-Z]{1,3}|[ivx]{1,4})\.?\s+(.+)$/i.exec(cur);
+        if (keyValMatch && normInstWs(keyValMatch[2]).toLowerCase() === next.toLowerCase()) {
+          out.push(cur);
+          i += 2;
+          continue;
+        }
+        if (i + 1 === lines.length - 1 && nextCompact.length >= 1 && curCompact.startsWith(nextCompact) && cur.toLowerCase().startsWith(next.toLowerCase())) {
+          const afterNext = cur.slice(next.length);
+          if (!afterNext || /^[\s.,;:]/.test(afterNext)) {
+            out.push(cur);
+            i += 2;
+            continue;
+          }
+        }
+        let tailAcc = '';
+        let isTailPrefix = true;
+        for (let j = i + 1; j < lines.length; j++) {
+          tailAcc += lines[j].replace(/\s+/g, '').toLowerCase();
+          if (!curCompact.startsWith(tailAcc)) {
+            isTailPrefix = false;
+            break;
+          }
+        }
+        if (isTailPrefix && lines.length - 1 - i >= 2 && tailAcc.length > 0 && tailAcc.length < curCompact.length) {
+          out.push(cur);
+          i = lines.length;
+          continue;
+        }
+      }
+
+      out.push(cur);
+      i++;
+    }
+    return out;
+  }
+
+  function splitInlineLetterRow(line) {
+    let work = line.replace(/(^|\s)([A-P])\s+\.(?=\s+\S)/g, '$1$2.');
+    if (/^A\s+\S+.*\bB\s+\S+.*\bc\s+\S+/.test(work)) {
+      work = work.replace(/\bc(\s+\S)/, 'C$1');
+    }
+    if (/\bH\s+\S+.*\b1\s+[a-z]/i.test(work) && !/\bI\s+/.test(work)) {
+      work = work.replace(/(\bH\s+.+?)\s+1(\s+[a-z])/i, '$1 I$2');
+    }
+
+    const startM = /^([A-P])(\.\s*|\s+)(.+)$/.exec(work);
+    if (!startM) return null;
+    const firstKey = startM[1];
+    const hasDot = startM[2].startsWith('.');
+    const firstCode = firstKey.charCodeAt(0);
+    // Match dotted keys ONLY when the row uses dotted keys (prevents middle initials like "Joseph E. Grimes" from splitting!)
+    const re = hasDot ? /\s+([B-P])\.\s*(?=\S)/g : /\s+([B-P])\s+(?=\S)/g;
+    const splits = [{ key: firstKey, code: firstCode, keyStart: 0, valStart: startM[0].length - startM[3].length }];
+    let m;
+    while ((m = re.exec(work)) !== null) {
+      const k = m[1];
+      const code = k.charCodeAt(0);
+      const prev = splits[splits.length - 1];
+      const diff = code - prev.code;
+      if (diff >= 1 && diff <= 4) {
+        if (!hasDot && k === 'I' && prev.key !== 'H' && !(splits.length >= 2 && prev.code - splits[splits.length - 2].code === diff)) {
+          continue;
+        }
+        const prevVal = work.slice(prev.valStart, m.index).trim();
+        if (!prevVal) continue;
+        splits.push({ key: k, code, keyStart: m.index, valStart: m.index + m[0].length });
+      }
+    }
+    if (splits.length < 2) return null;
+
+    const steps = [];
+    for (let s = 1; s < splits.length; s++) steps.push(splits[s].code - splits[s - 1].code);
+    const allStep1 = steps.every((d) => d === 1);
+    const allSameStep = steps.every((d) => d === steps[0] && d >= 1 && d <= 4);
+    const allColumnTableStep = hasDot && steps.every((d) => d >= 2 && d <= 4);
+    const chosen = (allStep1 || allSameStep || allColumnTableStep)
+      ? splits
+      : splits.reduce((acc, sp) => {
+          if (!acc.length || sp.code === acc[acc.length - 1].code + 1) acc.push(sp);
+          return acc;
+        }, []);
+
+    if (chosen.length < 2) return null;
+    return chosen.map((sp, idx) => ({
+      key: sp.key,
+      text: work.slice(sp.valStart, idx + 1 < chosen.length ? chosen[idx + 1].keyStart : work.length).trim()
+    }));
+  }
+
+  function healSequentialLetterKeys(rawItems) {
+    const items = rawItems.map((it) => ({ key: it.key, text: it.text }));
+    // Pass 1: Heal OCR lowercase 'c' (usually C after B, or E between D and F)
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].key === 'c') {
+        const prevCode = i > 0 && /^[A-P]$/.test(items[i - 1].key) ? items[i - 1].key.charCodeAt(0) : 0;
+        const nextCode = i + 1 < items.length && /^[A-P]$/.test(items[i + 1].key) ? items[i + 1].key.charCodeAt(0) : 0;
+        if (prevCode && nextCode && nextCode - prevCode === 2) {
+          items[i].key = String.fromCharCode(prevCode + 1);
+        } else if (prevCode === 66) {
+          items[i].key = 'C';
+        } else if (prevCode === 68) {
+          items[i].key = 'E';
+        } else {
+          items[i].key = 'C';
+        }
+      }
+    }
+    // Pass 2: Heal duplicated/misread uppercase keys sandwiched cleanly between prev and next (e.g., F -> C -> H => G)
+    const seenKeys = new Set();
+    for (let i = 0; i < items.length; i++) {
+      const k = items[i].key;
+      const code = k.charCodeAt(0);
+      const prevCode = i > 0 ? items[i - 1].key.charCodeAt(0) : 0;
+      const nextCode = i + 1 < items.length ? items[i + 1].key.charCodeAt(0) : 0;
+      if (seenKeys.has(k) && prevCode && nextCode && nextCode - prevCode === 2 && code !== prevCode + 1) {
+        const healed = String.fromCharCode(prevCode + 1);
+        if (!seenKeys.has(healed)) {
+          items[i].key = healed;
+        }
+      }
+      seenKeys.add(items[i].key);
+    }
+    return items;
+  }
+
+  function parseGroupInstructionAndBox(rawInst, group) {
+    if (!rawInst) return { proseBefore: [], boxTitle: '', items: [], chipWords: [], proseAfter: [], mode: '' };
+    const lines = dedupeScrapedInstructionLines(String(rawInst).split('\n'));
+    const qOpts = (group?.questions || []).map((q) => q.options).find((o) => Array.isArray(o) && o.length) || [];
+    const qOptSet = new Set(qOpts.map((o) => String(o).trim().toUpperCase()));
+    const isCodeOpts = qOpts.length >= 3 && qOpts.every((o) => /^[A-Z]{2,3}$/.test(String(o).trim()));
+    const isWordOpts = qOpts.length >= 4 && qOpts.every((o) => /^[a-zA-Z\-]{3,}$/.test(String(o).trim()));
+
+    const parsed = lines.map((line) => {
+      const multi = splitInlineLetterRow(line);
+      const romM = /^(x?(?:ix|iv|v?i{1,3})|x|xi|xii|xiii|xiv|xv)(?:\.\s*|\s+)(.+)$/i.exec(line);
+      const singleRoman = (romM && RP_ROMAN_ORDER[romM[1].toLowerCase()] && !/^Paragraph\b/i.test(line))
+        ? [{ key: romM[1].toLowerCase(), text: romM[2].trim() }]
+        : null;
+      let singleCode = null;
+      if (isCodeOpts) {
+        const codeM = /^([A-Z]{2,3})(?:\.\s*|\s+)(.+)$/.exec(line);
+        if (codeM && qOptSet.has(codeM[1])) {
+          singleCode = [{ key: codeM[1], text: codeM[2].trim() }];
+        }
+      }
+      const singleM = /^([A-P])(?:\.\s*|\s+)(.+)$/.exec(line);
+      const singleLetter = singleM ? [{ key: singleM[1], text: singleM[2].trim() }] : null;
+      const ocrCM = /^c(?:\.\s*|\s+)(.+)$/.exec(line);
+      const singleOcrC = ocrCM ? [{ key: 'c', text: ocrCM[1].trim() }] : null;
+      return { multiLetter: multi, singleLetter, singleOcrC, singleRoman, singleCode, raw: line };
+    });
+
+    let bestSpan = null;
+    for (const mode of ['letter', 'roman', 'code']) {
+      let start = -1;
+      let end = -1;
+      let items = [];
+      for (let i = 0; i < parsed.length; i++) {
+        const p = parsed[i];
+        let rowItems = mode === 'letter'
+          ? (p.multiLetter || p.singleLetter)
+          : (mode === 'roman' ? p.singleRoman : p.singleCode);
+        if (mode === 'letter' && !rowItems && start !== -1 && p.singleOcrC) {
+          rowItems = p.singleOcrC;
+        }
+        if (rowItems && rowItems.length) {
+          if (start === -1) start = i;
+          end = i;
+          items.push(...rowItems);
+        } else if (start !== -1) {
+          if (items.length >= 2) break;
+          start = -1;
+          end = -1;
+          items = [];
+        }
+      }
+      if (items.length >= 2) {
+        const finalItems = mode === 'letter' ? healSequentialLetterKeys(items) : items;
+        let valid = false;
+        if (mode === 'letter') {
+          const hasA = finalItems.some((x) => x.key === 'A');
+          const hasB = finalItems.some((x) => x.key === 'B');
+          valid = hasA && hasB && (finalItems.length >= 3 || finalItems[0].key === 'A');
+        } else if (mode === 'roman') {
+          valid = finalItems.some((x) => x.key === 'i') && finalItems.some((x) => x.key === 'ii') && finalItems.length >= 3;
+        } else if (mode === 'code') {
+          valid = finalItems.length >= 2;
+        }
+        if (valid && (!bestSpan || finalItems.length > bestSpan.items.length)) {
+          bestSpan = { mode, start, end, items: finalItems };
+        }
+      }
+    }
+
+    if (!bestSpan && isWordOpts) {
+      const lwIdx = lines.findIndex((l) => /^list of words$/i.test(l));
+      if (lwIdx >= 0 && lwIdx + 1 < lines.length) {
+        const chipWords = [];
+        for (let k = lwIdx + 1; k < lines.length; k++) {
+          for (const w of lines[k].split(/\s+/)) {
+            if (w && !chipWords.includes(w)) chipWords.push(w);
+          }
+        }
+        if (chipWords.length >= 3) {
+          return {
+            proseBefore: lines.slice(0, lwIdx),
+            boxTitle: lines[lwIdx],
+            items: [],
+            chipWords,
+            proseAfter: [],
+            mode: 'chips'
+          };
+        }
+      }
+    }
+
+    if (!bestSpan) {
+      return { proseBefore: lines, boxTitle: '', items: [], chipWords: [], proseAfter: [], mode: '' };
+    }
+
+    const seen = new Map();
+    bestSpan.items.forEach((it) => {
+      const prev = seen.get(it.key);
+      if (!prev || it.text.length > prev.text.length) seen.set(it.key, it);
+    });
+    const cleanItems = [...seen.values()];
+    if (bestSpan.mode === 'letter') {
+      cleanItems.sort((a, b) => a.key.charCodeAt(0) - b.key.charCodeAt(0));
+    } else if (bestSpan.mode === 'roman') {
+      cleanItems.sort((a, b) => (RP_ROMAN_ORDER[a.key] || 99) - (RP_ROMAN_ORDER[b.key] || 99));
+    }
+
+    const proseBefore = lines.slice(0, bestSpan.start);
+    let boxTitle = '';
+    if (proseBefore.length > 0) {
+      const lastBefore = proseBefore[proseBefore.length - 1];
+      const isLikelyTitle = /^(?:list of|types of|collection types|categories|summary|findings|researchers|people|theories|statements|headings|options)/i.test(lastBefore)
+        || (lastBefore.length <= 58 && !/[.?!]$/.test(lastBefore) && !/\b(?:write|choose|match|complete|answer sheet|boxes|more than once|questions?\s+\d)\b/i.test(lastBefore));
+      if (isLikelyTitle) {
+        boxTitle = proseBefore.pop();
+      }
+    }
+
+    return {
+      proseBefore,
+      boxTitle,
+      items: cleanItems,
+      chipWords: [],
+      proseAfter: lines.slice(bestSpan.end + 1),
+      mode: bestSpan.mode
+    };
+  }
+
   function formatGroupInstructionHtml(inst) {
     if (!inst) return '';
     return esc(String(inst).trim())
       .replace(/\b(NO MORE THAN (?:ONE|TWO|THREE|FOUR) WORDS?(?: AND\/OR A NUMBER)?|ONE WORD AND\/OR A NUMBER|ONE WORD ONLY|TWO WORDS ONLY|THREE WORDS ONLY|ONE NUMBER ONLY|TRUE|FALSE|NOT GIVEN|YES|NO)\b/g, '<strong>$1</strong>')
       .replace(/\n+/g, '<br>');
+  }
+
+  function renderGroupInstructionBlock(inst, group) {
+    if (!inst) return '';
+    const parsed = parseGroupInstructionAndBox(inst, group);
+    const hasBox = parsed.items.length > 0 || parsed.chipWords.length > 0;
+    if (!hasBox) {
+      const cleanText = parsed.proseBefore.join('\n');
+      return cleanText ? `<p class="ins-group-inst">${formatGroupInstructionHtml(cleanText)}</p>` : '';
+    }
+
+    const beforeHtml = parsed.proseBefore.length
+      ? `<p class="ins-group-inst">${formatGroupInstructionHtml(parsed.proseBefore.join('\n'))}</p>`
+      : '';
+
+    let boxHtml = '';
+    if (parsed.items.length > 0) {
+      const maxLen = parsed.items.reduce((m, it) => Math.max(m, it.text.length), 0);
+      const colCls = (parsed.mode === 'roman' || maxLen > 38)
+        ? 'cols-1'
+        : ((maxLen > 20 || parsed.items.length <= 6) ? 'cols-2' : 'cols-3');
+      boxHtml = `
+        <div class="rp-wordbank-box ${colCls} ${parsed.mode === 'roman' ? 'is-roman' : ''}">
+          ${parsed.boxTitle ? `<div class="rp-wb-head">${esc(parsed.boxTitle)}</div>` : ''}
+          <div class="rp-wb-grid">
+            ${parsed.items.map((it) => `
+              <div class="rp-wb-item">
+                <span class="rp-wb-key">${esc(it.key)}</span>
+                <span class="rp-wb-val">${esc(it.text)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    } else if (parsed.chipWords.length > 0) {
+      boxHtml = `
+        <div class="rp-wordbank-box is-chips">
+          ${parsed.boxTitle ? `<div class="rp-wb-head">${esc(parsed.boxTitle)}</div>` : ''}
+          <div class="rp-wb-chips">
+            ${parsed.chipWords.map((w) => `<span class="rp-wb-chip">${esc(w)}</span>`).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    const afterHtml = parsed.proseAfter.length
+      ? `<p class="ins-group-inst ins-group-inst-after">${formatGroupInstructionHtml(parsed.proseAfter.join('\n'))}</p>`
+      : '';
+
+    return `${beforeHtml}${boxHtml}${afterHtml}`;
   }
 
   function getGapGroupFrameKind(group) {
@@ -3678,7 +4037,7 @@
           ` : ''}
           <h3 class="ins-group-title">${esc(group.title)}</h3>
         </div>
-        ${group.instruction ? `<p class="ins-group-inst">${formatGroupInstructionHtml(group.instruction)}</p>` : ''}
+        ${renderGroupInstructionBlock(group.instruction, group)}
         <div class="ins-note-frame ${frameKind === 'summary' ? 'is-summary-frame' : ''}">
           ${frameTitle ? `<div class="ins-note-heading">${esc(frameTitle)}</div>` : ''}
           <div class="ins-note-list">
@@ -3723,7 +4082,7 @@
       return `
         <div class="ins-q-group">
           <h3 class="ins-group-title">${esc(group.title)}</h3>
-          ${group.instruction ? `<p class="ins-group-inst">${formatGroupInstructionHtml(group.instruction)}</p>` : ''}
+          ${renderGroupInstructionBlock(group.instruction, group)}
           <div class="ins-headings-sub">List of Headings</div>
           <div class="ins-headings-stack">${headingsHtml}</div>
           ${!isReview ? '<div class="ins-mh-hint">Kéo thả tiêu đề sang ô viền xanh bên trái, hoặc bấm chọn 1 tiêu đề rồi bấm vào ô số câu bên trái.</div>' : ''}
@@ -3748,7 +4107,7 @@
           ` : ''}
           <h3 class="ins-group-title">${esc(group.title)}</h3>
         </div>
-        ${group.instruction ? `<p class="ins-group-inst">${formatGroupInstructionHtml(group.instruction)}</p>` : ''}
+        ${renderGroupInstructionBlock(group.instruction, group)}
         <div class="ins-q-items">
           ${entries.map((entry) => entry.kind === 'multi'
             ? renderMultiBlankFlatItem(entry, passage, isReview)
@@ -4009,7 +4368,7 @@
   /* ---------- CLICK-TO-DICTIONARY POPOVER (Review & News -> My Vocab) ---------- */
   function extractSentenceForNode(node, fallbackWord = '') {
     const el = node?.nodeType === 1 ? node : node?.parentElement;
-    const container = el?.closest?.('.rp-para-text, .ins-q-stem, .ins-note-line, .ins-gap-line, .ins-mcq-txt, .ins-group-inst, .ins-heading-pill, .ins-note-heading, .ins-note-subheading, .ins-q-item');
+    const container = el?.closest?.('.rp-para-text, .ins-q-stem, .ins-note-line, .ins-gap-line, .ins-mcq-txt, .ins-group-inst, .rp-wb-val, .ins-heading-pill, .ins-note-heading, .ins-note-subheading, .ins-q-item');
     if (!container) return '';
     let full = '';
     if (container.classList.contains('rp-para-text')) {
