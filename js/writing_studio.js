@@ -3362,12 +3362,9 @@
 
     const isExam = mode === 'exam';
     const initContrast = pracState.contrast;
-    const acGuardAttrs = !isTeacherBypass()
-      ? `onpaste="event.preventDefault(); WritingStudio.toastMsg('Chống gian lận: Không được dán văn bản vào phòng viết!');" ondrop="event.preventDefault(); WritingStudio.toastMsg('Chống gian lận: Không được kéo thả văn bản!');"`
-      : '';
-    const editorAcAttrs = !isTeacherBypass()
-      ? `${acGuardAttrs} oncopy="event.preventDefault(); WritingStudio.toastMsg('Chống gian lận: Không sao chép trong lúc làm bài!');" oncut="event.preventDefault();" oncontextmenu="event.preventDefault();"`
-      : '';
+    // Official CD-IELTS Writing Practice & Exam ALLOWS Copy/Cut/Paste while editing essays (Task modes remain strictly locked!)
+    const acGuardAttrs = '';
+    const editorAcAttrs = '';
 
     const DEFAULT_PLAN_TEMPLATE = [
       '1. Intro (Paraphrase + Thesis):',
@@ -3413,7 +3410,7 @@
          </span>`;
 
     const headerAcChipHtml = `
-      <span class="rp-ac-shield" id="ws-prac-ac-pill" title="Chống gian lận đang bật: chặn dán, sao chép &amp; rời tab (tối đa 2 lần)">
+      <span class="rp-ac-shield" id="ws-prac-ac-pill" title="Chống gian lận đang bật: theo dõi rời tab (tối đa 2 lần) · Cho phép Copy/Paste chuẩn CD-IELTS">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         <span id="ws-prac-ac-text">Anti-Cheat</span>
       </span>
@@ -3515,6 +3512,7 @@
           </div>
           <div class="ins-hdr-right">
             ${headerAcChipHtml}
+            ${isTeacherBypass() ? `<button type="button" class="ins-hdr-pill" id="ws-btn-teacher-model" onclick="WritingStudio.submitPracticeEssay(true)" title="Quyền Giáo viên: Xem ngay gợi ý bài mẫu &amp; bảng paraphrase mà không cần viết">Xem bài mẫu</button>` : ''}
             <div class="ws-ins-opt-wrap" onclick="event.stopPropagation()">
               <button type="button" class="ins-hdr-ico" id="ws-prac-opt-btn" onclick="WritingStudio.togglePracOptions()" title="Màu sắc &amp; Cỡ chữ" aria-label="Options">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -3732,17 +3730,19 @@
     if (editor) editor.readOnly = true;
 
     const estBand = wc >= 250 ? 7.0 : (wc >= 160 ? 6.0 : 5.0);
-    const hist = getPracticeHist();
-    hist.unshift({
-      promptId: pracState.prompt.id,
-      type: pracState.prompt.type,
-      prompt: pracState.prompt.prompt,
-      mode: pracState.mode,
-      wordCount: wc,
-      band: estBand,
-      completedAt: Date.now()
-    });
-    savePracticeHist(hist);
+    if (!(isTeacherBypass() && wc === 0)) {
+      const hist = getPracticeHist();
+      hist.unshift({
+        promptId: pracState.prompt.id,
+        type: pracState.prompt.type,
+        prompt: pracState.prompt.prompt,
+        mode: pracState.mode,
+        wordCount: wc,
+        band: estBand,
+        completedAt: Date.now()
+      });
+      savePracticeHist(hist);
+    }
 
     const submitBtn = document.getElementById('ws-prac-submit');
     if (submitBtn) {

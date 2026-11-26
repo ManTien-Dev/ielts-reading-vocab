@@ -797,7 +797,7 @@
             </div>
           </div>
           <div class="lp-row-actions">
-            ${B()?.isTeacherUser?.() ? `<button type="button" class="rp-btn-assign lp-row-btn" style="flex:0 0 auto;padding:0 10px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'listening', itemId: '${esc(item.id)}', isFull: ${isFull ? 'true' : 'false'}, title: '${esc(item.title || item.id).replace(/'/g, "\\'")}', subtitle: '${esc(partLabel).replace(/'/g, "\\'")}' })" title="Tạo link giao bài Zalo cho học sinh">🔗 Giao</button>` : ''}
+            ${B()?.isTeacherUser?.() ? `<button type="button" class="rp-btn-assign lp-row-btn" style="flex:0 0 auto;padding:0 10px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'listening', itemId: '${esc(item.id)}', isFull: ${isFull ? 'true' : 'false'}, title: '${esc(item.title || item.id).replace(/'/g, "\\'")}', subtitle: '${esc(partLabel).replace(/'/g, "\\'")}' })" title="Tạo link giao bài Zalo cho học sinh">🔗 Giao</button><button type="button" class="btn-subtle lp-row-btn" style="flex:0 0 auto;padding:0 10px;" onclick="event.stopPropagation(); ListeningPracticeApp.openTeacherReview('${esc(item.id)}', ${isFull ? 'true' : 'false'})" title="Quyền Giáo viên: Xem ngay đáp án &amp; Transcript không cần làm bài">Xem đáp án</button>` : ''}
             <button type="button" class="btn-subtle lp-row-btn" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'practice')">Luyện tập</button>
             <button type="button" class="btn btn-primary lp-row-btn" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'exam')">${isFull ? 'Thi Full Test →' : 'Thi thật →'}</button>
           </div>
@@ -2164,6 +2164,13 @@
               ${isPractice ? timerBlockHtml : '<span class="lp-ins-mode-tag is-exam">Thi thật</span>'}
               <span class="rp-ac-shield" title="Chống gian lận đang bật trong phòng làm bài"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Anti-Cheat</span></span>
               ${practiceProgPillHtml}
+              ${(B()?.isTeacherUser?.() || B()?.isTeacherMode?.() || B()?.isTeacherPreviewing?.()) ? `
+                <button type="button" class="ins-hdr-pill" id="lp-btn-teacher-solutions"
+                  onclick="ListeningPracticeApp.openTeacherReviewFromExam()"
+                  title="Quyền Giáo viên: Xem ngay toàn bộ đáp án &amp; Transcript không cần làm hết">
+                  Xem đáp án
+                </button>
+              ` : ''}
               <button type="button" class="ins-hdr-ico ${isPractice ? 'prac-hdr-ico' : ''} ${s.notesOpen ? 'active' : ''}" onclick="ListeningPracticeApp.toggleNotesDrawer()" title="Notes" aria-label="Notes">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 ${notesCount ? `<span class="ins-notes-badge">${notesCount}</span>` : ''}
@@ -3056,6 +3063,66 @@
     renderExamView();
   }
 
+  function openTeacherReview(itemId, isFull) {
+    if (!(B()?.isTeacherUser?.() || B()?.isTeacherMode?.() || B()?.isTeacherPreviewing?.())) return;
+    const d = DATA();
+    let partIds = [];
+    let title = '';
+    let durationMin = 7;
+    if (isFull) {
+      const ft = (d.FULL_TESTS || []).find((x) => x.id === itemId);
+      if (!ft || !Array.isArray(ft.partIds) || !ft.partIds.length) {
+        toast('Đề FULL TEST này chưa có dữ liệu.');
+        return;
+      }
+      partIds = ft.partIds.filter((pid) => !!d.PARTS?.[pid]);
+      title = ft.title || 'IELTS Listening FULL TEST';
+      durationMin = Number(ft.durationMin) || 30;
+    } else {
+      const part = d.PARTS?.[itemId];
+      if (!part) {
+        toast('Bài nghe này chưa có dữ liệu.');
+        return;
+      }
+      partIds = [part.id];
+      title = part.title || `Part ${part.partNum || 1}`;
+      durationMin = Number(part.durationMin) || (part.partNum >= 3 ? 8 : 7);
+    }
+    stopExamTimer();
+    stopActiveAudio();
+    const dummySession = {
+      itemId,
+      isFull: !!isFull,
+      mode: 'practice',
+      title,
+      partIds,
+      activePartIdx: 0,
+      activeQNum: d.PARTS?.[partIds[0]]?.answers?.[0]?.num || 1,
+      answers: {},
+      startedAt: Date.now(),
+      durationSec: durationMin * 60,
+      remainingSec: durationMin * 60
+    };
+    const result = gradeSession(dummySession);
+    state.lastReview = result;
+    state.session = null;
+    state.view = 'review';
+    document.body.classList.add('lp-exam-fullscreen');
+    render();
+  }
+
+  function openTeacherReviewFromExam() {
+    if (!state.session) return;
+    if (!(B()?.isTeacherUser?.() || B()?.isTeacherMode?.() || B()?.isTeacherPreviewing?.())) return;
+    stopExamTimer();
+    stopActiveAudio();
+    const result = gradeSession(state.session);
+    state.lastReview = result;
+    state.session = null;
+    state.view = 'review';
+    render();
+  }
+
   function submitExam(force) {
     if (!state.session) return;
     const parts = getSessionParts();
@@ -3187,6 +3254,8 @@
     clearExamHighlight,
     clearAllPaperHighlights,
     addNoteFromSelection,
+    openTeacherReview,
+    openTeacherReviewFromExam,
     submitExam,
     exitExam,
     switchReviewPart,

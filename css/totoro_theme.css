@@ -10601,6 +10601,104 @@ body.rp-exam-fullscreen {
   color: var(--ins-ink);
   white-space: pre-line;
 }
+.ins-group-inst-after {
+  margin-top: 8px;
+}
+
+/* Structured CD-IELTS / Totoro Washi Word Bank & Option List Box */
+.rp-wordbank-box {
+  margin: 0 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--ins-border, #d0d5dd);
+  background: var(--ins-paper-sub, #f8fafc);
+  overflow: hidden;
+}
+.rp-wb-head {
+  padding: 8px 14px;
+  font-size: calc(var(--ins-fs, 15px) - 1.5px);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--ins-ink);
+  border-bottom: 1px solid var(--ins-border, #d0d5dd);
+  background: color-mix(in srgb, var(--ins-paper-sub, #f1f5f9) 70%, var(--ins-border, #d0d5dd) 30%);
+}
+.rp-wb-grid {
+  display: grid;
+  gap: 6px 14px;
+  padding: 12px 14px;
+}
+.rp-wordbank-box.cols-1 .rp-wb-grid {
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+.rp-wordbank-box.cols-2 .rp-wb-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.rp-wordbank-box.cols-3 .rp-wb-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.rp-wb-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  font-size: calc(var(--ins-fs, 15px) - 1px);
+  line-height: 1.45;
+  color: var(--ins-ink);
+}
+.rp-wb-key {
+  flex: 0 0 auto;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ins-ink);
+  background: color-mix(in srgb, var(--ins-active-ring, #2b7bd6) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ins-active-ring, #2b7bd6) 28%, transparent);
+  margin-top: 1px;
+}
+.rp-wordbank-box.is-roman .rp-wb-key {
+  min-width: 30px;
+  font-variant-numeric: tabular-nums;
+}
+.rp-wb-val {
+  flex: 1 1 auto;
+  min-width: 0;
+  word-break: break-word;
+}
+.rp-wb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 12px 14px;
+}
+.rp-wb-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--ins-border, #cbd5e1);
+  background: var(--ins-input-bg, #ffffff);
+  color: var(--ins-ink);
+  font-size: calc(var(--ins-fs, 15px) - 1.5px);
+  font-weight: 600;
+}
+@media (max-width: 960px) {
+  .rp-wordbank-box.cols-3 .rp-wb-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .rp-wordbank-box.cols-2 .rp-wb-grid,
+  .rp-wordbank-box.cols-3 .rp-wb-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .ins-select-chips {
   display: flex;
   flex-wrap: wrap;
@@ -12110,7 +12208,7 @@ body.rp-exam-fullscreen {
   margin: 0;
 }
 .ins-mode-practice .ins-group-inst {
-  margin: 0 0 14px;
+  margin: 0 0 12px;
   padding: 9px 12px;
   border-radius: 10px;
   border: 1px solid var(--prac-bd);
@@ -12118,6 +12216,36 @@ body.rp-exam-fullscreen {
   font-size: calc(var(--ins-fs, 15px) - 1.5px);
   line-height: 1.52;
   color: var(--prac-ink-2);
+}
+.ins-mode-practice .rp-wordbank-box {
+  margin: 0 0 16px;
+  border-radius: 12px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sheet);
+  box-shadow: 0 1px 2px rgba(45, 58, 49, 0.04);
+}
+.ins-mode-practice .rp-wb-head {
+  padding: 8px 14px;
+  color: var(--prac-ink);
+  background: var(--prac-sheet-sub);
+  border-bottom: 1px solid var(--prac-bd);
+  font-size: calc(var(--ins-fs, 15px) - 1.5px);
+}
+.ins-mode-practice .rp-wb-item {
+  color: var(--prac-ink);
+  padding: 3px 4px;
+  border-radius: 7px;
+}
+.ins-mode-practice .rp-wb-key {
+  background: var(--prac-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--prac-accent) 26%, transparent);
+  color: var(--prac-accent);
+  font-weight: 800;
+}
+.ins-mode-practice .rp-wb-chip {
+  background: var(--prac-sheet-sub);
+  border-color: var(--prac-bd);
+  color: var(--prac-ink);
 }
 
 .ins-mode-practice .ins-q-items {

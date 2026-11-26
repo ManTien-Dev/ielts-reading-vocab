@@ -690,7 +690,7 @@
   function isTeacherBypass() {
     try {
       const bridge = B();
-      if (bridge?.isTeacherMode?.() || bridge?.isTeacherPreviewing?.()) return true;
+      if (bridge?.isTeacherUser?.() || bridge?.isTeacherMode?.() || bridge?.isTeacherPreviewing?.()) return true;
       const u = bridge?.getCurrentUser?.();
       const role = String(u?.role || '').trim().toLowerCase();
       if (role === 'teacher' || role === 'admin') return true;
@@ -919,49 +919,34 @@
     }
   }
 
+  function isReadingPracticeExamOpen() {
+    const s = state.session;
+    return state.view === 'exam' && !!s && s.mode === 'exam' && !s.isNews;
+  }
+
   function bindGlobalReadingAntiCheatDom() {
     if (_acDomBound || typeof document === 'undefined') return;
     _acDomBound = true;
 
-    document.addEventListener('copy', (e) => {
-      if (!isReadingAntiCheatActive()) return;
-      const ws = document.getElementById('rp-workspace');
-      if (ws && ws.contains(e.target)) {
-        e.preventDefault();
-        toast('Chống gian lận: Không được sao chép nội dung khi đang làm bài!');
-      }
-    }, true);
-
-    document.addEventListener('cut', (e) => {
-      if (!isReadingAntiCheatActive()) return;
-      const ws = document.getElementById('rp-workspace');
-      if (ws && ws.contains(e.target)) {
-        e.preventDefault();
-        toast('Chống gian lận: Không được cắt nội dung khi đang làm bài!');
-      }
-    }, true);
-
-    document.addEventListener('paste', (e) => {
-      if (!isReadingAntiCheatActive()) return;
-      if (e.target && e.target.closest && e.target.closest('.ins-gap-input')) {
-        e.preventDefault();
-        toast('Hãy tự gõ đáp án vào ô trống — không được dán chữ!');
-      }
-    }, true);
-
+    // CD-IELTS Practice & Exam mode ALLOWS Copy/Cut/Paste (like official Inspera CD-IELTS)
+    // while DISABLING browser Find (Ctrl+F / Cmd+F / F3 / Ctrl+G) during active Reading sessions!
     document.addEventListener('keydown', (e) => {
-      if (!isReadingAntiCheatActive()) return;
+      if (!isReadingPracticeExamOpen()) return;
       const k = (e.key || '').toLowerCase();
       const ctrl = e.ctrlKey || e.metaKey;
-      const inGap = !!(e.target && e.target.closest && e.target.closest('.ins-gap-input, #rp-note-input'));
+
+      // Always block Ctrl+F / Cmd+F / F3 / Ctrl+G in active Reading Practice & Exam (authentic CD-IELTS)
+      if ((ctrl && (k === 'f' || k === 'g')) || e.key === 'F3') {
+        e.preventDefault();
+        e.stopPropagation();
+        toast('Chế độ Reading Practice khóa Ctrl+F chuẩn thi CD-IELTS — hãy dùng Skimming & Scanning nhé!');
+        return;
+      }
+
+      if (!isReadingAntiCheatActive()) return;
       if (e.key === 'F12' || (ctrl && e.shiftKey && ['i', 'j', 'c'].includes(k)) || (ctrl && ['u', 'p'].includes(k))) {
         e.preventDefault();
         toast('Chống gian lận: Phím tắt này bị khóa trong lúc làm bài.');
-        return;
-      }
-      if (ctrl && ['c', 'x', 'v'].includes(k) && !inGap) {
-        e.preventDefault();
-        toast('Chống gian lận: Không được sao chép/dán nội dung bài đọc.');
       }
     }, true);
   }
@@ -2276,7 +2261,7 @@
       : `
         <div class="rp-card-mode-btns">
           ${teacherAssignBtn}
-          ${isMastered ? `<button type="button" class="btn-subtle rp-btn-sm rp-btn-rev" onclick="${reviewCall}" title="Đã hoàn thành 100% — Xem lại đáp án &amp; lời giải">Xem giải</button>` : ''}
+          ${(isMastered || isTeacher) ? `<button type="button" class="btn-subtle rp-btn-sm rp-btn-rev" onclick="${reviewCall}" title="${isTeacher ? 'Quyền Giáo viên — Xem ngay đáp án, lời giải &amp; Locate không cần làm bài' : 'Đã hoàn thành 100% — Xem lại đáp án &amp; lời giải'}">${isTeacher && !isMastered ? 'Xem đáp án' : 'Xem giải'}</button>` : ''}
           <button type="button" class="rp-btn-practice rp-btn-sm" data-rp-start-mode="practice" onclick="${startPracticeCall}" title="Luyện tập Totoro Washi: 5 màu highlight pastel, tùy chỉnh nền &amp; cỡ chữ, chống gian lận &amp; mở khóa Solution khi đúng 100%">
             <span class="rp-mode-dot-swatch" aria-hidden="true"></span>
             <span>Luyện tập</span>
@@ -3186,7 +3171,7 @@
     // Anti-Cheat Shield Status Pill (active in BOTH Practice & Exam until 100% completion!)
     const antiCheatPillHtml = (!isReview && !s.isNews) ? `
       <span class="rp-ac-shield ${s.antiCheatStrikes > 0 ? 'is-warn' : ''}" id="rp-ac-shield"
-        title="Chống gian lận đang bật: khóa sao chép, khóa từ điển và cảnh báo chuyển tab (tối đa 2 lần)">
+        title="Chống gian lận đang bật: khóa Ctrl+F, khóa từ điển &amp; cảnh báo chuyển tab (tối đa 2 lần) · Cho phép Copy/Paste chuẩn CD-IELTS">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         <span>${s.antiCheatStrikes > 0 ? `Cảnh báo ${s.antiCheatStrikes}/2` : 'Anti-Cheat'}</span>
       </span>
@@ -3271,6 +3256,13 @@
               ${antiCheatPillHtml}
               ${isPractice ? timerBlockHtml : ''}
               ${practiceProgPillHtml}
+              ${(isTeacherBypass() && !isReview && !s.isNews) ? `
+                <button type="button" class="ins-hdr-pill" id="rp-btn-teacher-solutions"
+                  onclick="ReadingPracticeApp.openReviewFromResult()"
+                  title="Quyền Giáo viên: Xem ngay toàn bộ đáp án, lời giải, dịch song ngữ &amp; Locate mà không cần làm hết">
+                  Xem đáp án
+                </button>
+              ` : ''}
               ${reviewHeaderActionsHtml}
               ${s.isNews && !isReview ? `
                 <button type="button" class="ins-hdr-pill ${s.showBilingual ? 'active' : ''}" id="rp-btn-bilingual" onclick="ReadingPracticeApp.toggleBilingual()">
@@ -3782,9 +3774,92 @@
       .replace(/\n+/g, '<br>');
   }
 
+  const RP_WORD_LIMIT_RE = /\b(ONE WORD|TWO WORDS|THREE WORDS|FOUR WORDS|NO MORE THAN|A NUMBER|NUMBER ONLY|WORD ONLY|WORDS ONLY|FROM THE PASSAGE|FROM THE TEXT|LIST OF WORDS|CORRECT LETTER)\b/i;
+
+  function inferGapWordLimitPhrase(gapQs) {
+    let maxWords = 1;
+    let hasNum = false;
+    for (const q of gapQs) {
+      const rawArr = Array.isArray(q.answer) ? q.answer : [q.answer];
+      const variants = [];
+      for (const item of rawArr) {
+        const s = String(item || '').trim();
+        if (!s) continue;
+        const hasEitherOrder = /\b(IN EITHER ORDER|EITHER ORDER|ANY ORDER)\b/i.test(s);
+        const stripped = s
+          .replace(/\b(IN EITHER ORDER|BOTH REQUIRED FOR ONE MARK|BOTH REQUIRED|ANY ORDER|EITHER ORDER)\b/gi, '')
+          .replace(/\([^)]*\)/g, '')
+          .trim();
+        const parts = hasEitherOrder
+          ? stripped.split(/\s*(?:\/|,|;|\band\b|\bor\b)\s*/i)
+          : stripped.split(/\s*(?:\/|\bor\b)\s*/i);
+        for (const p of parts) {
+          const clean = p.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '').trim();
+          if (clean) variants.push(clean);
+        }
+      }
+      if (!variants.length) continue;
+      let minVarWords = Infinity;
+      for (const v of variants) {
+        const wc = v.split(/\s+/).filter(Boolean).length;
+        if (wc > 0 && wc < minVarWords) minVarWords = wc;
+        if (/\d/.test(v)) hasNum = true;
+      }
+      if (minVarWords < Infinity && minVarWords > maxWords) {
+        maxWords = minVarWords;
+      }
+    }
+    if (maxWords <= 1) return hasNum ? 'ONE WORD AND/OR A NUMBER' : 'ONE WORD ONLY';
+    if (maxWords === 2) return hasNum ? 'NO MORE THAN TWO WORDS AND/OR A NUMBER' : 'NO MORE THAN TWO WORDS';
+    return hasNum ? 'NO MORE THAN THREE WORDS AND/OR A NUMBER' : 'NO MORE THAN THREE WORDS';
+  }
+
+  function resolveEffectiveGroupInstruction(rawInst, group) {
+    const trimmed = String(rawInst || '').trim();
+    const qs = group?.questions || [];
+    const gapQs = qs.filter((q) => q.type === 'gap');
+
+    if (gapQs.length > 0 && !RP_WORD_LIMIT_RE.test(trimmed)) {
+      const limitPhrase = inferGapWordLimitPhrase(gapQs);
+      const limitLine = `Choose ${limitPhrase} from the passage for each answer.`;
+      if (trimmed) return `${trimmed}\n${limitLine}`;
+
+      const questionMarkCount = gapQs.filter((q) => /\?\s*$/.test(String(q.prompt || '').trim())).length;
+      const bulletCount = gapQs.filter((q) => /^\s*[•●○▪▸◦\-–—]\s*/.test(String(q.prompt || ''))).length;
+      const lead = questionMarkCount >= Math.ceil(gapQs.length * 0.5)
+        ? 'Answer the questions below.'
+        : (bulletCount >= Math.max(2, Math.ceil(gapQs.length * 0.5))
+          ? 'Complete the notes below.'
+          : 'Complete the sentences below.');
+      return `${lead}\n${limitLine}`;
+    }
+
+    if (!trimmed && qs.length > 0) {
+      const allTfng = qs.every((q) => q.type === 'tfng');
+      if (allTfng) {
+        return 'Do the following statements agree with the information given in the Reading Passage?\nWrite TRUE, FALSE or NOT GIVEN for each question.';
+      }
+      const allYnng = qs.every((q) => q.type === 'ynng');
+      if (allYnng) {
+        return 'Do the following statements agree with the views of the writer in the Reading Passage?\nWrite YES, NO or NOT GIVEN for each question.';
+      }
+      const allMcq = qs.every((q) => q.type === 'mcq');
+      if (allMcq) {
+        const optKeys = (qs[0]?.options || []).map((o) => String(o?.key || o || '').trim()).filter(Boolean);
+        const letterList = optKeys.length >= 2
+          ? `${optKeys.slice(0, -1).join(', ')} or ${optKeys[optKeys.length - 1]}`
+          : 'A, B, C or D';
+        return `Choose the correct letter, ${letterList}.`;
+      }
+    }
+
+    return trimmed;
+  }
+
   function renderGroupInstructionBlock(inst, group) {
-    if (!inst) return '';
-    const parsed = parseGroupInstructionAndBox(inst, group);
+    const effectiveInst = resolveEffectiveGroupInstruction(inst, group);
+    if (!effectiveInst) return '';
+    const parsed = parseGroupInstructionAndBox(effectiveInst, group);
     const hasBox = parsed.items.length > 0 || parsed.chipWords.length > 0;
     if (!hasBox) {
       const cleanText = parsed.proseBefore.join('\n');
@@ -5487,7 +5562,8 @@
       const pct = report.total > 0 ? Math.round((report.score / report.total) * 100) : 0;
       const wrongCnt = Math.max(0, report.total - report.score);
       const isEndedEarly = !!report.endedEarly && !report.isMastered;
-      const canPreviewSolutions = !!report.isMastered;
+      const isTeacher = isTeacherBypass();
+      const canPreviewSolutions = !!report.isMastered || isTeacher;
       if (titleEl) {
         const metaTxt = isEndedEarly
           ? `Đã kết thúc · ${formatDuration(report.elapsedSec)}`
@@ -5497,7 +5573,7 @@
 
       const rowsHtml = (report.rows || []).map((r) => {
         const displayAns = r.answer ? esc(r.answer) : 'Chưa làm';
-        const rowClick = isEndedEarly
+        const rowClick = (isEndedEarly || (isTeacher && !report.isMastered))
           ? (canPreviewSolutions ? `ReadingPracticeApp.openReviewFromResult(); ReadingPracticeApp.jumpToQuestion(${r.pIdx}, '${esc(r.qid)}')` : '')
           : `ReadingPracticeApp.jumpFromResult(${r.pIdx}, '${esc(r.qid)}')`;
         return `
@@ -5516,9 +5592,11 @@
 
       const noteHtml = report.isMastered
         ? `<div class="rp-res-note">Xuất sắc! Bạn đã hoàn thành đúng <strong>100%</strong>. Bấm <strong>Xem giải &amp; Locate</strong> để xem đáp án chi tiết, dịch song ngữ và tra từ.</div>`
-        : (isEndedEarly
-          ? `<div class="rp-res-note">Lượt làm đã kết thúc và lưu kết quả. Bạn cần hoàn thành đúng <strong>100%</strong> để mở khóa <strong>Xem giải &amp; Locate</strong>.</div>`
-          : `<div class="rp-res-note">Các câu đúng (<strong>✓</strong>) đã được giữ lại. Bấm trực tiếp vào câu sai (<strong>✕</strong>) hoặc nút <strong>Làm lại câu sai</strong> để sửa rồi bấm <strong>Nộp lại</strong> (đúng 100% để mở Xem giải &amp; Locate).</div>`);
+        : (isTeacher
+          ? `<div class="rp-res-note">Tài khoản Giáo viên có toàn quyền bấm <strong>Xem giải &amp; Locate</strong> ngay để kiểm tra đáp án, lời giải và dẫn chứng mà không cần làm hết.</div>`
+          : (isEndedEarly
+            ? `<div class="rp-res-note">Lượt làm đã kết thúc và lưu kết quả. Bạn cần hoàn thành đúng <strong>100%</strong> để mở khóa <strong>Xem giải &amp; Locate</strong>.</div>`
+            : `<div class="rp-res-note">Các câu đúng (<strong>✓</strong>) đã được giữ lại. Bấm trực tiếp vào câu sai (<strong>✕</strong>) hoặc nút <strong>Làm lại câu sai</strong> để sửa rồi bấm <strong>Nộp lại</strong> (đúng 100% để mở Xem giải &amp; Locate).</div>`));
 
       const footHtml = report.isMastered
         ? `
@@ -5531,12 +5609,14 @@
           ? `
             <div class="rp-res-foot">
               <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.retryCurrent()">Làm lại bài</button>
-              <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.finishExitToHub()">← Về kho đề</button>
+              ${isTeacher ? `<button type="button" class="btn btn-primary" id="rp-res-teacher-rev-btn" onclick="ReadingPracticeApp.openReviewFromResult()">Xem giải &amp; Locate →</button>` : ''}
+              <button type="button" class="${isTeacher ? 'btn-subtle' : 'btn btn-primary'}" id="rp-res-primary-btn" onclick="ReadingPracticeApp.finishExitToHub()">← Về kho đề</button>
             </div>
           `
           : `
             <div class="rp-res-foot">
               <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal()">Đóng</button>
+              ${isTeacher ? `<button type="button" class="btn-subtle" id="rp-res-teacher-rev-btn" onclick="ReadingPracticeApp.openReviewFromResult()">Xem giải &amp; Locate</button>` : ''}
               <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.focusFirstWrongFromResult()">Làm lại câu sai →</button>
             </div>
           `);
