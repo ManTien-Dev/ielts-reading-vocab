@@ -630,7 +630,10 @@
     const renderCard = (c) => {
       let badge = c.badge;
       let cardOnClick = '';
-      let actionsHtml = '';
+      let statText = '';
+      let secondaryHtml = '';
+      let primaryLabel = 'Mở kho đề →';
+      let primaryAct = '';
 
       if (c.kind === 'source') {
         const sum = d.BANK_SUMMARY?.[c.id];
@@ -638,45 +641,40 @@
           const bks = getBooksForSource(c.id);
           const ready = bks.filter((b) => countReadyTestsInBook(b.id) > 0).length;
           badge = ready > 0 ? `${ready}/${bks.length} cuốn` : (sum ? `${sum.books} cuốn · ${sum.fullTests} Tests` : `${bks.length} cuốn`);
+          statText = 'Part 1–4 · Full Test';
         } else if (c.id === 'volume') {
           const bks = getBooksForSource(c.id);
           const ready = bks.filter((b) => countReadyTestsInBook(b.id) > 0).length;
           badge = ready > 0 ? `${ready}/${bks.length} tập` : (sum ? `${sum.books} tập · ${sum.fullTests} Tests` : '10 tập · Real Listening');
+          statText = 'Bẫy Paraphrase · Full Test';
         } else if (c.id === 'actual') {
           const actCount = Object.values(d.PARTS || {}).filter((p) => p.source === 'actual').length;
           badge = actCount > 0 ? `${actCount} bài nghe` : (sum ? `${sum.parts} bài nghe · ${sum.fullTests} Full` : 'Part 1–4 · FULL TEST');
+          statText = '';
+          secondaryHtml = `<button type="button" class="rp-portal-link" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('actual', 'full')">Full Test</button>`;
         }
         cardOnClick = `ListeningPracticeApp.openSource('${esc(c.id)}')`;
-        actionsHtml = c.id === 'actual'
-          ? `
-            <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('actual', 'p1')">Chọn bài nghe</button>
-            <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('actual', 'full')">Làm Full Test</button>
-          `
-          : `
-            <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('${esc(c.id)}')">Chọn bộ đề</button>
-            <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningPracticeApp.openSource('${esc(c.id)}')">Làm Full Test</button>
-          `;
+        primaryAct = c.id === 'actual'
+          ? `ListeningPracticeApp.openSource('actual', 'p1')`
+          : `ListeningPracticeApp.openSource('${esc(c.id)}')`;
       } else if (c.kind === 'map_drill') {
         badge = `★ ${mapTasks.length || 3} Maps`;
         cardOnClick = `ListeningTasksModule.openPracticePicker('map')`;
-        actionsHtml = `
-          <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningTasksModule.openPracticePicker('map')">Chọn bài Map</button>
-          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningTasksModule.openExam('${esc(firstMapId)}', 3, { fromPractice: true })">Làm Map 01</button>
-        `;
+        secondaryHtml = `<button type="button" class="rp-portal-link" onclick="event.stopPropagation(); ListeningTasksModule.openExam('${esc(firstMapId)}', 3, { fromPractice: true })">Làm nhanh Map 01</button>`;
+        primaryLabel = 'Chọn bài Map →';
+        primaryAct = `ListeningTasksModule.openPracticePicker('map')`;
       } else if (c.kind === 'note_drill') {
         badge = `★ ${noteTasks.length || 8} Tests`;
         cardOnClick = `ListeningTasksModule.openPracticePicker('note')`;
-        actionsHtml = `
-          <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningTasksModule.openPracticePicker('note')">Chọn bài nghe</button>
-          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ListeningTasksModule.openExam('${esc(firstNoteId)}', 3, { fromPractice: true })">Làm Part 1</button>
-        `;
+        secondaryHtml = `<button type="button" class="rp-portal-link" onclick="event.stopPropagation(); ListeningTasksModule.openExam('${esc(firstNoteId)}', 3, { fromPractice: true })">Làm Part 1</button>`;
+        primaryLabel = 'Chọn bài nghe →';
+        primaryAct = `ListeningTasksModule.openPracticePicker('note')`;
       } else {
         badge = `${tasks.length || 139} Tasks`;
         cardOnClick = `window.TotoroUI?.switchView?.('task', { fromUser: true })`;
-        actionsHtml = `
-          <button type="button" class="tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); window.TotoroUI?.enterSkillMode?.('Listening', 'flashcard')">Flashcard</button>
-          <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); window.TotoroUI?.switchView?.('task', { fromUser: true })">Mở Tasks</button>
-        `;
+        secondaryHtml = `<button type="button" class="rp-portal-link" onclick="event.stopPropagation(); window.TotoroUI?.enterSkillMode?.('Listening', 'flashcard')">Flashcard</button>`;
+        primaryLabel = 'Mở Tasks →';
+        primaryAct = `window.TotoroUI?.switchView?.('task', { fromUser: true })`;
       }
 
       return `
@@ -685,22 +683,25 @@
           <div class="lp-p3-body">
             <h3 class="lp-p3-title">${esc(c.bookTitle)}</h3>
             <p class="lp-p3-desc">${esc(c.desc)}</p>
-            <div class="lp-p3-foot">${actionsHtml}</div>
+            <div class="lp-p3-foot is-clean">
+              ${secondaryHtml || `<span class="rp-portal-stat">${esc(statText)}</span>`}
+              <button type="button" class="btn btn-primary tot-demo-btn lp-p3-btn" onclick="event.stopPropagation(); ${primaryAct}">${esc(primaryLabel)}</button>
+            </div>
           </div>
         </article>
       `;
     };
 
     root.innerHTML = `
-      <div class="tot-section-shell ink-brackets lp-portal-shell">
+      <div class="tot-section-shell lp-portal-shell">
         <div class="tot-shell-head lp-shell-head">
           <div style="display:flex;align-items:center;gap:12px;">
-            <span class="tot-icon-tile" aria-hidden="true" style="width:38px;height:38px;">
+            <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
             </span>
             <div>
-              <h2 class="tot-shell-title">LISTENING PRACTICE</h2>
-              <p class="tot-shell-sub">Cambridge IELTS, Real Listening Tests, Recent Actual Tests cùng các bài bổ trợ Map Labelling, Note Completion và Tasks.</p>
+              <h2 class="tot-shell-title">Kho đề Listening</h2>
+              <p class="tot-shell-sub">Chọn bộ đề thi chuẩn phòng thi hoặc luyện bổ trợ Map Labelling, Note Completion &amp; 139 Tasks.</p>
             </div>
           </div>
         </div>
@@ -708,6 +709,23 @@
         <div class="lp-portal-3x3" id="lp-portal-grid">
           ${cards.map(renderCard).join('')}
         </div>
+      </div>
+    `;
+  }
+
+  function renderSourceSwitcherHtml(activeSrc) {
+    const tabs = [
+      { id: 'cambridge', label: 'Cambridge' },
+      { id: 'volume', label: 'Volume' },
+      { id: 'actual', label: 'Actual' }
+    ];
+    return `
+      <div class="rp-src-switcher" role="tablist" aria-label="Chuyển nhanh kho đề Listening">
+        ${tabs.map((t) => `
+          <button type="button" role="tab" aria-selected="${activeSrc === t.id ? 'true' : 'false'}"
+            class="rp-src-pill ${activeSrc === t.id ? 'active' : ''}"
+            onclick="ListeningPracticeApp.openSource('${t.id}'${t.id === 'actual' ? ", 'p1'" : ''})">${t.label}</button>
+        `).join('')}
       </div>
     `;
   }
@@ -770,17 +788,19 @@
           </div>
           <div class="lp-thumb-foot tabular">${qCount} câu hỏi · ${mins} phút</div>
         </div>
-        <div class="lp-row-body">
-          <h4 class="lp-row-title">${esc(item.title)}</h4>
-          <p class="lp-row-sub">${esc(item.subtitle || '')}</p>
-          <div class="lp-part-meta">
-            ${types.map((t) => `<span class="lp-qtype-chip">${esc(t)}</span>`).join('')}
+        <div class="lp-row-main-col">
+          <div class="lp-row-body">
+            <h4 class="lp-row-title">${esc(item.title)}</h4>
+            <p class="lp-row-sub">${esc(item.subtitle || '')}</p>
+            <div class="lp-part-meta">
+              ${types.map((t) => `<span class="lp-qtype-chip">${esc(t)}</span>`).join('')}
+            </div>
           </div>
-        </div>
-        <div class="lp-row-actions">
-          ${B()?.isTeacherUser?.() ? `<button type="button" class="rp-btn-assign lp-row-btn" style="flex:0 0 auto;padding:0 10px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'listening', itemId: '${esc(item.id)}', isFull: ${isFull ? 'true' : 'false'}, title: '${esc(item.title || item.id).replace(/'/g, "\\'")}', subtitle: '${esc(partLabel).replace(/'/g, "\\'")}' })" title="Tạo link giao bài Zalo cho học sinh">🔗 Giao</button>` : ''}
-          <button type="button" class="btn-subtle lp-row-btn" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'practice')">Luyện tập</button>
-          <button type="button" class="btn btn-primary lp-row-btn" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'exam')">${isFull ? 'Thi Full Test →' : 'Thi thật →'}</button>
+          <div class="lp-row-actions">
+            ${B()?.isTeacherUser?.() ? `<button type="button" class="rp-btn-assign lp-row-btn" style="flex:0 0 auto;padding:0 10px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'listening', itemId: '${esc(item.id)}', isFull: ${isFull ? 'true' : 'false'}, title: '${esc(item.title || item.id).replace(/'/g, "\\'")}', subtitle: '${esc(partLabel).replace(/'/g, "\\'")}' })" title="Tạo link giao bài Zalo cho học sinh">🔗 Giao</button>` : ''}
+            <button type="button" class="btn-subtle lp-row-btn" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'practice')">Luyện tập</button>
+            <button type="button" class="btn btn-primary lp-row-btn" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'exam')">${isFull ? 'Thi Full Test →' : 'Thi thật →'}</button>
+          </div>
         </div>
       </article>
     `;
@@ -816,15 +836,13 @@
     const filterOpen = !isFull && state.actualFilterOpen;
 
     root.innerHTML = `
-      <div class="tot-section-shell ink-brackets lp-hub-shell">
-        <div class="lp-hub-head">
-          <div class="lp-hub-head-left">
-            <button type="button" class="btn-subtle lp-btn-back" id="lp-btn-back-portal" onclick="ListeningPracticeApp.openPortal()">← PRACTICE</button>
-            <div>
-              <h2 class="tot-shell-title">${esc(curSourceObj?.bookTitle || 'Recent Actual Tests')}</h2>
-              <p class="tot-shell-sub">${esc(curSourceObj?.desc || '')}</p>
-            </div>
+      <div class="tot-section-shell lp-hub-shell">
+        <div class="rp-hub-head-clean">
+          <div class="rp-hub-head-left">
+            <button type="button" class="btn-subtle lp-btn-back" id="lp-btn-back-portal" onclick="ListeningPracticeApp.openPortal()">← Kho đề</button>
+            <h2 class="tot-shell-title" style="margin:0;">${esc(curSourceObj?.bookTitle || 'Recent Actual Tests')}</h2>
           </div>
+          ${renderSourceSwitcherHtml('actual')}
         </div>
 
         <div class="lp-actual-bar">
@@ -951,7 +969,7 @@
     const testTabsHtml = [1, 2, 3, 4].map((tNum) => {
       const st = curTestStatus[tNum] || {};
       const isAct = state.selectedTestNum === tNum;
-      const labelTxt = st.done ? 'Đã làm' : (st.hasData ? 'Sẵn sàng' : 'Trống');
+      const statusBadge = st.done ? '<small>✓</small>' : (!st.hasData ? '<small>Trống</small>' : '');
       return `
         <button type="button"
           class="lp-test-pill ${isAct ? 'active' : ''} ${st.hasData ? 'has-data' : 'is-empty'} ${st.done ? 'is-done' : ''}"
@@ -959,7 +977,7 @@
           onclick="ListeningPracticeApp.selectTestNum(${tNum})">
           <span class="lp-test-dot" aria-hidden="true"></span>
           <span class="lp-test-name">Test ${tNum}</span>
-          <small>${labelTxt}</small>
+          ${statusBadge}
         </button>
       `;
     }).join('');
@@ -987,48 +1005,25 @@
         </div>
       `;
     } else {
-      const partMeta = {
-        1: '7 phút · Dễ → Trung bình',
-        2: '7 phút · Bản đồ & Độc thoại',
-        3: '8 phút · Thảo luận học thuật',
-        4: '8 phút · Bài giảng Band 7.5+'
-      };
-      examListHtml = [1, 2, 3, 4].map((pNum) => {
-        const items = testParts.filter((p) => Number(p.partNum) === pNum);
-        if (!items.length) return '';
-        return `
-          <div class="lp-section-block">
-            <div class="lp-section-head">
-              <h3 class="lp-section-title">Part ${pNum}</h3>
-              <span class="lp-section-pill">${partMeta[pNum]}</span>
-            </div>
-            <div class="lp-row-stack">${items.map((p) => renderPartCard(p, false)).join('')}</div>
-          </div>
-        `;
-      }).join('') + (testFulls.length ? `
-        <div class="lp-section-block">
-          <div class="lp-section-head">
-            <h3 class="lp-section-title">FULL TEST</h3>
-            <span class="lp-section-pill">30 phút · Trọn bộ 4 Part</span>
-          </div>
-          <div class="lp-row-stack">${testFulls.map((ft) => renderPartCard(ft, true)).join('')}</div>
+      examListHtml = `
+        <div class="lp-test-quad">
+          ${testParts.map((p) => renderPartCard(p, false)).join('')}
+          ${testFulls.map((ft) => renderPartCard(ft, true)).join('')}
         </div>
-      ` : '');
+      `;
     }
 
     const shelfHeading = state.source === 'cambridge' ? 'Cambridge IELTS Library' : 'Real Listening Library';
     const unitNoun = state.source === 'volume' ? 'volumes' : 'books';
 
     root.innerHTML = `
-      <div class="tot-section-shell ink-brackets lp-hub-shell">
-        <div class="lp-hub-head">
-          <div class="lp-hub-head-left">
-            <button type="button" class="btn-subtle lp-btn-back" id="lp-btn-back-portal" onclick="ListeningPracticeApp.openPortal()">← PRACTICE</button>
-            <div>
-              <h2 class="tot-shell-title">${esc(curSourceObj?.bookTitle || 'LISTENING PRACTICE')}</h2>
-              <p class="tot-shell-sub">${esc(curSourceObj?.desc || '')}</p>
-            </div>
+      <div class="tot-section-shell lp-hub-shell">
+        <div class="rp-hub-head-clean">
+          <div class="rp-hub-head-left">
+            <button type="button" class="btn-subtle lp-btn-back" id="lp-btn-back-portal" onclick="ListeningPracticeApp.openPortal()">← Kho đề</button>
+            <h2 class="tot-shell-title" style="margin:0;">${esc(curSourceObj?.bookTitle || 'Kho đề Listening')}</h2>
           </div>
+          ${renderSourceSwitcherHtml(state.source)}
         </div>
 
         <section class="lp-bookcase" aria-label="${esc(shelfHeading)}">
@@ -2216,7 +2211,6 @@
                 <main class="lp-ins-scroll">
                   <div class="lp-ins-paper" id="lp-ex-paper">${part.html || ''}</div>
                 </main>
-                ${practiceStampSvg}
               </div>
             ` : `
               <main class="lp-ins-scroll">
@@ -2465,7 +2459,8 @@
       btn.type = 'button';
       btn.className = 'lp-rev-loc-btn';
       btn.title = `Xem dẫn chứng Câu ${qNum} trong Transcript`;
-      btn.textContent = '📍';
+      btn.setAttribute('aria-label', `Xem dẫn chứng Câu ${qNum}`);
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
       btn.addEventListener('click', (ev) => {
         ev.stopPropagation();
         jumpReviewQuestion(qNum, true);
@@ -2644,7 +2639,7 @@
                   <td><span class="lp-yrev-stpill ${r.ok ? 'is-ok' : 'is-bad'}">${r.ok ? '✓ Đúng' : '✕ Sai'}</span></td>
                   <td>
                     ${hasEv
-                      ? `<button type="button" class="lp-yrev-evbtn" onclick="event.stopPropagation(); ListeningPracticeApp.jumpReviewQuestion(${r.num}, true)">📍 Xem câu</button>`
+                      ? `<button type="button" class="lp-yrev-evbtn" onclick="event.stopPropagation(); ListeningPracticeApp.jumpReviewQuestion(${r.num}, true)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Xem câu</span></button>`
                       : '<span class="lp-rev-blank">—</span>'}
                   </td>
                 </tr>
@@ -2714,20 +2709,37 @@
       `;
     }).join('');
 
+    const pinIcoSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    const clockIcoSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>';
+    const docIcoSvg = '<svg width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
+    const listIcoSvg = '<svg width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="10" x2="9" y2="20"/></svg>';
+
     root.innerHTML = `
-      <div class="ins-shell lp-ins-shell lp-yrev-shell ins-contrast-cd ins-size-regular">
+      <div class="ins-shell lp-ins-shell lp-yrev-shell is-washi-rev ins-contrast-cd ins-size-regular">
         <div class="ins-main-col">
-          <!-- Compact YouPass-style Unified Review Header -->
+          <!-- Warm Totoro Washi Review Header -->
           <header class="ins-header lp-yrev-header">
             <div class="ins-hdr-left">
               <button type="button" class="lp-yrev-back" onclick="ListeningPracticeApp.backToSourceFromReview()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 <span>Kho đề</span>
               </button>
-              <span class="ins-brand-mark">IELTS</span>
+              <span class="prac-totoro-ico" aria-hidden="true">
+                <svg viewBox="0 0 36 36" fill="none">
+                  <path d="M12.5 13L10 6.5C9.7 5.7 10.6 5.2 11.2 5.7L15.4 9.2" fill="#637067" stroke="#2F3B34" stroke-width="1.4" stroke-linejoin="round"/>
+                  <path d="M23.5 13L26 6.5C26.3 5.7 25.4 5.2 24.8 5.7L20.6 9.2" fill="#637067" stroke="#2F3B34" stroke-width="1.4" stroke-linejoin="round"/>
+                  <path d="M18 8.6C18 6.4 19.9 5.3 21.8 5.8C21.3 7.8 19.7 9 18 8.6Z" fill="#4E724D" stroke="#2F4D31" stroke-width="1" stroke-linejoin="round"/>
+                  <path d="M9.5 23.5C9.5 15.2 13 10.2 18 10.2C23 10.2 26.5 15.2 26.5 23.5C26.5 28.4 23 30.8 18 30.8C13 30.8 9.5 28.4 9.5 23.5Z" fill="#6B756D" stroke="#2F3B34" stroke-width="1.4"/>
+                  <ellipse cx="18" cy="24.5" rx="6.4" ry="4.6" fill="#EFE6D8"/>
+                  <path d="M14.4 23.6L15.6 22.3L16.8 23.6M17.2 23.2L18.2 22L19.2 23.2M19.6 23.6L20.8 22.3L22 23.6" stroke="#5D645E" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="14.6" cy="16.2" r="1.65" fill="#FFFDF8"/><circle cx="14.8" cy="16.2" r="0.85" fill="#232B26"/>
+                  <circle cx="21.4" cy="16.2" r="1.65" fill="#FFFDF8"/><circle cx="21.2" cy="16.2" r="0.85" fill="#232B26"/>
+                  <ellipse cx="18" cy="17.1" rx="1.25" ry="0.65" fill="#232B26"/>
+                </svg>
+              </span>
               <div class="ins-hdr-meta">
                 <div class="ins-hdr-title">${esc(rev.title)}</div>
-                <div class="lp-yrev-sub">Chế độ xem lại · Đối chiếu Transcript &amp; Đáp án trực tiếp trên đề</div>
+                <div class="lp-yrev-sub">Xem lại · Đối chiếu Transcript &amp; Đáp án trực tiếp trên đề</div>
               </div>
             </div>
 
@@ -2739,7 +2751,7 @@
                 <span class="lp-yrev-kpi is-score">
                   <strong class="tabular">${rev.score}/${rev.total}</strong><small>đúng (${pct}%)</small>
                 </span>
-                <span class="lp-yrev-kpi is-time tabular">⏱ ${formatMMSS(rev.elapsedSec)}</span>
+                <span class="lp-yrev-kpi is-time tabular">${clockIcoSvg}<span>${formatMMSS(rev.elapsedSec)}</span></span>
               </div>
               <button type="button" class="lp-yrev-retry-btn" onclick="ListeningPracticeApp.startItem('${esc(rev.itemId)}', ${rev.isFull ? 'true' : 'false'}, '${esc(rev.mode)}')">
                 ↻ Làm lại
@@ -2757,7 +2769,7 @@
                 <div class="lp-yrev-pane-title">
                   <h3>Audio Script · Part ${activePart?.partNum || 1}</h3>
                   ${trBuilt.matchedQSet.size > 0
-                    ? `<span class="lp-yrev-ev-chip tabular">📍 ${trBuilt.matchedQSet.size}/${partRows.length} dẫn chứng</span>`
+                    ? `<span class="lp-yrev-ev-chip tabular">${pinIcoSvg}<span>${trBuilt.matchedQSet.size}/${partRows.length} dẫn chứng</span></span>`
                     : ''}
                 </div>
                 <input type="search" class="lp-tr-search" value="${esc(rev.transcriptQuery || '')}" placeholder="Tìm từ trong transcript..." oninput="ListeningPracticeApp.onTranscriptSearch(this.value)" autocomplete="off">
@@ -2771,10 +2783,10 @@
               <div class="lp-yrev-pane-head">
                 <div class="lp-yrev-seg" role="tablist">
                   <button type="button" role="tab" class="lp-yrev-seg-btn ${rightTab === 'paper' ? 'active' : ''}" onclick="ListeningPracticeApp.switchReviewRightTab('paper')">
-                    📄 Đề thi &amp; Đáp án
+                    ${docIcoSvg}<span>Đề thi &amp; Đáp án</span>
                   </button>
                   <button type="button" role="tab" class="lp-yrev-seg-btn ${rightTab === 'summary' ? 'active' : ''}" onclick="ListeningPracticeApp.switchReviewRightTab('summary')">
-                    📋 Bảng tổng hợp
+                    ${listIcoSvg}<span>Bảng tổng hợp</span>
                   </button>
                 </div>
                 <div class="lp-yrev-stat-pills tabular">

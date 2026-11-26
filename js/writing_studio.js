@@ -631,11 +631,11 @@
       opts.targets.forEach((t) => { targetMap[t.key] = t; });
     }
 
-    const T1_STEP_LABELS = ['01 · Nguyên nhân', '02 · Cơ chế', '03 · Hệ quả', '04 · Kết quả'];
-    const T1_ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
+    const T1_STEP_ROLES = ['Nguyên nhân', 'Cơ chế', 'Hệ quả', 'Kết quả'];
+    const T1_ARROW_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"/><path d="m13 6 6 6-6 6"/></svg>';
     const T1_CHECK_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
-    const renderEditableNode = (key, cueText, isOutcome, stepLabel) => {
+    const renderEditableNode = (key, cueText, isOutcome, stepNum, roleLabel) => {
       const val = opts.drafts?.[key] || '';
       const locked = Boolean(opts.locked?.[key]);
       const aud = opts.audit?.[key] || null;
@@ -648,8 +648,10 @@
         : '';
       return `
         <div class="ws-t1-cell ${isOutcome ? 'is-outcome' : ''} ${boxCls}" data-t1-key="${key}">
-          <span class="ws-t1-step">${esc(stepLabel)}</span>
-          <span class="ws-t1-check" aria-hidden="true">${T1_CHECK_SVG}</span>
+          <div class="ws-t1-cell-head">
+            <span class="ws-t1-step-badge"><span class="ws-t1-step-num">${stepNum}</span><span class="ws-t1-step-role">${esc(roleLabel)}</span></span>
+            <span class="ws-t1-check" aria-hidden="true">${T1_CHECK_SVG}</span>
+          </div>
           <div class="ws-t1-wrap">
             <div class="ws-t1-mirror" aria-hidden="true"></div>
             <div class="ws-t1-caret" aria-hidden="true"></div>
@@ -678,9 +680,9 @@
         return `
           <div class="ws-t1-board" onclick="event.stopPropagation()">
             ${(sf.rows || []).map((row, rIdx) => `
-              <div class="ws-t1-row">
+              <div class="ws-t1-row tone-${esc(row.tone || 'sage')}">
                 <div class="ws-t1-tag tone-${esc(row.tone || 'sage')}">
-                  <span class="ws-t1-tag-num">NHÁNH 0${rIdx + 1}</span>
+                  <span class="ws-t1-tag-idx">0${rIdx + 1}</span>
                   <span class="ws-t1-tag-name">${esc(row.label)}</span>
                 </div>
                 ${(row.nodes || []).map((nd, cIdx) => {
@@ -688,8 +690,8 @@
                   const prevKey = cIdx > 0 ? `${rIdx}_${cIdx - 1}` : '';
                   const arrow = cIdx > 0 ? `<div class="ws-t1-arrow" data-t1-arrow-after="${prevKey}" aria-hidden="true">${T1_ARROW_SVG}</div>` : '';
                   const isOutcome = cIdx === row.nodes.length - 1;
-                  const stepLbl = T1_STEP_LABELS[cIdx] || `0${cIdx + 1}`;
-                  return `${arrow}${renderEditableNode(key, nd, isOutcome, stepLbl)}`;
+                  const roleLbl = T1_STEP_ROLES[cIdx] || `Bước ${cIdx + 1}`;
+                  return `${arrow}${renderEditableNode(key, nd, isOutcome, cIdx + 1, roleLbl)}`;
                 }).join('')}
               </div>
             `).join('')}
@@ -729,8 +731,7 @@
       const renderEditableStation = (st, idx) => {
         const key = `s_${idx}`;
         const isOutcome = idx === stages.length - 1;
-        const stepLbl = `0${idx + 1} · ${st.role || 'Bước'}`;
-        return renderEditableNode(key, st.text, isOutcome, stepLbl);
+        return renderEditableNode(key, st.text, isOutcome, idx + 1, st.role || `Bước ${idx + 1}`);
       };
       if (stages.length === 4) {
         return `
@@ -2159,11 +2160,10 @@
       return `
         <article class="ws-task-card ${tierCls} ${isDone ? 'is-done' : ''}">
           <div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-              <span class="ws-task-code">${tierLabel}</span>
+            <div class="ws-task-card-top">
+              <div class="ws-task-title">${esc(flowLabel(m))}</div>
               ${isDone ? `<span class="ws-pill ok">Band ${Number(p.band || 7.5).toFixed(1)}</span>` : `<span class="ws-pill ${pillCls}">${mStat.done}/${mStat.total} thẻ</span>`}
             </div>
-            <div class="ws-task-title">${esc(flowLabel(m))}</div>
             <div class="ws-task-meta">${esc((m.viFlowSteps || []).slice(0, 2).join(' → '))}</div>
           </div>
           <div>
@@ -2173,11 +2173,11 @@
             </div>
             <div class="ws-task-foot" style="margin-top:10px;gap:6px;">
               ${isTeacherBypass()
-                ? `<button type="button" class="btn" style="padding:6px 9px;font-size:11.5px;" onclick="WritingStudio.copyTaskLink('${esc(m.id)}')">Copy link</button>`
+                ? `<button type="button" class="btn ws-task-sec-btn" onclick="WritingStudio.copyTaskLink('${esc(m.id)}')">Copy link</button>`
                 : (firstPromptId
-                  ? `<button type="button" class="btn" style="padding:6px 10px;font-size:12px;" onclick="WritingStudio.launchPracticeFromTask('${esc(firstPromptId)}', 'practice')" title="Thực hành viết bài hoàn chỉnh ngay trên đề thật của Flow này">Viết đề thật</button>`
+                  ? `<button type="button" class="btn ws-task-sec-btn" onclick="WritingStudio.launchPracticeFromTask('${esc(firstPromptId)}', 'practice')" title="Thực hành viết bài hoàn chỉnh ngay trên đề thật của Flow này">Viết đề thật</button>`
                   : `<span class="ws-task-steps-hint">${isDone ? 'Đã hoàn thành ✓' : 'Flow · Gram · Write'}</span>`)}
-              <button type="button" class="btn btn-primary" style="padding:7px 13px;font-size:12.5px;" onclick="WritingStudio.openTask('${esc(m.id)}')">
+              <button type="button" class="btn btn-primary ws-task-pri-btn" onclick="WritingStudio.openTask('${esc(m.id)}')">
                 ${isDone ? 'Làm lại Task' : 'Vào Task →'}
               </button>
             </div>
@@ -2484,13 +2484,8 @@
     const { mod, stage } = examState;
     const sents = mod.sentences || [];
     const card = document.getElementById('ws-task-exam-card');
-    const teacherJump = isTeacherBypass() ? `
-      <div style="display:flex;gap:5px;">
-        <button type="button" class="btn" style="padding:5px 9px;font-size:11.5px;" onclick="WritingStudio.teacherJumpExam(1)">T1</button>
-        <button type="button" class="btn" style="padding:5px 9px;font-size:11.5px;" onclick="WritingStudio.teacherJumpExam(2)">T2</button>
-        <button type="button" class="btn" style="padding:5px 9px;font-size:11.5px;" onclick="WritingStudio.teacherJumpExam(3)">T3</button>
-      </div>
-    ` : '';
+    const canJump = isTeacherBypass();
+    const clockSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 
     let bodyHtml = '';
 
@@ -2499,8 +2494,8 @@
       bodyHtml = `
         <div class="ws-t1-stage-head">
           <div>
-            <div class="ws-t1-stage-title">Test 1 · Viết Tiếng Anh Trực Tiếp Trong Sơ Đồ Flow</div>
-            <div class="ws-t1-stage-sub">Gõ tiếng Anh ngay trên từng mắt xích — chữ Tiếng Việt giữ nguyên 100% lúc gõ; dịch xong ý nào nhấn <strong>Tab</strong> hoặc <strong>Enter</strong> để ẩn và sang bước tiếp.</div>
+            <div class="ws-t1-stage-title">Dịch trực tiếp sơ đồ Flow VI → EN</div>
+            <div class="ws-t1-stage-sub">Gõ tiếng Anh ngay trên từng mắt xích — nhấn <strong>Tab</strong> hoặc <strong>Enter</strong> khi xong ý để sang ô tiếp theo.</div>
           </div>
           <div class="ws-t1-telemetry">
             <div class="ws-t1-stat is-accent">
@@ -2512,7 +2507,7 @@
             </div>
             <div class="ws-t1-stat"><strong id="ws-t1-stat-words">0</strong><span>từ</span></div>
             <div class="ws-t1-stat" id="ws-t1-stat-err-wrap"><strong id="ws-t1-stat-typos">0</strong><span>lỗi</span></div>
-            <button type="button" class="btn btn-primary" onclick="WritingStudio.checkTaskTest1()">Kiểm tra &amp; Sang Test 2 →</button>
+            <button type="button" class="btn btn-primary ws-t1-cta" onclick="WritingStudio.checkTaskTest1()">Kiểm tra &amp; Sang Test 2 →</button>
           </div>
         </div>
         ${renderSmartFlowDiagram(mod, {
@@ -2523,10 +2518,10 @@
           clauseIdx: examState.t1NodeClauseIdx
         })}
         <div class="ws-t1-footer">
-          <span class="ws-t1-footer-note">Tự do paraphrase hoặc đổi cấu trúc câu — chữ Tiếng Việt chỉ ẩn khi tự bạn xác nhận.</span>
+          <span class="ws-t1-footer-note">Tự do paraphrase hoặc đổi cấu trúc — chữ tiếng Việt chỉ ẩn khi bạn bấm xác nhận xong ý.</span>
           <div class="ws-t1-kb-group">
             <button type="button" class="ws-t1-kb-btn is-primary" id="ws-t1-btn-next">Xong ý này <kbd>Tab</kbd></button>
-            <button type="button" class="ws-t1-kb-btn" id="ws-t1-btn-prev">Hiện lại / Lùi ô <kbd>Shift</kbd>+<kbd>Tab</kbd></button>
+            <button type="button" class="ws-t1-kb-btn" id="ws-t1-btn-prev">Lùi ô <kbd>Shift</kbd>+<kbd>Tab</kbd></button>
           </div>
         </div>
       `;
@@ -2534,25 +2529,25 @@
       const wc = String(examState.t2Paragraph || '').trim() ? String(examState.t2Paragraph).trim().split(/\s+/).length : 0;
       const aud = examState.t2Audit;
       bodyHtml = `
-        <div class="ws-modal-head">
+        <div class="ws-t1-stage-head">
           <div>
-            <div style="font-size:17px;font-weight:750;">Test 2 · Dựng Nguyên Đoạn Theo Khung Sườn Grammar</div>
-            <div style="font-size:13.5px;color:var(--ink-2);margin-top:2px;">Kết nối các ý tiếng Việt bên trái vào đúng công thức ngữ pháp để viết thành một đoạn văn tiếng Anh liền mạch.</div>
+            <div class="ws-t1-stage-title">Dựng nguyên đoạn theo Khung Grammar</div>
+            <div class="ws-t1-stage-sub">Nối các ý bên trái theo đúng cấu trúc ngữ pháp thành một đoạn văn tiếng Anh liền mạch.</div>
           </div>
-          <button type="button" class="btn btn-primary" onclick="WritingStudio.checkTaskTest2()">Kiểm tra đoạn văn &amp; Sang Test 3 →</button>
+          <button type="button" class="btn btn-primary ws-t1-cta" onclick="WritingStudio.checkTaskTest2()">Kiểm tra &amp; Sang Test 3 →</button>
         </div>
-        <div class="ws-write-2col">
-          <div class="ws-pane">
-            <div class="ws-col-lbl">Ý tiếng Việt &amp; Khung sườn Grammar bắt buộc</div>
+        <div class="ws-write-2col ws-task-2col">
+          <div class="ws-pane ws-task-ref-pane">
+            <div class="ws-col-lbl">Ý tiếng Việt &amp; Khung sườn Grammar</div>
             <div class="ws-gram-skeleton-list">
               ${sents.map((s, idx) => {
                 const gRow = aud?.rows?.[idx];
                 const cls = gRow ? (gRow.ok ? 'is-ok' : 'is-bad') : '';
                 return `
                   <div class="ws-gram-skel-item ${cls}">
-                    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
-                      <strong style="font-size:12.5px;color:var(--accent);">Câu ${idx + 1}</strong>
-                      ${gRow ? `<strong style="font-size:12px;color:${gRow.ok ? 'var(--ok)' : 'var(--danger)'};">${gRow.ok ? '✓ Đạt khung' : `Thiếu: ${esc(gRow.missing.join(' / '))}`}</strong>` : ''}
+                    <div class="ws-gram-skel-top">
+                      <span class="ws-t1-step-badge"><span class="ws-t1-step-num">${idx + 1}</span><span class="ws-t1-step-role">Câu ${idx + 1}</span></span>
+                      ${gRow ? `<strong class="ws-gram-status ${gRow.ok ? 'is-ok' : 'is-bad'}">${gRow.ok ? '✓ Đạt khung' : `Thiếu: ${esc(gRow.missing.join(' / '))}`}</strong>` : ''}
                     </div>
                     <div class="ws-gram-skel-vi">${esc(s.vi || s.viBrief || '')}</div>
                     <div class="ws-gram-skel-formula">${esc(s.grammar || 'S + V + O')}</div>
@@ -2561,13 +2556,13 @@
               }).join('')}
             </div>
           </div>
-          <div class="ws-pane">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div class="ws-col-lbl">Đoạn văn hoàn chỉnh của bạn</div>
-              <span class="ws-pill tabular" id="ws-t2-wc">${wc} words</span>
+          <div class="ws-pane ws-task-write-pane">
+            <div class="ws-task-write-head">
+              <div class="ws-col-lbl" style="margin:0;">Đoạn văn của bạn</div>
+              <span class="ws-pill tabular" id="ws-t2-wc">${wc} từ</span>
             </div>
-            <textarea class="ws-para-editor" id="ws-t2-para"
-              placeholder="Viết liền mạch nguyên đoạn văn tiếng Anh gồm ${sents.length} câu bám sát ý và khung sườn Grammar bên trái..."
+            <textarea class="ws-para-editor ws-task-editor" id="ws-t2-para"
+              placeholder="Viết liền mạch nguyên đoạn văn tiếng Anh gồm ${sents.length} câu bám sát ý và khung Grammar bên trái..."
               oninput="WritingStudio.saveT2Paragraph(this.value)"
               onpaste="${!isTeacherBypass() ? "event.preventDefault(); WritingStudio.toastMsg('Không được dán bài — hãy tự gõ trực tiếp!');" : ''}">${esc(examState.t2Paragraph || '')}</textarea>
             ${(aud?.typos?.length || aud?.gramErrs?.length) ? `
@@ -2589,17 +2584,17 @@
       const focusVi = mod.bodyFocusVi || `mạch lập luận của ${flowLabel(mod)}`;
 
       bodyHtml = `
-        <div class="ws-modal-head">
+        <div class="ws-t1-stage-head">
           <div>
-            <div style="font-size:17px;font-weight:750;">Test 3 · Đề Thi Thật &amp; Viết Đoạn Body Thực Chiến</div>
-            <div style="font-size:13.5px;color:var(--ink-2);margin-top:2px;">Vận dụng độc lập Flow, Grammar và Vocab vừa luyện để viết 01 đoạn Body hoàn chỉnh tối thiểu 85 từ.</div>
+            <div class="ws-t1-stage-title">Viết đoạn Body thực chiến trên Đề thi thật</div>
+            <div class="ws-t1-stage-sub">Vận dụng độc lập Flow, Grammar và từ vựng vừa luyện để viết 01 đoạn Body tối thiểu 85 từ.</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
             ${!examState.t3Finalized
-              ? `<button type="button" class="btn btn-primary" onclick="WritingStudio.submitTaskTest3()">${aud ? `Nộp lại đoạn Body · Còn ${examState.t3RetriesLeft} lượt` : 'Nộp đoạn Body & Chấm bài'}</button>`
+              ? `<button type="button" class="btn btn-primary ws-t1-cta" onclick="WritingStudio.submitTaskTest3()">${aud ? `Nộp lại · Còn ${examState.t3RetriesLeft} lượt` : 'Nộp đoạn Body & Chấm bài'}</button>`
               : `
                 ${curPrompt.id ? `
-                  <button type="button" class="btn btn-primary" onclick="WritingStudio.launchPracticeFromTask('${esc(curPrompt.id)}', 'practice')">Viết bài hoàn chỉnh (Luyện tập) →</button>
+                  <button type="button" class="btn btn-primary ws-t1-cta" onclick="WritingStudio.launchPracticeFromTask('${esc(curPrompt.id)}', 'practice')">Viết bài hoàn chỉnh →</button>
                   <button type="button" class="btn" onclick="WritingStudio.launchPracticeFromTask('${esc(curPrompt.id)}', 'exam')">Thi thật 40p</button>
                 ` : ''}
                 <button type="button" class="btn" onclick="WritingStudio.closeTaskExamModal(true)">Hoàn tất Task ✓</button>
@@ -2607,32 +2602,32 @@
           </div>
         </div>
 
-        <div class="ws-write-2col">
-          <div class="ws-pane">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-              <div class="ws-col-lbl">Đề thi thật IELTS Task 2</div>
+        <div class="ws-write-2col ws-task-2col">
+          <div class="ws-pane ws-task-ref-pane">
+            <div class="ws-task-write-head">
+              <div class="ws-col-lbl" style="margin:0;">Đề thi thật IELTS Task 2</div>
               ${prompts.length > 1 && !examState.t3Finalized ? `
                 <div style="display:flex;gap:4px;">
-                  ${prompts.map((_, pIdx) => `<button type="button" class="ws-pill" style="cursor:pointer;border:1px solid ${pIdx === examState.promptIdx ? 'var(--accent)' : 'var(--border)'};background:${pIdx === examState.promptIdx ? 'var(--accent-soft)' : 'var(--surface)'};" onclick="WritingStudio.selectT3Prompt(${pIdx})">Đề ${pIdx + 1}</button>`).join('')}
+                  ${prompts.map((_, pIdx) => `<button type="button" class="ws-pill ws-prompt-sw ${pIdx === examState.promptIdx ? 'is-active' : ''}" onclick="WritingStudio.selectT3Prompt(${pIdx})">Đề ${pIdx + 1}</button>`).join('')}
                 </div>
               ` : ''}
             </div>
-            <div class="ws-prompt-box">
-              <span class="ws-branch-tag" style="margin-bottom:0;">${esc(curPrompt.type || 'Task 2')}</span>
+            <div class="ws-prompt-box ws-task-prompt-card">
+              <span class="ws-type-pill">${esc(curPrompt.type || 'Task 2')}</span>
               <div class="ws-prompt-q">${esc(curPrompt.prompt)}</div>
-              <div style="font-size:13px;line-height:1.58;color:var(--ink-2);border-top:1px dashed var(--border-strong);padding-top:10px;text-align:left;">
-                <strong>Trọng tâm đoạn Body:</strong> Viết 01 đoạn Body hoàn chỉnh từ 90 đến 140 từ giải quyết phần <strong>${esc(focusVi)}</strong> của đề bài trên bằng mạch lập luận vừa học. Không hiển thị gợi ý công thức.
+              <div class="ws-task-focus-note">
+                <strong>Trọng tâm đoạn Body:</strong> Viết 01 đoạn Body từ 90–140 từ giải quyết phần <strong>${esc(focusVi)}</strong> bằng mạch lập luận vừa học.
               </div>
             </div>
           </div>
 
-          <div class="ws-pane">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <div class="ws-col-lbl">Bài viết đoạn Body của bạn</div>
-              <span class="ws-pill tabular ${wc >= 85 ? 'ok' : ''}" id="ws-t3-wc">${wc} / 85+ words</span>
+          <div class="ws-pane ws-task-write-pane">
+            <div class="ws-task-write-head">
+              <div class="ws-col-lbl" style="margin:0;">Đoạn Body của bạn</div>
+              <span class="ws-pill tabular ${wc >= 85 ? 'ok' : ''}" id="ws-t3-wc">${wc} / 85+ từ</span>
             </div>
-            <textarea class="ws-para-editor ${examState.t3Finalized ? 'is-submitted' : ''}" id="ws-t3-body" ${examState.t3Finalized ? 'readonly' : ''}
-              placeholder="Viết đoạn Body hoàn chỉnh tại đây: Mở đoạn Paraphrase đề bài → Triển khai nhân quả theo Flow → Từ vựng và cấu trúc học thuật..."
+            <textarea class="ws-para-editor ws-task-editor ${examState.t3Finalized ? 'is-submitted' : ''}" id="ws-t3-body" ${examState.t3Finalized ? 'readonly' : ''}
+              placeholder="Mở đoạn paraphrase đề bài → Triển khai nhân quả theo Flow → Từ vựng và cấu trúc học thuật..."
               oninput="WritingStudio.saveT3Body(this.value)"
               onpaste="${!isTeacherBypass() ? "event.preventDefault(); WritingStudio.toastMsg('Không được dán bài — hãy tự viết như thi thật!');" : ''}">${esc(examState.t3Body || '')}</textarea>
 
@@ -2675,20 +2670,32 @@
       `;
     }
 
+    const stepItems = [
+      { n: 1, lbl: 'Flow VI → EN' },
+      { n: 2, lbl: 'Khung Grammar' },
+      { n: 3, lbl: 'Viết Body Đề Thật' }
+    ];
+    const stepperHtml = stepItems.map((st, idx) => {
+      const cls = stage === st.n ? 'active' : (stage > st.n ? 'done' : '');
+      const numDisp = stage > st.n ? '✓' : String(st.n);
+      const clickAttr = canJump ? `onclick="WritingStudio.teacherJumpExam(${st.n})" title="Chuyển nhanh sang Test ${st.n}"` : '';
+      const tag = canJump ? 'button' : 'span';
+      const sep = idx > 0 ? `<span class="ws-stepper-line ${stage >= st.n ? 'is-lit' : ''}" aria-hidden="true"></span>` : '';
+      return `${sep}<${tag} ${canJump ? 'type="button"' : ''} class="ws-step-pill is-v2 ${cls} ${canJump ? 'is-clickable' : ''}" ${clickAttr}><span class="ws-step-dot">${numDisp}</span><span>${st.lbl}</span></${tag}>`;
+    }).join('');
+
     card.innerHTML = `
-      <div class="ws-modal-head" style="padding-bottom:10px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <button type="button" class="btn" style="padding:6px 11px;" onclick="WritingStudio.requestExitTaskExam()">←</button>
+      <div class="ws-modal-head ws-task-topbar">
+        <div class="ws-task-topbar-left">
+          <button type="button" class="ws-task-back-btn" onclick="WritingStudio.requestExitTaskExam()" title="Thoát bài tập">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Thoát</span>
+          </button>
           <div class="ws-modal-title">${esc(flowLabel(mod))}</div>
         </div>
-        <div class="ws-step-pills">
-          <span class="ws-step-pill ${stage === 1 ? 'active' : 'done'}">Test 1 · Flow VI → EN</span>
-          <span class="ws-step-pill ${stage === 2 ? 'active' : (stage > 2 ? 'done' : '')}">Test 2 · Khung Grammar</span>
-          <span class="ws-step-pill ${stage === 3 ? 'active' : ''}">Test 3 · Viết Body Đề Thật</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${teacherJump}
-          <span class="ws-pill tabular ${examState.stageSecsLeft <= 60 ? 'urgent' : ''}" id="ws-exam-timer">${fmtMmSs(examState.stageSecsLeft)}</span>
+        <div class="ws-step-pills is-stepper">${stepperHtml}</div>
+        <div class="ws-task-topbar-right">
+          <span class="ws-pill ws-timer-chip tabular ${examState.stageSecsLeft <= 60 ? 'urgent' : ''}" id="ws-exam-timer">${clockSvg}<span>${fmtMmSs(examState.stageSecsLeft)}</span></span>
         </div>
       </div>
       ${bodyHtml}
@@ -3278,6 +3285,7 @@
                   <div class="ws-prac-btns">
                     <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="WritingStudio.startPracticePrompt('${esc(p.id)}', 'practice')">Luyện tập</button>
                     <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="WritingStudio.startPracticePrompt('${esc(p.id)}', 'exam')">Thi thật</button>
+                    ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'writing', itemId: '${esc(p.id)}', isFull: false, title: '${esc(String(p.prompt || '').slice(0, 80)).replace(/'/g, "\\'")}', subtitle: '${esc(p.type || 'Task 2').replace(/'/g, "\\'")}' })" title="Tạo link giao đề Writing này cho học sinh">🔗 Giao link đề này</button>` : ''}
                   </div>
                 </div>
               </article>
@@ -3383,7 +3391,6 @@
       </div>
     ` : '';
 
-    const acBadgeText = isTeacherBypass() ? 'Chống gian lận · GV' : 'Chống gian lận · 0/2';
     const headerBrandHtml = isExam
       ? `<span class="ins-brand-mark">IELTS</span>`
       : `<span class="ws-prac-brand-badge" aria-hidden="true">
@@ -3397,9 +3404,9 @@
          </span>`;
 
     const headerAcChipHtml = `
-      <span class="ws-hdr-ac-chip" id="ws-prac-ac-pill" title="Đang bật chống gian lận: chặn dán, sao chép &amp; rời tab (vi phạm 2/2 sẽ tự nộp và khóa 30 phút)">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span id="ws-prac-ac-text">${acBadgeText}</span>
+      <span class="rp-ac-shield" id="ws-prac-ac-pill" title="Chống gian lận đang bật: chặn dán, sao chép &amp; rời tab (tối đa 2 lần)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span id="ws-prac-ac-text">Anti-Cheat</span>
       </span>
     `;
 
@@ -3471,7 +3478,7 @@
           </div>
           <textarea class="ws-ins-editor ws-prac-editor" id="ws-prac-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
             aria-label="IELTS Writing Task 2 response"
-            placeholder="Bắt đầu viết bài Task 2 của bạn tại đây...&#10;&#10;• Mở bài: Paraphrase đề bài &amp; nêu lập trường rõ ràng&#10;• Thân bài 1 &amp; 2: Triển khai theo mạch lập luận A → B → C kèm ví dụ&#10;• Kết bài: Tóm tắt 2 ý chính &amp; khẳng định lại quan điểm"
+            placeholder="Bắt đầu viết bài Task 2 của bạn tại đây..."
             oninput="WritingStudio.updatePracWC()"
             ${editorAcAttrs}></textarea>
           <div class="ws-prac-paper-foot">
@@ -3796,7 +3803,7 @@
       pracState.strikes++;
       const acPill = document.getElementById('ws-prac-ac-pill');
       const acText = document.getElementById('ws-prac-ac-text');
-      if (acText) acText.textContent = `Chống gian lận · ${Math.min(2, pracState.strikes)}/2`;
+      if (acText) acText.textContent = `Cảnh báo ${Math.min(2, pracState.strikes)}/2`;
       if (acPill) acPill.classList.add('is-warn');
       const modeLbl = pracState.mode === 'exam' ? 'thi thật' : 'luyện viết';
       if (pracState.strikes >= 2) {

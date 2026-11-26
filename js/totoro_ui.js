@@ -76,6 +76,8 @@
   function resolveInitialView() {
     try {
       const sp = new URLSearchParams(window.location.search || '');
+      const tParam = `${sp.get('task') || ''},${sp.get('tasks') || ''}`;
+      if (/\b(?:rp|rp_full|lp|lp_full|wp):/i.test(tParam)) return 'practice';
       if (sp.get('task') || sp.get('tasks') || sp.get('wtask') || sp.get('adminTest')) return 'flashcard';
       const urlView = parseViewFromLocation();
       if (VALID_VIEWS.includes(urlView)) return urlView;
@@ -943,7 +945,10 @@
     const uName = snap.user?.name || snap.user?.id || 'bạn';
     const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
 
-    setTxt('home-hero-greeting', `Chào ${uName}, giữ vững chuỗi ${snap.streak} ngày nhé`);
+    const greetMsg = snap.streak > 0
+      ? `Chào ${uName}, giữ vững chuỗi ${snap.streak} ngày nhé`
+      : `Chào ${uName}, sẵn sàng học hôm nay nhé`;
+    setTxt('home-hero-greeting', greetMsg);
     const subEl = document.getElementById('home-hero-sub');
     if (subEl) {
       const rankTxt = snap.meWeek
@@ -1092,7 +1097,7 @@
               <span class="tot-hist-badge tabular">${esc(row.badge)}</span>
             </button>
           `).join('')
-        : '<div style="font-size:12.5px;color:var(--ink-3);padding:12px 0;">Chưa có bài làm nào. Chọn <strong>Reading</strong> hoặc <strong>Listening</strong> phía trên để bắt đầu nhé!</div>';
+        : `<div class="tot-empty-inline"><span>Chưa có bài làm nào hôm nay.</span><button type="button" class="tot-foot-btn" onclick="window.TotoroUI?.enterSkillMode('Reading', 'practice')">Vào Reading Practice →</button></div>`;
       setTxt('home-history-total', `${snap.completedTasks.length + rpHist.length} bài`);
     }
 
@@ -1140,7 +1145,7 @@
     }).join('');
 
     const rpHistHtml = rpStats.recent.length
-      ? rpStats.recent.map((h) => {
+      ? rpStats.recent.slice(0, 5).map((h) => {
           const dt = h.completedAt ? new Date(h.completedAt).toLocaleDateString('vi-VN') : '';
           const srcLabel = h.source === 'cambridge' ? 'Cambridge' : h.source === 'volume' ? 'Volume' : h.source === 'actual' ? 'Actual' : 'News';
           const isMastered = !!(h.mastered || (h.total > 0 && h.score === h.total));
@@ -1148,19 +1153,19 @@
             ? `window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.startFullTest('${esc(h.itemId)}', { ${isMastered ? 'openInReview: true' : "studyMode: 'practice'"} });`
             : `window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.startPassage('${esc(h.itemId)}', { ${isMastered ? 'openInReview: true' : "studyMode: 'practice'"} });`;
           return `
-            <div class="rh-hist-item">
+            <div class="rh-hist-row">
               <div style="min-width:0;">
                 <div class="rh-hist-title">${esc(h.title)}</div>
                 <div class="rh-hist-meta">${esc(srcLabel)} · ${h.score}/${h.total} câu đúng · ${dt}</div>
               </div>
               <div class="rh-hist-right">
-                <span class="rh-band-pill tabular">${h.score}/${h.total} câu</span>
+                <span class="rh-band-pill tabular">${h.score}/${h.total}</span>
                 <button type="button" class="tot-foot-btn" onclick="${openCall}">${isMastered ? 'Xem giải' : 'Làm lại'}</button>
               </div>
             </div>
           `;
         }).join('')
-      : `<div class="rh-empty">Chưa có lịch sử luyện đề Reading. Hãy vào tab <strong>Practice</strong> chọn Cambridge, Volume, Actual Tests hoặc News nhé!</div>`;
+      : `<div class="rh-empty-clean">Chưa có bài luyện đề nào. Chọn một kho đề phía trên để bắt đầu ngay.</div>`;
 
     const recentTasks = snap.completedTasks
       .slice()
@@ -1173,7 +1178,7 @@
           const label = taskObj ? `${taskObj.label} · ${taskObj.theme || ''}` : tid.toUpperCase();
           const score = info.recognitionScore != null ? `${info.recognitionScore}%` : `${info.translationScore ?? '--'}/10`;
           return `
-            <div class="rh-hist-item">
+            <div class="rh-hist-row">
               <div style="min-width:0;">
                 <div class="rh-hist-title">${esc(label)}</div>
                 <div class="rh-hist-meta">${info.updatedAt ? new Date(info.updatedAt).toLocaleDateString('vi-VN') : 'Đã nộp'}</div>
@@ -1182,82 +1187,119 @@
             </div>
           `;
         }).join('')
-      : `<div class="rh-empty">Chưa có Task Reading nào hoàn thành.</div>`;
+      : `<div class="rh-empty-clean">Chưa hoàn thành Task Reading nào.</div>`;
 
-    const mvDecksHtml = mvDecks.slice(0, 4).map((d) => `
-      <div class="rh-hist-item">
-        <div style="min-width:0;">
-          <div class="rh-hist-title">${esc(d.name)}</div>
-          <div class="rh-hist-meta">${d.words?.length || 0} từ (lưu cục bộ trên máy)</div>
+    const mvDecksHtml = mvDecks.length
+      ? mvDecks.slice(0, 3).map((d) => `
+          <div class="rh-hist-row">
+            <div style="min-width:0;">
+              <div class="rh-hist-title">${esc(d.name)}</div>
+              <div class="rh-hist-meta">${d.words?.length || 0} từ đã lưu</div>
+            </div>
+            <button type="button" class="tot-foot-btn" onclick="window.__VOCAB_BRIDGE__?.openMyVocabDeck('${esc(d.id)}')">Học →</button>
+          </div>
+        `).join('')
+      : `<div class="rh-empty-clean">Chưa có từ cá nhân. Vào Solutions sau khi làm bài để lưu từ vựng.</div>`;
+
+    const quickBanks = [
+      { id: 'cambridge', name: 'Cambridge 1–20', meta: '194 bài · 71 Full Tests', tag: 'Chuẩn đề' },
+      { id: 'volume', name: 'Real Volume 1–10', meta: '114 bài · 38 Full Tests', tag: 'Thực chiến' },
+      { id: 'actual', name: 'Recent Actual', meta: '270 bài · Lọc theo dạng', tag: 'Thi thật' },
+      { id: 'news', name: 'Academic News', meta: 'Song ngữ · Tra & lưu từ', tag: 'Đọc báo' }
+    ];
+
+    const quickBanksHtml = quickBanks.map((bk) => `
+      <button type="button" class="rh-quick-tile" onclick="window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.openSource('${bk.id}', '${bk.id === 'actual' ? 'p1' : 'all'}')">
+        <div class="rh-quick-top">
+          <span class="rh-quick-name">${esc(bk.name)}</span>
+          <span class="rh-quick-tag">${esc(bk.tag)}</span>
         </div>
-        <button type="button" class="tot-foot-btn" onclick="window.__VOCAB_BRIDGE__?.openMyVocabDeck('${esc(d.id)}')">Học →</button>
-      </div>
+        <div class="rh-quick-meta">${esc(bk.meta)}</div>
+      </button>
     `).join('');
 
     el.innerHTML = `
-      <div class="rh-layout">
+      <div class="rh-layout rh-clean">
         <div class="rh-top-asym">
-          <div class="tot-hero-card ink-brackets has-stamp rh-main-hero">
+          <div class="tot-hero-card rh-main-hero">
             <div class="rh-hero-copy">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <div class="rh-head-row">
                 <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
                   <svg viewBox="3 5.5 26 23.5" fill="none"><path d="M10.2 14L8.8 7.2L13.2 10.8C15 10.2 17 10.2 18.8 10.8L23.2 7.2L21.8 14C23.4 15.4 24 17.4 24 19H8C8 17.4 8.6 15.4 10.2 14Z" fill="#595651"/><path d="M14.2 10.2C15.8 7.5 19.2 7.4 20.6 9.5C18.5 11 15.8 11.2 14.2 10.2Z" fill="#4E9460"/><circle cx="13" cy="14.3" r="1.9" fill="#FFFFFF"/><circle cx="13.2" cy="14.3" r="0.95" fill="#181A1F"/><circle cx="19" cy="14.3" r="1.9" fill="#FFFFFF"/><circle cx="18.8" cy="14.3" r="0.95" fill="#181A1F"/><path d="M4.2 18.8C4.2 17.7 5.2 17 6.3 17.2L16 18.8L25.7 17.2C26.8 17 27.8 17.7 27.8 18.8V26.4C27.8 27.2 27 27.8 26.2 27.6L16 26L5.8 27.6C5 27.8 4.2 27.2 4.2 26.4V18.8Z" fill="#FBF8F0" stroke="#3F6E4A" stroke-width="1.6" stroke-linejoin="round"/><path d="M16 18.8V26" stroke="#3F6E4A" stroke-width="1.5"/></svg>
                 </span>
                 <div>
                   <h2 class="tot-shell-title" style="margin:0;">IELTS Reading</h2>
-                  <div class="tot-shell-sub tabular">${(snap.mastered || 0).toLocaleString('vi-VN')} / ${(snap.totalFamilies || 4489).toLocaleString('vi-VN')} từ · ${snap.completedTasks.length} / 110 Tasks · ${mvTotalWords} từ cá nhân</div>
+                  <div class="tot-shell-sub tabular">${(snap.mastered || 0).toLocaleString('vi-VN')} / ${(snap.totalFamilies || 4489).toLocaleString('vi-VN')} từ · ${snap.completedTasks.length}/110 Tasks · ${mvTotalWords} từ cá nhân</div>
                 </div>
               </div>
               <div class="rh-decks-grid-4">${deckBarsHtml}</div>
-              <div class="rh-hero-actions" style="margin-top:12px;">
+              <div class="rh-hero-actions" style="margin-top:14px;">
                 <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.switchView('practice')">Vào kho đề Practice →</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('flashcard')">Học Flashcard</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('flashcard')">Flashcard</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('task')">110 Tasks</button>
                 <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">MY LIST</button>
               </div>
             </div>
           </div>
 
-          <div class="tot-home-panel ink-brackets rh-band-panel">
-            <div class="tot-panel-head">
+          <div class="tot-home-panel rh-band-panel">
+            <div class="tot-panel-head" style="margin-bottom:10px;">
               <div>
-                <div class="tot-panel-title">Kết quả Luyện đề Reading</div>
-                <div class="tot-panel-sub tabular">${rpStats.attemptsCount} lượt nộp · ${rpStats.completedUnique} bài · ${rpStats.totalMins} phút</div>
+                <div class="tot-panel-title">Kết quả Luyện đề</div>
+                <div class="tot-panel-sub">Thống kê từ các lượt đã nộp</div>
               </div>
               <span class="rh-band-big tabular">${rpStats.avgBand ? `Band ${rpStats.avgBand.toFixed(1)}` : '—'}</span>
             </div>
-            <div class="rh-empty" style="margin:auto 0;">Chọn một Passage hoặc Full Test trong kho <strong>Cambridge · Volume · Actual · News</strong> để đo Band Reading thực tế.</div>
-            <div class="tot-panel-foot" style="margin-top:auto;">
+            <div class="rh-kpi-strip tabular">
+              <div class="rh-kpi-cell">
+                <span class="rh-kpi-num">${rpStats.completedUnique}</span>
+                <span class="rh-kpi-lbl">Bài đã làm</span>
+              </div>
+              <div class="rh-kpi-cell">
+                <span class="rh-kpi-num">${rpStats.attemptsCount}</span>
+                <span class="rh-kpi-lbl">Lượt nộp</span>
+              </div>
+              <div class="rh-kpi-cell">
+                <span class="rh-kpi-num">${rpStats.totalMins}p</span>
+                <span class="rh-kpi-lbl">Thời gian</span>
+              </div>
+            </div>
+            <div class="tot-panel-foot" style="margin-top:auto;padding-top:10px;">
               <span class="tot-foot-meta">Tiến độ Task <strong class="tabular">${snap.completedTasks.length}/110</strong></span>
-              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.switchView('practice')">Làm đề mới →</button>
+              <span class="tot-foot-meta">MY LIST <strong class="tabular">${mvTotalWords} từ</strong></span>
             </div>
           </div>
         </div>
 
+        <section class="rh-quick-section" aria-label="Mở nhanh kho đề Reading">
+          <div class="rh-quick-head">
+            <h3 class="rh-section-lbl">Mở nhanh kho đề Reading</h3>
+            <button type="button" class="rh-text-link" onclick="window.TotoroUI.switchView('practice')">Xem tất cả 4 kho →</button>
+          </div>
+          <div class="rh-quick-grid">${quickBanksHtml}</div>
+        </section>
+
         <div class="rh-bottom-asym">
-          <div class="tot-home-panel ink-brackets">
+          <div class="tot-home-panel">
             <div class="tot-panel-head">
               <div>
-                <div class="tot-panel-title">Lịch sử Luyện đề Reading</div>
-                <div class="tot-panel-sub">Cambridge · Volume · Actual Tests · News</div>
+                <div class="tot-panel-title">Lịch sử luyện đề gần đây</div>
+                <div class="tot-panel-sub">Bấm vào bài đã xong để xem lại hoặc làm lại</div>
               </div>
-              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.switchView('practice')">Kho đề →</button>
             </div>
-            <div class="rh-hist-list">${rpHistHtml}</div>
+            <div class="rh-hist-list is-flat">${rpHistHtml}</div>
           </div>
 
-          <div class="tot-home-panel ink-brackets">
+          <div class="tot-home-panel">
             <div class="tot-panel-head">
               <div>
-                <div class="tot-panel-title">MY LIST &amp; Task gần đây</div>
-                <div class="tot-panel-sub">Ôn nhanh bộ từ cá nhân rút từ bài đọc</div>
+                <div class="tot-panel-title">Từ cá nhân &amp; Task gần đây</div>
+                <div class="tot-panel-sub">Ôn nhanh bộ từ rút từ bài đọc</div>
               </div>
               <button type="button" class="tot-foot-btn" onclick="window.MyVocabUI?.openModal()">Quản lý →</button>
             </div>
-            <div class="rh-subhead">MY LIST</div>
-            <div class="rh-hist-list">${mvDecksHtml}</div>
-            <div class="rh-subhead" style="margin-top:12px;">Task Reading vừa xong</div>
-            <div class="rh-hist-list">${taskHistHtml}</div>
+            <div class="rh-hist-list is-flat">${mvDecksHtml}</div>
+            ${recentTasks.length ? `<div class="rh-subhead" style="margin-top:12px;">Task Reading vừa xong</div><div class="rh-hist-list is-flat">${taskHistHtml}</div>` : ''}
           </div>
         </div>
       </div>
@@ -1345,6 +1387,19 @@
     const totalTasks = allTasks.length || 139;
     const doneTasks = Object.values(prog).filter((p) => p && p.completed).length;
 
+    // Read real Listening Practice attempts for current user
+    const uid = String(B?.getScopedUid?.() || B?.getCurrentUser?.()?.id || 'guest').trim().toLowerCase();
+    let lpHist = [];
+    try {
+      const raw = localStorage.getItem(`ielts_listening_practice_v1_${uid}`);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && Array.isArray(parsed.history)) lpHist = parsed.history;
+    } catch (_) {}
+    const lpUnique = new Set(lpHist.map((h) => h.itemId).filter(Boolean)).size;
+    const lpBands = lpHist.map((h) => Number(h.band || 0)).filter((b) => b > 0);
+    const lpAvgBand = lpBands.length ? (lpBands.reduce((a, b) => a + b, 0) / lpBands.length) : 0;
+    const lpTotalMins = Math.round(lpHist.reduce((a, h) => a + Number(h.elapsedSec || 0), 0) / 60);
+
     const parts = [
       { label: 'Giao Tiếp & Dịch Vụ', list: lv.part1 || [] },
       { label: 'Bản Đồ & Địa Điểm', list: lv.part2 || [] },
@@ -1366,18 +1421,9 @@
         </div>`;
     }).join('');
 
-    const recentDone = allTasks.filter((t) => prog[t.id]?.completed).slice(0, 4);
-    const histHtml = recentDone.length
-      ? recentDone.map((t) => {
-          const r = prog[t.id];
-          const sc = r.t3Total ? `${r.t3Score}/${r.t3Total}` : `${r.t1Score || 0}/${r.t1Total || 30}`;
-          return `<div class="rh-hist-item"><div class="rh-hist-title">${esc(t.label)}</div><span class="tot-hist-badge tabular">${esc(sc)}</span></div>`;
-        }).join('')
-      : `<div class="rh-empty">Chưa có bài Listening nào hoàn thành. Chọn ngay một bài <strong>Bản đồ Map</strong> hoặc <strong>Thực chiến 3 Test</strong> bên dưới để bắt đầu.</div>`;
-
     const featuredExams = [
       ...allTasks.filter((t) => t.isMapTask).slice(0, 3),
-      ...allTasks.filter((t) => t.hasFullTests && !t.isMapTask).slice(0, 3),
+      ...allTasks.filter((t) => t.hasFullTests && !t.isMapTask).slice(0, 2),
     ];
     const featuredHtml = featuredExams.map((t) => {
       const r = prog[t.id];
@@ -1387,10 +1433,10 @@
         ? `<span class="tot-hist-badge tabular">${r.t3Score}/${r.t3Total}</span>`
         : `<span class="lt-inline-pill ${t.isMapTask ? 'is-map' : ''}">${t.isMapTask ? 'Map' : '3 Test'}</span>`;
       return `
-        <div class="rh-hist-item lh-click-row" onclick="window.ListeningTasksModule?.openExam?.('${esc(t.id)}', 3, { fromPractice: true })">
+        <div class="rh-hist-row lh-flat-row" onclick="window.ListeningTasksModule?.openExam?.('${esc(t.id)}', 3, { fromPractice: true })" role="button" tabindex="0">
           <div style="min-width:0;flex:1;">
             <div class="rh-hist-title">${esc(t.label)} · ${esc(shortTitle)}</div>
-            <div class="rh-hist-meta">${t.isMapTask ? 'Map Labelling · Part 2' : 'Note Completion'}</div>
+            <div class="rh-hist-meta">${t.isMapTask ? 'Map Labelling · Part 2' : 'Note Completion · 3 Test'}</div>
           </div>
           <div class="rh-hist-right">
             ${badge}
@@ -1400,7 +1446,7 @@
     }).join('');
 
     const deckCatalog = [
-      { key: 'l_foundation', name: 'Từ Vựng Nền Tảng', sub: 'Từ cơ bản bắt buộc nghe hiểu', list: lv.foundation || [] },
+      { key: 'l_foundation', name: 'Từ Vựng Nền Tảng', sub: 'Cơ bản bắt buộc nghe hiểu', list: lv.foundation || [] },
       { key: 'l_all_parts', name: 'Từ Vựng Cốt Lõi', sub: 'Xuất hiện đều ở cả 4 phần thi', list: lv.all_parts || [] },
       { key: 'l_part1', name: 'Giao Tiếp & Dịch Vụ', sub: 'Đặt phòng, du lịch, đăng ký, điền form', list: lv.part1 || [] },
       { key: 'l_part2', name: 'Bản Đồ & Địa Điểm', sub: 'Chỉ đường, công viên, tòa nhà, sự kiện', list: lv.part2 || [] },
@@ -1411,68 +1457,108 @@
     const deckListHtml = deckCatalog.map((d) => {
       const m = d.list.filter((w) => assess[w.id] === 3).length;
       return `
-        <div class="rh-hist-item lh-click-row" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard'); window.__VOCAB_BRIDGE__?.loadMainScope?.('${d.key}');">
+        <div class="rh-hist-row lh-flat-row" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard'); window.__VOCAB_BRIDGE__?.loadMainScope?.('${d.key}');" role="button" tabindex="0">
           <div style="min-width:0;flex:1;">
             <div class="rh-hist-title">${esc(d.name)}</div>
-            <div class="rh-hist-meta">${esc(d.sub)} · <strong class="tabular">${m}/${d.list.length}</strong></div>
+            <div class="rh-hist-meta">${esc(d.sub)}</div>
           </div>
-          <button type="button" class="tot-foot-btn" onclick="event.stopPropagation(); window.TotoroUI.enterSkillMode('Listening', 'flashcard'); window.__VOCAB_BRIDGE__?.loadMainScope?.('${d.key}');">Học →</button>
+          <div class="rh-hist-right">
+            <span class="lh-row-count tabular">${m}/${d.list.length}</span>
+            <button type="button" class="tot-foot-btn" onclick="event.stopPropagation(); window.TotoroUI.enterSkillMode('Listening', 'flashcard'); window.__VOCAB_BRIDGE__?.loadMainScope?.('${d.key}');">Học →</button>
+          </div>
         </div>`;
     }).join('');
 
+    const quickBanks = [
+      { id: 'cambridge', name: 'Cambridge 1–20', meta: '20 cuốn · 80 Tests chuẩn đề', tag: 'Chuẩn đề', act: "window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice'); window.ListeningPracticeApp?.openSource('cambridge')" },
+      { id: 'volume', name: 'Real Volume 1–10', meta: '10 tập · 40 Tests luyện bẫy', tag: 'Thực chiến', act: "window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice'); window.ListeningPracticeApp?.openSource('volume')" },
+      { id: 'actual', name: 'Recent Actual', meta: '52 bài nghe · 13 Full Tests', tag: 'Thi thật', act: "window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice'); window.ListeningPracticeApp?.openSource('actual', 'p1')" },
+      { id: 'dictation', name: 'Dictation Studio', meta: 'Chép chính tả · YouTube & Audio', tag: 'Nghe sâu', act: "window.TotoroUI.openDictationStudio()" }
+    ];
+    const quickBanksHtml = quickBanks.map((bk) => `
+      <button type="button" class="rh-quick-tile" onclick="${bk.act}">
+        <div class="rh-quick-top">
+          <span class="rh-quick-name">${esc(bk.name)}</span>
+          <span class="rh-quick-tag">${esc(bk.tag)}</span>
+        </div>
+        <div class="rh-quick-meta">${esc(bk.meta)}</div>
+      </button>
+    `).join('');
+
     el.innerHTML = `
-      <div class="rh-layout">
+      <div class="rh-layout rh-clean">
         <div class="rh-top-asym">
-          <div class="tot-hero-card ink-brackets has-stamp rh-main-hero">
+          <div class="tot-hero-card rh-main-hero">
             <div class="rh-hero-copy">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <div class="rh-head-row">
                 <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
                 </span>
                 <div>
-                  <h2 class="tot-shell-title" style="margin:0;">LISTENING</h2>
-                  <div class="tot-shell-sub tabular">${masteredTotal.toLocaleString('vi-VN')} / ${totalVocab.toLocaleString('vi-VN')} từ · ${doneTasks} / ${totalTasks} Tasks</div>
+                  <h2 class="tot-shell-title" style="margin:0;">IELTS Listening</h2>
+                  <div class="tot-shell-sub tabular">${masteredTotal.toLocaleString('vi-VN')} / ${totalVocab.toLocaleString('vi-VN')} từ · ${doneTasks} / ${totalTasks} Tasks · 133 Full Tests</div>
                 </div>
               </div>
               <div class="rh-decks-grid-4">${barsHtml}</div>
-              <div class="rh-hero-actions" style="margin-top:12px;">
-                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice')">PRACTICE →</button>
+              <div class="rh-hero-actions" style="margin-top:14px;">
+                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice')">Vào kho đề Practice →</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openDictationStudio()">Dictation Studio</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Flashcard</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">Tasks</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">${totalTasks} Tasks</button>
               </div>
             </div>
           </div>
 
-          <div class="tot-home-panel ink-brackets rh-band-panel">
-            <div class="tot-panel-head">
+          <div class="tot-home-panel rh-band-panel">
+            <div class="tot-panel-head" style="margin-bottom:10px;">
               <div>
                 <div class="tot-panel-title">Tiến độ Luyện nghe</div>
-                <div class="tot-panel-sub tabular">${doneTasks} / ${totalTasks} bài đã hoàn thành</div>
+                <div class="tot-panel-sub">Thống kê luyện đề &amp; từ vựng</div>
               </div>
-              <span class="rh-band-big tabular">${pctTotal}%</span>
+              <span class="rh-band-big tabular">${lpAvgBand ? `Band ${lpAvgBand.toFixed(1)}` : `${pctTotal}%`}</span>
             </div>
-            <div class="rh-hist-list">${histHtml}</div>
-            <div class="tot-panel-foot" style="margin-top:auto;">
-              <span class="tot-foot-meta">Bản đồ Map &amp; Note Completion</span>
-              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">Làm đề mới →</button>
+            <div class="rh-kpi-strip tabular">
+              <div class="rh-kpi-cell">
+                <span class="rh-kpi-num">${lpUnique}</span>
+                <span class="rh-kpi-lbl">Bài luyện đề</span>
+              </div>
+              <div class="rh-kpi-cell">
+                <span class="rh-kpi-num">${doneTasks}</span>
+                <span class="rh-kpi-lbl">Tasks xong</span>
+              </div>
+              <div class="rh-kpi-cell">
+                <span class="rh-kpi-num">${lpTotalMins}p</span>
+                <span class="rh-kpi-lbl">Thời gian</span>
+              </div>
+            </div>
+            <div class="tot-panel-foot" style="margin-top:auto;padding-top:10px;">
+              <span class="tot-foot-meta">Đã thuộc <strong class="tabular">${masteredTotal.toLocaleString('vi-VN')} từ</strong></span>
+              <span class="tot-foot-meta">Lượt nộp <strong class="tabular">${lpHist.length}</strong></span>
             </div>
           </div>
         </div>
 
+        <section class="rh-quick-section" aria-label="Mở nhanh kho đề Listening">
+          <div class="rh-quick-head">
+            <h3 class="rh-section-lbl">Mở nhanh kho đề Listening</h3>
+            <button type="button" class="rh-text-link" onclick="window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice')">Xem tất cả kho đề →</button>
+          </div>
+          <div class="rh-quick-grid">${quickBanksHtml}</div>
+        </section>
+
         <div class="rh-bottom-asym">
-          <div class="tot-home-panel ink-brackets">
+          <div class="tot-home-panel">
             <div class="tot-panel-head">
               <div>
-                <div class="tot-panel-title">Đề Listening nổi bật</div>
-                <div class="tot-panel-sub">Map Labelling &amp; Note Completion</div>
+                <div class="tot-panel-title">Đề bổ trợ nổi bật</div>
+                <div class="tot-panel-sub">Map Labelling Part 2 &amp; Note Completion 3 Test</div>
               </div>
-              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'practice')">Tất cả đề →</button>
+              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">Tất cả Tasks →</button>
             </div>
-            <div class="rh-hist-list">${featuredHtml}</div>
+            <div class="rh-hist-list is-flat">${featuredHtml}</div>
           </div>
 
-          <div class="tot-home-panel ink-brackets">
+          <div class="tot-home-panel">
             <div class="tot-panel-head">
               <div>
                 <div class="tot-panel-title">Lộ trình Bộ từ Listening</div>
@@ -1480,7 +1566,7 @@
               </div>
               <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Flashcard →</button>
             </div>
-            <div class="rh-hist-list lh-deck-scroll">${deckListHtml}</div>
+            <div class="rh-hist-list is-flat lh-deck-scroll">${deckListHtml}</div>
           </div>
         </div>
       </div>

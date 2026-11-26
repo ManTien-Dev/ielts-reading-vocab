@@ -35,6 +35,9 @@
     { key: 'academic',   label: 'Học thuật (20)' },
     { key: 'paraphrase', label: 'Paraphrase (30)' },
     { key: 'advanced',   label: 'Chuyên sâu (30)' },
+    { key: 'rp_cambridge', label: '📖 Đề Cambridge' },
+    { key: 'rp_volume',    label: '📖 Đề Volume' },
+    { key: 'rp_actual',    label: '📖 Đề Actual' },
   ];
 
   const state = {
@@ -49,6 +52,8 @@
       writing: 'all',
       speaking: 'all',
     },
+    pickerPracticeMode: 'practice', // 'practice' | 'exam'
+    pickerLoadingBank: false,
     pickerQuery: '',
     pickerHideAllDone: false,
     selectedIds: new Set(),
@@ -57,6 +62,7 @@
     detailFilter: 'all',
     remindedKeys: new Set(),
     tickerId: null,
+    quickAssignCtx: null,
   };
 
   function B() { return window.__VOCAB_BRIDGE__ || null; }
@@ -129,9 +135,113 @@
     return SKILLS.find((s) => s.key === skillKey) || SKILLS[0];
   }
 
+  /* =========================================================
+     PRACTICE ASSIGNMENT ID PARSER (rp / rp_full / lp / lp_full / wp)
+     Format: <prefix>:<itemId>:<practice|exam>
+     ========================================================= */
+  function parsePracticeTaskId(rawId) {
+    const s = String(rawId || '').trim();
+    const m = s.match(/^(rp_full|rp|lp_full|lp|wp):([^:\s]+)(?::(practice|exam))?$/i);
+    if (!m) return null;
+    const prefix = m[1].toLowerCase();
+    const itemId = m[2];
+    const mode = (m[3] || 'practice').toLowerCase() === 'exam' ? 'exam' : 'practice';
+    const skill = prefix.startsWith('rp') ? 'reading' : (prefix.startsWith('lp') ? 'listening' : 'writing');
+    const isFull = prefix.endsWith('_full');
+    return {
+      prefix,
+      skill,
+      isFull,
+      itemId,
+      mode,
+      canonicalId: `${prefix}:${itemId}:${mode}`,
+    };
+  }
+
+  function buildPracticeTaskId(skill, itemId, isFull, mode = 'practice') {
+    const cleanMode = mode === 'exam' ? 'exam' : 'practice';
+    if (skill === 'reading') return `${isFull ? 'rp_full' : 'rp'}:${itemId}:${cleanMode}`;
+    if (skill === 'listening') return `${isFull ? 'lp_full' : 'lp'}:${itemId}:${cleanMode}`;
+    return `wp:${itemId}:${cleanMode}`;
+  }
+
+  function formatPracticeFallbackLabel(pm) {
+    const modeTag = pm.mode === 'exam' ? 'Thi thật' : 'Luyện tập';
+    const raw = pm.itemId;
+    if (pm.skill === 'reading') {
+      const mCam = raw.match(/^cam_(\d+)_t(\d+)(?:_p(\d+))?$/i);
+      if (mCam) return { code: `Cam ${mCam[1]} · T${mCam[2]}${mCam[3] ? ` · P${mCam[3]}` : ' Full'}`, shortCode: `C${mCam[1]}T${mCam[2]}${mCam[3] ? `P${mCam[3]}` : ''}`, theme: `Reading Practice (${modeTag})` };
+      const mVol = raw.match(/^vol_(\d+)_t(\d+)(?:_p(\d+))?$/i);
+      if (mVol) return { code: `Vol ${mVol[1]} · T${mVol[2]}${mVol[3] ? ` · P${mVol[3]}` : ' Full'}`, shortCode: `V${mVol[1]}T${mVol[2]}${mVol[3] ? `P${mVol[3]}` : ''}`, theme: `Reading Volume (${modeTag})` };
+      return { code: pm.isFull ? `Reading Full (${raw})` : `Reading (${raw})`, shortCode: raw.slice(0, 10), theme: `Reading Practice (${modeTag})` };
+    }
+    if (pm.skill === 'listening') {
+      const mCam = raw.match(/^lcam_(\d+)_t(\d+)(?:_p(\d+))?$/i);
+      if (mCam) return { code: `LCam ${mCam[1]} · T${mCam[2]}${mCam[3] ? ` · P${mCam[3]}` : ' Full'}`, shortCode: `LC${mCam[1]}T${mCam[2]}${mCam[3] ? `P${mCam[3]}` : ''}`, theme: `Listening Practice (${modeTag})` };
+      const mVol = raw.match(/^lvol_(\d+)_t(\d+)(?:_p(\d+))?$/i);
+      if (mVol) return { code: `LVol ${mVol[1]} · T${mVol[2]}${mVol[3] ? ` · P${mVol[3]}` : ' Full'}`, shortCode: `LV${mVol[1]}T${mVol[2]}${mVol[3] ? `P${mVol[3]}` : ''}`, theme: `Listening Volume (${modeTag})` };
+      return { code: pm.isFull ? `Listening Full (${raw})` : `Listening (${raw})`, shortCode: raw.slice(0, 10), theme: `Listening Practice (${modeTag})` };
+    }
+    return { code: `Writing ${raw.toUpperCase()}`, shortCode: raw.toUpperCase().slice(0, 8), theme: `Writing Task 2 (${modeTag})` };
+  }
+
+  function buildPracticeTaskDescriptor(pm) {
+    if (!pm) return null;
+    const modeTag = pm.mode === 'exam' ? 'Thi thật' : 'Luyện tập';
+    const fb = formatPracticeFallbackLabel(pm);
+    let code = fb.code;
+    let shortCode = fb.shortCode;
+    let theme = fb.theme;
+
+    if (pm.skill === 'reading') {
+      const d = window.READING_PRACTICE_DATA || {};
+      const item = pm.isFull
+        ? (d.FULL_TESTS || []).find((x) => x.id === pm.itemId)
+        : (d.PASSAGES || {})[pm.itemId];
+      if (item) {
+        const series = item.series ? `${item.series}${pm.isFull ? ' · FULL' : (item.passageNum ? ` · P${item.passageNum}` : '')}` : fb.code;
+        code = series;
+        theme = `${item.title || item.id} (${modeTag})`;
+      }
+    } else if (pm.skill === 'listening') {
+      const d = window.LISTENING_PRACTICE_DATA || {};
+      const item = pm.isFull
+        ? (d.FULL_TESTS || []).find((x) => x.id === pm.itemId)
+        : (d.PARTS || {})[pm.itemId];
+      if (item) {
+        code = pm.isFull ? (item.series || fb.code) : `${item.series || fb.code}${item.partNum ? ` · P${item.partNum}` : ''}`;
+        theme = `${item.title || item.id} (${modeTag})`;
+      }
+    } else if (pm.skill === 'writing') {
+      const p = (window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).find((x) => x.id === pm.itemId);
+      if (p) {
+        code = `Writing · ${p.type || 'Task 2'}`;
+        shortCode = p.id.toUpperCase();
+        const snippet = String(p.prompt || '').trim();
+        theme = `${snippet.length > 76 ? snippet.slice(0, 76) + '…' : snippet} (${modeTag})`;
+      }
+    }
+
+    return {
+      id: pm.canonicalId,
+      skill: pm.skill,
+      suite: pm.skill === 'writing' ? 'wp_practice' : `${pm.skill === 'reading' ? 'rp' : 'lp'}_practice`,
+      num: 0,
+      code,
+      shortCode,
+      theme,
+      wordTotal: 1,
+      isPractice: true,
+      practiceMeta: pm,
+      raw: null,
+    };
+  }
+
   function detectSkillByTaskId(rawId) {
     const id = String(rawId || '').trim();
     if (!id) return 'reading';
+    const pm = parsePracticeTaskId(id);
+    if (pm) return pm.skill;
     if (/^(task|fnd|acd|adv)_\d+$/i.test(id)) return 'reading';
     if (/^(lp\d|lmap|lcf|lcore|ltask)_/i.test(id)) return 'listening';
     if (/^w_/i.test(id)) return 'writing';
@@ -145,6 +255,8 @@
   function normalizeAnyTaskId(raw) {
     const s = String(raw || '').trim();
     if (!s) return '';
+    const pm = parsePracticeTaskId(s);
+    if (pm) return pm.canonicalId;
     // Reading numeric shorthand "1" -> "task_01"
     if (/^\d{1,2}$/.test(s)) return `task_${s.padStart(2, '0')}`;
     if (/^(task|fnd|acd|adv)_\d{1,2}$/i.test(s)) {
@@ -230,10 +342,133 @@
     }));
   }
 
+  function getReadingPracticeCatalog(sourceKey) {
+    const d = window.READING_PRACTICE_DATA || {};
+    const mode = state.pickerPracticeMode === 'exam' ? 'exam' : 'practice';
+    const modeTag = mode === 'exam' ? 'Thi thật' : 'Luyện tập';
+    const out = [];
+    const fulls = (d.FULL_TESTS || []).filter((ft) => ft && ft.source === sourceKey);
+    fulls.forEach((ft, idx) => {
+      const id = buildPracticeTaskId('reading', ft.id, true, mode);
+      const fb = formatPracticeFallbackLabel(parsePracticeTaskId(id));
+      out.push({
+        id,
+        skill: 'reading',
+        suite: `rp_${sourceKey}`,
+        num: idx + 1,
+        code: `${ft.series || fb.code} · FULL`,
+        shortCode: fb.shortCode + 'F',
+        theme: `${ft.title || ft.id} (${modeTag})`,
+        wordTotal: 1,
+        isPractice: true,
+        practiceMeta: parsePracticeTaskId(id),
+        raw: ft,
+      });
+    });
+    const passages = Object.values(d.PASSAGES || {}).filter((p) => p && p.source === sourceKey);
+    passages.forEach((p, idx) => {
+      const id = buildPracticeTaskId('reading', p.id, false, mode);
+      const fb = formatPracticeFallbackLabel(parsePracticeTaskId(id));
+      out.push({
+        id,
+        skill: 'reading',
+        suite: `rp_${sourceKey}`,
+        num: idx + 1,
+        code: `${p.series || fb.code}${p.passageNum ? ` · P${p.passageNum}` : ''}`,
+        shortCode: fb.shortCode,
+        theme: `${p.title || p.id} (${modeTag})`,
+        wordTotal: 1,
+        isPractice: true,
+        practiceMeta: parsePracticeTaskId(id),
+        raw: p,
+      });
+    });
+    return out;
+  }
+
+  function getListeningPracticeCatalog(sourceKey) {
+    const d = window.LISTENING_PRACTICE_DATA || {};
+    const mode = state.pickerPracticeMode === 'exam' ? 'exam' : 'practice';
+    const modeTag = mode === 'exam' ? 'Thi thật' : 'Luyện tập';
+    const out = [];
+    const fulls = (d.FULL_TESTS || []).filter((ft) => ft && ft.source === sourceKey);
+    fulls.forEach((ft, idx) => {
+      const id = buildPracticeTaskId('listening', ft.id, true, mode);
+      const fb = formatPracticeFallbackLabel(parsePracticeTaskId(id));
+      out.push({
+        id,
+        skill: 'listening',
+        suite: `lp_${sourceKey}`,
+        num: idx + 1,
+        code: `${ft.series || fb.code} · FULL`,
+        shortCode: fb.shortCode + 'F',
+        theme: `${ft.title || ft.id} (${modeTag})`,
+        wordTotal: 1,
+        isPractice: true,
+        practiceMeta: parsePracticeTaskId(id),
+        raw: ft,
+      });
+    });
+    const parts = Object.values(d.PARTS || {}).filter((p) => p && p.source === sourceKey);
+    parts.forEach((p, idx) => {
+      const id = buildPracticeTaskId('listening', p.id, false, mode);
+      const fb = formatPracticeFallbackLabel(parsePracticeTaskId(id));
+      out.push({
+        id,
+        skill: 'listening',
+        suite: `lp_${sourceKey}`,
+        num: idx + 1,
+        code: `${p.series || fb.code}${p.partNum ? ` · P${p.partNum}` : ''}`,
+        shortCode: fb.shortCode,
+        theme: `${p.title || p.id} (${modeTag})`,
+        wordTotal: 1,
+        isPractice: true,
+        practiceMeta: parsePracticeTaskId(id),
+        raw: p,
+      });
+    });
+    return out;
+  }
+
+  function getWritingPracticeCatalog() {
+    const prompts = window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || [];
+    const mode = state.pickerPracticeMode === 'exam' ? 'exam' : 'practice';
+    const modeTag = mode === 'exam' ? 'Thi thật' : 'Luyện tập';
+    return prompts.map((p, idx) => {
+      const id = buildPracticeTaskId('writing', p.id, false, mode);
+      const snippet = String(p.prompt || '').trim();
+      return {
+        id,
+        skill: 'writing',
+        suite: 'wp_practice',
+        num: idx + 1,
+        code: `Đề #${idx + 1} · ${p.type || 'Task 2'}`,
+        shortCode: `WP${idx + 1}`,
+        theme: `${snippet.length > 88 ? snippet.slice(0, 88) + '…' : snippet} (${modeTag})`,
+        wordTotal: 1,
+        isPractice: true,
+        practiceMeta: parsePracticeTaskId(id),
+        raw: p,
+      };
+    });
+  }
+
   function getCatalogBySkill(skillKey) {
-    if (skillKey === 'reading') return getReadingCatalog();
-    if (skillKey === 'listening') return getListeningCatalog();
-    if (skillKey === 'writing') return getWritingCatalog();
+    if (skillKey === 'reading') {
+      const curSuite = state.pickerSuite.reading || 'foundation';
+      if (curSuite.startsWith('rp_')) return getReadingPracticeCatalog(curSuite.slice(3));
+      return getReadingCatalog();
+    }
+    if (skillKey === 'listening') {
+      const curSuite = state.pickerSuite.listening || 'part1';
+      if (curSuite.startsWith('lp_')) return getListeningPracticeCatalog(curSuite.slice(3));
+      return getListeningCatalog();
+    }
+    if (skillKey === 'writing') {
+      const curSuite = state.pickerSuite.writing || 'all';
+      if (curSuite === 'wp_practice') return getWritingPracticeCatalog();
+      return getWritingCatalog();
+    }
     if (skillKey === 'speaking') return getSpeakingCatalog();
     return [];
   }
@@ -250,8 +485,12 @@
   function getTaskById(rawId) {
     const id = normalizeAnyTaskId(rawId);
     if (!id) return null;
+    const pm = parsePracticeTaskId(id);
+    if (pm) return buildPracticeTaskDescriptor(pm);
     const sk = detectSkillByTaskId(id);
-    const list = getCatalogBySkill(sk);
+    const list = sk === 'reading' ? getReadingCatalog()
+      : (sk === 'listening' ? getListeningCatalog()
+        : (sk === 'writing' ? getWritingCatalog() : getSpeakingCatalog()));
     const found = list.find((t) => t.id === id);
     if (found) return found;
     return getAllCatalogTasks().find((t) => t.id === id) || null;
@@ -261,13 +500,20 @@
     if (skillKey === 'reading') return READING_SUITES;
     if (skillKey === 'listening') {
       const suites = window.APP_LISTENING_TASKS?.suites || [];
-      return suites.map((s) => ({ key: s.key, label: s.label }));
+      return [
+        ...suites.map((s) => ({ key: s.key, label: s.label })),
+        { key: 'lp_cambridge', label: '🎧 Đề Cambridge' },
+        { key: 'lp_volume',    label: '🎧 Đề Volume' },
+        { key: 'lp_actual',    label: '🎧 Đề Actual' },
+      ];
     }
     if (skillKey === 'writing') {
       const subs = window.WRITING_STUDIO_DATA?.SUBTOPICS || [];
       const mods = window.WRITING_STUDIO_DATA?.MODULES || [];
+      const wpCount = (window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).length;
       return [
         { key: 'all', label: `Tất cả (${mods.length})` },
+        { key: 'wp_practice', label: `✍️ Đề Practice (${wpCount})` },
         ...subs.map((st) => {
           const c = mods.filter((m) => m.subtopic === st.key).length;
           return { key: st.key, label: `${st.shortTitle || st.title} (${c})` };
@@ -477,9 +723,85 @@
     return rec.score != null ? String(rec.score) : 'Đạt';
   }
 
+  function readStudentPracticeAttempt(studentId, pm) {
+    const bridge = B();
+    const uid = bridge ? bridge.getScopedUid(studentId) : String(studentId || 'guest').toLowerCase();
+    const cache = bridge?.getCloudClassCache?.() || {};
+    const sd = cache?.[uid]?.syncData || {};
+
+    if (pm.skill === 'reading') {
+      const localObj = readJson(`ielts_reading_practice_v1_${uid}`, { history: [] });
+      const remoteHist = Array.isArray(sd.readingPracticeHistory) ? sd.readingPracticeHistory : [];
+      const all = [...(Array.isArray(localObj?.history) ? localObj.history : []), ...remoteHist];
+      const hits = all.filter((h) => h && h.itemId === pm.itemId);
+      if (!hits.length) return null;
+      hits.sort((a, b) => (Number(b.score || 0) - Number(a.score || 0)) || (Number(b.submittedAt || 0) - Number(a.submittedAt || 0)));
+      const best = hits[0];
+      return {
+        completed: true,
+        scoreLabel: best.total ? `${best.score}/${best.total}${best.band ? ` · B${Number(best.band).toFixed(1)}` : ''}` : 'Đã nộp',
+        updatedAt: Number(best.submittedAt || best.completedAt || 0),
+        raw: best,
+      };
+    }
+    if (pm.skill === 'listening') {
+      const localObj = readJson(`ielts_listening_practice_v1_${uid}`, { history: [] });
+      const remoteHist = Array.isArray(sd.listeningPracticeHistory) ? sd.listeningPracticeHistory : [];
+      const all = [...(Array.isArray(localObj?.history) ? localObj.history : []), ...remoteHist];
+      const hits = all.filter((h) => h && h.itemId === pm.itemId);
+      if (!hits.length) return null;
+      hits.sort((a, b) => (Number(b.score || 0) - Number(a.score || 0)) || (Number(b.submittedAt || 0) - Number(a.submittedAt || 0)));
+      const best = hits[0];
+      return {
+        completed: true,
+        scoreLabel: best.total ? `${best.score}/${best.total}${best.band ? ` · B${Number(best.band).toFixed(1)}` : ''}` : 'Đã nộp',
+        updatedAt: Number(best.submittedAt || best.completedAt || 0),
+        raw: best,
+      };
+    }
+    if (pm.skill === 'writing') {
+      const localArr = readJson(`totoro_writing_prac_hist_v1_${uid}`, []);
+      const remoteArr = Array.isArray(sd.writingPracticeHistory) ? sd.writingPracticeHistory : [];
+      const all = [...(Array.isArray(localArr) ? localArr : []), ...remoteArr];
+      const hits = all.filter((h) => h && h.promptId === pm.itemId);
+      if (!hits.length) return null;
+      hits.sort((a, b) => Number(b.completedAt || 0) - Number(a.completedAt || 0));
+      const latest = hits[0];
+      return {
+        completed: true,
+        scoreLabel: latest.wordCount ? `${latest.wordCount} từ${latest.band ? ` · B${Number(latest.band).toFixed(1)}` : ''}` : 'Đã nộp',
+        updatedAt: Number(latest.completedAt || 0),
+        raw: latest,
+      };
+    }
+    return null;
+  }
+
   function getStudentHomeworkRow(taskObj, student, nowMs = Date.now()) {
     const bridge = B();
     const uid = bridge.getScopedUid(student.id);
+    if (taskObj?.isPractice && taskObj.practiceMeta) {
+      const pm = taskObj.practiceMeta;
+      const attempt = readStudentPracticeAttempt(student.id, pm);
+      const locks = readStudentAllLocks(student.id, nowMs);
+      const matchedLock = locks.find((lk) => lk.lockKey === taskObj.id || (pm.skill === 'writing' && lk.lockKey === 'w_prac_lock'));
+      const completed = Boolean(attempt?.completed);
+      const bucket = completed ? 'done' : (matchedLock ? 'locked' : 'missing');
+      const progressLabel = completed ? 'Đã nộp' : (matchedLock ? `Khóa ${formatMmSs(matchedLock.remainingMs)}` : 'Chưa làm');
+      return {
+        student,
+        uid,
+        rec: attempt?.raw || null,
+        bucket,
+        completed,
+        lock: matchedLock || null,
+        doneUnits: completed ? 1 : 0,
+        totalUnits: 1,
+        progressLabel,
+        scoreLabel: completed ? (attempt?.scoreLabel || 'Đã nộp') : '',
+        updatedAt: Number(attempt?.updatedAt || 0),
+      };
+    }
     const progMap = readSkillProgressMap(student.id, taskObj.skill);
     const rec = progMap[taskObj.id] || null;
     const locks = readStudentAllLocks(student.id, nowMs);
@@ -1177,19 +1499,34 @@
       }
     }
 
-    // 3. Sub-suite tabs
+    // 3. Sub-suite tabs (+ Practice Mode Bar when viewing Reading/Listening/Writing Practice suites!)
     const suites = getSuitesForSkill(state.pickerSkill);
     const curSuite = state.pickerSuite[state.pickerSkill] || (suites[0]?.key || 'all');
+    const isPracticeSuite = /^(?:rp_|lp_|wp_practice)/.test(curSuite);
     const suiteTabsEl = document.getElementById('teacher-task-suite-tabs');
     if (suiteTabsEl) {
+      const modeBarHtml = isPracticeSuite ? `
+        <div class="ts-prac-mode-bar">
+          <span class="ts-prac-mode-lbl">Chế độ học sinh làm bài:</span>
+          <button type="button" class="ts-prac-mode-btn ${state.pickerPracticeMode === 'practice' ? 'active' : ''}" onclick="TeacherStudio.setPickerPracticeMode('practice')">Luyện tập</button>
+          <button type="button" class="ts-prac-mode-btn ${state.pickerPracticeMode === 'exam' ? 'active' : ''}" onclick="TeacherStudio.setPickerPracticeMode('exam')">Thi thật</button>
+        </div>
+      ` : '';
       suiteTabsEl.innerHTML = suites.map((s) => `
         <button type="button" class="task-suite-tab ${curSuite === s.key ? 'active' : ''}" onclick="TeacherStudio.setPickerSuite('${esc(s.key)}')">${esc(s.label)}</button>
-      `).join('');
+      `).join('') + modeBarHtml;
     }
 
     // 4. Grid cards — STRICTLY CLEAN (NO "chưa làm / đang học / 0/8 HS" lines!)
     const gridEl = document.getElementById('teacher-dash-task-grid');
     if (!gridEl) return;
+
+    if (state.pickerLoadingBank) {
+      gridEl.className = 'ts-picker-grid';
+      gridEl.innerHTML = '<div class="ts-monitor-empty" style="grid-column:1/-1;">Đang nạp danh sách đề Practice...</div>';
+      updateLinkPreview();
+      return;
+    }
 
     if (state.pickerSkill === 'speaking' && !getSpeakingCatalog().length) {
       gridEl.className = 'ts-picker-grid';
@@ -1237,7 +1574,9 @@
       }
 
       let previewBtns = '';
-      if (t.skill === 'reading') {
+      if (t.isPractice) {
+        previewBtns = `<button type="button" class="ts-pick-mini-btn" onclick="TeacherStudio.previewSkillTask('${esc(t.skill)}', '${esc(t.id)}')">Mở đề</button>`;
+      } else if (t.skill === 'reading') {
         previewBtns = `
           <button type="button" class="ts-pick-mini-btn" onclick="TasksModule.openAdminTestPreview(1, '${esc(t.id)}')">T1</button>
           <button type="button" class="ts-pick-mini-btn" onclick="TasksModule.openAdminTestPreview(2, '${esc(t.id)}')">T2</button>
@@ -1738,6 +2077,11 @@
     if (typeof window.toggleTeacherStudyPreview === 'function') {
       window.toggleTeacherStudyPreview(true);
     }
+    const pm = parsePracticeTaskId(taskId);
+    if (pm) {
+      openStudentSkillTask(taskId);
+      return;
+    }
     if (skillKey === 'listening') {
       window.TotoroUI?.enterSkillMode?.('Listening', 'task');
       setTimeout(() => window.ListeningTasksModule?.openTaskBrief?.(taskId), 120);
@@ -1748,9 +2092,22 @@
   }
 
   function openStudentSkillTask(taskId) {
-    const taskObj = getTaskById(taskId);
-    if (!taskObj) return;
+    const cleanId = normalizeAnyTaskId(taskId);
+    const pm = parsePracticeTaskId(cleanId);
     document.getElementById('modal-student-combo-tasks')?.remove();
+    if (pm) {
+      if (pm.skill === 'reading') {
+        window.ReadingPracticeApp?.openAssignedItem?.(pm.itemId, pm.isFull, pm.mode);
+      } else if (pm.skill === 'listening') {
+        window.ListeningPracticeApp?.openAssignedItem?.(pm.itemId, pm.isFull, pm.mode);
+      } else if (pm.skill === 'writing') {
+        window.TotoroUI?.enterSkillMode?.('Writing', 'practice');
+        setTimeout(() => window.WritingStudio?.startPracticePrompt?.(pm.itemId, pm.mode), 160);
+      }
+      return;
+    }
+    const taskObj = getTaskById(cleanId);
+    if (!taskObj) return;
     if (taskObj.skill === 'reading') {
       window.TotoroUI?.enterSkillMode?.('Reading', 'task');
       setTimeout(() => window.TasksModule?.openTaskBriefModal?.(taskObj.id), 120);
@@ -1761,6 +2118,135 @@
       window.TotoroUI?.enterSkillMode?.('Writing', 'task');
       setTimeout(() => window.WritingStudio?.openTask?.(taskObj.id), 120);
     }
+  }
+
+  /* =========================================================
+     QUICK ASSIGN MODAL (Triggered right from Cambridge/Volume/Actual/Writing cards!)
+     ========================================================= */
+  function computeQuickAssignDeadlineMs(presetVal, customVal, nowTs = Date.now()) {
+    if (!presetVal || presetVal === '0') return 0;
+    if (presetVal === 'tonight_24') {
+      const d = new Date(nowTs);
+      d.setHours(23, 59, 59, 0);
+      return d.getTime() > nowTs ? d.getTime() : (nowTs + 60 * 60 * 1000);
+    }
+    if (presetVal === 'tomorrow_24') {
+      const d = new Date(nowTs);
+      d.setDate(d.getDate() + 1);
+      d.setHours(23, 59, 59, 0);
+      return d.getTime();
+    }
+    if (presetVal === 'custom') {
+      if (!customVal) return 0;
+      const ts = new Date(customVal).getTime();
+      return (Number.isFinite(ts) && ts > nowTs) ? ts : 0;
+    }
+    const mins = Number(presetVal || 0);
+    return (Number.isFinite(mins) && mins > 0) ? (nowTs + mins * 60 * 1000) : 0;
+  }
+
+  function updateQuickAssignPreview() {
+    const ctx = state.quickAssignCtx;
+    if (!ctx) return;
+    const mode = document.querySelector('#modal-practice-assign [data-qa-mode].active')?.getAttribute('data-qa-mode') || 'practice';
+    const preset = document.getElementById('qa-dl-preset')?.value || 'tonight_24';
+    const customEl = document.getElementById('qa-dl-custom');
+    if (customEl) customEl.style.display = preset === 'custom' ? 'block' : 'none';
+    const nowTs = Date.now();
+    const dlMs = computeQuickAssignDeadlineMs(preset, customEl?.value || '', nowTs);
+    const taskId = buildPracticeTaskId(ctx.skill, ctx.itemId, ctx.isFull, mode);
+    const msg = buildDailyHomeworkMessage([taskId], dlMs, nowTs, nowTs);
+    const prevEl = document.getElementById('qa-preview-box');
+    if (prevEl) prevEl.value = msg;
+    return { taskId, dlMs, issuedAt: nowTs, msg, mode };
+  }
+
+  function openPracticeAssignModal(opts = {}) {
+    if (!opts.itemId) return;
+    state.quickAssignCtx = {
+      skill: opts.skill || 'reading',
+      itemId: String(opts.itemId),
+      isFull: Boolean(opts.isFull),
+      title: String(opts.title || opts.itemId),
+      subtitle: String(opts.subtitle || ''),
+    };
+    document.getElementById('modal-practice-assign')?.remove();
+    const sm = skillMeta(state.quickAssignCtx.skill);
+    const ov = document.createElement('div');
+    ov.id = 'modal-practice-assign';
+    ov.className = 'modal-overlay open';
+    ov.style.zIndex = '2600';
+    ov.onclick = (e) => { if (e.target === ov) ov.remove(); };
+    ov.innerHTML = `
+      <div class="modal-card ts-qa-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;">
+              <span class="ts-skill-pill is-${esc(sm.key)}">${esc(sm.label.toUpperCase())} PRACTICE</span>
+              ${state.quickAssignCtx.subtitle ? `<span style="font-size:12px;color:var(--ink-3);font-weight:700;">${esc(state.quickAssignCtx.subtitle)}</span>` : ''}
+            </div>
+            <div class="modal-title" style="font-size:16px;">Giao bài theo link · ${esc(state.quickAssignCtx.title)}</div>
+          </div>
+          <button type="button" class="btn-icon-glass" style="width:32px;height:32px;" onclick="document.getElementById('modal-practice-assign')?.remove()" aria-label="Đóng">✕</button>
+        </div>
+        <div class="modal-body ts-qa-body">
+          <div class="ts-qa-row">
+            <label class="ts-qa-lbl">Chế độ học sinh làm bài</label>
+            <div class="ts-qa-seg">
+              <button type="button" class="ts-qa-seg-btn active" data-qa-mode="practice" onclick="TeacherStudio.setQuickAssignMode('practice')">Luyện tập (Totoro Washi)</button>
+              <button type="button" class="ts-qa-seg-btn" data-qa-mode="exam" onclick="TeacherStudio.setQuickAssignMode('exam')">Thi thật (CD-IELTS)</button>
+            </div>
+          </div>
+          <div class="ts-qa-row">
+            <label class="ts-qa-lbl" for="qa-dl-preset">Hạn nộp bài</label>
+            <select id="qa-dl-preset" class="ts-qa-select" onchange="TeacherStudio.updateQuickAssignPreview()">
+              <option value="0">Không giới hạn thời gian</option>
+              <option value="120">2 giờ tới</option>
+              <option value="tonight_24" selected>Cuối ngày hôm nay (23:59)</option>
+              <option value="tomorrow_24">Cuối ngày mai (23:59)</option>
+              <option value="custom">Tự chọn ngày giờ...</option>
+            </select>
+            <input type="datetime-local" id="qa-dl-custom" class="ts-qa-select" style="display:none;margin-top:6px;" onchange="TeacherStudio.updateQuickAssignPreview()">
+          </div>
+          <div class="ts-qa-row">
+            <label class="ts-qa-lbl" for="qa-preview-box">Mẫu gửi Zalo (tự tạo)</label>
+            <textarea id="qa-preview-box" class="ts-qa-preview" rows="3" readonly></textarea>
+          </div>
+          <div class="ts-qa-acts">
+            <button type="button" class="tot-demo-btn" onclick="TeacherStudio.addQuickAssignToBasket()">+ Thêm vào Giỏ combo</button>
+            <button type="button" class="btn btn-primary tot-demo-btn" onclick="TeacherStudio.copyQuickAssignLink()">🔗 Copy link Zalo ngay</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    updateQuickAssignPreview();
+  }
+
+  function setQuickAssignMode(mode) {
+    document.querySelectorAll('#modal-practice-assign [data-qa-mode]').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-qa-mode') === mode);
+    });
+    updateQuickAssignPreview();
+  }
+
+  function copyQuickAssignLink() {
+    const info = updateQuickAssignPreview();
+    if (!info || !info.msg) return;
+    updateLiveDeadlines([info.taskId], info.dlMs);
+    saveSentTasks([info.taskId]);
+    copySafe(info.msg, () => {
+      B()?.showToast?.('Đã copy link giao bài Zalo & lưu vào danh sách Đang giao!');
+      document.getElementById('modal-practice-assign')?.remove();
+    });
+  }
+
+  function addQuickAssignToBasket() {
+    const info = updateQuickAssignPreview();
+    if (!info) return;
+    state.selectedIds.add(info.taskId);
+    B()?.showToast?.(`Đã thêm vào Giỏ combo (${state.selectedIds.size} bài) — mở Bảng Giáo viên để copy gộp Zalo!`);
+    document.getElementById('modal-practice-assign')?.remove();
   }
 
   function openStudentComboModal(taskIds, deadlineMs = 0) {
@@ -1834,7 +2320,8 @@
       if (multi) multi.split(',').map(normalizeAnyTaskId).filter(Boolean).forEach((x) => { if (!rawList.includes(x)) rawList.push(x); });
       if (!rawList.length) return false;
       const hasNonReading = rawList.some((id) => detectSkillByTaskId(id) !== 'reading');
-      if (!hasNonReading) return false;
+      const hasPractice = rawList.some((id) => Boolean(parsePracticeTaskId(id)));
+      if (!hasNonReading && !hasPractice) return false;
       // Record deadline locally if present
       if (dl > 0) {
         const live = loadLiveDeadlines();
@@ -1863,7 +2350,39 @@
     setMonitorTab: (t) => { state.monitorTab = t === 'expired' ? 'expired' : 'active'; renderDashboard(); },
     setMonitorSkill: (sk) => { state.monitorSkill = sk || 'all'; renderDashboard(); },
     setPickerSkill: (sk) => { state.pickerSkill = sk; state.pickerQuery = ''; const el = document.getElementById('ts-picker-search'); if (el) el.value = ''; renderPickerSection(Date.now()); },
-    setPickerSuite: (suiteKey) => { state.pickerSuite[state.pickerSkill] = suiteKey; renderPickerSection(Date.now()); },
+    setPickerSuite: (suiteKey) => {
+      state.pickerSuite[state.pickerSkill] = suiteKey;
+      const rpMatch = String(suiteKey || '').match(/^rp_(cambridge|volume|actual)$/);
+      const lpMatch = String(suiteKey || '').match(/^lp_(cambridge|volume|actual)$/);
+      if (rpMatch && window.ReadingPracticeApp?.ensureSourceBankLoaded) {
+        state.pickerLoadingBank = true;
+        renderPickerSection(Date.now());
+        window.ReadingPracticeApp.ensureSourceBankLoaded(rpMatch[1]).finally(() => {
+          state.pickerLoadingBank = false;
+          renderPickerSection(Date.now());
+        });
+        return;
+      }
+      if (lpMatch && window.ListeningPracticeApp?.ensureSourceBankLoaded) {
+        state.pickerLoadingBank = true;
+        renderPickerSection(Date.now());
+        window.ListeningPracticeApp.ensureSourceBankLoaded(lpMatch[1]).finally(() => {
+          state.pickerLoadingBank = false;
+          renderPickerSection(Date.now());
+        });
+        return;
+      }
+      renderPickerSection(Date.now());
+    },
+    setPickerPracticeMode: (mode) => {
+      state.pickerPracticeMode = mode === 'exam' ? 'exam' : 'practice';
+      renderPickerSection(Date.now());
+    },
+    openPracticeAssignModal,
+    setQuickAssignMode,
+    updateQuickAssignPreview,
+    copyQuickAssignLink,
+    addQuickAssignToBasket,
     onPickerSearch: (val) => { state.pickerQuery = String(val || ''); renderPickerSection(Date.now()); },
     toggleHideAllDone: () => {
       state.pickerHideAllDone = !state.pickerHideAllDone;

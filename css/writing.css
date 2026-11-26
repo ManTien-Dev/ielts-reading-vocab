@@ -3287,10 +3287,29 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
 .ws-exam-room.is-practice.ins-size-regular .ws-ins-prompt-text {
   font-size: 15.5px !important;
   line-height: 1.62 !important;
+  background: var(--ins-input-bg, #fffefb) !important;
+  border: 1px solid color-mix(in srgb, var(--ins-border, #d8d1c2) 92%, transparent) !important;
+  border-radius: 13px !important;
+  padding: 15px 17px !important;
+  box-shadow: 0 4px 14px -10px rgba(34, 42, 34, 0.14);
 }
 .ws-exam-room.is-practice.ins-size-large .ws-ins-prompt-text {
   font-size: 17px !important;
   line-height: 1.65 !important;
+  background: var(--ins-input-bg, #fffefb) !important;
+  border: 1px solid color-mix(in srgb, var(--ins-border, #d8d1c2) 92%, transparent) !important;
+  border-radius: 13px !important;
+  padding: 16px 18px !important;
+}
+.ws-exam-room.is-practice .ws-ins-plan-card {
+  border-radius: 14px !important;
+  border-color: color-mix(in srgb, var(--ins-border, #d8d1c2) 88%, transparent) !important;
+  background: var(--ins-input-bg, #fffefb) !important;
+  box-shadow: 0 4px 14px -12px rgba(34, 42, 34, 0.12);
+}
+.ws-exam-room.is-practice .ws-ins-plan-head {
+  background: color-mix(in srgb, var(--ins-banner, #efe8da) 65%, var(--ins-input-bg, #fffefb)) !important;
+  padding: 9px 13px !important;
 }
 
 /* Custom Editorial Writing Paper Card (Practice Studio Mode — full-height spacious canvas) */
@@ -3553,4 +3572,497 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
   .ws-prac-search-wrap { flex: 1 1 100%; min-width: 0; }
   .ws-dnd-2col, .ws-sq-grid, .ws-trap-grid, .ws-prac-grid { grid-template-columns: 1fr; }
   .ws-para-editor { min-height: 260px; font-size: 15px; }
+}
+
+/* =========================================================
+   WRITING TASK REDESIGN (TOTORO SOFT-EDITORIAL PASTEL + CRAFT FLOOR)
+   Zero one-sided accent bars, connected stepper, crisp Flow A -> B -> C
+   ========================================================= */
+
+/* 1. Task Hub Cards: remove fake top accent bar, clean balanced header */
+.ws-task-card::before {
+  display: none !important;
+}
+.ws-task-card {
+  border-width: 1px;
+  border-color: var(--border-strong);
+  box-shadow: 0 2px 8px -4px rgba(24, 34, 28, 0.06);
+  padding: 15px 16px 13px;
+}
+.ws-task-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ws-task-card .ws-task-title {
+  margin-top: 0;
+  font-size: 15.5px;
+  font-weight: 780;
+  letter-spacing: -0.015em;
+}
+.ws-task-card .ws-task-meta {
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-top: 6px;
+  -webkit-line-clamp: 2;
+  min-height: 2.95em;
+}
+.ws-task-sec-btn {
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1), background-color 140ms ease;
+}
+.ws-task-pri-btn {
+  padding: 6px 13px !important;
+  font-size: 12.2px !important;
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1), background-color 140ms ease;
+}
+.ws-task-sec-btn:active,
+.ws-task-pri-btn:active {
+  transform: scale(0.97);
+}
+
+/* 2. Task Exam Modal: Warm Washi Canvas + Connected 3-Step Stepper */
+#ws-task-exam-card.ws-modal-card.is-wide {
+  background: var(--bg-app, #f4f1ea);
+  padding: 18px 24px 20px;
+  gap: 14px;
+  border-radius: 22px;
+}
+.ws-task-topbar {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.ws-task-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ws-task-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 11px 0 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.ws-task-back-btn:hover { background: var(--surface-item); }
+.ws-task-back-btn:active { transform: scale(0.97); }
+.ws-task-topbar .ws-modal-title {
+  font-size: 15.5px;
+  font-weight: 800;
+  text-transform: none;
+  letter-spacing: -0.015em;
+}
+
+.ws-step-pills.is-stepper {
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  padding: 4px;
+  border-radius: 999px;
+}
+.ws-step-pill.is-v2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 7px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  transition: background-color 150ms ease, color 150ms ease, transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.ws-step-pill.is-v2.is-clickable { cursor: pointer; }
+.ws-step-pill.is-v2.is-clickable:hover:not(.active) { color: var(--ink); background: var(--surface-panel); }
+.ws-step-pill.is-v2.is-clickable:active { transform: scale(0.97); }
+.ws-step-pill.is-v2 .ws-step-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--bg-subtle);
+  color: var(--ink-2);
+}
+.ws-step-pill.is-v2.active {
+  background: var(--accent);
+  color: #ffffff;
+}
+.ws-step-pill.is-v2.active .ws-step-dot {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+.ws-step-pill.is-v2.done {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.ws-step-pill.is-v2.done .ws-step-dot {
+  background: var(--ok);
+  color: #ffffff;
+}
+.ws-stepper-line {
+  width: 14px;
+  height: 1.5px;
+  background: var(--border-strong);
+  margin: 0 2px;
+}
+.ws-stepper-line.is-lit { background: var(--accent); }
+.ws-timer-chip {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12.5px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+/* 3. Test 1 Soft-Editorial Pastel Flow Board (Thầy Mẫn Pastel A -> B -> C) */
+.ws-t1-stage-head {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 16px;
+}
+.ws-t1-stage-title {
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+.ws-t1-stage-sub {
+  font-size: 12.6px;
+  color: var(--ink-2);
+  margin-top: 2px;
+}
+.ws-t1-stat {
+  border-radius: 999px;
+  padding: 5px 11px;
+  border-color: var(--border);
+  background: var(--bg-app, #f6f3ec);
+  font-family: var(--font-ui);
+  font-size: 12px;
+}
+.ws-t1-cta {
+  height: 36px;
+  padding: 0 16px !important;
+  border-radius: 11px !important;
+  font-size: 12.8px !important;
+  font-weight: 750 !important;
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1), background-color 140ms ease;
+}
+.ws-t1-cta:active { transform: scale(0.97); }
+
+.ws-t1-board { gap: 11px; }
+.ws-t1-row {
+  grid-template-columns: 116px 1fr 24px 1fr 24px 1fr;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 14px -6px rgba(20, 32, 24, 0.07);
+}
+/* Remove banned one-sided accent stripe on rounded pastel badge */
+.ws-t1-tag::before { display: none !important; }
+.ws-t1-tag {
+  border-radius: 14px;
+  padding: 10px 8px;
+  gap: 6px;
+  background: #e2f5e9;
+  border: 1px solid #bce3cb;
+  color: #1c5c37;
+}
+.ws-t1-tag.tone-amber {
+  background: #fef0dc;
+  border-color: #f3d2a4;
+  color: #8c4a12;
+}
+.ws-t1-tag.tone-teal {
+  background: #ece8fc;
+  border-color: #d3c8f7;
+  color: #4f3596;
+}
+.ws-t1-tag-idx {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.78);
+  color: inherit;
+  font-size: 11px;
+  font-weight: 850;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.ws-t1-tag-name {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ws-t1-cell {
+  background: #faf9f5;
+  border: 1.5px solid rgba(44, 52, 46, 0.11);
+  box-shadow: none;
+  border-radius: 14px;
+  padding: 10px 13px 12px;
+  min-height: 104px;
+  gap: 7px;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.ws-t1-cell:hover:not(.is-focused) {
+  background: #ffffff;
+  border-color: rgba(44, 52, 46, 0.24);
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+.ws-t1-cell.is-focused {
+  background: #ffffff;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent), 0 10px 22px -12px rgba(34, 70, 44, 0.24);
+}
+.ws-t1-cell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.ws-t1-step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ws-t1-step-num {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: rgba(44, 52, 46, 0.09);
+  color: #3a443d;
+  font-size: 10.5px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+.ws-t1-step-role {
+  font-size: 11px;
+  font-weight: 750;
+  color: #5b665e;
+  letter-spacing: 0.01em;
+}
+.ws-t1-cell.is-focused .ws-t1-step-num,
+.ws-t1-cell.is-done .ws-t1-step-num,
+.ws-t1-cell.is-ok .ws-t1-step-num {
+  background: var(--accent);
+  color: #ffffff;
+}
+.ws-t1-cell.is-focused .ws-t1-step-role,
+.ws-t1-cell.is-done .ws-t1-step-role,
+.ws-t1-cell.is-ok .ws-t1-step-role {
+  color: var(--accent);
+}
+.ws-t1-cell.is-bad .ws-t1-step-num {
+  background: var(--danger);
+  color: #ffffff;
+}
+.ws-t1-cell.is-bad .ws-t1-step-role {
+  color: var(--danger);
+}
+.ws-t1-cell-head .ws-t1-check {
+  position: static;
+  flex-shrink: 0;
+}
+
+/* Stronger Vietnamese cue contrast + crisp English typing */
+.ws-t1-mirror,
+.ws-t1-ta {
+  font-size: 14.8px;
+  line-height: 1.66;
+}
+.ws-t1-vi-active {
+  color: #202a23;
+  font-weight: 600;
+}
+.ws-t1-cell:not(.is-focused) .ws-t1-vi-active {
+  color: #2c3730;
+  opacity: 0.94;
+}
+.ws-t1-vi-upcoming {
+  color: #5d6860;
+  opacity: 0.88;
+}
+.ws-t1-arrow {
+  color: #8f9a92;
+  opacity: 0.85;
+}
+.ws-t1-arrow.is-lit {
+  color: var(--accent);
+  opacity: 1;
+}
+
+/* 4. Test 2 & Test 3 Spacious 44/56 Washi Split */
+.ws-task-2col {
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr) !important;
+  gap: 14px !important;
+}
+.ws-task-ref-pane,
+.ws-task-write-pane {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ws-task-write-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ws-gram-skel-item {
+  background: #faf9f5;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ws-gram-skel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ws-gram-status { font-size: 11.8px; font-weight: 750; }
+.ws-gram-status.is-ok { color: var(--ok); }
+.ws-gram-status.is-bad { color: var(--danger); }
+.ws-gram-skel-vi {
+  font-size: 13.4px;
+  line-height: 1.54;
+  color: var(--ink);
+  font-weight: 500;
+}
+.ws-gram-skel-formula {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #4f3596;
+  background: #efeafc;
+  border: 1px solid #d9cdf9;
+  padding: 5px 10px;
+  border-radius: 8px;
+  width: fit-content;
+}
+.ws-task-editor {
+  min-height: 310px !important;
+  font-size: 15.5px !important;
+  line-height: 1.74 !important;
+  padding: 14px 16px !important;
+  border-radius: 12px !important;
+  background: #fdfcf8 !important;
+  border: 1.5px solid var(--border-strong) !important;
+}
+.ws-task-editor:focus {
+  background: #ffffff !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent) !important;
+}
+.ws-task-prompt-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 15px;
+  border-radius: 13px;
+  background: #faf9f5;
+  border: 1px solid var(--border);
+}
+.ws-task-focus-note {
+  font-size: 12.8px;
+  line-height: 1.56;
+  color: var(--ink-2);
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: #edf6f0;
+  border: 1px solid #cbe2d3;
+  text-align: left;
+}
+.ws-prompt-sw {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.ws-prompt-sw.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Dark theme harmonization */
+html[data-theme="dark"] .ws-t1-cell,
+html[data-theme="dark"] .ws-gram-skel-item,
+html[data-theme="dark"] .ws-task-prompt-card {
+  background: var(--surface-panel);
+  border-color: var(--border-strong);
+}
+html[data-theme="dark"] .ws-t1-vi-active,
+html[data-theme="dark"] .ws-t1-cell:not(.is-focused) .ws-t1-vi-active {
+  color: var(--ink);
+}
+html[data-theme="dark"] .ws-t1-vi-upcoming {
+  color: var(--ink-2);
+}
+html[data-theme="dark"] .ws-t1-tag {
+  background: rgba(92, 196, 140, 0.14);
+  border-color: rgba(92, 196, 140, 0.3);
+  color: #8be0b0;
+}
+html[data-theme="dark"] .ws-t1-tag.tone-amber {
+  background: rgba(235, 175, 95, 0.14);
+  border-color: rgba(235, 175, 95, 0.3);
+  color: #f0c27d;
+}
+html[data-theme="dark"] .ws-t1-tag.tone-teal {
+  background: rgba(167, 146, 232, 0.14);
+  border-color: rgba(167, 146, 232, 0.3);
+  color: #cab9f7;
+}
+html[data-theme="dark"] .ws-t1-tag-idx {
+  background: rgba(255, 255, 255, 0.12);
+}
+html[data-theme="dark"] .ws-gram-skel-formula {
+  background: rgba(167, 146, 232, 0.14);
+  border-color: rgba(167, 146, 232, 0.3);
+  color: #cbbaf8;
+}
+html[data-theme="dark"] .ws-task-focus-note {
+  background: rgba(92, 196, 140, 0.12);
+  border-color: rgba(92, 196, 140, 0.28);
+  color: var(--ink);
+}
+html[data-theme="dark"] .ws-task-editor {
+  background: var(--surface-panel) !important;
+  color: var(--ink) !important;
 }

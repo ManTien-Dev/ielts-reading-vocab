@@ -21,15 +21,128 @@
 
   const STORAGE_KEY_BASE = 'ielts_reading_practice_v1_';
   const LOCKOUT_KEY_BASE = 'ielts_rp_anticheat_lock_v1_';
+  const PALETTE_STORAGE_KEY = 'ielts_rp_hl_palette_v1';
+  const BILINGUAL_STORAGE_KEY_BASE = 'ielts_rp_bilingual_v1_';
+  const ONLINE_DICT_CACHE_KEY = 'ielts_rp_online_dict_v1';
   const ANTI_CHEAT_LOCKOUT_MINS = 30;
 
-  const PASTEL_PENS = [
-    { id: 'yellow', name: 'Vàng nắng',     role: 'Ý chính',    swatch: '#FDE047' },
-    { id: 'green',  name: 'Xanh bạc hà',   role: 'Dẫn chứng',  swatch: '#86EFAC' },
-    { id: 'pink',   name: 'Hồng đào',      role: 'Từ bẫy',     swatch: '#F9A8D4' },
-    { id: 'blue',   name: 'Xanh bầu trời', role: 'Số liệu',    swatch: '#7DD3FC' },
-    { id: 'purple', name: 'Tím oải hương', role: 'Từ vựng',    swatch: '#D8B4FE' }
+  const HL_COLOR_IDS = ['yellow', 'green', 'pink', 'blue', 'purple', 'coral'];
+  const HL_ROLE_NAMES = ['Ý chính', 'Dẫn chứng', 'Từ khóa', 'Số liệu', 'Từ vựng', 'Lưu ý'];
+
+  // 6 Soothing Print-Ready Pastel Highlight Palettes (Matching Reference Image 5)
+  const PASTEL_PALETTES = [
+    {
+      id: 'macaron',
+      name: 'Cầu vồng Macaron',
+      sub: 'Macaron Pastel',
+      colors: ['#D6ECFC', '#D6F3DF', '#FFF0B3', '#FCE0EC', '#E9DFFA', '#FDE1CF'],
+      lines:  ['#60A5FA', '#4ADE80', '#EAB308', '#F472B6', '#A78BFA', '#FB923C']
+    },
+    {
+      id: 'sage',
+      name: 'Thảo mộc & Xô thơm',
+      sub: 'Botanical Sage',
+      colors: ['#D8F0DC', '#CFF0E8', '#EAF5C4', '#E3ECD4', '#F8F1C4', '#E0EDE2'],
+      lines:  ['#4E9460', '#2CA58D', '#8FB339', '#6B8E56', '#C9A227', '#5C8D6B']
+    },
+    {
+      id: 'ocean',
+      name: 'Biển xanh & Lam ngọc',
+      sub: 'Ocean & Sky',
+      colors: ['#DCF0FA', '#D1F3EE', '#C7EEF6', '#DBE4FA', '#C9E7FC', '#D6EFE7'],
+      lines:  ['#38BDF8', '#2DD4BF', '#22D3EE', '#60A5FA', '#0EA5E9', '#34D399']
+    },
+    {
+      id: 'sunset',
+      name: 'Hoàng hôn & Đất nung',
+      sub: 'Warm Sunset',
+      colors: ['#FDE5CF', '#FDE0B5', '#FAD8D0', '#FADCE8', '#FFF0BE', '#F4DFD5'],
+      lines:  ['#F97316', '#F59E0B', '#F87171', '#EC4899', '#EAB308', '#D97757']
+    },
+    {
+      id: 'lavender',
+      name: 'Oải hương & Thạch anh',
+      sub: 'Lavender & Mauve',
+      colors: ['#ECE0FA', '#F4E0F8', '#DFE6FA', '#E3D6FA', '#FCE0EE', '#E9E5F8'],
+      lines:  ['#A855F7', '#C084FC', '#818CF8', '#9333EA', '#EC4899', '#8B5CF6']
+    },
+    {
+      id: 'classic',
+      name: 'Học thuật Cổ điển',
+      sub: 'Academic Classic',
+      colors: ['#FFF2AC', '#DCE8FB', '#D8F2DE', '#FDE7B6', '#FBDFE6', '#FDE1CC'],
+      lines:  ['#CA8A04', '#3B82F6', '#16A34A', '#D97706', '#DB2777', '#EA580C']
+    }
   ];
+
+  function getActivePaletteId() {
+    try {
+      const saved = localStorage.getItem(PALETTE_STORAGE_KEY);
+      if (saved && PASTEL_PALETTES.some((p) => p.id === saved)) return saved;
+    } catch (_) {}
+    return 'macaron';
+  }
+
+  function getActivePalette() {
+    const pid = state?.highlightPalette || getActivePaletteId();
+    return PASTEL_PALETTES.find((p) => p.id === pid) || PASTEL_PALETTES[0];
+  }
+
+  function getActivePastelPens() {
+    const pal = getActivePalette();
+    return HL_COLOR_IDS.map((id, idx) => ({
+      id,
+      name: `Màu ${idx + 1} (${pal.name})`,
+      role: HL_ROLE_NAMES[idx] || 'Highlight',
+      swatch: pal.colors[idx] || pal.colors[0],
+      line: pal.lines[idx] || pal.lines[0]
+    }));
+  }
+
+  function buildPaletteCssVarsStyle(pal) {
+    const p = pal || getActivePalette();
+    return HL_COLOR_IDS.map((id, idx) => `--hl-${id}:${p.colors[idx]};--hl-${id}-line:${p.lines[idx]};`).join('');
+  }
+
+  function loadBilingualDrafts(passageId) {
+    if (!passageId) return {};
+    try {
+      const raw = localStorage.getItem(BILINGUAL_STORAGE_KEY_BASE + getUid());
+      const all = raw ? JSON.parse(raw) : {};
+      return (all && typeof all[passageId] === 'object' && all[passageId]) ? all[passageId] : {};
+    } catch (_) { return {}; }
+  }
+
+  function saveBilingualDraft(passageId, paraIdx, text) {
+    if (!passageId) return;
+    try {
+      const key = BILINGUAL_STORAGE_KEY_BASE + getUid();
+      const raw = localStorage.getItem(key);
+      const all = raw ? JSON.parse(raw) : {};
+      if (!all[passageId] || typeof all[passageId] !== 'object') all[passageId] = {};
+      if (String(text || '').trim()) all[passageId][String(paraIdx)] = String(text);
+      else delete all[passageId][String(paraIdx)];
+      localStorage.setItem(key, JSON.stringify(all));
+    } catch (_) {}
+  }
+
+  function clearBilingualDrafts(passageId) {
+    if (!passageId) return;
+    try {
+      const key = BILINGUAL_STORAGE_KEY_BASE + getUid();
+      const raw = localStorage.getItem(key);
+      const all = raw ? JSON.parse(raw) : {};
+      delete all[passageId];
+      localStorage.setItem(key, JSON.stringify(all));
+    } catch (_) {}
+  }
+
+  const PASTEL_PENS = HL_COLOR_IDS.map((id, idx) => ({
+    id,
+    name: `Màu ${idx + 1}`,
+    role: HL_ROLE_NAMES[idx] || 'Highlight',
+    swatch: PASTEL_PALETTES[0].colors[idx]
+  }));
 
   function B() { return window.__VOCAB_BRIDGE__ || null; }
   function DATA() {
@@ -219,15 +332,48 @@
      2. DICTIONARY LOOKUP (Post-Exam Review & News -> My Vocab)
      ========================================================= */
   let _appWordMap = null;
+  function getReadingDeckLabelForItem(it, bucket) {
+    if (bucket === 'file1') return 'Paraphrase 1.500';
+    if (bucket === 'signal') return 'Signal Words';
+    const tier = String(it?.tier || it?.level || '').toLowerCase();
+    if (tier === 'foundation') return 'Nền tảng';
+    if (tier === 'academic') return 'Học thuật';
+    if (tier === 'advanced') return 'Chuyên sâu';
+    const r = Number(it?.rank || 0);
+    if (r > 0 && r <= 1000) return 'Nền tảng';
+    if (r > 1000 && r <= 2200) return 'Học thuật';
+    return 'Chuyên sâu';
+  }
+
   function getAppWordMap() {
     if (_appWordMap) return _appWordMap;
     const map = new Map();
     const d = (typeof APP_DATA !== 'undefined' ? APP_DATA : window.APP_DATA) || {};
-    [d.file1_paraphrase_1500 || [], d.file2_families_3500 || [], d.signal_words || []].forEach((arr) => {
+    const buckets = [
+      ['file1', d.file1_paraphrase_1500 || []],
+      ['file2', d.file2_families_3500 || []],
+      ['signal', d.signal_words || []]
+    ];
+    buckets.forEach(([bucket, arr]) => {
       arr.forEach((it) => {
         if (!it || !it.lemma) return;
-        const k = String(it.lemma).trim().toLowerCase();
-        if (k && !map.has(k)) map.set(k, it);
+        const deckLabel = getReadingDeckLabelForItem(it, bucket);
+        const rec = { item: it, deckLabel, bucket };
+        const mainKey = String(it.lemma).trim().toLowerCase();
+        if (mainKey && !map.has(mainKey)) map.set(mainKey, rec);
+
+        // Index word forms so plurals/inflections/derivatives match the Reading list too
+        const forms = [];
+        if (typeof it.word_forms === 'string' && it.word_forms) {
+          it.word_forms.split(/[,;/]+/).forEach((f) => forms.push(f));
+        }
+        if (Array.isArray(it.clean_forms)) {
+          it.clean_forms.forEach((f) => forms.push(f));
+        }
+        forms.forEach((f) => {
+          const fk = String(f || '').trim().toLowerCase();
+          if (fk && fk.length >= 2 && !map.has(fk)) map.set(fk, rec);
+        });
       });
     });
     if (map.size > 0) _appWordMap = map;
@@ -246,26 +392,250 @@
     return cands;
   }
 
+  /* ---------- ONLINE DICTIONARY FALLBACK + LOCAL CACHE (for words outside 4.489 Reading list, e.g. "ocean-going") ---------- */
+  const _onlineDictMem = new Map();
+  let _dictLookupSeq = 0;
+
+  const EN_POS_TO_VI = {
+    noun: 'Danh từ',
+    verb: 'Động từ',
+    adjective: 'Tính từ',
+    adverb: 'Trạng từ',
+    preposition: 'Giới từ',
+    conjunction: 'Liên từ',
+    pronoun: 'Đại từ',
+    interjection: 'Thán từ',
+    phrase: 'Cụm từ'
+  };
+
+  function getOnlineDictCache() {
+    try {
+      const raw = localStorage.getItem(ONLINE_DICT_CACHE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (_) { return {}; }
+  }
+
+  function setOnlineDictCache(key, data) {
+    if (!key || !data) return;
+    _onlineDictMem.set(key, data);
+    try {
+      const all = getOnlineDictCache();
+      all[key] = { ...data, _ts: Date.now() };
+      const keys = Object.keys(all);
+      if (keys.length > 350) {
+        keys.sort((a, b) => (all[a]?._ts || 0) - (all[b]?._ts || 0));
+        keys.slice(0, keys.length - 300).forEach((k) => delete all[k]);
+      }
+      localStorage.setItem(ONLINE_DICT_CACHE_KEY, JSON.stringify(all));
+    } catch (_) {}
+  }
+
+  function getCachedOnlineEntry(lowerKey) {
+    if (_onlineDictMem.has(lowerKey)) return _onlineDictMem.get(lowerKey);
+    const all = getOnlineDictCache();
+    if (all[lowerKey]) {
+      _onlineDictMem.set(lowerKey, all[lowerKey]);
+      return all[lowerKey];
+    }
+    return null;
+  }
+
+  async function fetchOnlineWordDefinition(rawWord) {
+    const clean = String(rawWord || '').trim().replace(/\s+/g, ' ');
+    const key = clean.toLowerCase();
+    if (!key) return null;
+    const cached = getCachedOnlineEntry(key);
+    if (cached && cached.vi) return cached;
+
+    const result = { vi: '', ipa: '', pos: '', enDef: '', synonyms: [] };
+    const isSingleLike = /^[a-z]+(?:-[a-z]+)?$/i.test(clean);
+
+    // 1) Parallel free CORS endpoints: Google Translate (EN->VI) + Free Dictionary API (IPA/POS/EN def/synonyms)
+    const tasks = [];
+
+    // Google Translate public GTX endpoint (fast, handles compounds like "ocean-going" & phrases!)
+    tasks.push((async () => {
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 4500);
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&dt=bd&q=${encodeURIComponent(clean)}`;
+        const resp = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (!resp.ok) return;
+        const json = await resp.json();
+        const mainTrans = Array.isArray(json?.[0])
+          ? json[0].map((seg) => (Array.isArray(seg) ? seg[0] : '')).join('').trim()
+          : '';
+        const extraTerms = [];
+        if (Array.isArray(json?.[1])) {
+          json[1].forEach((grp) => {
+            if (!result.pos && typeof grp?.[0] === 'string') {
+              const p = EN_POS_TO_VI[grp[0].toLowerCase()];
+              if (p) result.pos = p;
+            }
+            if (Array.isArray(grp?.[1])) {
+              grp[1].slice(0, 3).forEach((t) => {
+                const s = String(t || '').trim();
+                if (s && s.toLowerCase() !== mainTrans.toLowerCase() && !extraTerms.includes(s)) {
+                  extraTerms.push(s);
+                }
+              });
+            }
+          });
+        }
+        const combined = [mainTrans, ...extraTerms.slice(0, 2)].filter(Boolean).join(', ').normalize('NFC');
+        if (combined && combined.toLowerCase() !== key) {
+          result.vi = combined.charAt(0).toUpperCase() + combined.slice(1);
+        }
+      } catch (_) {}
+    })());
+
+    // Free Dictionary API for IPA + English definition + Synonyms
+    if (isSingleLike) {
+      tasks.push((async () => {
+        try {
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 4500);
+          const resp = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(key)}`, { signal: ctrl.signal });
+          clearTimeout(tid);
+          if (!resp.ok) return;
+          const arr = await resp.json();
+          const first = Array.isArray(arr) ? arr[0] : null;
+          if (!first) return;
+          const phon = first.phonetic || (Array.isArray(first.phonetics) ? (first.phonetics.find((p) => p?.text)?.text || '') : '');
+          if (phon) result.ipa = phon;
+          const m0 = Array.isArray(first.meanings) ? first.meanings[0] : null;
+          if (m0) {
+            if (!result.pos && m0.partOfSpeech) {
+              result.pos = EN_POS_TO_VI[String(m0.partOfSpeech).toLowerCase()] || m0.partOfSpeech;
+            }
+            const def0 = Array.isArray(m0.definitions) ? m0.definitions[0]?.definition : '';
+            if (def0) result.enDef = String(def0).trim();
+            const syns = [];
+            (first.meanings || []).forEach((m) => {
+              (m.synonyms || []).forEach((s) => { if (s && !syns.includes(s) && s.toLowerCase() !== key) syns.push(s); });
+              (m.definitions || []).forEach((d) => {
+                (d.synonyms || []).forEach((s) => { if (s && !syns.includes(s) && s.toLowerCase() !== key) syns.push(s); });
+              });
+            });
+            if (syns.length) result.synonyms = syns.slice(0, 4);
+          }
+        } catch (_) {}
+      })());
+    }
+
+    await Promise.all(tasks);
+
+    // Fallback to MyMemory EN->VI if Google Translate didn't return a translation
+    if (!result.vi) {
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 4500);
+        const resp = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=en|vi`, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (resp.ok) {
+          const j = await resp.json();
+          const tr = String(j?.responseData?.translatedText || '').trim();
+          if (tr && tr.toLowerCase() !== key && !/^MYMEMORY WARNING/i.test(tr)) {
+            result.vi = tr.charAt(0).toUpperCase() + tr.slice(1);
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (result.vi || result.ipa || result.enDef) {
+      setOnlineDictCache(key, result);
+      return result;
+    }
+    return null;
+  }
+
   function lookupWordEntry(rawWord, passage) {
     const clean = String(rawWord || '').trim().replace(/^[^a-zA-Z]+|[^a-zA-Z-]+$/g, '');
     const lower = clean.toLowerCase();
     const gloss = passage?.glossary || {};
     const appMap = getAppWordMap();
     const ipaDict = (typeof IPA_DICT !== 'undefined' ? IPA_DICT : window.IPA_DICT) || {};
+    const cands = stemCandidates(lower);
 
-    for (const cand of stemCandidates(lower)) {
+    let appRec = null;
+    for (const cand of cands) {
+      if (appMap.has(cand)) { appRec = appMap.get(cand); break; }
+    }
+    const assessments = B()?.getAssessmentsMap?.() || {};
+    const readingWordId = appRec?.item?.id || '';
+    const readingAssess = readingWordId ? assessments[readingWordId] : 0;
+    const readingMeta = appRec ? {
+      inReadingList: true,
+      readingListLabel: appRec.deckLabel,
+      readingWordId,
+      readingLemma: appRec.item.lemma || clean,
+      readingStatus: readingAssess === 3 ? 'mastered' : (readingAssess > 0 ? 'learning' : 'listed')
+    } : {
+      inReadingList: false,
+      readingListLabel: '',
+      readingWordId: '',
+      readingLemma: '',
+      readingStatus: ''
+    };
+
+    for (const cand of cands) {
       if (gloss[cand]) {
         const g = gloss[cand];
-        return { word: clean, lemma: cand, ipa: g.ipa || ipaDict[cand] || '', pos: g.pos || 'word', vi: g.vi || '', synonyms: Array.isArray(g.syn) ? g.syn : [], found: true };
+        return {
+          word: clean, lemma: cand, ipa: g.ipa || ipaDict[cand] || '', pos: g.pos || 'Từ vựng',
+          vi: g.vi || '', enDef: '', synonyms: Array.isArray(g.syn) ? g.syn : [], found: true,
+          ...readingMeta
+        };
       }
     }
-    for (const cand of stemCandidates(lower)) {
-      const cat = appMap.get(cand);
-      if (cat) {
-        return { word: clean, lemma: cat.lemma || clean, ipa: cat.ipa || ipaDict[cand] || '', pos: cat.pos || 'word', vi: cat.clean_meaning || cat.definition || '', synonyms: Array.isArray(cat.synonyms) ? cat.synonyms.slice(0, 4) : [], found: true };
-      }
+    if (appRec) {
+      const cat = appRec.item;
+      const syns = Array.isArray(cat.clean_synonyms) && cat.clean_synonyms.length
+        ? cat.clean_synonyms.slice(0, 4)
+        : (Array.isArray(cat.synonyms) ? cat.synonyms.slice(0, 4) : []);
+      return {
+        word: clean,
+        lemma: cat.lemma || clean,
+        ipa: cat.ipa || ipaDict[String(cat.lemma || lower).toLowerCase()] || '',
+        pos: cat.clean_pos || cat.pos || 'Từ vựng',
+        vi: cat.clean_meaning || cat.definition || '',
+        enDef: '',
+        synonyms: syns,
+        found: true,
+        ...readingMeta
+      };
     }
-    return { word: clean, lemma: clean, ipa: ipaDict[lower] || '', pos: 'word', vi: '', synonyms: [], found: false };
+
+    // Check local online-dict cache (0ms repeat lookup!)
+    const cached = getCachedOnlineEntry(lower);
+    if (cached) {
+      return {
+        word: clean,
+        lemma: clean,
+        ipa: cached.ipa || ipaDict[lower] || '',
+        pos: cached.pos || (clean.includes(' ') ? 'Cụm từ' : 'Từ vựng'),
+        vi: cached.vi || '',
+        enDef: cached.enDef || '',
+        synonyms: Array.isArray(cached.synonyms) ? cached.synonyms : [],
+        found: !!cached.vi,
+        ...readingMeta
+      };
+    }
+
+    return {
+      word: clean,
+      lemma: clean,
+      ipa: ipaDict[lower] || '',
+      pos: clean.includes(' ') ? 'Cụm từ' : (clean.includes('-') ? 'Từ ghép' : 'Từ vựng'),
+      vi: '',
+      enDef: '',
+      synonyms: [],
+      found: false,
+      needsOnline: true,
+      ...readingMeta
+    };
   }
 
   /* =========================================================
@@ -653,6 +1023,308 @@
     return pSol[String(qNum)] || null;
   }
 
+  /* ---------- SMART 4-TIER EVIDENCE LOCATOR (100% Locate Coverage) ---------- */
+  const LOC_STOP_WORDS = new Set([
+    'the','a','an','is','are','was','were','be','been','being','have','has','had',
+    'do','does','did','will','would','could','should','may','might','must','can',
+    'to','of','in','on','at','for','with','by','from','as','into','through','about',
+    'between','after','before','under','over','above','below','and','or','but','nor',
+    'so','yet','if','then','than','that','this','these','those','it','its','they',
+    'them','their','he','him','his','she','her','we','us','our','you','your','not',
+    'no','only','more','most','some','any','all','each','every','one','two','such',
+    'very','also','when','where','which','who','whom','whose','what','why','how',
+    'there','here','many','much','other','another','first','second','third','used',
+    'make','made','often','people','person','article','passage','writer','author',
+    'text','following','information','paragraph','section','statement','true','false',
+    'given','yes','choose','correct','letter','box','answer','sheet','words','number'
+  ]);
+  const _autoLocCache = new Map();
+
+  function splitParagraphSentencesWithOffsets(text) {
+    const raw = String(text || '');
+    if (!raw.trim()) return [];
+    const sents = [];
+    let start = 0;
+    const abbrevRe = /\b(?:Dr|Mr|Mrs|Ms|Prof|St|Sr|Jr|vs|etc|eg|ie|e\.g|i\.e|Fig|No|Vol|p|pp|U\.S|U\.K|St)\.$/i;
+    const len = raw.length;
+    for (let i = 0; i < len; i++) {
+      const ch = raw[i];
+      if (ch === '.' || ch === '!' || ch === '?') {
+        const next = raw[i + 1] || '';
+        const next2 = raw[i + 2] || '';
+        // Skip decimals like 3.5 or abbreviations like Dr. / U.S.
+        if (ch === '.' && /\d/.test(raw[i - 1] || '') && /\d/.test(next)) continue;
+        if (ch === '.' && abbrevRe.test(raw.slice(Math.max(0, i - 10), i + 1))) continue;
+        const isEnd = i === len - 1 || (/\s/.test(next) && (!next2 || /[A-Z0-9“"‘'(]/.test(next2)));
+        if (isEnd) {
+          let s = start;
+          let e = i + 1;
+          // Include trailing closing quote if immediately following punctuation
+          if (raw[e] === '"' || raw[e] === '”' || raw[e] === "'" || raw[e] === '’') e++;
+          while (s < e && /\s/.test(raw[s])) s++;
+          while (e > s && /\s/.test(raw[e - 1])) e--;
+          if (e - s >= 6) {
+            const sub = raw.slice(s, e);
+            sents.push({ start: s, end: e, text: sub, lower: sub.toLowerCase() });
+          }
+          start = e;
+        }
+      }
+    }
+    if (start < len) {
+      let s = start;
+      let e = len;
+      while (s < e && /\s/.test(raw[s])) s++;
+      while (e > s && /\s/.test(raw[e - 1])) e--;
+      if (e - s >= 6) {
+        const sub = raw.slice(s, e);
+        sents.push({ start: s, end: e, text: sub, lower: sub.toLowerCase() });
+      }
+    }
+    if (!sents.length && raw.trim().length) {
+      sents.push({ start: 0, end: raw.length, text: raw, lower: raw.toLowerCase() });
+    }
+    return sents;
+  }
+
+  function extractLocatorTokens(str) {
+    const raw = String(str || '').replace(/_{2,}|\[\s*\.\.\.\s*\]/g, ' ');
+    const matches = raw.match(/[A-Za-z0-9]+(?:[-'][A-Za-z0-9]+)*/g) || [];
+    const out = [];
+    for (const m of matches) {
+      const low = m.toLowerCase();
+      const isNum = /^\d+$/.test(m);
+      if (!isNum && (low.length < 3 || LOC_STOP_WORDS.has(low))) continue;
+      const isCap = !isNum && /^[A-Z][a-z]{2,}/.test(m);
+      out.push({ raw: m, low, stem: low.length >= 5 ? low.slice(0, low.length - 2) : low, isNum, isCap });
+    }
+    return out;
+  }
+
+  function findQuoteInPassage(passage, quote) {
+    const cleanQ = String(quote || '').replace(/^[“"'\s]+|[”"'\s]+$/g, '').trim();
+    if (!cleanQ || cleanQ.length < 8) return null;
+    const paras = passage?.paragraphs || [];
+    const segments = cleanQ.split(/\s*(?:\.{3,}|…)\s*/).map((s) => s.trim()).filter((s) => s.length >= 12);
+    const probes = segments.length ? [cleanQ, ...segments.sort((a, b) => b.length - a.length)] : [cleanQ];
+
+    for (const probe of probes) {
+      const normProbe = probe.toLowerCase().replace(/\s+/g, ' ');
+      for (let pIdx = 0; pIdx < paras.length; pIdx++) {
+        const raw = String(paras[pIdx]?.en || '');
+        const idx = raw.toLowerCase().indexOf(normProbe);
+        if (idx >= 0) {
+          return [pIdx, idx, Math.min(raw.length, idx + normProbe.length)];
+        }
+      }
+    }
+    // Fallback: best overlapping sentence with quote tokens
+    const qToks = extractLocatorTokens(cleanQ);
+    if (!qToks.length) return null;
+    let best = null;
+    for (let pIdx = 0; pIdx < paras.length; pIdx++) {
+      const sents = splitParagraphSentencesWithOffsets(paras[pIdx]?.en || '');
+      for (const sent of sents) {
+        let hits = 0;
+        for (const t of qToks) {
+          if (sent.lower.includes(t.low)) hits += 2;
+          else if (t.stem.length >= 4 && sent.lower.includes(t.stem)) hits += 1;
+        }
+        const score = hits / Math.max(1, qToks.length);
+        if (score >= 0.45 && (!best || score > best.score)) {
+          best = { pIdx, start: sent.start, end: sent.end, score };
+        }
+      }
+    }
+    return best ? [best.pIdx, best.start, best.end] : null;
+  }
+
+  function findQuestionGroupFor(passage, qNum) {
+    for (const g of (passage?.groups || [])) {
+      if ((g.questions || []).some((x) => Number(x.num) === Number(qNum))) return g;
+    }
+    return null;
+  }
+
+  function resolveQuestionEvidenceLoc(passage, q, sol) {
+    if (!passage || !q) return null;
+    const paras = passage.paragraphs || [];
+    if (!paras.length) return null;
+
+    // Tier 2: Verified pre-authored solution coordinates
+    if (Array.isArray(sol?.loc) && sol.loc.length === 3) {
+      const p = Number(sol.loc[0]);
+      const st = Number(sol.loc[1]);
+      const en = Number(sol.loc[2]);
+      const raw = String(paras[p]?.en || '');
+      if (raw && st >= 0 && en > st && en <= raw.length) {
+        return { loc: [p, st, en], source: 'verified' };
+      }
+    }
+
+    // Tier 3: Match solution quote inside passage paragraphs
+    if (sol?.quote) {
+      const qLoc = findQuoteInPassage(passage, sol.quote);
+      if (qLoc) return { loc: qLoc, source: 'quote' };
+    }
+
+    // Tier 4: Deterministic smart auto-locator (memoized per passage + question)
+    const cacheKey = `${passage.id}__q${q.num}`;
+    if (_autoLocCache.has(cacheKey)) return _autoLocCache.get(cacheKey);
+
+    const group = findQuestionGroupFor(passage, q.num);
+    const allQs = getAllQuestionsInPassage(passage);
+    const qIdxInPassage = Math.max(0, allQs.findIndex((x) => Number(x.num) === Number(q.num)));
+    const qRelPos = allQs.length > 1 ? qIdxInPassage / (allQs.length - 1) : 0.5;
+
+    // Helper: detect paragraph letter label from para.label OR leading "A " / "D. " inside para.en
+    const getParaLetter = (para) => {
+      const explicit = String(para?.label || '').trim().toUpperCase();
+      if (/^[A-L]$/.test(explicit)) return explicit;
+      const m = String(para?.en || '').trim().match(/^([A-L])(?:[\s.:)\-–]+)(?=[A-Z“"‘'(])/);
+      return m ? m[1] : '';
+    };
+
+    // Build sentence index across all paragraphs
+    const allSents = [];
+    const docFreq = new Map();
+    paras.forEach((para, pIdx) => {
+      const pLbl = getParaLetter(para);
+      const sents = splitParagraphSentencesWithOffsets(para?.en || '');
+      sents.forEach((st, sIdx) => {
+        const uniq = new Set((st.lower.match(/[a-z0-9]{3,}/g) || []));
+        uniq.forEach((w) => docFreq.set(w, (docFreq.get(w) || 0) + 1));
+        allSents.push({
+          pIdx,
+          sIdx,
+          paraLabel: pLbl,
+          start: st.start,
+          end: st.end,
+          text: st.text,
+          lower: st.lower
+        });
+      });
+    });
+    if (!allSents.length) return null;
+
+    // Detect if answer/question directly targets a labeled paragraph (Matching Headings / Paragraph Info Matching)
+    let targetParaIdx = -1;
+    if (q.sectionLabel) {
+      const lbl = String(q.sectionLabel).trim().toUpperCase();
+      targetParaIdx = paras.findIndex((p) => getParaLetter(p) === lbl);
+    } else if (q.type === 'select') {
+      const ansLetter = String(Array.isArray(q.answer) ? q.answer[0] : q.answer || '').trim().toUpperCase();
+      const paraLabels = new Set(paras.map((p) => getParaLetter(p)).filter(Boolean));
+      const groupHay = `${group?.title || ''} ${group?.instruction || ''}`;
+      const isParaMatch = paraLabels.size >= 3 && paraLabels.has(ansLetter) &&
+        (/\b(paragraph|section|part)\b/i.test(groupHay) || !/\b(person|people|researcher|scientist|writer|expert|list of)\b/i.test(groupHay));
+      if (isParaMatch) {
+        targetParaIdx = paras.findIndex((p) => getParaLetter(p) === ansLetter);
+      }
+    }
+
+    const candidateSents = targetParaIdx >= 0
+      ? allSents.filter((x) => x.pIdx === targetParaIdx)
+      : allSents;
+    const pool = candidateSents.length ? candidateSents : allSents;
+
+    // Gather answer terms & extra semantic cues
+    const answerList = Array.isArray(q.answer) ? q.answer : (q.answer != null ? [q.answer] : []);
+    const cleanAnswers = answerList.map((a) => String(a || '').replace(/[()]/g, '').trim()).filter(Boolean);
+    let extraText = '';
+    if (q.type === 'mcq' && Array.isArray(q.options)) {
+      const key = String(cleanAnswers[0] || '').toUpperCase();
+      const opt = q.options.find((o) => String(o?.key || '').toUpperCase() === key);
+      if (opt?.text) extraText += ' ' + opt.text;
+    } else if (group?.type === 'matching_headings' && Array.isArray(group.headings)) {
+      const key = String(cleanAnswers[0] || '').toLowerCase();
+      const hd = group.headings.find((h) => String(h?.key || '').toLowerCase() === key);
+      if (hd?.text) extraText += ' ' + hd.text;
+    } else if (q.type === 'select' && targetParaIdx < 0 && group?.instruction) {
+      const key = String(cleanAnswers[0] || '').toUpperCase();
+      const lineRe = new RegExp(`(?:^|\\n)\\s*${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s.:\\-–]+([^\\n]+)`, 'i');
+      const m = String(group.instruction).match(lineRe);
+      if (m && m[1]) extraText += ' ' + m[1];
+    }
+
+    const promptToks = extractLocatorTokens(q.prompt || '');
+    const extraToks = extractLocatorTokens(extraText);
+    const totalSentCount = allSents.length;
+    const isOrderedType = ['gap', 'tfng', 'ynng', 'mcq'].includes(q.type);
+    const isGapType = q.type === 'gap';
+
+    let best = null;
+    for (let i = 0; i < pool.length; i++) {
+      const s = pool[i];
+      let score = 0;
+
+      // Exact gap answer match is the strongest signal in IELTS Reading
+      if (isGapType) {
+        for (const ans of cleanAnswers) {
+          const lowAns = ans.toLowerCase();
+          if (lowAns.length < 2) continue;
+          const escAns = lowAns.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const wordRe = new RegExp(`\\b${escAns}\\b`, 'i');
+          if (wordRe.test(s.text)) {
+            score += 18;
+            break;
+          }
+          if (s.lower.includes(lowAns)) {
+            score += 11;
+            break;
+          }
+          const ansWords = lowAns.split(/\s+/).filter((w) => w.length >= 3);
+          if (ansWords.length > 1 && ansWords.every((w) => s.lower.includes(w))) {
+            score += 13;
+            break;
+          }
+        }
+      }
+
+      // Prompt tokens weighted by inverse document frequency
+      for (const t of promptToks) {
+        const df = docFreq.get(t.low) || 1;
+        const idf = Math.max(0.5, Math.log((totalSentCount + 1) / (df + 0.5)));
+        if (t.isNum) {
+          if (s.lower.includes(t.low)) score += 5.5 * idf;
+        } else if (s.lower.includes(t.low)) {
+          score += (t.isCap ? 3.8 : 2.5) * idf;
+        } else if (t.stem.length >= 4 && s.lower.includes(t.stem)) {
+          score += 1.4 * idf;
+        }
+      }
+
+      // Extra semantic tokens (MCQ correct option / Matching heading / Person name)
+      for (const t of extraToks) {
+        const df = docFreq.get(t.low) || 1;
+        const idf = Math.max(0.5, Math.log((totalSentCount + 1) / (df + 0.5)));
+        if (s.lower.includes(t.low)) {
+          score += (t.isCap ? 4.2 : 2.8) * idf;
+        } else if (t.stem.length >= 4 && s.lower.includes(t.stem)) {
+          score += 1.3 * idf;
+        }
+      }
+
+      // Gentle order prior for sequential IELTS Reading question types
+      if (isOrderedType && targetParaIdx < 0) {
+        const globalIdx = allSents.indexOf(s);
+        const sentRelPos = totalSentCount > 1 ? globalIdx / (totalSentCount - 1) : 0.5;
+        score += 1.1 * (1 - Math.abs(qRelPos - sentRelPos));
+      } else if (targetParaIdx >= 0 && s.sIdx === 0) {
+        // Topic sentence tie-breaker inside a matched paragraph
+        score += 0.35;
+      }
+
+      if (!best || score > best.score) {
+        best = { pIdx: s.pIdx, start: s.start, end: s.end, score };
+      }
+    }
+
+    const result = best ? { loc: [best.pIdx, best.start, best.end], source: 'auto' } : null;
+    if (result) _autoLocCache.set(cacheKey, result);
+    return result;
+  }
+
   function mergeBankPayload(src, payload) {
     if (!payload) return;
     const d = DATA();
@@ -950,34 +1622,35 @@
       news: 'assets/images/reading_covers/portal_news.webp?v=20261125c'
     };
 
+    const conciseDescById = {
+      cambridge: '194 bài đọc · 71 Full Tests · Chuẩn Cambridge & đáp án gốc.',
+      volume: '114 bài đọc · 38 Full Tests · Chia rõ Test 1–4 & Passage 1–3.',
+      actual: '270 bài thi thật gần đây · Lọc nhanh theo Passage & dạng câu hỏi.',
+      news: 'The Economist, Nature, BBC Future · Song ngữ & lưu từ 1 chạm.'
+    };
+
     const cardsHtml = sources.map((s) => {
       const summary = d.BANK_SUMMARY || {};
+      const doneInSource = new Set(hist.filter((h) => h.source === s.id).map((h) => h.itemId)).size;
       let rightBadge = '';
       if (s.id === 'cambridge') rightBadge = `${summary.cambridge?.booksReady || 20}/20 cuốn`;
       else if (s.id === 'volume') rightBadge = `10 tập · Real Reading`;
       else if (s.id === 'actual') rightBadge = `Passage 1–3 · Full Test`;
       else rightBadge = `Song ngữ · Tra từ`;
 
-      const actionsHtml = s.id === 'news'
-        ? `
-          <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('news')">Chọn chủ đề</button>
-          <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('news')">Đọc báo ngay</button>
-        `
-        : s.id === 'actual'
-          ? `
-            <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('actual', 'p1')">Chọn bài đọc</button>
-            <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('actual', 'full')">Làm Full Test</button>
-          `
-          : `
-            <button type="button" class="tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'all')">Chọn bộ đề</button>
-            <button type="button" class="btn btn-primary tot-demo-btn" style="height:31px;font-size:12px;" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', 'full')">Làm Full Test</button>
-          `;
+      const footMeta = doneInSource > 0
+        ? `<span class="rp-portal-stat is-done tabular">Đã làm ${doneInSource} bài</span>`
+        : `<span class="rp-portal-stat">${s.id === 'news' ? 'Đọc & lưu từ' : 'Luyện tập · Thi thật'}</span>`;
+
+      const actionsHtml = `
+        <button type="button" class="btn btn-primary tot-demo-btn rp-portal-cta" onclick="event.stopPropagation(); ReadingPracticeApp.openSource('${esc(s.id)}', '${s.id === 'actual' ? 'p1' : 'all'}')">${s.id === 'news' ? 'Đọc báo →' : 'Mở kho đề →'}</button>
+      `;
 
       const coverUrl = portalCoverById[s.id] || portalCoverById.cambridge;
 
       return `
         <div class="tot-exam-card rp-portal-card has-cover" data-rp-portal="${esc(s.id)}"
-          onclick="ReadingPracticeApp.openSource('${esc(s.id)}')" role="button" tabindex="0">
+          onclick="ReadingPracticeApp.openSource('${esc(s.id)}', '${s.id === 'actual' ? 'p1' : 'all'}')" role="button" tabindex="0">
           <div class="rp-portal-cover">
             <img class="rp-portal-cover-img" src="${esc(coverUrl)}" alt="" loading="lazy" decoding="async">
             <div class="rp-portal-cover-scrim" aria-hidden="true"></div>
@@ -988,10 +1661,11 @@
           </div>
           <div class="rp-portal-body">
             <div>
-              <div class="rp-portal-title" style="font-size:15.5px;font-weight:750;color:var(--ink);">${esc(s.bookTitle || s.label)}</div>
-              <div style="font-size:12.5px;color:var(--ink-2);margin-top:5px;line-height:1.52;">${esc(s.desc)}</div>
+              <div class="rp-portal-title">${esc(s.bookTitle || s.label)}</div>
+              <div class="rp-portal-desc">${esc(conciseDescById[s.id] || s.desc)}</div>
             </div>
             <div class="rp-portal-foot">
+              ${footMeta}
               ${actionsHtml}
             </div>
           </div>
@@ -1000,17 +1674,9 @@
     }).join('');
 
     root.innerHTML = `
-      <div class="tot-section-shell ink-brackets has-stamp">
-        <svg class="ghibli-stamp" style="right:26px;bottom:22px;width:116px;height:116px;opacity:0.09;" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-          <circle cx="32" cy="32" r="29" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>
-          <path d="M32 7V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M12 24C16 14 23 11 32 11C41 11 48 14 52 24C47 21.8 42 21.8 38 23.5C34 21.6 30 21.6 26 23.5C22 21.8 17 21.8 12 24Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="currentColor" fill-opacity=".1"/>
-          <path d="M32 22V39C32 41.2 34.4 42 35.4 40" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-          <path d="M22 29L19.5 21L26 25.5C29.5 24.5 34.5 24.5 38 25.5L44.5 21L42 29C47 33 49 40 48.5 47.5C47.8 53.5 41.5 56.5 32 56.5C22.5 56.5 16.2 53.5 15.5 47.5C15 40 17 33 22 29Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <circle cx="25.5" cy="32.5" r="1.9" fill="currentColor"/><circle cx="38.5" cy="32.5" r="1.9" fill="currentColor"/>
-        </svg>
-        <div class="tot-shell-head">
-          <div style="display:flex;align-items:center;gap:10px;">
+      <div class="tot-section-shell rp-portal-shell">
+        <div class="tot-shell-head rp-portal-head">
+          <div style="display:flex;align-items:center;gap:11px;">
             <span class="tot-icon-tile info" aria-hidden="true" style="width:36px;height:36px;">
               <svg viewBox="2 2 24 24" fill="none">
                 <path d="M8.5 11.2L7 5.6L11.2 9C12.5 8.5 14 8.5 15.3 9L19.5 5.6L18 11.2C20.2 12.8 21.2 15.2 21 18.2C20.7 21.5 17.8 23.2 13.2 23.2C8.6 23.2 5.7 21.5 5.4 18.2C5.2 15.2 6.2 12.8 8.5 11.2Z" fill="#6B92B8" stroke="#3F5C78" stroke-width="1.1"/>
@@ -1020,8 +1686,8 @@
               </svg>
             </span>
             <div>
-              <h2 class="tot-shell-title">Luyện đọc · Practice</h2>
-              <p class="tot-shell-sub">Chọn Cambridge 1–20, Real Reading Test Volume 1–10, IELTS Reading Recent Actual Tests hoặc đọc báo học thuật News.</p>
+              <h2 class="tot-shell-title">Kho đề Reading</h2>
+              <p class="tot-shell-sub">Chọn bộ đề luyện tập hoặc thi bấm giờ chuẩn phòng thi máy.</p>
             </div>
           </div>
         </div>
@@ -1303,12 +1969,12 @@
       const bookPassages = Object.values(d.PASSAGES || {}).filter((p) => p.bookId === curBook?.id);
       const bookFullTests = (d.FULL_TESTS || []).filter((t) => t.bookId === curBook?.id);
 
-      // 4 Test tabs inside the selected Book
+      // 4 Test tabs inside the selected Book (concise labels — no repeated "Sẵn sàng" clutter)
       const testTabsHtml = [1, 2, 3, 4].map((tNum) => {
         const st = curTestStatus[tNum] || {};
         const hasP = st.hasData;
         const isAct = state.selectedTestNum === tNum;
-        const stateText = st.done ? 'Đã làm' : (hasP ? 'Sẵn sàng' : 'Trống');
+        const stateTag = st.done ? '<small>✓ Xong</small>' : (!hasP ? '<small>Trống</small>' : '');
         return `
           <button type="button"
             class="rp-test-tab ${isAct ? 'active' : ''} ${hasP ? 'has-data' : 'is-empty'} ${st.done ? 'is-done' : ''}"
@@ -1317,7 +1983,7 @@
             onclick="ReadingPracticeApp.selectTestNum(${tNum})">
             <span class="rp-test-dot" aria-hidden="true"></span>
             <span class="rp-test-name">Test ${tNum}</span>
-            <small>${stateText}</small>
+            ${stateTag}
           </button>
         `;
       }).join('');
@@ -1403,24 +2069,20 @@
           </div>
         `;
       } else {
-        const sections = [
-          { key: 'p1', title: 'Passage 1', badge: '20 phút · Dễ → Trung bình', items: testPassages.filter((p) => p.passageNum === 1), isFull: false },
-          { key: 'p2', title: 'Passage 2', badge: '20 phút · Trung bình → Khá', items: testPassages.filter((p) => p.passageNum === 2), isFull: false },
-          { key: 'p3', title: 'Passage 3', badge: '20 phút · Nâng cao Band 7.5+', items: testPassages.filter((p) => p.passageNum === 3), isFull: false },
-          { key: 'full', title: 'FULL TEST', badge: '60 phút · Trọn bộ 3 Passage', items: testFulls, isFull: true }
+        // Distilled 2x2 Test Quad: Passage 1, 2, 3 + Full Test all visible cleanly without 4 duplicate section headers
+        const orderedPassages = [1, 2, 3]
+          .flatMap((n) => testPassages.filter((p) => Number(p.passageNum) === n));
+        const quadCards = [
+          ...orderedPassages.map((it) => renderHubCard(it, false)),
+          ...testFulls.map((it) => renderHubCard(it, true))
         ];
-
-        contentHtml = sections.map((sec) => `
-          <div class="rp-section-block" data-rp-section="${sec.key}">
-            <div class="rp-section-head">
-              <h3 class="rp-section-title">${esc(sec.title)}</h3>
-              <span class="rp-section-badge">${esc(sec.badge)}</span>
+        contentHtml = `
+          <div class="rp-section-block rp-test-quad-block" data-rp-section="test-${state.selectedTestNum}">
+            <div class="rp-cards-grid is-test-quad">
+              ${quadCards.join('')}
             </div>
-            ${sec.items.length
-              ? `<div class="rp-cards-grid ${sec.items.length === 1 ? 'is-single' : ''}">${sec.items.map((it) => renderHubCard(it, sec.isFull)).join('')}</div>`
-              : `<div class="rp-empty-inline">Không có đề khớp trong mục ${esc(sec.title)}.</div>`}
           </div>
-        `).join('');
+        `;
       }
     } else {
       const allNews = Object.values(d.PASSAGES || {}).filter((p) => p.source === 'news');
@@ -1449,16 +2111,25 @@
       `;
     }
 
+    const sourceSwitchPills = [
+      { id: 'cambridge', lbl: 'Cambridge' },
+      { id: 'volume', lbl: 'Volume' },
+      { id: 'actual', lbl: 'Actual' },
+      { id: 'news', lbl: 'News' }
+    ].map((sp) => `
+      <button type="button" class="rp-src-pill ${state.source === sp.id ? 'active' : ''}"
+        aria-pressed="${state.source === sp.id ? 'true' : 'false'}"
+        onclick="ReadingPracticeApp.openSource('${sp.id}', '${sp.id === 'actual' ? 'p1' : 'all'}')">${sp.lbl}</button>
+    `).join('');
+
     root.innerHTML = `
-      <div class="rp-hub-shell tot-section-shell ink-brackets">
-        <div class="rp-hub-head">
-          <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-            <button type="button" class="btn-subtle rp-btn-sm" id="rp-btn-back-portal" onclick="ReadingPracticeApp.openPortal()">← Practice</button>
-            <div>
-              <h2 class="tot-shell-title">${esc(curSourceObj?.bookTitle || curSourceObj?.label || 'Practice')}</h2>
-              <p class="tot-shell-sub">${esc(curSourceObj?.desc || '')}</p>
-            </div>
+      <div class="rp-hub-shell tot-section-shell">
+        <div class="rp-hub-head rp-hub-head-clean">
+          <div class="rp-hub-head-left">
+            <button type="button" class="btn-subtle rp-btn-sm" id="rp-btn-back-portal" onclick="ReadingPracticeApp.openPortal()">← Kho đề</button>
+            <h2 class="tot-shell-title" style="margin:0;">${esc(curSourceObj?.bookTitle || curSourceObj?.label || 'Practice')}</h2>
           </div>
+          <div class="rp-src-switcher" role="group" aria-label="Chuyển nhanh kho đề">${sourceSwitchPills}</div>
         </div>
 
         ${buildResumeBannerHtml()}
@@ -1574,6 +2245,11 @@
       ? `ReadingPracticeApp.startFullTest('${esc(item.id)}', { openInReview: true })`
       : `ReadingPracticeApp.startPassage('${esc(item.id)}', { openInReview: true })`;
 
+    const isTeacher = Boolean(B()?.isTeacherUser?.());
+    const teacherAssignBtn = (isTeacher && !isNews)
+      ? `<button type="button" class="rp-btn-assign rp-btn-sm" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'reading', itemId: '${esc(item.id)}', isFull: ${isFull ? 'true' : 'false'}, title: '${esc(item.title || item.id).replace(/'/g, "\\'")}', subtitle: '${esc(item.series || pillLabel).replace(/'/g, "\\'")}' })" title="Tạo link giao bài Zalo cho học sinh">🔗 Giao</button>`
+      : '';
+
     const footHtml = isNews
       ? `
         <button type="button" class="btn-subtle rp-btn-sm" onclick="${reviewCall}">Đọc song ngữ</button>
@@ -1581,6 +2257,7 @@
       `
       : `
         <div class="rp-card-mode-btns">
+          ${teacherAssignBtn}
           ${isMastered ? `<button type="button" class="btn-subtle rp-btn-sm rp-btn-rev" onclick="${reviewCall}" title="Đã hoàn thành 100% — Xem lại đáp án &amp; lời giải">Xem giải</button>` : ''}
           <button type="button" class="rp-btn-practice rp-btn-sm" data-rp-start-mode="practice" onclick="${startPracticeCall}" title="Luyện tập Totoro Washi: 5 màu highlight pastel, tùy chỉnh nền &amp; cỡ chữ, chống gian lận &amp; mở khóa Solution khi đúng 100%">
             <span class="rp-mode-dot-swatch" aria-hidden="true"></span>
@@ -2153,8 +2830,9 @@
     const samePassage = prevPassageId === curPassage.id;
 
     const isReview = s.mode === 'review';
-    if (isReview && !s.isNews && !_loadedSolutions[s.source]) {
-      ensureSourceSolutionsLoaded(s.source).then(() => {
+    const solSrc = curPassage.source || s.source;
+    if (isReview && !s.isNews && !_loadedSolutions[solSrc]) {
+      ensureSourceSolutionsLoaded(solSrc).then(() => {
         if (state.session === s && state.session.mode === 'review') renderExamWorkspace();
       });
     }
@@ -2187,34 +2865,26 @@
     const modeCls = isPractice ? 'ins-mode-practice' : 'ins-mode-exam';
     const timerUrgency = !isPractice && s.remainingSec <= 300 ? ' is-critical' : (!isPractice && s.remainingSec <= 600 ? ' is-warn' : '');
 
-    // Review Summary Strip (ONLY visible AFTER 100% mastery unlocks Solution & Dictionary!)
+    // Polished Review Metrics Ribbon (Ảnh 2 + Ảnh 3: clean 3 KPI pills, NO "Solution & Từ điển đã mở khóa", NO duplicate "Về kho đề")
     const firstTry = s.firstAttemptResult || s.reviewResult;
+    const isMasteredNow = !!(s.reviewResult && s.reviewResult.total > 0 && s.reviewResult.score === s.reviewResult.total);
     const reviewStripHtml = isReview && s.reviewResult ? `
-      <div class="ins-review-strip">
-        <div class="rp-rev-metric is-band">
-          <span>Band lần đầu</span>
-          <strong class="tabular">${(firstTry?.band ?? s.reviewResult.band).toFixed(1)}</strong>
+      <div class="ins-review-strip is-refined">
+        <div class="rp-rev-kpi-group">
+          <div class="rp-rev-kpi-pill is-band">
+            <span class="rp-rk-lbl">Band lần đầu</span>
+            <strong class="rp-rk-val tabular">${(firstTry?.band ?? s.reviewResult.band).toFixed(1)}</strong>
+          </div>
+          <div class="rp-rev-kpi-pill">
+            <span class="rp-rk-lbl">Điểm lần đầu</span>
+            <strong class="rp-rk-val tabular">${firstTry?.score ?? s.reviewResult.score} / ${s.reviewResult.total}</strong>
+          </div>
+          <div class="rp-rev-kpi-pill ${isMasteredNow ? 'is-done' : ''}">
+            <span class="rp-rk-lbl">${isMasteredNow ? 'Hoàn thành 100%' : 'Tổng thời gian'}</span>
+            <strong class="rp-rk-val tabular">${Math.max(1, s.attemptCount || 1)} lần nộp · ${formatDuration(s.reviewResult.elapsedSec)}</strong>
+          </div>
         </div>
-        <div class="rp-rev-metric">
-          <span>Lần đầu</span>
-          <strong class="tabular">${firstTry?.score ?? s.reviewResult.score} / ${s.reviewResult.total}</strong>
-        </div>
-        <div class="rp-rev-metric">
-          <span>Hoàn thành 100%</span>
-          <strong class="tabular">${Math.max(1, s.attemptCount || 1)} lần nộp · ${formatDuration(s.reviewResult.elapsedSec)}</strong>
-        </div>
-        <div class="rp-rev-types">
-          <span class="rp-type-chip is-unlocked">✓ Solution &amp; Từ điển đã mở khóa</span>
-        </div>
-        <div class="rp-rev-actions">
-          <button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.openResultModal()">Bảng kết quả</button>
-          <button type="button" class="btn-subtle rp-btn-sm ${s.showBilingual ? 'is-on' : ''}" id="rp-btn-bilingual"
-            onclick="ReadingPracticeApp.toggleBilingual()">
-            ${s.showBilingual ? '✓ Đang hiện Song ngữ' : 'Dịch song ngữ'}
-          </button>
-          <button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.retryCurrent()">Làm lại</button>
-          <button type="button" class="btn btn-primary rp-btn-sm" onclick="ReadingPracticeApp.exitToHub()">← Về kho đề</button>
-        </div>
+        <div class="rp-rev-hint-txt">Bấm vào từ để tra &amp; lưu · Bấm Locate xem dẫn chứng</div>
       </div>
     ` : '';
 
@@ -2248,10 +2918,10 @@
 
     const groupsHtml = (curPassage.groups || []).map((g) => renderQuestionGroup(g, curPassage, isReview)).join('');
 
-    // Subtle editorial eyebrow inside the left Washi sheet in Practice mode (0 extra toolbar height!)
+    // Subtle clean meta header inside the left Washi sheet in Practice mode (no decorative eyebrow box or squiggle!)
     const practicePassageEyebrowHtml = isPractice ? `
-      <div class="prac-sheet-eyebrow">
-        <span class="prac-eyebrow-meta">${esc(partLabel)} · Questions ${qMin}–${qMax}</span>
+      <div class="prac-sheet-meta-bar">
+        <span class="prac-meta-subtle">${esc(partLabel)} · Questions ${qMin}–${qMax}</span>
         <button type="button"
           class="prac-eyebrow-clear ${curHlCount === 0 ? 'is-empty' : ''}"
           id="prac-hl-clear-all"
@@ -2342,28 +3012,56 @@
       </aside>
     `;
 
-    // Anchored Totoro "Giao diện" Popover for Practice; Official Inspera Options Overlay for Exam
+    // Anchored Totoro "Giao diện" Popover for Practice (now with 6 Pastel Highlight Palettes from Reference Image 5!)
+    const activePalette = getActivePalette();
+    const activePens = getActivePastelPens();
+    const paletteGridHtml = PASTEL_PALETTES.map((pal) => {
+      const isCurPal = pal.id === activePalette.id;
+      return `
+        <button type="button" class="prac-pal-card ${isCurPal ? 'is-active' : ''}"
+          data-hl-palette="${pal.id}"
+          aria-pressed="${isCurPal ? 'true' : 'false'}"
+          onclick="ReadingPracticeApp.setHighlightPalette('${pal.id}')">
+          <div class="prac-pal-top">
+            <span class="prac-pal-name">${esc(pal.name)}</span>
+            ${isCurPal ? '<span class="prac-pal-chk" aria-hidden="true">✓</span>' : ''}
+          </div>
+          <div class="prac-pal-dots" aria-hidden="true">
+            ${pal.colors.map((c) => `<span class="prac-pal-dot" style="background:${c};"></span>`).join('')}
+          </div>
+          <div class="prac-pal-sub">${esc(pal.sub)}</div>
+        </button>
+      `;
+    }).join('');
+
     const practiceAppearancePopHtml = isPractice ? `
       <div class="prac-pop-wrap" onclick="event.stopPropagation()">
         <button type="button" class="prac-hdr-btn ${s.optionsOpen ? 'active' : ''}" id="ins-btn-options"
-          onclick="ReadingPracticeApp.toggleOptionsOverlay()" title="Tùy chỉnh nền giấy &amp; cỡ chữ" aria-label="Giao diện">
+          onclick="ReadingPracticeApp.toggleOptionsOverlay()" title="Tùy chỉnh nền giấy, cỡ chữ &amp; 6 bộ màu Highlight Pastel" aria-label="Giao diện">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           <span>Giao diện</span>
         </button>
-        <div class="prac-popover ${s.optionsOpen ? 'open' : ''}" id="ins-options-overlay" role="dialog" aria-label="Tùy chỉnh hiển thị">
+        <div class="prac-popover prac-popover-wide ${s.optionsOpen ? 'open' : ''}" id="ins-options-overlay" role="dialog" aria-label="Tùy chỉnh hiển thị">
           <div id="prac-opt-contrast-card">
             <div class="prac-pop-lbl">Nền giấy đọc bài</div>
-            <div class="prac-pop-seg" style="margin-bottom:12px;">
+            <div class="prac-pop-seg" style="margin-bottom:10px;">
               <button type="button" class="prac-seg-btn ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('totoro')">Washi ấm</button>
               <button type="button" class="prac-seg-btn ${s.contrast === 'cd' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('cd')">Trắng sáng</button>
               <button type="button" class="prac-seg-btn ${s.contrast === 'sepia' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('sepia')">Giấy kem</button>
             </div>
           </div>
           <div class="prac-pop-lbl">Cỡ chữ bài đọc</div>
-          <div class="prac-pop-seg">
+          <div class="prac-pop-seg" style="margin-bottom:12px;">
             <button type="button" class="prac-seg-btn ${s.textSize === 'regular' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('regular')">Vừa</button>
             <button type="button" class="prac-seg-btn ${s.textSize === 'large' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('large')">Lớn</button>
             <button type="button" class="prac-seg-btn ${s.textSize === 'xlarge' ? 'active' : ''}" onclick="ReadingPracticeApp.setTextSize('xlarge')">Rất lớn</button>
+          </div>
+          <div class="prac-pop-lbl-row">
+            <span class="prac-pop-lbl" style="margin:0;">Bảng màu Highlight Pastel</span>
+            <span class="prac-pop-subtag">6 bộ dịu mắt</span>
+          </div>
+          <div class="prac-pal-grid" id="rp-palette-grid">
+            ${paletteGridHtml}
           </div>
           ${curHlCount > 0 ? `
             <div class="prac-pop-sep"></div>
@@ -2458,7 +3156,7 @@
             ${s.paused ? '<span class="ins-paused-tag">PAUSED</span>' : ''}
           </button>
         `)
-      : `<div class="ins-hdr-review-lbl">Review Mode · Paraphrase &amp; Dictionary Unlocked</div>`;
+      : '';
 
     const practiceProgPillHtml = (isPractice && !isReview) ? `
       <div class="prac-prog-pill tabular" title="Tiến độ trả lời bài hiện tại">
@@ -2476,31 +3174,18 @@
       </span>
     ` : '';
 
-    // Subtle Totoro stationery watermark SVG for Practice Reading Folio
-    const practiceStampSvg = isPractice ? `
-      <svg class="prac-folio-stamp" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-        <circle cx="40" cy="40" r="35" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 4"/>
-        <path d="M27 32L23.5 18L32.5 26C36.8 24.5 43.2 24.5 47.5 26L56.5 18L53 32C58.5 36.2 61.5 43 61.5 50.5C61.5 60.5 52.5 66 40 66C27.5 66 18.5 60.5 18.5 50.5C18.5 43 21.5 36.2 27 32Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M40 19.5C43.5 15.2 48.5 14.8 51.5 17.5C48 20.5 43.5 21.2 40 19.5Z" fill="currentColor" fill-opacity="0.18" stroke="currentColor" stroke-width="1.6"/>
-        <circle cx="32" cy="39" r="2.2" fill="currentColor"/><circle cx="48" cy="39" r="2.2" fill="currentColor"/>
-        <path d="M29.5 52L33 48.8L36.5 52M37.5 51L40 48.2L42.5 51M43.5 52L47 48.8L50.5 52" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    ` : '';
+    // Calm distraction-free Practice sheets (no decorative corner brackets, squiggle rules, or watermarks over reading text)
+    const practiceStampSvg = '';
+    const practiceTitleRuleSvg = '';
 
-    const practiceTitleRuleSvg = isPractice ? `
-      <svg class="prac-title-rule" viewBox="0 0 180 10" fill="none" aria-hidden="true">
-        <path d="M2 7.2C42 2.4 114 1.6 178 6.4" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
-      </svg>
-    ` : '';
-
-    // Selection Popover: Practice shows 5 silky pastel dots + Ghi chú + Xóa (Tra từ STRICTLY unlocked only in Review/News!)
+    // Selection Popover: Practice shows 6 silky pastel dots from active palette + Ghi chú + Xóa (Tra & Lưu STRICTLY unlocked only in Review/Solutions or News!)
     const selPopoverHtml = isPractice ? `
       <div class="ins-sel-popover is-practice hidden" id="rp-hl-toolbar" role="toolbar" aria-label="Highlight màu pastel" onmousedown="event.stopPropagation()">
         <div class="prac-pop-swatches">
-          ${PASTEL_PENS.map((pen) => `
+          ${activePens.map((pen) => `
             <button type="button"
               class="prac-pop-dot ${s.activePenColor === pen.id ? 'is-active' : ''}"
-              style="--swatch:${pen.swatch};"
+              style="--swatch:${pen.swatch};--swatch-line:${pen.line};"
               data-pop-color="${pen.id}"
               title="${esc(pen.name)} — ${esc(pen.role)}"
               aria-label="Highlight ${esc(pen.name)}"
@@ -2512,7 +3197,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span>Ghi chú</span>
         </button>
-        ${enableDict ? '<button type="button" class="ins-sel-dict prac-pop-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra từ</button>' : ''}
+        ${enableDict ? '<button type="button" class="ins-sel-dict prac-pop-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()" title="Tra nghĩa và lưu vào Từ của tôi">Tra &amp; Lưu</button>' : ''}
         <button type="button" class="ins-sel-clear prac-pop-clear" onclick="ReadingPracticeApp.clearSelectionHighlight()" title="Xóa màu đoạn chọn">Xóa</button>
       </div>
     ` : `
@@ -2526,12 +3211,32 @@
           <span>Highlight</span>
         </button>
         <button type="button" class="ins-sel-clear" onclick="ReadingPracticeApp.clearSelectionHighlight()" title="Xóa highlight">Clear</button>
-        ${enableDict ? '<button type="button" class="ins-sel-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra từ</button>' : ''}
+        ${enableDict ? '<button type="button" class="ins-sel-dict" onclick="ReadingPracticeApp.lookupSelectedPhrase()">Tra &amp; Lưu</button>' : ''}
       </div>
     `;
 
+    // Review Header Actions (unified directly into Row 1 so there is ZERO duplicate "Về kho đề" or bloated double action bar!)
+    const reviewHeaderActionsHtml = isReview ? `
+      <div class="rp-hdr-rev-acts">
+        <button type="button" class="prac-hdr-btn is-compact" onclick="ReadingPracticeApp.openResultModal()">Bảng kết quả</button>
+        <button type="button" class="prac-hdr-btn is-compact ${s.showBilingual ? 'is-on' : ''}" id="rp-btn-bilingual" onclick="ReadingPracticeApp.toggleBilingual()">
+          ${s.showBilingual ? '✓ Dịch song ngữ' : 'Dịch song ngữ'}
+        </button>
+        <button type="button" class="prac-hdr-btn is-compact" onclick="ReadingPracticeApp.retryCurrent()">Làm lại</button>
+      </div>
+    ` : '';
+
+    // Bilingual Translation Input Studio on the right pane when user enables "Dịch song ngữ"
+    const rightPaneContentHtml = (s.showBilingual && enableDict)
+      ? renderBilingualEditorHtml(curPassage)
+      : groupsHtml;
+
+    const palCssVars = buildPaletteCssVarsStyle(activePalette);
+
     root.innerHTML = `
-      <div class="rp-workspace ins-shell ${modeCls} ${contrastCls} ${sizeCls}" id="rp-workspace" data-study-mode="${esc(s.studyMode)}" data-passage-id="${esc(curPassage.id)}"
+      <div class="rp-workspace ins-shell ${modeCls} ${contrastCls} ${sizeCls} ${isReview ? 'is-review-mode' : ''}" id="rp-workspace"
+        data-study-mode="${esc(s.studyMode)}" data-passage-id="${esc(curPassage.id)}" data-hl-palette="${esc(activePalette.id)}"
+        style="${palCssVars}"
         onclick="${isPractice && s.optionsOpen ? 'ReadingPracticeApp.toggleOptionsOverlay(false)' : ''}">
         <div class="ins-main-col">
           <!-- Workspace Header -->
@@ -2548,9 +3253,10 @@
               ${antiCheatPillHtml}
               ${isPractice ? timerBlockHtml : ''}
               ${practiceProgPillHtml}
+              ${reviewHeaderActionsHtml}
               ${s.isNews && !isReview ? `
                 <button type="button" class="ins-hdr-pill ${s.showBilingual ? 'active' : ''}" id="rp-btn-bilingual" onclick="ReadingPracticeApp.toggleBilingual()">
-                  ${s.showBilingual ? '✓ Song ngữ' : 'Song ngữ'}
+                  ${s.showBilingual ? '✓ Dịch song ngữ' : 'Dịch song ngữ'}
                 </button>
               ` : ''}
               ${!isPractice ? `
@@ -2597,7 +3303,7 @@
 
           <!-- 50/50 Split Workspace -->
           <div class="ins-split-body" id="rp-split-body">
-            <div class="${isPractice ? 'prac-sheet-shell ink-brackets ' : 'ins-pane-wrap '}${state.mobilePane === 'passage' ? 'mob-active' : ''}"
+            <div class="${isPractice ? 'prac-sheet-shell ' : 'ins-pane-wrap '}${state.mobilePane === 'passage' ? 'mob-active' : ''}"
               id="rp-passage-shell" style="flex: 0 0 ${state.splitRatio}%;">
               <section class="ins-pane ins-pane-left ${state.mobilePane === 'passage' ? 'mob-active' : ''}"
                 id="rp-passage-pane"
@@ -2623,14 +3329,14 @@
               <span class="ins-resizer-box" aria-hidden="true">${isPractice ? '' : '↔'}</span>
             </div>
 
-            <div class="${isPractice ? 'prac-sheet-shell ink-brackets prac-sheet-right ' : 'ins-pane-wrap ins-pane-wrap-right '}${state.mobilePane === 'questions' ? 'mob-active' : ''}">
-              <section class="ins-pane ins-pane-right ${state.mobilePane === 'questions' ? 'mob-active' : ''}" id="rp-questions-pane"
+            <div class="${isPractice ? 'prac-sheet-shell prac-sheet-right ' : 'ins-pane-wrap ins-pane-wrap-right '}${state.mobilePane === 'questions' ? 'mob-active' : ''}">
+              <section class="ins-pane ins-pane-right ${state.mobilePane === 'questions' ? 'mob-active' : ''} ${enableDict ? 'is-dict-unlocked' : ''} ${s.showBilingual && enableDict ? 'is-bilingual-mode' : ''}" id="rp-questions-pane"
                 onmousedown="ReadingPracticeApp.onPassageMouseDown(event)"
                 onmouseup="ReadingPracticeApp.handlePassageSelection(event)"
                 oncontextmenu="ReadingPracticeApp.handlePassageContextMenu(event)"
-                onclick="ReadingPracticeApp.onQuestionsClickGuard(event)">
+                onclick="ReadingPracticeApp.handleQuestionsClick(event)">
                 <div class="ins-questions-inner">
-                  ${groupsHtml}
+                  ${rightPaneContentHtml}
                 </div>
               </section>
             </div>
@@ -2646,8 +3352,8 @@
             ` : ''}
           </div>
 
-          <!-- Fixed Bottom Navigator Bar -->
-          <footer class="ins-footer">
+          <!-- Fixed Bottom Navigator Bar (Ảnh 4: sleek pills + Prev/Next nav instead of duplicate back button!) -->
+          <footer class="ins-footer ${isReview ? 'is-review-footer' : ''}">
             <div class="ins-footer-parts">${bottomPartsHtml}</div>
             ${!isReview ? (isPractice ? `
               <button type="button" class="ins-submit-check-btn prac-submit-pill" id="rp-btn-open-submit"
@@ -2658,7 +3364,10 @@
               <button type="button" class="ins-submit-check-btn" id="rp-btn-open-submit"
                 onclick="ReadingPracticeApp.openPreSubmitModal()" title="${isRetryPhase ? 'Nộp lại' : 'Review &amp; Submit your answers'}" aria-label="Review and Submit">✓</button>
             `) : `
-              <button type="button" class="ins-submit-check-btn is-done" onclick="ReadingPracticeApp.exitToHub()" title="Quay về kho đề">←</button>
+              <div class="rp-rev-foot-nav">
+                <button type="button" class="rp-foot-step-btn" onclick="ReadingPracticeApp.stepQuestion(-1)" ${curGlobalIdx <= 0 ? 'disabled' : ''} title="Câu trước" aria-label="Câu trước">‹</button>
+                <button type="button" class="rp-foot-step-btn" onclick="ReadingPracticeApp.stepQuestion(1)" ${curGlobalIdx >= allQ.length - 1 ? 'disabled' : ''} title="Câu tiếp theo" aria-label="Câu tiếp theo">›</button>
+              </div>
             `}
           </footer>
         </div>
@@ -2693,6 +3402,60 @@
       if (pEl) pEl.scrollTop = prevPassageScroll;
       if (qEl) qEl.scrollTop = prevQuestScroll;
     }
+  }
+
+  /* ---------- INTERACTIVE BILINGUAL TRANSLATION STUDIO (Right Pane) ---------- */
+  function renderBilingualEditorHtml(passage) {
+    const paras = passage?.paragraphs || [];
+    const drafts = loadBilingualDrafts(passage?.id);
+    const totalParas = paras.length;
+    let doneParas = 0;
+    let totalWords = 0;
+    const cardsHtml = paras.map((para, pIdx) => {
+      const val = String(drafts[String(pIdx)] || '');
+      const wc = val.trim() ? val.trim().split(/\s+/).length : 0;
+      if (wc > 0) doneParas += 1;
+      totalWords += wc;
+      const cleanEn = String(para.en || '').replace(/<\/?ev[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+      const preview = cleanEn.length > 105 ? cleanEn.slice(0, 105) + '…' : cleanEn;
+      const lbl = para.label ? `Đoạn ${esc(para.label)}` : `Đoạn ${pIdx + 1}`;
+      const sampleVi = para.vi ? `
+        <details class="rp-bi-sample">
+          <summary>Xem bản dịch gợi ý</summary>
+          <p>${esc(para.vi)}</p>
+        </details>
+      ` : '';
+      return `
+        <div class="rp-bi-card ${wc > 0 ? 'is-filled' : ''}" data-bi-para="${pIdx}">
+          <div class="rp-bi-card-head">
+            <span class="rp-bi-para-tag">${lbl}</span>
+            <span class="rp-bi-wc tabular" id="rp-bi-wc-${pIdx}">${wc > 0 ? `${wc} từ` : 'Chưa dịch'}</span>
+          </div>
+          <div class="rp-bi-en-preview">“${esc(preview)}”</div>
+          <textarea class="rp-bi-textarea" id="rp-bi-ta-${pIdx}" rows="3"
+            placeholder="Nhập bản dịch tiếng Việt cho ${lbl.toLowerCase()}..."
+            onfocus="ReadingPracticeApp.focusBilingualParagraph(${pIdx})"
+            oninput="ReadingPracticeApp.onBilingualInput('${esc(passage.id)}', ${pIdx}, this)">${esc(val)}</textarea>
+          ${sampleVi}
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="rp-bi-studio" id="rp-bilingual-studio">
+        <div class="rp-bi-head">
+          <div>
+            <h3 class="rp-bi-title">Dịch song ngữ từng đoạn</h3>
+            <div class="rp-bi-sub tabular" id="rp-bi-summary">Đã dịch <strong>${doneParas}/${totalParas}</strong> đoạn · ${totalWords} từ (tự lưu trên máy)</div>
+          </div>
+          <div class="rp-bi-head-acts">
+            ${doneParas > 0 ? `<button type="button" class="btn-subtle rp-btn-sm" onclick="ReadingPracticeApp.clearPassageBilingual('${esc(passage.id)}')">Xóa nháp</button>` : ''}
+            <button type="button" class="btn btn-primary rp-btn-sm" onclick="ReadingPracticeApp.toggleBilingual()">← Câu hỏi &amp; Locate</button>
+          </div>
+        </div>
+        <div class="rp-bi-list">${cardsHtml}</div>
+      </div>
+    `;
   }
 
   /* ---------- FLAT INSPERA / PRACTICE PRO QUESTION GROUP & ITEM RENDERER ---------- */
@@ -3047,7 +3810,9 @@
     const sol = getQuestionSolution(passage, q.num);
     const paraList = (Array.isArray(q.paraphrase) && q.paraphrase.length) ? q.paraphrase : (sol?.para || []);
     const expText = q.explanation || sol?.exp || '';
-    const loc = Array.isArray(sol?.loc) && sol.loc.length === 3 ? sol.loc : null;
+    const resolvedLoc = q.evidenceId ? null : resolveQuestionEvidenceLoc(passage, q, sol);
+    const loc = resolvedLoc?.loc || null;
+    const isAutoLoc = resolvedLoc?.source === 'auto';
     const quoteText = (!loc && sol?.quote) ? sol.quote : '';
     const srcLabel = sol?.src || '';
     const hasDetails = !!(paraList.length || expText || quoteText);
@@ -3069,10 +3834,13 @@
     const pinSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
     const chevSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
 
+    const locateTitle = isAutoLoc
+      ? 'Định vị câu dẫn chứng liên quan trong bài đọc'
+      : 'Định vị dẫn chứng chính xác trong bài đọc';
     const locateBtnHtml = q.evidenceId
-      ? `<button type="button" class="rp-rev-pill is-locate ${isLocActive ? 'is-active' : ''}" onclick="event.stopPropagation(); ReadingPracticeApp.locateEvidence('${esc(q.evidenceId)}')">${pinSvg}<span>Locate</span></button>`
+      ? `<button type="button" class="rp-rev-pill is-locate ${isLocActive ? 'is-active' : ''}" title="${locateTitle}" onclick="event.stopPropagation(); ReadingPracticeApp.locateEvidence('${esc(q.evidenceId)}')">${pinSvg}<span>Locate</span></button>`
       : (loc && passage?.id
-        ? `<button type="button" class="rp-rev-pill is-locate ${isLocActive ? 'is-active' : ''}" onclick="event.stopPropagation(); ReadingPracticeApp.locateWebEvidence('${esc(passage.id)}', ${loc[0]}, ${loc[1]}, ${loc[2]}, ${q.num})">${pinSvg}<span>Locate</span></button>`
+        ? `<button type="button" class="rp-rev-pill is-locate ${isLocActive ? 'is-active' : ''}" title="${locateTitle}" onclick="event.stopPropagation(); ReadingPracticeApp.locateWebEvidence('${esc(passage.id)}', ${loc[0]}, ${loc[1]}, ${loc[2]}, ${q.num})">${pinSvg}<span>Locate</span></button>`
         : '');
 
     const explainBtnHtml = hasDetails
@@ -3239,18 +4007,222 @@
   }
 
   /* ---------- CLICK-TO-DICTIONARY POPOVER (Review & News -> My Vocab) ---------- */
-  function extractSentenceForNode(node) {
-    const pEl = node?.closest?.('.rp-para-text');
-    if (!pEl) return '';
-    const full = (pEl.textContent || '').replace(/\s+/g, ' ').trim();
-    const word = (node.dataset?.word || node.textContent || '').trim();
+  function extractSentenceForNode(node, fallbackWord = '') {
+    const el = node?.nodeType === 1 ? node : node?.parentElement;
+    const container = el?.closest?.('.rp-para-text, .ins-q-stem, .ins-note-line, .ins-gap-line, .ins-mcq-txt, .ins-group-inst, .ins-heading-pill, .ins-note-heading, .ins-note-subheading, .ins-q-item');
+    if (!container) return '';
+    let full = '';
+    if (container.classList.contains('rp-para-text')) {
+      full = (container.textContent || '').replace(/\s+/g, ' ').trim();
+    } else {
+      const clone = container.cloneNode(true);
+      clone.querySelectorAll('input, select, option, textarea, button, svg, .rp-rev-inline, .ins-note-qnum, .ins-q-num, .prac-q-inline-acts').forEach((n) => n.remove());
+      full = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+    const word = (fallbackWord || el?.dataset?.word || el?.textContent || '').trim();
     if (!full || !word) return full.slice(0, 220);
     const sentences = full.split(/(?<=[.!?])\s+/);
     const found = sentences.find((sent) => sent.toLowerCase().includes(word.toLowerCase()));
     return (found || full).trim().slice(0, 260);
   }
 
-  function showDictPopover(rawWord, contextSentence, anchorRect) {
+  function getWordAtClientPoint(clientX, clientY, rootEl) {
+    let textNode = null;
+    let offset = 0;
+    if (typeof document.caretRangeFromPoint === 'function') {
+      const r = document.caretRangeFromPoint(clientX, clientY);
+      if (r && r.startContainer?.nodeType === 3) {
+        textNode = r.startContainer;
+        offset = r.startOffset;
+      }
+    } else if (typeof document.caretPositionFromPoint === 'function') {
+      const pos = document.caretPositionFromPoint(clientX, clientY);
+      if (pos && pos.offsetNode?.nodeType === 3) {
+        textNode = pos.offsetNode;
+        offset = pos.offset;
+      }
+    }
+    if (!textNode || (rootEl && !rootEl.contains(textNode))) return null;
+    const text = textNode.nodeValue || '';
+    if (!text.length) return null;
+    let idx = Math.min(Math.max(0, offset), text.length - 1);
+    const isWordCh = (c) => /[A-Za-z'-]/.test(c || '');
+    if (!isWordCh(text[idx]) && idx > 0 && isWordCh(text[idx - 1])) idx -= 1;
+    if (!isWordCh(text[idx])) return null;
+    let start = idx;
+    let end = idx + 1;
+    while (start > 0 && isWordCh(text[start - 1])) start--;
+    while (end < text.length && isWordCh(text[end])) end++;
+    const rawWord = text.slice(start, end).replace(/^['-]+|['-]+$/g, '');
+    if (rawWord.length < 2 || !/[A-Za-z]/.test(rawWord)) return null;
+    const range = document.createRange();
+    range.setStart(textNode, start);
+    range.setEnd(textNode, end);
+    const rect = range.getBoundingClientRect();
+    // Guard against clicking far away in empty whitespace on the same line
+    if (!rect || rect.width <= 0 || clientX < rect.left - 8 || clientX > rect.right + 8 || clientY < rect.top - 8 || clientY > rect.bottom + 8) {
+      return null;
+    }
+    return { word: rawWord, rect, node: textNode };
+  }
+
+  function trimContextCleanly(sentence, targetWord, maxLen = 175) {
+    const raw = String(sentence || '').replace(/\s+/g, ' ').trim();
+    if (!raw) return '';
+    if (raw.length <= maxLen) return raw;
+    const low = raw.toLowerCase();
+    const wLow = String(targetWord || '').trim().toLowerCase();
+    const pos = wLow ? low.indexOf(wLow) : -1;
+    let start = 0;
+    let end = maxLen;
+    if (pos >= 0 && pos + wLow.length > maxLen - 20) {
+      start = Math.max(0, pos - Math.floor(maxLen * 0.42));
+      end = Math.min(raw.length, start + maxLen);
+    }
+    // Snap start/end cleanly to word boundaries so we NEVER slice mid-word like "unt"!
+    if (start > 0) {
+      const sp = raw.indexOf(' ', start);
+      if (sp > start && sp < start + 18) start = sp + 1;
+    }
+    if (end < raw.length) {
+      const sp = raw.lastIndexOf(' ', end);
+      if (sp > start + 40) end = sp;
+    }
+    const prefix = start > 0 ? '…' : '';
+    const suffix = end < raw.length ? '…' : '';
+    return `${prefix}${raw.slice(start, end).trim()}${suffix}`;
+  }
+
+  function highlightWordInContextHtml(sentence, targetWord) {
+    const trimmed = trimContextCleanly(sentence, targetWord, 175);
+    if (!trimmed) return '';
+    const w = String(targetWord || '').trim();
+    if (!w || w.length < 2) return esc(trimmed);
+    const escRe = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(${escRe})`, 'i');
+    const parts = trimmed.split(re);
+    if (parts.length < 3) return esc(trimmed);
+    return parts.map((p, idx) => (idx % 2 === 1 ? `<mark class="rp-dict-ctx-hit">${esc(p)}</mark>` : esc(p))).join('');
+  }
+
+  function positionDictPopover(pop, anchorRect) {
+    if (!pop) return;
+    const popRect = pop.getBoundingClientRect();
+    const pw = Math.max(330, Math.round(popRect.width || 368));
+    const ph = Math.max(220, Math.round(popRect.height || 320));
+    const left = Math.max(14, Math.min(window.innerWidth - pw - 14, (anchorRect?.left || 100) - 24));
+    const belowTop = (anchorRect?.bottom || 180) + 10;
+    const aboveTop = (anchorRect?.top || 180) - ph - 10;
+    const top = (belowTop + ph <= window.innerHeight - 14)
+      ? Math.max(62, belowTop)
+      : (aboveTop >= 62 ? aboveTop : Math.max(62, window.innerHeight - ph - 14));
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+  }
+
+  function renderDictPopoverBody(pop, target, isLoadingOnline = false) {
+    if (!pop || !target) return;
+    const { entry, context, deckName, sourcePane, editMode } = target;
+    const decks = window.MyVocabStore ? window.MyVocabStore.getDecks() : [];
+    const deckOptions = [deckName, ...decks.map((d) => d.name).filter((n) => n !== deckName)];
+    const savedSet = window.MyVocabStore ? window.MyVocabStore.getSavedWordSet() : new Set();
+    const alreadySaved = savedSet.has(entry.word.toLowerCase()) || savedSet.has(entry.lemma.toLowerCase());
+    const ctxLabel = sourcePane === 'questions' ? 'Ngữ cảnh câu hỏi' : 'Ngữ cảnh bài đọc';
+
+    const bookChkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="m9 10 2 2 4-4"/></svg>`;
+    const starChkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/></svg>`;
+    const spkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
+    const editSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>`;
+
+    const statusChips = [];
+    if (entry.inReadingList) {
+      const statusSuffix = entry.readingStatus === 'mastered'
+        ? ' · Đã thuộc'
+        : (entry.readingStatus === 'learning' ? ' · Đang ôn' : '');
+      const statusCls = entry.readingStatus === 'mastered' ? 'is-mastered' : 'is-reading-list';
+      statusChips.push(`<span class="rp-dict-status-chip ${statusCls}" title="Từ '${esc(entry.readingLemma)}' đã có sẵn trong bộ Reading (${esc(entry.readingListLabel)})">${bookChkSvg}<span>Reading · ${esc(entry.readingListLabel)}${statusSuffix}</span></span>`);
+    }
+    if (alreadySaved) {
+      statusChips.push(`<span class="rp-dict-status-chip is-myvocab" title="Đã lưu trong Từ của tôi">${starChkSvg}<span>MY LIST</span></span>`);
+    }
+    const statusBarHtml = statusChips.length ? `<div class="rp-dict-status-row">${statusChips.join('')}</div>` : '';
+
+    const meaningBlockHtml = editMode
+      ? `
+        <div class="rp-dict-meaning-edit">
+          <textarea class="rp-dict-ta" id="rp-dict-meaning-input" rows="2" placeholder="Nhập nghĩa tiếng Việt ngắn gọn..."
+            oninput="ReadingPracticeApp.onDictMeaningEdit(this.value)">${esc(entry.vi)}</textarea>
+        </div>
+      `
+      : (isLoadingOnline && !entry.vi
+        ? `<div class="rp-dict-loading"><span class="rp-dict-shimmer"></span><span>Đang tra nghĩa tự động…</span></div>`
+        : `
+          <div class="rp-dict-meaning-view">
+            <div class="rp-dict-meaning-text ${entry.vi ? '' : 'is-empty'}">
+              ${entry.vi ? esc(entry.vi) : 'Chưa có nghĩa — bấm Sửa để tự ghi chú'}
+            </div>
+            <button type="button" class="rp-dict-edit-btn" onclick="ReadingPracticeApp.toggleDictMeaningEdit()" title="Chỉnh sửa nghĩa trước khi lưu">
+              ${editSvg}<span>Sửa</span>
+            </button>
+          </div>
+          ${entry.enDef ? `<div class="rp-dict-endef">${esc(entry.enDef)}</div>` : ''}
+        `);
+
+    const synsHtml = entry.synonyms.length ? `
+      <div class="rp-dict-syns-v2">
+        <span class="rp-dict-syns-lbl">≈</span>
+        <div class="rp-dict-syns-chips">
+          ${entry.synonyms.map((sy) => `<button type="button" class="rp-syn-chip is-btn" onclick="ReadingPracticeApp.lookupSynonymWord('${esc(sy).replace(/'/g, "\\'")}')">${esc(sy)}</button>`).join('')}
+        </div>
+      </div>
+    ` : '';
+
+    const ctxHtml = context ? `
+      <div class="rp-dict-ctx-v2">
+        <span class="rp-dict-ctx-tag">${ctxLabel}</span>
+        <div class="rp-dict-ctx-quote">“${highlightWordInContextHtml(context, entry.word)}”</div>
+      </div>
+    ` : '';
+
+    pop.innerHTML = `
+      <div class="rp-dict-v2">
+        <div class="rp-dict-head-v2">
+          <div class="rp-dict-title-col">
+            <div class="rp-dict-word-row">
+              <span class="rp-dict-word-v2">${esc(entry.word)}</span>
+              ${entry.pos ? `<span class="rp-dict-pos-v2">${esc(entry.pos)}</span>` : ''}
+            </div>
+            <div class="rp-dict-phon-row">
+              ${entry.ipa ? `<span class="rp-dict-ipa-v2">${esc(entry.ipa)}</span>` : ''}
+              <button type="button" class="rp-dict-spk-v2" onclick="ReadingPracticeApp.speakDictWord('en-US')" title="Phát âm Mỹ (US)">${spkSvg}<span>US</span></button>
+              <button type="button" class="rp-dict-spk-v2" onclick="ReadingPracticeApp.speakDictWord('en-GB')" title="Phát âm Anh (UK)">${spkSvg}<span>UK</span></button>
+            </div>
+          </div>
+          <button type="button" class="rp-dict-close-v2" onclick="ReadingPracticeApp.closeDictPopover()" aria-label="Đóng">✕</button>
+        </div>
+
+        ${statusBarHtml}
+
+        <div class="rp-dict-meaning-box">
+          ${meaningBlockHtml}
+        </div>
+
+        ${synsHtml}
+        ${ctxHtml}
+
+        <div class="rp-dict-foot-v2">
+          <select class="rp-dict-deck-sel-v2" id="rp-dict-deck-select" aria-label="Chọn bộ từ lưu">
+            ${deckOptions.map((dn) => `<option value="${esc(dn)}">${esc(dn)}</option>`).join('')}
+          </select>
+          <button type="button" class="btn btn-primary rp-btn-sm rp-dict-save-v2" id="rp-btn-save-myvocab" onclick="ReadingPracticeApp.saveDictWordToMyVocab()">
+            ${alreadySaved ? '✓ Lưu thêm' : '+ Lưu vào Từ của tôi'}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function showDictPopover(rawWord, contextSentence, anchorRect, sourcePane = 'passage') {
     const pop = document.getElementById('rp-dict-popover');
     if (!pop || !state.session) return;
     const passages = getSessionPassages();
@@ -3258,51 +4230,49 @@
     const entry = lookupWordEntry(rawWord, curPassage);
     if (!entry.word) return;
 
-    const decks = window.MyVocabStore ? window.MyVocabStore.getDecks() : [];
     const defaultDeckName = state.session.deckDefaultName || 'Từ của tôi';
-    const deckOptions = [defaultDeckName, ...decks.map((d) => d.name).filter((n) => n !== defaultDeckName)];
-    const savedSet = window.MyVocabStore ? window.MyVocabStore.getSavedWordSet() : new Set();
-    const alreadySaved = savedSet.has(entry.word.toLowerCase()) || savedSet.has(entry.lemma.toLowerCase());
+    const seq = ++_dictLookupSeq;
+    const target = {
+      seq,
+      entry,
+      context: contextSentence || '',
+      deckName: defaultDeckName,
+      sourcePane,
+      anchorRect,
+      editMode: false,
+      userEdited: false
+    };
+    state.dictTarget = target;
 
-    state.dictTarget = { entry, context: contextSentence || '', deckName: defaultDeckName };
-
-    pop.innerHTML = `
-      <div class="rp-dict-head">
-        <div>
-          <div class="rp-dict-word">${esc(entry.word)}</div>
-          <div class="rp-dict-meta">
-            ${entry.ipa ? `<span class="rp-dict-ipa">${esc(entry.ipa)}</span>` : ''}
-            <span class="rp-dict-pos">${esc(entry.pos || 'word')}</span>
-          </div>
-        </div>
-        <div class="rp-dict-audio">
-          <button type="button" class="rp-dict-spk" onclick="ReadingPracticeApp.speakDictWord('en-US')">US</button>
-          <button type="button" class="rp-dict-spk" onclick="ReadingPracticeApp.speakDictWord('en-GB')">UK</button>
-          <button type="button" class="rp-dict-close" onclick="ReadingPracticeApp.closeDictPopover()">✕</button>
-        </div>
-      </div>
-      <div class="rp-dict-meaning-wrap">
-        <label class="rp-dict-lbl">Nghĩa tiếng Việt</label>
-        <input type="text" class="rp-dict-input" id="rp-dict-meaning-input" value="${esc(entry.vi)}" placeholder="Nhập nghĩa ngắn gọn...">
-      </div>
-      ${entry.synonyms.length ? `<div class="rp-dict-syns"><span>Đồng nghĩa:</span>${entry.synonyms.map((sy) => `<span class="rp-syn-chip">${esc(sy)}</span>`).join('')}</div>` : ''}
-      ${contextSentence ? `<div class="rp-dict-ctx"><div class="rp-dict-lbl">Ngữ cảnh trích từ bài đọc</div><div class="rp-dict-ctx-text">“${esc(contextSentence)}”</div></div>` : ''}
-      <div class="rp-dict-foot">
-        <select class="rp-dict-deck-sel" id="rp-dict-deck-select">
-          ${deckOptions.map((dn) => `<option value="${esc(dn)}">${esc(dn)}</option>`).join('')}
-        </select>
-        <button type="button" class="btn btn-primary rp-btn-sm" id="rp-btn-save-myvocab" onclick="ReadingPracticeApp.saveDictWordToMyVocab()">
-          ${alreadySaved ? '✓ Lưu thêm' : '+ Lưu vào Từ của tôi'}
-        </button>
-      </div>
-    `;
-
+    const shouldFetchOnline = !entry.vi || (!entry.ipa && !entry.inReadingList);
+    renderDictPopoverBody(pop, target, shouldFetchOnline && !entry.vi);
     pop.classList.remove('hidden');
-    const pw = 340;
-    const left = Math.max(14, Math.min(window.innerWidth - pw - 16, (anchorRect?.left || 100) - 20));
-    const top = Math.max(70, Math.min(window.innerHeight - 310, (anchorRect?.bottom || 180) + 10));
-    pop.style.left = `${left}px`;
-    pop.style.top = `${top}px`;
+    positionDictPopover(pop, anchorRect);
+
+    if (shouldFetchOnline) {
+      fetchOnlineWordDefinition(entry.word).then((online) => {
+        if (!state.dictTarget || state.dictTarget.seq !== seq) return;
+        if (online) {
+          if (online.vi && !state.dictTarget.userEdited && !state.dictTarget.entry.vi) {
+            state.dictTarget.entry.vi = online.vi;
+          }
+          if (online.ipa && !state.dictTarget.entry.ipa) {
+            state.dictTarget.entry.ipa = online.ipa;
+          }
+          if (online.pos && (!state.dictTarget.entry.pos || ['Từ vựng', 'Từ ghép', 'word'].includes(state.dictTarget.entry.pos))) {
+            state.dictTarget.entry.pos = online.pos;
+          }
+          if (online.enDef && !state.dictTarget.entry.enDef) {
+            state.dictTarget.entry.enDef = online.enDef;
+          }
+          if (online.synonyms?.length && !state.dictTarget.entry.synonyms.length) {
+            state.dictTarget.entry.synonyms = online.synonyms;
+          }
+        }
+        renderDictPopoverBody(pop, state.dictTarget, false);
+        positionDictPopover(pop, anchorRect);
+      });
+    }
   }
 
   /* =========================================================
@@ -4151,7 +5121,7 @@
       const pct = report.total > 0 ? Math.round((report.score / report.total) * 100) : 0;
       const wrongCnt = Math.max(0, report.total - report.score);
       const isEndedEarly = !!report.endedEarly && !report.isMastered;
-      const canPreviewSolutions = report.isMastered || isTeacherBypass();
+      const canPreviewSolutions = !!report.isMastered;
       if (titleEl) {
         const metaTxt = isEndedEarly
           ? `Đã kết thúc · ${formatDuration(report.elapsedSec)}`
@@ -4175,31 +5145,32 @@
         `;
       }).join('');
 
+      const rowCount = (report.rows || []).length;
+      const gridColsCls = rowCount > 20 ? 'is-cols-5' : (rowCount >= 9 ? 'is-cols-4' : 'is-cols-3');
+
       const noteHtml = report.isMastered
-        ? `<div class="rp-res-note">Xuất sắc! Bạn đã hoàn thành đúng <strong>100%</strong>. Toàn bộ <strong>Solution, Locate &amp; Từ điển</strong> đã được mở khóa.</div>`
+        ? `<div class="rp-res-note">Xuất sắc! Bạn đã hoàn thành đúng <strong>100%</strong>. Bấm <strong>Xem giải &amp; Locate</strong> để xem đáp án chi tiết, dịch song ngữ và tra từ.</div>`
         : (isEndedEarly
-          ? `<div class="rp-res-note">Lượt làm đã kết thúc và lưu kết quả. Bạn có thể bấm <strong>Làm lại bài</strong> hoặc quay về <strong>Kho đề</strong>${isTeacherBypass() ? ' (tài khoản Giáo viên có thể bấm <strong>Xem giải &amp; Locate</strong> ngay).' : ' (đạt 100% để mở khóa Solution &amp; Từ điển).'}</div>`
-          : `<div class="rp-res-note">Các câu đúng (<strong>✓</strong>) đã được giữ lại. Bấm trực tiếp vào câu sai (<strong>✕</strong>) hoặc nút <strong>Làm lại câu sai</strong> để sửa rồi bấm <strong>Nộp lại</strong>.</div>`);
+          ? `<div class="rp-res-note">Lượt làm đã kết thúc và lưu kết quả. Bạn cần hoàn thành đúng <strong>100%</strong> để mở khóa <strong>Xem giải &amp; Locate</strong>.</div>`
+          : `<div class="rp-res-note">Các câu đúng (<strong>✓</strong>) đã được giữ lại. Bấm trực tiếp vào câu sai (<strong>✕</strong>) hoặc nút <strong>Làm lại câu sai</strong> để sửa rồi bấm <strong>Nộp lại</strong> (đúng 100% để mở Xem giải &amp; Locate).</div>`);
 
       const footHtml = report.isMastered
         ? `
           <div class="rp-res-foot">
             <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.finishExitToHub()">← Về kho đề</button>
-            <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.closePreSubmitModal()">Xem lời giải chi tiết →</button>
+            <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.closePreSubmitModal()">Xem giải &amp; Locate →</button>
           </div>
         `
         : (isEndedEarly
           ? `
             <div class="rp-res-foot">
               <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.retryCurrent()">Làm lại bài</button>
-              ${isTeacherBypass() ? `<button type="button" class="btn-subtle" id="rp-res-teacher-sol-btn" onclick="ReadingPracticeApp.openReviewFromResult()">Xem giải &amp; Locate</button>` : ''}
               <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.finishExitToHub()">← Về kho đề</button>
             </div>
           `
           : `
             <div class="rp-res-foot">
               <button type="button" class="btn-subtle" onclick="ReadingPracticeApp.closePreSubmitModal()">Đóng</button>
-              ${isTeacherBypass() ? `<button type="button" class="btn-subtle" id="rp-res-teacher-sol-btn" onclick="ReadingPracticeApp.openReviewFromResult()">Xem giải &amp; Locate</button>` : ''}
               <button type="button" class="btn btn-primary" id="rp-res-primary-btn" onclick="ReadingPracticeApp.focusFirstWrongFromResult()">Làm lại câu sai →</button>
             </div>
           `);
@@ -4219,7 +5190,7 @@
           <div class="rp-res-kpi">
             <span class="rp-res-kpi-lbl">Trạng thái</span>
             <strong class="rp-res-kpi-val tabular" style="font-size:18px;padding-top:4px;color:${report.isMastered ? '#15803d' : '#b91c1c'};">${report.isMastered ? '✓ Đạt 100%' : `Còn ${wrongCnt} câu`}</strong>
-            <span class="rp-res-kpi-sub">${report.isMastered ? 'Đã mở Solution' : 'Chưa mở đáp án gốc'}</span>
+            <span class="rp-res-kpi-sub">${report.isMastered ? 'Đã mở Solution' : 'Đúng 100% mới mở giải'}</span>
           </div>
         </div>
 
@@ -4231,7 +5202,7 @@
               <span class="rp-res-leg-bad">✕ Sai (${wrongCnt})</span>
             </span>
           </div>
-          <div class="rp-res-grid" id="rp-res-answer-grid">
+          <div class="rp-res-grid ${gridColsCls}" id="rp-res-answer-grid">
             ${rowsHtml}
           </div>
         </div>
@@ -4283,7 +5254,52 @@
     toggleBilingual() {
       if (!state.session) return;
       state.session.showBilingual = !state.session.showBilingual;
+      if (state.session.showBilingual) state.mobilePane = 'questions';
       renderExamWorkspace();
+    },
+
+    setHighlightPalette(paletteId) {
+      const pal = PASTEL_PALETTES.find((p) => p.id === paletteId);
+      if (!pal) return;
+      state.highlightPalette = pal.id;
+      try { localStorage.setItem(PALETTE_STORAGE_KEY, pal.id); } catch (_) {}
+      renderExamWorkspace();
+      toast(`Đã đổi bảng màu Highlight: ${pal.name}`);
+    },
+
+    focusBilingualParagraph(paraIdx) {
+      document.querySelectorAll('#rp-passage-pane .ins-para-block.is-bi-focus').forEach((el) => el.classList.remove('is-bi-focus'));
+      const target = document.querySelector(`#rp-passage-pane .ins-para-block[data-para-idx="${paraIdx}"]`);
+      if (target) {
+        target.classList.add('is-bi-focus');
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
+
+    onBilingualInput(passageId, paraIdx, taEl) {
+      const val = String(taEl?.value || '');
+      saveBilingualDraft(passageId, paraIdx, val);
+      const wc = val.trim() ? val.trim().split(/\s+/).length : 0;
+      const wcEl = document.getElementById(`rp-bi-wc-${paraIdx}`);
+      if (wcEl) wcEl.textContent = wc > 0 ? `${wc} từ` : 'Chưa dịch';
+      taEl?.closest('.rp-bi-card')?.classList.toggle('is-filled', wc > 0);
+      // Update summary counter cleanly without re-rendering textarea focus
+      const allTas = Array.from(document.querySelectorAll('#rp-bilingual-studio .rp-bi-textarea'));
+      let done = 0;
+      let words = 0;
+      allTas.forEach((t) => {
+        const w = t.value.trim() ? t.value.trim().split(/\s+/).length : 0;
+        if (w > 0) done += 1;
+        words += w;
+      });
+      const sumEl = document.getElementById('rp-bi-summary');
+      if (sumEl) sumEl.innerHTML = `Đã dịch <strong>${done}/${allTas.length}</strong> đoạn · ${words} từ (tự lưu trên máy)`;
+    },
+
+    clearPassageBilingual(passageId) {
+      clearBilingualDrafts(passageId);
+      renderExamWorkspace();
+      toast('Đã xóa toàn bộ bản dịch nháp của bài đọc này.');
     },
 
     locateEvidence(evId) {
@@ -4322,7 +5338,7 @@
       const bar = document.getElementById('rp-hl-toolbar');
       if (!bar || !rect) return;
       const isPrac = state.session?.studyMode === 'practice';
-      const estW = isPrac ? 290 : 220;
+      const estW = isPrac ? 360 : 280;
       const left = Math.max(12, Math.min(window.innerWidth - estW - 12, rect.left + rect.width / 2 - estW / 2));
       const preferTop = rect.top - 52;
       const top = preferTop >= 62 ? preferTop : Math.max(62, rect.bottom + 8);
@@ -4337,7 +5353,32 @@
           ev.preventDefault();
           ev.stopPropagation();
         }
+        return true;
       }
+      return false;
+    },
+
+    handleQuestionsClick(ev) {
+      if (this.onQuestionsClickGuard(ev)) return;
+      const s = state.session;
+      // STRICT RULE: Click-to-Dictionary on questions ONLY unlocked in Review (after 100% mastery) or News!
+      if (!s || !(s.mode === 'review' || s.isNews)) return;
+      if (state.pendingSelection) return;
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) return;
+
+      // Ignore clicks on interactive controls & review action buttons
+      if (ev.target?.closest?.('input, select, option, textarea, button, a, svg, .rp-rev-bar, .rp-rev-pill, .ins-bookmark-btn, .ins-strike-btn, .ins-sel-chip, .ins-note-qnum, .ins-q-num')) {
+        return;
+      }
+      const qPane = document.getElementById('rp-questions-pane');
+      const hit = getWordAtClientPoint(ev.clientX, ev.clientY, qPane);
+      if (!hit) {
+        this.closeDictPopover();
+        return;
+      }
+      const ctx = extractSentenceForNode(hit.node, hit.word);
+      showDictPopover(hit.word, ctx, hit.rect, 'questions');
     },
 
     onPassageMouseDown(ev) {
@@ -4382,7 +5423,7 @@
       const parentEl = range.commonAncestorContainer.nodeType === 1
         ? range.commonAncestorContainer
         : range.commonAncestorContainer.parentElement;
-      const context = extractSentenceForNode(parentEl);
+      const context = extractSentenceForNode(parentEl, text);
 
       if (!slices.length) {
         bar.classList.add('hidden');
@@ -4514,8 +5555,9 @@
       if (!text) return;
       const rect = pending?.rect || (sel && !sel.isCollapsed ? sel.getRangeAt(0).getBoundingClientRect() : null);
       const ctx = pending?.context || '';
+      const pane = pending?.pane || 'passage';
       this.hideHighlightToolbar();
-      showDictPopover(text, ctx, rect);
+      showDictPopover(text, ctx, rect, pane);
     },
 
     handlePassageWordClick(ev) {
@@ -4535,6 +5577,29 @@
       state.dictTarget = null;
     },
 
+    toggleDictMeaningEdit() {
+      if (!state.dictTarget) return;
+      state.dictTarget.editMode = !state.dictTarget.editMode;
+      const pop = document.getElementById('rp-dict-popover');
+      renderDictPopoverBody(pop, state.dictTarget, false);
+      positionDictPopover(pop, state.dictTarget.anchorRect);
+      if (state.dictTarget.editMode) {
+        const inp = document.getElementById('rp-dict-meaning-input');
+        if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+      }
+    },
+
+    onDictMeaningEdit(val) {
+      if (!state.dictTarget) return;
+      state.dictTarget.userEdited = true;
+      state.dictTarget.entry.vi = String(val || '');
+    },
+
+    lookupSynonymWord(synWord) {
+      if (!state.dictTarget || !synWord) return;
+      showDictPopover(synWord, state.dictTarget.context || '', state.dictTarget.anchorRect, state.dictTarget.sourcePane || 'passage');
+    },
+
     speakDictWord(accent) {
       if (!state.dictTarget?.entry?.word) return;
       if (B()?.speakText) B().speakText(state.dictTarget.entry.word, accent || 'en-US');
@@ -4543,17 +5608,44 @@
 
     saveDictWordToMyVocab() {
       if (!state.dictTarget || !window.MyVocabStore) return;
-      const meaning = (document.getElementById('rp-dict-meaning-input')?.value || state.dictTarget.entry.vi || '').trim() || '(Tự ghi chú nghĩa sau)';
+      const inpVal = document.getElementById('rp-dict-meaning-input')?.value;
+      const meaning = (inpVal !== undefined ? inpVal : state.dictTarget.entry.vi || '').trim() || '(Tự ghi chú nghĩa sau)';
       const deckName = document.getElementById('rp-dict-deck-select')?.value || state.dictTarget.deckName || 'Từ của tôi';
       const entry = state.dictTarget.entry;
       const res = window.MyVocabStore.addWordToNamedDeck(deckName, {
-        lemma: entry.word, pos: entry.pos || 'word', ipa: entry.ipa || '',
-        clean_meaning: meaning, reading_context: state.dictTarget.context || '',
+        lemma: entry.word, pos: entry.pos || 'Từ vựng', ipa: entry.ipa || '',
+        clean_meaning: meaning, reading_context: trimContextCleanly(state.dictTarget.context || '', entry.word, 220),
         synonyms: entry.synonyms || [], source: state.session?.title || 'Reading Practice'
       });
       this.closeDictPopover();
       renderExamWorkspace();
       toast(res?.ok ? `Đã lưu "${entry.word}" vào "${deckName}" (Từ của tôi)!` : `"${entry.word}" đã có trong "${deckName}".`);
+    },
+
+    ensureSourceBankLoaded(src) {
+      return ensureSourceBankLoaded(src);
+    },
+
+    async openAssignedItem(itemId, isFull, mode = 'practice') {
+      const cleanId = String(itemId || '').trim();
+      if (!cleanId) return;
+      const src = /^vol/i.test(cleanId) ? 'volume' : (/^act/i.test(cleanId) ? 'actual' : 'cambridge');
+      window.TotoroUI?.enterSkillMode?.('Reading', 'practice');
+      await ensureSourceBankLoaded(src);
+      const useMode = mode === 'exam' ? 'exam' : 'practice';
+      if (isFull) {
+        if ((DATA().FULL_TESTS || []).some((x) => x.id === cleanId)) {
+          this.startFullTest(cleanId, { studyMode: useMode });
+        } else {
+          toast('Không tìm thấy đề Full Test này trong kho dữ liệu.');
+        }
+      } else {
+        if ((DATA().PASSAGES || {})[cleanId]) {
+          this.startPassage(cleanId, { studyMode: useMode });
+        } else {
+          toast('Không tìm thấy Passage này trong kho dữ liệu.');
+        }
+      }
     },
 
     startResize(ev) {

@@ -548,7 +548,7 @@
 
     const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
     const subEl = document.getElementById('inline-task-sub');
-    if (titleEl) titleEl.textContent = 'LISTENING TASKS';
+    if (titleEl) titleEl.textContent = 'Task bài tập · Listening';
     if (subEl) subEl.textContent = `${doneInSuite} / ${filtered.length} hoàn thành · ${suiteLabel}`;
 
     if (tabsEl) {
@@ -574,7 +574,7 @@
           : (t.hasFullTests ? '<span class="lt-inline-pill">3 Test</span>' : ''));
 
       return `
-        <button type="button" class="tot-task-card has-stamp ${done ? 'is-done' : ''}" onclick="ListeningTasksModule.openTaskBrief('${esc(t.id)}')">
+        <button type="button" class="tot-task-card ${done ? 'is-done' : ''}" onclick="ListeningTasksModule.openTaskBrief('${esc(t.id)}')">
           <span class="tot-task-num ${t.isMapTask ? 'is-map-num' : ''}">${esc(numStr)}</span>
           <div style="min-width:0;flex:1;">
             <div style="font-size:13px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.label)}</div>

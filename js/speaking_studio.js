@@ -1,6 +1,6 @@
 /* ==========================================================================
-   TOTORO IELTS MASTER — SPEAKING STUDIO ENGINE (STORY 01)
-   4-Tab Native Studio: Tổng quan · Flashcard · Task (4 Bước) · Practice (14 Cue Cards)
+   TOTORO IELTS MASTER — SPEAKING STUDIO ENGINE (STORY 01 · FULL B1 → B5 FLOW)
+   4-Tab Native Studio: Tổng quan · Flashcard (B1→B5) · Task (4 Bước) · Practice (14 Cue Cards)
    Integrates window.TotoroSpeechSTT (Whisper Large v3) + window.AppCore.audio (Youdao US/UK)
    ========================================================================== */
 (function () {
@@ -102,16 +102,17 @@
     };
     const st = getStory();
     if (st) {
-      (st.stages || []).forEach((s) => { add(s.textEn); (s.keywords || []).forEach(add); });
+      (st.storyMindmap || []).forEach((n) => { add(n.textEn); (n.keywords || []).forEach(add); });
+      (st.storySections || []).forEach((s) => add(s.textEn));
       (st.spokenChunks || []).forEach((c) => { add(c.en); add(c.example); add(c.enRef); });
-      (st.pivotCards || []).forEach((p) => { add(p.en); add(p.example); (p.items || []).forEach((it) => add(it.en)); });
+      (st.steerMindmaps || []).forEach((m) => (m.nodes || []).forEach((n) => { add(n.refEn); (n.keywords || []).forEach(add); }));
       (st.fullSpeech?.en || []).forEach(add);
       (st.pictureBook || []).forEach((p) => { add(p.en); (p.collocations || []).forEach(add); });
       (st.cueCards || []).forEach((c) => { add(c.title); add(c.b13En); add(c.b5En); });
     }
     if (window.IPA_DICT) Object.keys(window.IPA_DICT).forEach((k) => set.add(k.toLowerCase()));
     if (Array.isArray(window.RAW_VOCAB_DATA)) window.RAW_VOCAB_DATA.forEach((it) => { add(it.word); add(it.example); });
-    add('grandfather grandmother retired maths math teacher seventies silver hair warm smile parents worked morning till night afternoon dinner homework neighbour neighbor next door close friends grade mother fell ill hospital month missed school look after housework behind low marks insecure lost motivation dropping out found out called over listened calmly worries invited weekend broke hard problems simple steps explained clearly review notebook finished exercise quickly struggling basic calculation frustrated snapped hurry gently hand shoulder whispered take time stuck afraid making mistakes rushing panic confused heard felt guilty apologised apologized right away worked through guidance year caught regained confidence better kids brought notebooks help looking back hope follow example staying calm listening carefully');
+    add('grandfather grandmother retired maths math teacher seventies silver hair warm smile admire respect role model patience empathy nature gently voice parents worked morning till night afternoon dinner homework neighbour neighbor next door close friends grade mother fell ill hospital month missed school look after housework behind low marks insecure lost motivation dropping out found out called over listened calmly worries invited weekend broke hard problems simple steps explained clearly review notebook finished exercise quickly struggling basic calculation frustrated snapped hurry gently hand shoulder whispered take time stuck afraid making mistakes rushing panic confused heard felt guilty apologised apologized right away worked through guidance year caught regained confidence better kids brought notebooks help looking back hope follow example staying calm listening carefully skill experience teamwork collaborate secondary vividly owning judging');
     cachedLex = set;
     return set;
   }
@@ -181,53 +182,63 @@
       return norm.includes(cn) || (toks.length >= 2 && toks.filter((t) => norm.includes(t)).length >= Math.ceil(toks.length * 0.75));
     }).map((c) => c.en);
     const fillerMatches = (String(text || '').match(/\b(um+|uh+|er+|hmm+|like|you know|actually|basically)\b/gi) || []);
-    const stageHits = (story?.stages || []).filter((st) => evaluateKeywords(text, st.keywords).hits.length >= 2).length;
+    const stationHits = (story?.speakStations || []).filter((st) => evaluateKeywords(text, st.keywords).hits.length >= 2).length;
     return {
       words,
       durationSec: dur,
       wpm,
       usedChunks,
       fillerCount: fillerMatches.length,
-      stageHits
+      stageHits: stationHits
     };
   }
 
-  /* ================= DECK BUILDER (STORY 01 FLOW ORDER) ================= */
+  /* ================= DECK BUILDER (SMOOTH FULL STORY B1 → B2 → B3 → B4 → B5) ================= */
   function buildStoryCards(story) {
     if (!story) return [];
     const cards = [];
-    // Card 0: Story Flow Map (untested)
+    // Card 0: Compact Story 01 Overview Map (B1 -> B5)
     cards.push({
       id: `${story.id}_overview`,
       kind: 'story_flow',
+      group: 'MAP',
+      sectionCode: 'B1 → B5',
       untested: true,
-      pos: 'STORY FLOW · B4',
+      pos: 'BẢN ĐỒ STORY 01 · B1 → B5',
       en: story.shortTitle || story.title,
       vi: story.subtitle,
       story
     });
 
+    const sections = story.storySections || [];
     const chunks = story.spokenChunks || [];
-    (story.stages || []).forEach((st) => {
+    const posMap = { 'n phr': 'CỤM DANH TỪ', 'v phr': 'CỤM ĐỘNG TỪ', 'adj phr': 'CỤM TÍNH TỪ', phr: 'CỤM NÓI' };
+
+    sections.forEach((sec) => {
+      const secChunks = chunks.filter((c) => c.section === sec.id);
       cards.push({
-        id: `${story.id}_stage_${st.stage}`,
-        kind: 'stage_flow',
+        id: `${story.id}_sec_${sec.id.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        kind: 'section_flow',
+        group: sec.group,
+        sectionId: sec.id,
+        sectionCode: sec.code,
         untested: true,
-        stage: st.stage,
-        pos: `CHẶNG B4.${st.stage} / 5`,
-        en: st.titleVi,
-        vi: st.textVi,
-        textEn: st.textEn,
-        sceneImg: st.sceneImg,
-        keywords: st.keywords || []
+        pos: `MẠCH TRUYỆN · ${sec.code}`,
+        en: sec.titleVi,
+        vi: sec.textVi,
+        textEn: sec.textEn,
+        sceneImg: sec.sceneImg,
+        nextLabel: sec.nextLabel || `Học ${secChunks.length} cụm ${sec.code} →`
       });
-      chunks.filter((c) => c.stage === st.stage).forEach((c, idx) => {
-        const posVi = { 'n phr': 'CỤM DANH TỪ', 'v phr': 'CỤM ĐỘNG TỪ', 'adj phr': 'CỤM TÍNH TỪ', phr: 'CỤM NÓI' }[c.pos] || 'CỤM NÓI';
+
+      secChunks.forEach((c, idx) => {
         cards.push({
-          id: `${story.id}_c_s${st.stage}_${idx + 1}`,
+          id: `${story.id}_c_${sec.id.replace(/[^a-zA-Z0-9]/g, '_')}_${idx + 1}`,
           kind: 'chunk',
-          stage: st.stage,
-          pos: posVi,
+          group: sec.group,
+          sectionId: sec.id,
+          sectionCode: sec.code,
+          pos: posMap[c.pos] || 'CỤM NÓI',
           en: c.en,
           vi: c.vi,
           example: c.example || '',
@@ -237,20 +248,6 @@
       });
     });
 
-    (story.pivotCards || []).forEach((p, idx) => {
-      cards.push({
-        id: p.id || `${story.id}_pv_${idx + 1}`,
-        kind: 'pivot',
-        pos: 'PIVOT · BẺ LÁI',
-        label: p.label,
-        en: p.en,
-        vi: p.vi,
-        items: p.items || [],
-        example: p.example || '',
-        viPrompt: p.viPrompt || '',
-        enRef: p.enRef || ''
-      });
-    });
     return cards;
   }
 
@@ -278,8 +275,7 @@
     unmasteredOnly: false,
     flowMaskOn: false,
     flowRevealed: {},
-    perspKey: 'ong',
-    stageEnRevealed: {},
+    sectionEnRevealed: {},
     pracCat: 'all',
     pracQuery: '',
     cooldownMap: {},
@@ -288,6 +284,7 @@
 
   let recallState = null;
   let pbState = null;
+  let mmState = null;
   let examState = null;
   let roomState = null;
   let overlaysMounted = false;
@@ -305,6 +302,7 @@
       <div class="sp-modal-overlay" id="sp-pb-modal" onclick="SpeakingStudio.closePictureBook()">
         <div class="sp-modal-card is-wide" id="sp-pb-card" onclick="event.stopPropagation()"></div>
       </div>
+      <div class="sp-mm-fullscreen" id="sp-mindmap-modal"></div>
       <div class="sp-modal-overlay" id="sp-task-exam-modal">
         <div class="sp-modal-card is-wide" id="sp-task-exam-card" onclick="event.stopPropagation()"></div>
       </div>
@@ -316,6 +314,12 @@
     document.body.appendChild(wrap);
 
     document.addEventListener('keydown', (e) => {
+      if (mmState) {
+        if (e.key === 'Escape') closeMindmapModal();
+        else if (e.key === '+' || e.key === '=') zoomMindmap(1.15);
+        else if (e.key === '-') zoomMindmap(0.85);
+        return;
+      }
       if (pbState) {
         if (e.key === 'ArrowRight') { e.preventDefault(); stepPictureBook(1); }
         else if (e.key === 'ArrowLeft') { e.preventDefault(); stepPictureBook(-1); }
@@ -337,171 +341,157 @@
     });
   }
 
-  /* ================= TAB 1: SPEAKING HOME ================= */
+  /* ================= TAB 1: SPEAKING HOME (1:1 WRITING/READING TOTORO PARITY) ================= */
   function renderSpeakingHomePanel(el) {
     if (!el) return;
     const story = getStory();
     if (!story) return;
     const mStats = getStoryMasteryStats(story);
     const taskDone = getTaskDoneMap()[story.id] || null;
+    const tasksDoneCnt = taskDone?.completed ? 4 : (taskDone?.maxStage || 0);
     const hist = getPracHistory();
     const practicedCueIds = new Set(hist.map((h) => h.cueId));
-    const totalCue = (story.cueCards || []).length;
-    const totalMins = Math.round(hist.reduce((acc, h) => acc + (Number(h.durationSec) || 0), 0) / 60);
+    const allCues = story.cueCards || [];
+    const totalCue = allCues.length;
 
-    const catCounts = { person: 0, cross_topic: 0, cross_category: 0 };
-    (story.cueCards || []).forEach((c) => {
-      if (catCounts[c.category] !== undefined) catCounts[c.category]++;
-    });
+    const groups = [
+      { key: 'person', label: 'Person' },
+      { key: 'cross_topic', label: 'Cross-Topic' },
+      { key: 'cross_category', label: 'Cross-Category' }
+    ];
+    const barsHtml = groups.map((g) => {
+      const list = allCues.filter((c) => c.category === g.key);
+      const done = list.filter((c) => practicedCueIds.has(c.id)).length;
+      const pct = Math.round((done / Math.max(1, list.length)) * 100);
+      return `
+        <div class="rh-deck-row">
+          <div class="rh-deck-meta"><span>${esc(g.label)}</span><strong class="tabular">${done}/${list.length}</strong></div>
+          <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:${pct}%"></div></div>
+        </div>
+      `;
+    }).join('');
 
     const histHtml = hist.length
-      ? hist.slice(0, 5).map((h) => `
-          <div class="rh-hist-item">
-            <div style="min-width:0;">
-              <div class="rh-hist-title">${esc(h.cueTitle)}</div>
-              <div class="rh-hist-meta">${h.mode === 'exam' ? 'Thi thật' : 'Luyện tập'} · ${fmtMmSs(h.durationSec)} · ${h.wpm || 0} WPM · ${h.chunksCount || 0} chunks · ${h.at ? new Date(h.at).toLocaleDateString('vi-VN') : ''}</div>
+      ? hist.slice(0, 2).map((h) => `
+          <div class="rh-hist-row">
+            <div style="flex:1;min-width:0;">
+              <div class="rh-hist-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(h.cueTitle)}</div>
+              <div class="rh-hist-meta">${h.mode === 'exam' ? 'Thi thật' : 'Luyện tập'} · ${fmtMmSs(h.durationSec)} · ${h.wpm || 0} WPM</div>
             </div>
-            <div class="rh-hist-right">
-              <span class="rh-band-pill tabular">${h.words || 0} từ</span>
-              <button type="button" class="tot-foot-btn" onclick="SpeakingStudio.openPracticeRoom('${esc(h.cueId)}', '${esc(h.mode || 'practice')}')">Nói lại</button>
-            </div>
+            <span class="tot-hist-badge tabular">${h.words || 0}w</span>
           </div>
         `).join('')
-      : `<div class="rh-empty">Chưa có lượt luyện nói nào. Hãy học <strong>Flashcard Story 01</strong> rồi vào <strong>Task · 4 Bước</strong> hoặc <strong>Practice</strong> nhé!</div>`;
+      : '';
+
+    const storyPct = Math.round((tasksDoneCnt / 4) * 100);
+    const quickTiles = [
+      { name: 'Flashcard Story 01', meta: '30 Spoken Chunks · Âm thanh US/UK', tag: 'Cốt lõi', act: "window.TotoroUI.enterSkillMode('Speaking', 'flashcard')" },
+      { name: 'Mindmap Bẻ Lái', meta: 'Sơ đồ mạch kể Story 01 trực quan', tag: 'Tư duy', act: "SpeakingStudio.openMindmapModal('master')" },
+      { name: `Sách Tranh ${(story?.pictureBook || []).length || 10} cảnh`, meta: 'Ghi nhớ trọn 5 chặng bằng hình ảnh', tag: 'Trực quan', act: "SpeakingStudio.openPictureBook(0)" },
+      { name: `Kho ${totalCue} Đề Part 2`, meta: 'Person · Cross-Topic · Cross-Category', tag: 'Thi thật', act: "window.TotoroUI.enterSkillMode('Speaking', 'practice')" }
+    ];
+    const quickTilesHtml = quickTiles.map((q) => `
+      <button type="button" class="rh-quick-tile" onclick="${q.act}">
+        <div class="rh-quick-top">
+          <span class="rh-quick-name">${esc(q.name)}</span>
+          <span class="rh-quick-tag">${esc(q.tag)}</span>
+        </div>
+        <div class="rh-quick-meta">${esc(q.meta)}</div>
+      </button>
+    `).join('');
 
     el.innerHTML = `
-      <div class="rh-layout">
+      <div class="rh-layout rh-clean">
         <div class="rh-top-asym">
-          <div class="tot-hero-card ink-brackets has-stamp rh-main-hero">
+          <div class="tot-hero-card rh-main-hero">
             <div class="rh-hero-copy">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <div class="rh-head-row">
                 <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
                 </span>
                 <div>
-                  <h2 class="tot-shell-title" style="margin:0;">IELTS Speaking · Story 01</h2>
-                  <div class="tot-shell-sub">${esc(story.title)}</div>
+                  <h2 class="tot-shell-title" style="margin:0;">IELTS Speaking</h2>
+                  <div class="tot-shell-sub tabular">${mStats.done} / ${mStats.total} thẻ · ${tasksDoneCnt} / 4 Bước Task · ${practicedCueIds.size} / ${totalCue} Đề Part 2</div>
                 </div>
               </div>
-
-              <div class="sp-arch-track">
-                <div class="sp-arch-box">
-                  <span class="sp-arch-tag">B1 – B2 – B3</span>
-                  <div class="sp-arch-title">Đổi Góc Nhìn</div>
-                  <div class="sp-arch-desc">Ông ngoại · Bản thân tôi · Bạn Nam (10–15% bài nói)</div>
-                </div>
-                <div class="sp-arch-arrow" aria-hidden="true">→</div>
-                <div class="sp-arch-box is-core">
-                  <span class="sp-arch-tag">B4 · LÕI BẤT BIẾN</span>
-                  <div class="sp-arch-title">5 Chặng Kể Chuyện (75–80%)</div>
-                  <div class="sp-arch-desc">Tuổi thơ → Biến cố mẹ Nam → Lớp học cuối tuần → Lời ông → Trái ngọt</div>
-                </div>
-                <div class="sp-arch-arrow" aria-hidden="true">→</div>
-                <div class="sp-arch-box">
-                  <span class="sp-arch-tag">B5 · KHÓA ĐỀ</span>
-                  <div class="sp-arch-title">Cân ${totalCue}+ Đề Thật</div>
-                  <div class="sp-arch-desc">Person · Cross-Topic · Cross-Category (10% bài nói)</div>
-                </div>
+              <div class="rh-decks-grid-4 sp-home-cat-grid">${barsHtml}</div>
+              <div class="sp-home-flow-strip" aria-label="Cấu trúc mạch Story 01">
+                <span>Mở bài</span><span aria-hidden="true">→</span>
+                <span>Dẫn chuyện</span><span aria-hidden="true">→</span>
+                <span>Cốt truyện (5 chặng)</span><span aria-hidden="true">→</span>
+                <span>Kết bài</span>
               </div>
-
-              <div class="sp-stat-pills">
-                <div class="sp-stat-cell">
-                  <div class="sp-stat-cell-val">${mStats.done}/${mStats.total}</div>
-                  <div class="sp-stat-cell-lbl">Spoken Chunks thuộc</div>
-                </div>
-                <div class="sp-stat-cell">
-                  <div class="sp-stat-cell-val">${taskDone?.completed ? '4/4' : `${taskDone?.maxStage || 0}/4`}</div>
-                  <div class="sp-stat-cell-lbl">Bước Task Story 01</div>
-                </div>
-                <div class="sp-stat-cell">
-                  <div class="sp-stat-cell-val">${practicedCueIds.size}/${totalCue}</div>
-                  <div class="sp-stat-cell-lbl">Cue Card đã luyện</div>
-                </div>
-                <div class="sp-stat-cell">
-                  <div class="sp-stat-cell-val">${totalMins}p</div>
-                  <div class="sp-stat-cell-lbl">Thời lượng luyện nói</div>
-                </div>
-              </div>
-
-              <div class="rh-hero-actions" style="margin-top:14px;">
-                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.switchView('flashcard')">Học Flashcard Story 01 →</button>
-                <button type="button" class="tot-demo-btn" onclick="SpeakingStudio.openPictureBook(0)">Sách Tranh 26 Phân Cảnh</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('task')">Task · 4 Bước</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('practice')">Luyện ${totalCue} Cue Cards</button>
+              <div class="rh-hero-actions" style="margin-top:12px;">
+                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'flashcard')">Học Flashcard →</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'task')">Task 4 Bước</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'practice')">Kho ${totalCue} Đề</button>
               </div>
             </div>
           </div>
 
-          <div class="tot-home-panel ink-brackets rh-band-panel">
-            <div class="tot-panel-head">
+          <div class="tot-home-panel rh-band-panel">
+            <div class="tot-panel-head" style="margin-bottom:10px;">
               <div>
-                <div class="tot-panel-title">Độ Phủ Bẻ Lái · Story 01</div>
-                <div class="tot-panel-sub">1 cốt truyện lõi áp dụng cho 3 nhóm đề</div>
+                <div class="tot-panel-title">Tiến độ Speaking</div>
+                <div class="tot-panel-sub tabular">${tasksDoneCnt} / 4 bước Task Story 01</div>
               </div>
               <span class="rh-band-big tabular">${mStats.pct}%</span>
             </div>
-            <div style="display:flex;flex-direction:column;gap:10px;margin:auto 0;">
-              <div class="rh-deck-row">
-                <div class="rh-deck-meta"><span>Person (Bẻ lái nhân vật)</span><strong class="tabular">${catCounts.person} đề</strong></div>
-                <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:100%"></div></div>
+            <div class="rh-kpi-strip tabular">
+              <div class="rh-kpi-cell">
+                <span class="rh-kpi-num">${mStats.done}/${mStats.total}</span>
+                <span class="rh-kpi-lbl">Thẻ thuộc</span>
               </div>
-              <div class="rh-deck-row">
-                <div class="rh-deck-meta"><span>Cross-Topic (Kỹ năng · Cộng đồng)</span><strong class="tabular">${catCounts.cross_topic} đề</strong></div>
-                <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:100%"></div></div>
+              <div class="rh-kpi-cell">
+                <span class="rh-kpi-num">${tasksDoneCnt}/4</span>
+                <span class="rh-kpi-lbl">Bước Task</span>
               </div>
-              <div class="rh-deck-row">
-                <div class="rh-deck-meta"><span>Cross-Category (Ngoài Person)</span><strong class="tabular">${catCounts.cross_category} đề</strong></div>
-                <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:100%"></div></div>
+              <div class="rh-kpi-cell">
+                <span class="rh-kpi-num">${practicedCueIds.size}/${totalCue}</span>
+                <span class="rh-kpi-lbl">Đề đã nói</span>
               </div>
             </div>
-            <div class="tot-panel-foot" style="margin-top:auto;">
-              <span class="tot-foot-meta">Phòng luyện <strong>1p Planning + 2p Nói</strong></span>
-              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.switchView('practice')">Chọn Cue Card →</button>
+            ${histHtml ? `<div class="rh-hist-list is-flat" style="margin-top:8px;">${histHtml}</div>` : ''}
+            <div class="tot-panel-foot" style="margin-top:auto;padding-top:10px;">
+              <span class="tot-foot-meta">Story 01 · ${totalCue} đề thi thật Part 2</span>
+              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'practice')">Kho đề →</button>
             </div>
           </div>
         </div>
 
-        <div class="rh-bottom-asym">
-          <div class="tot-home-panel ink-brackets">
-            <div class="tot-panel-head">
-              <div>
-                <div class="tot-panel-title">Lịch Sử Luyện Nói Part 2</div>
-                <div class="tot-panel-sub">Luyện tập 1p+2p · Phòng thi thật</div>
-              </div>
-              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.switchView('practice')">Kho Cue Card →</button>
-            </div>
-            <div class="rh-hist-list">${histHtml}</div>
+        <section class="rh-quick-section" aria-label="Mở nhanh Speaking Studio">
+          <div class="rh-quick-head">
+            <h3 class="rh-section-lbl">Mở nhanh Speaking Studio</h3>
+            <button type="button" class="rh-text-link" onclick="window.TotoroUI.enterSkillMode('Speaking', 'task')">Vào Task 4 Bước →</button>
           </div>
+          <div class="rh-quick-grid">${quickTilesHtml}</div>
+        </section>
 
-          <div class="tot-home-panel ink-brackets">
-            <div class="tot-panel-head">
-              <div>
-                <div class="tot-panel-title">Lộ Trình Khóa Chặt Story 01</div>
-                <div class="tot-panel-sub">Đi theo thứ tự để nhớ tự nhiên không học vẹt</div>
-              </div>
-              <button type="button" class="tot-foot-btn" onclick="SpeakingStudio.openPictureBook(0)">Xem Sách Tranh →</button>
+        <section class="sp-home-story-card" onclick="window.TotoroUI.enterSkillMode('Speaking', 'flashcard')" role="button" tabindex="0">
+          <div class="sp-home-story-thumb">
+            <img src="assets/speaking/story1/scene_01.webp" alt="${esc(story.title)}" loading="lazy">
+          </div>
+          <div class="ws-home-st-main">
+            <div class="sp-home-story-kicker">Lộ trình Story 01 · IELTS Speaking Part 2</div>
+            <div class="ws-home-st-title">${esc(story.title)}</div>
+            <div class="ws-home-st-desc">${esc(story.subtitle)}</div>
+          </div>
+          <div class="ws-home-st-right" onclick="event.stopPropagation()">
+            <div class="ws-home-st-prog">
+              <span class="ws-pill tabular">${tasksDoneCnt} / 4 bước</span>
+              <div class="ws-home-st-bar"><span style="width:${storyPct}%"></span></div>
             </div>
-            <div class="rh-hist-list">
-              <div class="rh-hist-item">
-                <div style="min-width:0;"><div class="rh-hist-title">1. Nắm 5 chặng lõi B4 + 30 Spoken Chunks</div><div class="rh-hist-meta">Flashcard đồng bộ + kiểm tra Mic AI</div></div>
-                <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.switchView('flashcard')">Học →</button>
-              </div>
-              <div class="rh-hist-item">
-                <div style="min-width:0;"><div class="rh-hist-title">2. Khóa chặt qua Task 4 Bước</div><div class="rh-hist-meta">Viết B4 → Nói B4 → Bẻ lái → Nói 2 phút</div></div>
-                <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.switchView('task')">Vào Task →</button>
-              </div>
-              <div class="rh-hist-item">
-                <div style="min-width:0;"><div class="rh-hist-title">3. Bẻ lái ${totalCue} Cue Card thi thật</div><div class="rh-hist-meta">1 phút ghi chú nháp + 2 phút thu âm đối chiếu</div></div>
-                <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.switchView('practice')">Luyện →</button>
-              </div>
+            <div class="sp-home-story-acts">
+              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'task')">Làm Task</button>
+              <button type="button" class="btn btn-primary tot-demo-btn" style="height:34px;min-height:34px;padding:0 14px;font-size:12.5px;" onclick="window.TotoroUI.enterSkillMode('Speaking', 'flashcard')">Học ngay →</button>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     `;
   }
 
-  /* ================= TAB 2: FLASHCARD WORKSPACE (1:1 READING/WRITING PARITY) ================= */
+  /* ================= TAB 2: FLASHCARD WORKSPACE (SMOOTH FULL STORY B1 → B5) ================= */
   function getVisibleCards() {
     const story = getStory();
     const base = buildStoryCards(story);
@@ -545,9 +535,20 @@
         lbl.textContent = `Chờ ${sec}s`;
       } else if (btn.disabled) {
         btn.disabled = false;
-        lbl.innerHTML = 'Đã thuộc <small class="anki-ivl-tag">Mic AI</small>';
+        lbl.innerHTML = 'Đã thuộc <small class="anki-ivl-tag">Gõ + Nói</small>';
       }
     }, 500);
+  }
+
+  function jumpToPart(groupKey) {
+    state.unmasteredOnly = false;
+    const cards = getVisibleCards();
+    const idx = cards.findIndex((c) => c.group === groupKey);
+    if (idx >= 0) {
+      state.cardIdx = idx;
+      state.flipped = false;
+      renderFlashcardWorkspace();
+    }
   }
 
   function renderFlashcardWorkspace() {
@@ -563,31 +564,50 @@
     const mStats = getStoryMasteryStats(story);
     const stLevel = mmap[card.id]?.level || 0;
     const statusCls = stLevel === 3 ? 'mastered' : (stLevel === 2 ? 'slow' : '');
-    const statusTxt = card.untested ? (card.kind === 'story_flow' ? 'Bản đồ Story 01' : `Chặng B4.${card.stage}`) : (stLevel === 3 ? 'Đã thuộc' : (stLevel === 2 ? 'Nhớ chậm' : 'Chưa học'));
-    const isAnyFlow = card.kind === 'story_flow' || card.kind === 'stage_flow';
-    const showAudio = card.kind === 'chunk' || card.kind === 'pivot';
+    const statusTxt = card.untested ? (card.kind === 'story_flow' ? 'Bản đồ B1 → B5' : `Mạch ${card.sectionCode}`) : (stLevel === 3 ? 'Đã thuộc' : (stLevel === 2 ? 'Nhớ chậm' : 'Chưa học'));
+    const isAnyFlow = card.kind === 'story_flow' || card.kind === 'section_flow';
+    const showAudio = card.kind === 'chunk';
     const cdSec = getCooldownSec(card.id);
 
     const pctCard = Math.round(((state.cardIdx + 1) / Math.max(1, cards.length)) * 100);
     const wordSizeCls = card.en.length <= 20 ? 'sp-word-sm' : (card.en.length <= 36 ? 'sp-word-md' : 'sp-word-lg');
-    const metaTag = card.kind === 'chunk' ? `Chặng B4.${card.stage}` : (card.kind === 'pivot' ? (card.label || 'Bẻ lái B1/B5') : '');
+    const metaTag = card.kind === 'chunk' ? `Phần ${card.sectionCode}` : '';
 
-    // Build Front extra content
+    // Smooth compact story part ribbon (B1–B2 -> B3 -> B4 -> B5)
+    const partTabs = [
+      { key: 'MAP', label: 'Sơ đồ' },
+      { key: 'B1-B2', label: 'Mở bài' },
+      { key: 'B3', label: 'Dẫn chuyện' },
+      { key: 'B4', label: 'Cốt truyện' },
+      { key: 'B5', label: 'Kết bài' }
+    ];
+    const partRibbonHtml = `
+      <div class="sp-part-ribbon" role="navigation" aria-label="Mạch Story 01">
+        ${partTabs.map((pt, i) => `
+          <button type="button" class="sp-part-pill ${card.group === pt.key ? 'active' : ''}" onclick="SpeakingStudio.jumpToPart('${pt.key}')">${pt.label}</button>
+          ${i < partTabs.length - 1 ? '<span class="sp-part-sep" aria-hidden="true">→</span>' : ''}
+        `).join('')}
+      </div>
+    `;
+
+    // Front extra content
     let frontExtraHtml = '';
     if (card.kind === 'story_flow') {
       frontExtraHtml = `
+        <div class="sp-stage-front-thumb"><img src="assets/speaking/story1/scene_01.webp" alt="${esc(story.title)}" loading="lazy"></div>
         <div class="fc-pronounce-row" onclick="event.stopPropagation()">
-          <span class="fc-ipa-badge">5 chặng lõi B4 · 3 góc nhìn · 30 Spoken Chunks</span>
-          <button type="button" class="btn-voice-speak" style="width:auto;padding:0 12px;" onclick="SpeakingStudio.openPictureBook(0, event)"><span>Sách Tranh 26 cảnh</span></button>
+          <span class="fc-ipa-badge">Trọn mạch Story 01 · 30 cụm nói</span>
+          <button type="button" class="btn-voice-speak" style="width:auto;padding:0 12px;" onclick="SpeakingStudio.openMindmapModal('master', event)"><span>Mindmap</span></button>
+          <button type="button" class="btn-voice-speak" style="width:auto;padding:0 12px;" onclick="SpeakingStudio.openPictureBook(0, event)"><span>${(story?.pictureBook || []).length || 10} tranh</span></button>
         </div>
       `;
-    } else if (card.kind === 'stage_flow') {
+    } else if (card.kind === 'section_flow') {
       frontExtraHtml = `
         ${card.sceneImg ? `<div class="sp-stage-front-thumb"><img src="${esc(card.sceneImg)}" alt="${esc(card.en)}" loading="lazy"></div>` : ''}
         <div class="fc-pronounce-row" onclick="event.stopPropagation()">
-          <span class="fc-ipa-badge">Mạch kể Chặng ${card.stage} / 5</span>
-          <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakStageEn(${card.stage}, 'en-GB', event)"><span>UK</span></button>
-          <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakStageEn(${card.stage}, 'en-US', event)"><span>US</span></button>
+          <span class="fc-ipa-badge">Mạch kể ${esc(card.sectionCode)}</span>
+          <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakSectionEn('${esc(card.sectionId)}', 'en-GB', event)"><span>UK</span></button>
+          <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakSectionEn('${esc(card.sectionId)}', 'en-US', event)"><span>US</span></button>
         </div>
       `;
     } else {
@@ -600,67 +620,52 @@
       `;
     }
 
-    // Build Back body content
+    // Back body content
     let backBodyHtml = '';
     if (card.kind === 'story_flow') {
-      const persps = story.perspectives || [];
-      const curP = persps.find((p) => p.key === state.perspKey) || persps[0];
+      const mm = story.storyMindmap || [];
+      const b1 = mm.find((n) => n.id === 'B1');
+      const b2 = mm.find((n) => n.id === 'B2');
+      const b3 = mm.find((n) => n.id === 'B3');
+      const b5 = mm.find((n) => n.id === 'B5');
+      const b4List = (story.stages || []).map((s) => `${s.code} ${s.titleVi}`).join(' → ');
+      const overviewRows = [
+        { key: 'b1', code: 'B1', title: 'Chân dung', text: b1?.textVi || '' },
+        { key: 'b2', code: 'B2', title: 'Hình mẫu', text: b2?.textVi || '' },
+        { key: 'b3', code: 'B3', title: 'Phẩm chất', text: b3?.textVi || '' },
+        { key: 'b4', code: 'B4', title: '5 chặng truyện', text: b4List },
+        { key: 'b5', code: 'B5', title: 'Bài học chốt', text: b5?.textVi || '' }
+      ];
       backBodyHtml = `
-        <div class="sp-persp-bar" onclick="event.stopPropagation()">
-          <span style="font-size:11.5px;font-weight:800;color:var(--ink-3);text-transform:uppercase;">Góc nhìn B1–B2:</span>
-          ${persps.map((p) => `
-            <button type="button" class="sp-persp-tab ${p.key === curP?.key ? 'active' : ''}" onclick="SpeakingStudio.selectPerspective('${esc(p.key)}', event)">${esc(p.label)}</button>
-          `).join('')}
-          ${curP ? `<button type="button" class="btn-voice-speak" style="margin-left:auto;" onclick="SpeakingStudio.speakRaw('${esc(curP.enSample).replace(/'/g, "\\'")}', 'en-GB', event)"><span>UK</span></button>` : ''}
-        </div>
-        ${curP ? `
-          <div class="sp-persp-box" onclick="event.stopPropagation()">
-            <div><strong>${esc(curP.b1Title)}:</strong> ${esc(curP.b1Vi)}</div>
-            <div class="sp-persp-en">“${esc(curP.enSample)}”</div>
-          </div>
-        ` : ''}
         <div class="sp-flow-stage-grid" onclick="event.stopPropagation()">
-          ${(story.stages || []).map((st) => {
-            const key = `st_${st.stage}`;
-            const masked = state.flowMaskOn && !state.flowRevealed[key];
+          ${overviewRows.map((row) => {
+            const masked = state.flowMaskOn && !state.flowRevealed[row.key];
             return `
-              <div class="sp-flow-stage-row ${masked ? 'is-masked' : ''}" ${masked ? `onclick="SpeakingStudio.revealFlowNode('${key}', event)"` : ''}>
-                <span class="sp-stage-badge">B4.${st.stage}</span>
-                <div>${masked ? 'Chạm để hiện chặng này (đang ẩn để tự nhẩm)...' : `<strong>${esc(st.titleVi)}:</strong> ${esc(st.textVi.slice(0, 118))}${st.textVi.length > 118 ? '…' : ''}`}</div>
+              <div class="sp-flow-stage-row ${masked ? 'is-masked' : ''}" ${masked ? `onclick="SpeakingStudio.revealFlowNode('${row.key}', event)"` : ''}>
+                <span class="sp-stage-badge">${row.code}</span>
+                <div>${masked ? 'Chạm để hiện phần này (đang ẩn để nhẩm)...' : `<strong>${esc(row.title)}:</strong> ${esc(row.text)}`}</div>
               </div>
             `;
           }).join('')}
         </div>
       `;
-    } else if (card.kind === 'stage_flow') {
-      const showEn = Boolean(state.stageEnRevealed[card.stage]);
+    } else if (card.kind === 'section_flow') {
+      const showEn = Boolean(state.sectionEnRevealed[card.sectionId]);
       backBodyHtml = `
         <div class="sp-stage-back-hero" onclick="event.stopPropagation()">
           ${card.sceneImg ? `<div class="sp-stage-back-img"><img src="${esc(card.sceneImg)}" alt="${esc(card.en)}"></div>` : ''}
           <div class="sp-stage-vi-text">${esc(card.vi)}</div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;" onclick="event.stopPropagation()">
-          <button type="button" class="btn-reading-tip ${showEn ? 'is-active' : ''}" onclick="SpeakingStudio.toggleStageEn(${card.stage}, event)">
-            ${showEn ? 'Ẩn bản Tiếng Anh mẫu' : 'Xem bản Tiếng Anh chuẩn chặng này'}
+          <button type="button" class="btn-reading-tip ${showEn ? 'is-active' : ''}" onclick="SpeakingStudio.toggleSectionEn('${esc(card.sectionId)}', event)">
+            ${showEn ? 'Ẩn câu Tiếng Anh mẫu' : 'Xem câu Tiếng Anh mẫu'}
           </button>
           <div style="display:flex;gap:6px;">
-            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakStageEn(${card.stage}, 'en-GB', event)"><span>UK</span></button>
-            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakStageEn(${card.stage}, 'en-US', event)"><span>US</span></button>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakSectionEn('${esc(card.sectionId)}', 'en-GB', event)"><span>UK</span></button>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakSectionEn('${esc(card.sectionId)}', 'en-US', event)"><span>US</span></button>
           </div>
         </div>
         ${showEn ? `<div class="sp-stage-en-reveal" onclick="event.stopPropagation()">${esc(card.textEn)}</div>` : ''}
-      `;
-    } else if (card.kind === 'pivot') {
-      backBodyHtml = `
-        <div class="fc-back-meaning">${esc(card.vi)}</div>
-        <div class="sp-pivot-chips" onclick="event.stopPropagation()">
-          ${(card.items || []).map((it) => `
-            <div class="sp-pivot-chip">
-              <div class="sp-pivot-chip-en">${esc(it.en)}</div>
-              <div class="sp-pivot-chip-vi">${esc(it.vi)}</div>
-            </div>
-          `).join('')}
-        </div>
       `;
     } else {
       backBodyHtml = `
@@ -680,11 +685,11 @@
     const miniListHtml = cards.map((c, idx) => {
       const lvl = mmap[c.id]?.level || 0;
       const dotCls = c.untested ? '' : (lvl === 3 ? 'ok' : (lvl === 2 ? 'warn' : ''));
-      const badgeCls = c.kind === 'story_flow' || c.kind === 'stage_flow' ? 'is-flow' : (c.kind === 'pivot' ? 'is-para' : '');
-      const badgeTxt = c.kind === 'story_flow' ? 'FLOW' : (c.kind === 'stage_flow' ? `B4.${c.stage}` : (c.kind === 'pivot' ? 'BẺ LÁI' : `S${c.stage}`));
+      const badgeCls = c.kind === 'story_flow' || c.kind === 'section_flow' ? 'is-flow' : '';
+      const badgeTxt = c.kind === 'story_flow' ? 'MAP' : c.sectionCode;
       return `
         <button type="button" class="ws-mini-row ${idx === state.cardIdx ? 'active' : ''}" onclick="SpeakingStudio.jumpCard(${idx})">
-          <span class="ws-kind-badge ${badgeCls}">${badgeTxt}</span>
+          <span class="ws-kind-badge ${badgeCls}">${esc(badgeTxt)}</span>
           <span class="ws-mini-txt">${esc(c.en)}</span>
           <span class="ws-mini-dot ${dotCls}"></span>
         </button>
@@ -695,21 +700,25 @@
     const curTimerStatus = document.getElementById('timer-status-text')?.textContent || 'Đang học';
     const curTimerPlay = document.getElementById('timer-play-text')?.textContent || 'Tạm dừng';
     const curTimerToday = document.getElementById('timer-today-total')?.textContent || '0 phút';
-    const isFocusActive = document.body.classList.contains('focus-mode');
+    const isFocusActive = document.body.classList.contains('study-focus-mode') || document.body.classList.contains('focus-mode');
 
     root.innerHTML = `
-      <!-- 1. TOP BAR — 1:1 Reading & Writing Totoro Editorial Parity -->
+      <!-- 1. TOP BAR — 1:1 Reading & Writing Totoro Editorial Parity + Smooth B1→B5 Ribbon -->
       <div class="study-top-bar">
         <div class="study-bar-left">
-          <div class="scope-select-wrap has-custom-scope">
-            <button type="button" class="tot-scope-trigger" onclick="SpeakingStudio.openPictureBook(0)" title="Mở Sách Tranh 26 phân cảnh Story 01">
-              <span class="tot-scope-trigger-label">STORY 01 · ${esc(story.shortTitle)}</span>
+          <div class="scope-select-wrap has-custom-scope sp-scope-compact">
+            <button type="button" class="tot-scope-trigger" onclick="SpeakingStudio.openPictureBook(0)" title="Story 01 · ${esc(story.shortTitle)} — Bấm xem Sách Tranh">
+              <span class="tot-scope-trigger-label">Story 01</span>
             </button>
           </div>
-          <span class="sp-pill ok tabular">Thuộc ${mStats.done}/${mStats.total}</span>
+          ${partRibbonHtml}
         </div>
 
         <div class="study-top-actions">
+          <button type="button" class="btn-deck-tool tot-tool-quiet" onclick="SpeakingStudio.openMindmapModal('master')" title="Mở Sơ Đồ Mindmap Bẻ Lái Story 01 (kéo thả & phóng to)">
+            <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 12H12m0 0 4.5-6M12 12l4.5 6"/></svg>
+            <span>Mindmap</span>
+          </button>
           <button type="button" class="btn-deck-tool tot-tool-quiet" onclick="SpeakingStudio.openPictureBook(0)" title="Xem Sách Tranh 26 phân cảnh">
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
             <span>Sách Tranh</span>
@@ -824,21 +833,21 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
               </span>
               <div class="widget-title-group">
-                <div class="widget-title">Task · 4 Bước</div>
-                <div class="widget-subtitle">Viết B4 → Nói B4 → Bẻ lái → 2p</div>
+                <div class="widget-title">Task · Story 01</div>
+                <div class="widget-subtitle">Mindmap → Nói → Bẻ lái → Đề</div>
               </div>
             </div>
             <div class="tot-speedquiz-meta">
-              <div class="tot-sq-badge"><span>Chấm Mic AI</span></div>
-              <div class="tot-sq-badge"><span>Nghe lại giọng</span></div>
+              <span class="tot-sq-badge">Mindmap B1–B5</span>
+              <span class="tot-sq-badge">Đề thi 60s + 2p</span>
             </div>
-            <button type="button" class="btn-widget-speedquiz" onclick="SpeakingStudio.startTaskExam()">
-              <span>Vào Task 4 Bước →</span>
+            <button type="button" class="btn-widget-speedquiz" onclick="SpeakingStudio.startTaskExam(1)">
+              <span>Vào Task Story 01 →</span>
             </button>
           </div>
         </aside>
 
-        <!-- CENTER COLUMN: 1:1 READING/WRITING 3D FLASHCARD -->
+        <!-- CENTER CARD STAGE -->
         <div class="study-center-col">
           <div class="fc-scene" id="sp-fc-scene" onclick="SpeakingStudio.flipCard()">
             <div class="deck-ghost-2" aria-hidden="true"></div>
@@ -897,7 +906,7 @@
                       <div class="fc-back-top-row">
                         <span class="fc-pos">${esc(card.pos)}</span>
                         <div class="fc-back-header-right">
-                          ${card.kind === 'story_flow' ? `<button type="button" class="btn-reading-tip ${state.flowMaskOn ? 'is-active' : ''}" onclick="SpeakingStudio.toggleFlowMask(event)">${state.flowMaskOn ? 'Hiện toàn bộ' : 'Ẩn mắt xích để nhẩm'}</button>` : ''}
+                          ${card.kind === 'story_flow' ? `<button type="button" class="btn-reading-tip ${state.flowMaskOn ? 'is-active' : ''}" onclick="SpeakingStudio.toggleFlowMask(event)">${state.flowMaskOn ? 'Hiện toàn bộ' : 'Ẩn để nhẩm'}</button>` : ''}
                           <span class="fc-status-tag ${statusCls}">${esc(statusTxt)}</span>
                         </div>
                       </div>
@@ -912,7 +921,7 @@
                       </div>
                     </div>
 
-                    <div class="fc-back-body-stack ${isAnyFlow ? 'is-flow-stack' : ''}">${backBodyHtml}</div>
+                    <div class="fc-back-body-stack ${card.kind === 'story_flow' ? 'is-flow-stack' : (card.kind === 'section_flow' ? 'is-section-stack' : '')}">${backBodyHtml}</div>
                   </div>
 
                   <div class="hanko-seal ${stLevel === 3 ? 'stamped' : ''}" aria-hidden="true">
@@ -922,7 +931,7 @@
                   ${isAnyFlow ? `
                     <div class="ws-flow-guide-cta" onclick="event.stopPropagation()">
                       <button type="button" class="btn btn-primary ws-flow-guide-btn" onclick="SpeakingStudio.stepCard(1)">
-                        <span>${card.kind === 'story_flow' ? 'Đã nắm tổng quan · Vào Chặng B4.1 →' : `Đã nắm Chặng B4.${card.stage} · Học 6 cụm nói →`}</span>
+                        <span>${card.kind === 'story_flow' ? 'Bắt đầu học từ B1–B2 →' : esc(card.nextLabel || 'Tiếp theo →')}</span>
                       </button>
                     </div>
                   ` : `
@@ -936,7 +945,7 @@
                         <span class="kbd-badge">2</span>
                       </button>
                       <button type="button" class="btn-assess btn-assess-mastered" id="sp-btn-master" ${cdSec > 0 ? 'disabled' : ''} onclick="SpeakingStudio.assessCard(3)">
-                        <span id="sp-btn-master-lbl">${cdSec > 0 ? `Chờ ${cdSec}s` : 'Đã thuộc <small class="anki-ivl-tag">Mic AI</small>'}</span>
+                        <span id="sp-btn-master-lbl">${cdSec > 0 ? `Chờ ${cdSec}s` : 'Đã thuộc <small class="anki-ivl-tag">Gõ + Nói</small>'}</span>
                         <span class="kbd-badge">3</span>
                       </button>
                     </div>
@@ -954,7 +963,7 @@
             </div>
           </div>
 
-          <div class="keyboard-hint">Phím tắt: <strong>Space</strong> Lật thẻ · <strong>← / →</strong> Chuyển thẻ · <strong>1 / 2 / 3</strong> Chấm điểm (3 mở Mic AI) · <strong>R</strong> Nghe lại</div>
+          <div class="keyboard-hint">Phím tắt: <strong>Space</strong> Lật thẻ · <strong>← / →</strong> Chuyển thẻ · <strong>1 / 2 / 3</strong> Chấm điểm (3: B1 Gõ → B2 Nói) · <strong>R</strong> Nghe lại</div>
         </div>
 
         <!-- RIGHT DECK -->
@@ -966,7 +975,7 @@
               </span>
               <div class="widget-title-group">
                 <div class="widget-title">Tiến Độ Story 01</div>
-                <div class="widget-subtitle">30 Spoken Chunks + 4 Pivot</div>
+                <div class="widget-subtitle">30 Spoken Chunks (B1 → B5)</div>
               </div>
             </div>
 
@@ -1012,8 +1021,8 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               </span>
               <div class="widget-title-group">
-                <div class="widget-title">Mạch Thẻ Story 01</div>
-                <div class="widget-subtitle">Flow → B4.1–B4.5 → Pivot</div>
+                <div class="widget-title">Mạch Story 01</div>
+                <div class="widget-subtitle">B1–B2 → B3 → B4 → B5</div>
               </div>
             </div>
             <div class="sp-deck-scroll">${miniListHtml}</div>
@@ -1031,7 +1040,7 @@
     const cards = getVisibleCards();
     const card = cards[state.cardIdx];
     renderFlashcardWorkspace();
-    if (card && (card.kind === 'chunk' || card.kind === 'pivot')) {
+    if (card && card.kind === 'chunk') {
       speakText(card.en, state.flipped ? 'en-GB' : 'en-US');
     }
   }
@@ -1043,7 +1052,7 @@
     state.flipped = false;
     renderFlashcardWorkspace();
     const c = cards[state.cardIdx];
-    if (c && (c.kind === 'chunk' || c.kind === 'pivot')) speakText(c.en, 'en-US');
+    if (c && c.kind === 'chunk') speakText(c.en, 'en-US');
   }
   function jumpCard(idx) {
     state.cardIdx = idx;
@@ -1055,10 +1064,10 @@
     const card = getVisibleCards()[state.cardIdx];
     if (card) speakText(card.en, accent || 'en-US');
   }
-  function speakStageEn(stageNum, accent, e) {
+  function speakSectionEn(sectionId, accent, e) {
     if (e) e.stopPropagation();
-    const st = (getStory()?.stages || []).find((s) => s.stage === stageNum);
-    if (st?.textEn) speakText(st.textEn, accent || 'en-GB');
+    const sec = (getStory()?.storySections || []).find((s) => s.id === sectionId);
+    if (sec?.textEn) speakText(sec.textEn, accent || 'en-GB');
   }
   function speakRaw(text, accent, e) {
     if (e) e.stopPropagation();
@@ -1081,14 +1090,9 @@
     state.flowRevealed[key] = true;
     renderFlashcardWorkspace();
   }
-  function selectPerspective(key, e) {
+  function toggleSectionEn(sectionId, e) {
     if (e) e.stopPropagation();
-    state.perspKey = key;
-    renderFlashcardWorkspace();
-  }
-  function toggleStageEn(stageNum, e) {
-    if (e) e.stopPropagation();
-    state.stageEnRevealed[stageNum] = !state.stageEnRevealed[stageNum];
+    state.sectionEnRevealed[sectionId] = !state.sectionEnRevealed[sectionId];
     renderFlashcardWorkspace();
   }
 
@@ -1108,14 +1112,14 @@
     stepCard(1);
   }
 
-  /* ================= 2-STEP RECALL MODAL (VOICE MIC + TYPING FALLBACK) ================= */
+  /* ================= 2-STEP RECALL MODAL (BƯỚC 1: GÕ LẠI · BƯỚC 2: NÓI LẠI) ================= */
   function startRecallTest(card) {
     ensureOverlays();
     STT()?.abort?.();
     recallState = {
       card,
-      step: 1, // 1: Speak/Type chunk (30s) | 2: Speak/Type full sentence from VI prompt (60s)
-      inputMode: 'voice', // 'voice' | 'type'
+      step: 1, // 1: Gõ lại chính xác (30s, default type) | 2: Nói lại câu (60s, default voice)
+      inputMode: 'type',
       recording: false,
       processing: '',
       transcript: '',
@@ -1149,7 +1153,7 @@
   }
 
   function toggleRecallMode() {
-    if (!recallState) return;
+    if (!recallState || recallState.step !== 2) return;
     STT()?.abort?.();
     recallState.recording = false;
     recallState.processing = '';
@@ -1170,7 +1174,7 @@
     if (!recallState) return;
     const stt = STT();
     if (!stt?.isSupported?.()) {
-      toast('Trình duyệt không hỗ trợ Micro — tự động chuyển sang chế độ Gõ phím.');
+      toast('Trình duyệt không hỗ trợ Micro — chuyển sang chế độ Gõ dự phòng.');
       recallState.inputMode = 'type';
       renderRecallModal();
       return;
@@ -1186,9 +1190,9 @@
     recallState.transcript = '';
     recallState.processing = '';
     stt.startRecording({
-      mode: recallState.step === 1 ? 'word' : 'sentence',
-      autoStopOnSilence: recallState.step === 1,
-      maxDurationMs: recallState.step === 1 ? 8000 : 25000,
+      mode: 'sentence',
+      autoStopOnSilence: false,
+      maxDurationMs: 25000,
       onStart: () => {
         if (!recallState) return;
         recallState.recording = true;
@@ -1208,7 +1212,7 @@
         recallState.audioUrl = res.audioUrl || '';
         recallState.transcript = res.text || '';
         if (res.silent || !res.text) {
-          recallState.feedback = { ok: false, msg: 'Chưa nghe rõ giọng bạn — hãy nói to rõ hơn hoặc chuyển sang Gõ phím dự phòng.' };
+          recallState.feedback = { ok: false, msg: 'Chưa nghe rõ giọng bạn — hãy nói to rõ hơn hoặc dùng Gõ dự phòng.' };
           renderRecallModal();
           return;
         }
@@ -1218,7 +1222,7 @@
         if (!recallState) return;
         recallState.recording = false;
         recallState.processing = '';
-        recallState.feedback = { ok: false, msg: String(errMsg || 'Không thể dùng Micro. Bạn có thể chuyển sang Gõ phím.') };
+        recallState.feedback = { ok: false, msg: String(errMsg || 'Không thể dùng Micro. Bạn có thể bấm Gõ dự phòng.') };
         renderRecallModal();
       }
     });
@@ -1233,7 +1237,7 @@
       gradeRecallAnswer(val);
     } else {
       const val = (document.getElementById('sp-recall-sent-ta')?.value || '').trim();
-      if (!val) { toast('Hãy gõ trọn câu Tiếng Anh!'); return; }
+      if (!val) { toast('Hãy nhập trọn câu Tiếng Anh!'); return; }
       recallState.transcript = val;
       gradeRecallAnswer(val);
     }
@@ -1246,25 +1250,23 @@
     const userNorm = normText(rawText);
 
     if (recallState.step === 1) {
-      const sttMatch = STT()?.matchSpokenTarget?.(rawText, card.en);
-      const targetToks = targetNorm.split(' ').filter((w) => w.length >= 2);
-      const hitCount = targetToks.filter((t) => userNorm.includes(t) || editDist(userNorm, t) <= 1).length;
-      const passed = Boolean(sttMatch?.matched) || userNorm === targetNorm || (targetToks.length > 0 && hitCount >= Math.ceil(targetToks.length * 0.75));
+      const passed = userNorm === targetNorm;
       if (passed) {
-        recallState.feedback = { ok: true, msg: `Chuẩn xác: “${rawText}”! Chuẩn bị sang Bước 2 (Nói trọn câu)...` };
+        recallState.feedback = { ok: true, msg: `Chính xác! Chuyển sang Bước 2 · Nói lại câu...` };
         renderRecallModal();
         setTimeout(() => {
           if (!recallState) return;
           recallState.step = 2;
+          recallState.inputMode = 'voice';
           recallState.secsLeft = 60;
           recallState.transcript = '';
           recallState.audioUrl = '';
           recallState.feedback = null;
           startRecallTimer();
           renderRecallModal();
-        }, 700);
+        }, 650);
       } else {
-        recallState.feedback = { ok: false, msg: `Bạn nói/gõ: “${rawText}” — chưa khớp cụm cần nhớ. Thử lại nhé!` };
+        recallState.feedback = { ok: false, msg: 'Chưa khớp chính xác mặt chữ — hãy kiểm tra chính tả và gõ lại!' };
         renderRecallModal();
       }
     } else {
@@ -1277,14 +1279,14 @@
         const mmap = getMasteryMap();
         mmap[card.id] = { level: 3, updatedAt: Date.now() };
         saveMasteryMap(mmap);
-        recallState.feedback = { ok: true, passedAll: true, msg: 'Xuất sắc! Bạn đã vận dụng chuẩn cụm Spoken Chunk vào câu nói tự nhiên.' };
+        recallState.feedback = { ok: true, passedAll: true, msg: 'Xuất sắc! Bạn đã vượt qua cả 2 bước (Gõ lại + Nói lại).' };
         renderRecallModal();
       } else {
         recallState.feedback = {
           ok: false,
           msg: !chunkHit
-            ? 'Câu chưa sử dụng đúng cụm từ tiếng Anh vừa học cho ý trên. Hãy thử lại!'
-            : 'Câu còn ngắn — hãy nói hoặc viết trọn vẹn câu Tiếng Việt trên.'
+            ? 'Câu nói chưa chứa cụm từ tiếng Anh vừa học cho ý trên. Hãy thử nói lại!'
+            : 'Câu còn ngắn — hãy nói trọn vẹn câu Tiếng Việt ở trên.'
         };
         renderRecallModal();
       }
@@ -1325,32 +1327,32 @@
     const waveHtml = `<div class="sp-wave-bars">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="recall"></span>`).join('')}</div>`;
 
     let interactionHtml = '';
-    if (inputMode === 'voice') {
-      interactionHtml = `
-        <div class="sp-mic-stage ${recording ? 'is-rec' : ''}">
-          ${waveHtml}
-          <button type="button" class="sp-mic-btn ${recording ? 'is-recording' : ''}" ${processing ? 'disabled' : ''} onclick="SpeakingStudio.toggleRecallMic()">
-            <span>${recording ? 'Đang thu âm · Bấm để dừng' : (step === 1 ? 'Bấm Mic nói cụm từ' : 'Bấm Mic nói trọn câu')}</span>
-          </button>
-          <div style="font-size:12.5px;color:var(--ink-2);">
-            ${processing ? esc(processing) : (recording ? 'Đang nghe...' : (step === 1 ? 'Nói chính xác cụm từ tiếng Anh vừa học' : 'Nói trọn câu tiếng Anh diễn đạt ý trên'))}
-          </div>
-          ${audioUrl ? `<audio class="sp-audio-replay" controls src="${esc(audioUrl)}"></audio>` : ''}
-          ${transcript ? `<div class="sp-transcript-box"><strong>Bạn vừa nói:</strong> ${esc(transcript)}</div>` : ''}
-        </div>
-      `;
-    } else if (step === 1) {
+    if (step === 1) {
       interactionHtml = `
         <div class="ws-recall-box">
           <input type="text" class="sp-underline-input is-single" id="sp-recall-input" placeholder="_ _ _ _"
             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
             onpaste="event.preventDefault();"
             onkeydown="if(event.key==='Enter'){event.preventDefault();SpeakingStudio.submitRecallTyped();}">
-          <div style="font-size:13.5px;color:var(--ink-2);text-align:center;">Gõ chính xác cụm từ tiếng Anh vừa học.</div>
+          <div style="font-size:13.5px;color:var(--ink-2);text-align:center;">Gõ chính xác cụm từ tiếng Anh vừa học để sang Bước 2 (Nói lại).</div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:10px;">
           <button type="button" class="btn" onclick="SpeakingStudio.closeRecall()">Bỏ kiểm tra</button>
           <button type="button" class="btn btn-primary" onclick="SpeakingStudio.submitRecallTyped()">Tiếp sang Bước 2 →</button>
+        </div>
+      `;
+    } else if (inputMode === 'voice') {
+      interactionHtml = `
+        <div class="sp-mic-stage ${recording ? 'is-rec' : ''}">
+          ${waveHtml}
+          <button type="button" class="sp-mic-btn ${recording ? 'is-recording' : ''}" ${processing ? 'disabled' : ''} onclick="SpeakingStudio.toggleRecallMic()">
+            <span>${recording ? 'Đang thu âm · Bấm để dừng' : 'Bấm Mic nói trọn câu'}</span>
+          </button>
+          <div style="font-size:12.5px;color:var(--ink-2);">
+            ${processing ? esc(processing) : (recording ? 'Đang nghe giọng bạn...' : 'Nói trọn câu Tiếng Anh diễn đạt ý Tiếng Việt ở trên')}
+          </div>
+          ${audioUrl ? `<audio class="sp-audio-replay" controls src="${esc(audioUrl)}"></audio>` : ''}
+          ${transcript ? `<div class="sp-transcript-box"><strong>Bạn vừa nói:</strong> ${esc(transcript)}</div>` : ''}
         </div>
       `;
     } else {
@@ -1358,7 +1360,7 @@
         <textarea class="ws-recall-sent-input" id="sp-recall-sent-ta" style="min-height:110px;"
           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
           onpaste="event.preventDefault();"
-          placeholder="Viết câu tiếng Anh của bạn tại đây...">${esc(transcript)}</textarea>
+          placeholder="Nhập câu Tiếng Anh của bạn tại đây...">${esc(transcript)}</textarea>
         <div style="display:flex;justify-content:flex-end;gap:10px;">
           <button type="button" class="btn" onclick="SpeakingStudio.closeRecall()">Bỏ kiểm tra</button>
           <button type="button" class="btn btn-primary" onclick="SpeakingStudio.submitRecallTyped()">Xác nhận câu</button>
@@ -1368,11 +1370,13 @@
 
     el.innerHTML = `
       <div class="sp-modal-head">
-        <div class="sp-modal-title">KIỂM TRA ĐÃ THUỘC · BƯỚC ${step} / 2</div>
+        <div class="sp-modal-title">KIỂM TRA ĐÃ THUỘC · BƯỚC ${step} / 2 · ${step === 1 ? 'GÕ LẠI' : 'NÓI LẠI'}</div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <button type="button" class="btn" style="padding:5px 11px;font-size:12px;" onclick="SpeakingStudio.toggleRecallMode()">
-            ${inputMode === 'voice' ? 'Gõ phím' : 'Dùng Mic'}
-          </button>
+          ${step === 2 ? `
+            <button type="button" class="btn" style="padding:5px 11px;font-size:12px;" onclick="SpeakingStudio.toggleRecallMode()">
+              ${inputMode === 'voice' ? 'Gõ dự phòng' : 'Dùng Mic'}
+            </button>
+          ` : ''}
           ${isTeacherBypass() ? `<button type="button" class="btn" style="padding:5px 10px;font-size:12px;" onclick="SpeakingStudio.teacherPassRecall()">Bỏ qua (GV)</button>` : ''}
           <span class="sp-pill urgent tabular" id="sp-recall-timer">${recallState.secsLeft}s</span>
         </div>
@@ -1397,23 +1401,32 @@
       ` : ''}
     `;
 
-    if (inputMode === 'type' && step === 1) {
+    if (step === 1) {
       setTimeout(() => document.getElementById('sp-recall-input')?.focus(), 30);
     }
   }
 
-  /* ================= PICTURE BOOK 26-SCENE VIEWER MODAL ================= */
+  /* ================= PICTURE BOOK CINEMA VIEWER MODAL (10 CURATED SCENES) ================= */
+  function handlePbKeyDown(e) {
+    if (!pbState) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); stepPictureBook(1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); stepPictureBook(-1); }
+    else if (e.key === 'Escape') { e.preventDefault(); closePictureBook(); }
+  }
   function openPictureBook(pageIdx, e) {
     if (e) e.stopPropagation();
     ensureOverlays();
     const pages = getStory()?.pictureBook || [];
     if (!pages.length) return;
-    pbState = { idx: Math.max(0, Math.min(pages.length - 1, Number(pageIdx) || 0)), showVi: true };
+    pbState = { idx: Math.max(0, Math.min(pages.length - 1, Number(pageIdx) || 0)), showEn: false };
     document.getElementById('sp-pb-modal').classList.add('open');
+    window.removeEventListener('keydown', handlePbKeyDown);
+    window.addEventListener('keydown', handlePbKeyDown);
     renderPictureBook();
   }
   function closePictureBook() {
     pbState = null;
+    window.removeEventListener('keydown', handlePbKeyDown);
     document.getElementById('sp-pb-modal')?.classList.remove('open');
   }
   function stepPictureBook(delta) {
@@ -1429,7 +1442,7 @@
   }
   function togglePbVi() {
     if (!pbState) return;
-    pbState.showVi = !pbState.showVi;
+    pbState.showEn = !pbState.showEn;
     renderPictureBook();
   }
 
@@ -1438,66 +1451,363 @@
     const pages = getStory()?.pictureBook || [];
     const cur = pages[pbState.idx];
     if (!cur) return;
-    const chapters = [];
-    pages.forEach((p, i) => {
-      if (!chapters.some((c) => c.num === p.chapterNum)) {
-        chapters.push({ num: p.chapterNum, title: p.chapterTitle, firstIdx: i });
-      }
-    });
 
     const el = document.getElementById('sp-pb-card');
+    el.classList.add('sp-pb-cinema-card');
+    const pageBadge = `${String(cur.page).padStart(2, '0')} / ${String(pages.length).padStart(2, '0')}`;
+
     el.innerHTML = `
-      <div class="sp-modal-head" style="padding-bottom:10px;border-bottom:1px solid var(--border);">
-        <div>
-          <div class="sp-modal-title">Sách Tranh Story 01 · Cảnh ${cur.page} / ${pages.length}</div>
-          <div style="font-size:12.5px;color:var(--ink-2);">${esc(cur.chapterTitle)}</div>
+      <div class="sp-pb-top-bar">
+        <div class="sp-pb-top-meta">
+          <span class="sp-pill ok">${esc(cur.badge || `Phần ${cur.chapterNum}`)}</span>
+          <span class="sp-pb-top-title">${esc(cur.title)}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <button type="button" class="btn" style="padding:6px 11px;font-size:12px;" onclick="SpeakingStudio.togglePbVi()">${pbState.showVi ? 'Ẩn Tiếng Việt' : 'Hiện Tiếng Việt'}</button>
-          <button type="button" class="btn" style="padding:6px 11px;" onclick="SpeakingStudio.closePictureBook()">Đóng ✕</button>
+        <div class="sp-pb-top-acts">
+          <button type="button" class="sp-pb-pill-btn ${pbState.showEn ? 'active' : ''}" onclick="SpeakingStudio.togglePbVi()">${pbState.showEn ? 'Song ngữ EN + VI' : 'Xem Tiếng Anh'}</button>
+          <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(cur.en).replace(/'/g, "\\'")}', 'en-GB')" title="Nghe giọng Anh-Anh"><span>UK</span></button>
+          <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(cur.en).replace(/'/g, "\\'")}', 'en-US')" title="Nghe giọng Anh-Mỹ"><span>US</span></button>
+          <button type="button" class="sp-pb-pill-btn is-close" onclick="SpeakingStudio.closePictureBook()" title="Đóng [Esc]">✕</button>
         </div>
       </div>
 
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        ${chapters.map((ch) => `
-          <button type="button" class="sp-persp-tab ${ch.num === cur.chapterNum ? 'active' : ''}" onclick="SpeakingStudio.jumpPictureBook(${ch.firstIdx})">Chương ${ch.num}</button>
+      <div class="sp-pb-stage">
+        <button type="button" class="sp-pb-float-nav is-prev" ${pbState.idx === 0 ? 'disabled' : ''} onclick="SpeakingStudio.stepPictureBook(-1)" aria-label="Cảnh trước" title="Cảnh trước [←]">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+
+        <div class="sp-pb-hero-wrap">
+          <img class="sp-pb-hero-img" src="${esc(cur.img)}" alt="Cảnh ${cur.page}: ${esc(cur.title)}">
+        </div>
+
+        <button type="button" class="sp-pb-float-nav is-next" ${pbState.idx >= pages.length - 1 ? 'disabled' : ''} onclick="SpeakingStudio.stepPictureBook(1)" aria-label="Cảnh tiếp" title="Cảnh tiếp [→]">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
+      <div class="sp-pb-progress" role="tablist" aria-label="Tiến độ 10 cảnh truyện tranh">
+        ${pages.map((p, i) => `
+          <button type="button" class="sp-pb-seg ${i === pbState.idx ? 'is-active' : (i < pbState.idx ? 'is-past' : '')}" onclick="SpeakingStudio.jumpPictureBook(${i})" title="Cảnh ${p.page}: ${esc(p.title)}" aria-label="Cảnh ${p.page}"></button>
         `).join('')}
       </div>
 
-      <div class="sp-pb-grid">
-        <div class="sp-pb-frame">
-          <img src="${esc(cur.img)}" alt="Scene ${cur.page}: ${esc(cur.title)}">
-        </div>
-        <div class="sp-pb-copy">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-            <span class="sp-pill ok">${esc(cur.badge)}</span>
-            <div style="display:flex;gap:6px;">
-              <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(cur.en).replace(/'/g, "\\'")}', 'en-GB')"><span>UK</span></button>
-              <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(cur.en).replace(/'/g, "\\'")}', 'en-US')"><span>US</span></button>
-            </div>
+      <div class="sp-pb-caption">
+        <div class="sp-pb-caption-row">
+          <span class="sp-pb-page-chip tabular">${pageBadge}</span>
+          <div class="sp-pb-caption-text">
+            <div class="sp-pb-vi-story">${esc(cur.vi)}</div>
+            ${pbState.showEn ? `
+              <div class="sp-pb-en-story">${esc(cur.en)}</div>
+              ${(cur.collocations || []).length ? `
+                <div class="sp-pb-cols">
+                  ${cur.collocations.map((col) => `
+                    <button type="button" class="sp-kw-chip hit" style="cursor:pointer;" onclick="SpeakingStudio.speakRaw('${esc(col).replace(/'/g, "\\'")}', 'en-US')">${esc(col)}</button>
+                  `).join('')}
+                </div>
+              ` : ''}
+            ` : ''}
           </div>
-          <div style="font-size:17px;font-weight:800;color:var(--ink);">${esc(cur.title)}</div>
-          <div class="sp-pb-en">${esc(cur.en)}</div>
-          ${pbState.showVi ? `<div class="sp-pb-vi">${esc(cur.vi)}</div>` : ''}
-          ${(cur.collocations || []).length ? `
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
-              ${cur.collocations.map((col) => `
-                <button type="button" class="sp-kw-chip hit" style="cursor:pointer;" onclick="SpeakingStudio.speakRaw('${esc(col).replace(/'/g, "\\'")}', 'en-US')">${esc(col)}</button>
-              `).join('')}
-            </div>
-          ` : ''}
         </div>
-      </div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);">
-        <button type="button" class="btn" ${pbState.idx === 0 ? 'disabled' : ''} onclick="SpeakingStudio.stepPictureBook(-1)">← Cảnh trước</button>
-        <span style="font-size:12.5px;color:var(--ink-2);font-weight:700;" class="tabular">${cur.page} / ${pages.length}</span>
-        <button type="button" class="btn btn-primary" ${pbState.idx >= pages.length - 1 ? 'disabled' : ''} onclick="SpeakingStudio.stepPictureBook(1)">Cảnh tiếp →</button>
       </div>
     `;
   }
 
-  /* ================= TAB 3: TASK HUB & 4-STEP TASK EXAM ================= */
+  /* ================= FULLSCREEN INTERACTIVE MINDMAP BẺ LÁI (100% SOURCE HTML PARITY) ================= */
+  function openMindmapModal(modeOrGroupId, e) {
+    if (e) e.stopPropagation();
+    ensureOverlays();
+    const story = getStory();
+    const groups = story?.mindmapGroups || [];
+    if (!groups.length) return;
+
+    const isGroup = modeOrGroupId && modeOrGroupId !== 'master' && groups.some((g) => g.id === modeOrGroupId);
+    mmState = {
+      mode: isGroup ? 'group' : 'master', // 'master' (Radial Hub Story 01) | 'group' (5-block Mindmap Bẻ Lái)
+      groupId: isGroup ? modeOrGroupId : groups[0].id,
+      lang: 'vi', // 'vi' | 'en'
+      scale: 1,
+      panX: 0,
+      panY: 0,
+      dragging: false,
+      startX: 0,
+      startY: 0
+    };
+    const root = document.getElementById('sp-mindmap-modal');
+    root.classList.add('open');
+    renderMindmapModal();
+  }
+
+  function closeMindmapModal() {
+    mmState = null;
+    document.getElementById('sp-mindmap-modal')?.classList.remove('open');
+  }
+
+  function setMindmapMode(mode, groupId) {
+    if (!mmState) return;
+    mmState.mode = mode === 'group' ? 'group' : 'master';
+    if (groupId) mmState.groupId = groupId;
+    renderMindmapModal();
+  }
+
+  function setMindmapLang(lang) {
+    if (!mmState) return;
+    mmState.lang = lang === 'en' ? 'en' : 'vi';
+    renderMindmapModal();
+  }
+
+  function selectMindmapGroup(groupId) {
+    if (!mmState) return;
+    mmState.mode = 'group';
+    mmState.groupId = groupId;
+    renderMindmapModal();
+  }
+
+  function applyMindmapTransform(animate) {
+    if (!mmState) return;
+    const canvas = document.getElementById('sp-mm-canvas');
+    const zoomEl = document.getElementById('sp-mm-zoom-val');
+    if (canvas) {
+      canvas.classList.toggle('is-smooth', Boolean(animate));
+      canvas.style.transform = `translate3d(${Math.round(mmState.panX)}px, ${Math.round(mmState.panY)}px, 0) scale(${mmState.scale})`;
+    }
+    if (zoomEl) zoomEl.textContent = `${Math.round(mmState.scale * 100)}%`;
+  }
+
+  function zoomMindmap(factor) {
+    if (!mmState) return;
+    const vp = document.getElementById('sp-mm-viewport');
+    const cx = vp ? vp.clientWidth / 2 : 700;
+    const cy = vp ? vp.clientHeight / 2 : 420;
+    const next = Math.min(2.0, Math.max(0.32, mmState.scale * factor));
+    mmState.panX -= (cx - mmState.panX) * (next / mmState.scale - 1);
+    mmState.panY -= (cy - mmState.panY) * (next / mmState.scale - 1);
+    mmState.scale = next;
+    applyMindmapTransform(true);
+  }
+
+  function fitMindmapToScreen() {
+    if (!mmState) return;
+    const vp = document.getElementById('sp-mm-viewport');
+    const canvas = document.getElementById('sp-mm-canvas');
+    if (!vp || !canvas) return;
+    const vw = vp.clientWidth;
+    const vh = vp.clientHeight;
+    const cw = canvas.scrollWidth || canvas.offsetWidth || 1200;
+    const ch = canvas.scrollHeight || canvas.offsetHeight || 700;
+    const padX = 56;
+    const padY = 84;
+    const sc = Math.min(1.06, Math.max(0.32, Math.min((vw - padX) / cw, (vh - padY) / ch)));
+    mmState.scale = sc;
+    mmState.panX = Math.round((vw - cw * sc) / 2);
+    mmState.panY = Math.round(Math.max(58, (vh - ch * sc) / 2 + 12));
+    applyMindmapTransform(true);
+  }
+
+  function bindMindmapViewportEvents() {
+    const vp = document.getElementById('sp-mm-viewport');
+    if (!vp || vp._spBound) return;
+    vp._spBound = true;
+
+    vp.addEventListener('mousedown', (e) => {
+      if (!mmState || e.target.closest('button, select, input, textarea, .sp-mm-card-click')) return;
+      mmState.dragging = true;
+      mmState.startX = e.clientX - mmState.panX;
+      mmState.startY = e.clientY - mmState.panY;
+      vp.classList.add('is-grabbing');
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!mmState || !mmState.dragging) return;
+      mmState.panX = e.clientX - mmState.startX;
+      mmState.panY = e.clientY - mmState.startY;
+      applyMindmapTransform();
+    });
+    window.addEventListener('mouseup', () => {
+      if (!mmState || !mmState.dragging) return;
+      mmState.dragging = false;
+      document.getElementById('sp-mm-viewport')?.classList.remove('is-grabbing');
+    });
+    vp.addEventListener('wheel', (e) => {
+      if (!mmState) return;
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.09 : 0.91;
+      const rect = vp.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const next = Math.min(2.0, Math.max(0.32, mmState.scale * factor));
+      mmState.panX -= (mx - mmState.panX) * (next / mmState.scale - 1);
+      mmState.panY -= (my - mmState.panY) * (next / mmState.scale - 1);
+      mmState.scale = next;
+      applyMindmapTransform();
+    }, { passive: false });
+  }
+
+  function renderMindmapModal() {
+    if (!mmState) return;
+    const root = document.getElementById('sp-mindmap-modal');
+    const story = getStory();
+    const groups = story?.mindmapGroups || [];
+    const stages = story?.stages || [];
+    const b4 = story?.mindmapB4 || { en: [], vi: [] };
+    const isEn = mmState.lang === 'en';
+    const b4Paras = isEn ? b4.en : b4.vi;
+    const b4FullEn = (b4.en || []).join(' ');
+
+    const arrowCol = (tag) => `
+      <div class="sp-mm-arrow-col">
+        <span class="sp-mm-arrow-tag">${esc(tag)}</span>
+        <svg viewBox="0 0 28 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h20"/><path d="m17 6 6 6-6 6"/></svg>
+      </div>
+    `;
+
+    let canvasInner = '';
+    if (mmState.mode === 'master') {
+      const g0 = groups[0] || {};
+      const b12Txt = isEn ? (g0.b12En || '') : (g0.b12Vi || '');
+      const b3Txt = isEn ? (g0.b3En || '') : (g0.b3Vi || '');
+      const b5Txt = isEn ? (g0.b5En || '') : (g0.b5Vi || '');
+      canvasInner = `
+        <div class="sp-mm-node-box is-b12">
+          <div class="sp-mm-node-head">
+            <span>${isEn ? 'OPENING & IDENTITY' : 'MỞ BÀI & NHẬN DIỆN NHÂN VẬT'}</span>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(g0.b12En || '').replace(/'/g, "\\'")}', 'en-GB', event)"><span>UK</span></button>
+          </div>
+          <div class="sp-mm-node-text">${esc(b12Txt)}</div>
+        </div>
+
+        ${arrowCol('')}
+
+        <div class="sp-mm-node-box is-b3">
+          <div class="sp-mm-node-head">
+            <span>${isEn ? 'STORY PIVOT' : 'DẪN CHUYỆN BẺ LÁI'}</span>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(g0.b3En || '').replace(/'/g, "\\'")}', 'en-GB', event)"><span>UK</span></button>
+          </div>
+          <div class="sp-mm-node-text is-quote">“${esc(b3Txt)}”</div>
+        </div>
+
+        ${arrowCol(isEn ? 'CONTINUE' : 'KỂ TIẾP')}
+
+        <div class="sp-mm-col-b4 is-compact">
+          <div class="sp-mm-b4-head">
+            <span>${isEn ? 'ACTION STORY' : 'CỐT TRUYỆN HÀNH ĐỘNG'}</span>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(b4FullEn).replace(/'/g, "\\'")}', 'en-GB', event)"><span>UK</span></button>
+          </div>
+          <div class="sp-mm-b4-paras">
+            ${b4Paras.map((p) => `<p>${esc(p)}</p>`).join('')}
+          </div>
+        </div>
+
+        ${arrowCol(isEn ? 'WRAP UP' : 'CHỐT BÀI')}
+
+        <div class="sp-mm-node-box is-b5">
+          <div class="sp-mm-node-head">
+            <span>${isEn ? 'CLOSURE & LESSON' : 'KẾT BÀI & BÀI HỌC ĐÚC KẾT'}</span>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(g0.b5En || '').replace(/'/g, "\\'")}', 'en-GB', event)"><span>UK</span></button>
+          </div>
+          <div class="sp-mm-node-text is-quote">“${esc(b5Txt)}”</div>
+        </div>
+      `;
+    } else {
+      const grp = groups.find((g) => g.id === mmState.groupId) || groups[0];
+      const topics = grp?.topics || [];
+      canvasInner = `
+        <div class="sp-mm-grp-topics">
+          <div class="sp-mm-grp-topics-head">
+            <span>${isEn ? 'APPLICABLE CUE CARDS' : 'CÁC ĐỀ THI ÁP DỤNG'}</span>
+            <span class="sp-mm-badge-cnt">${topics.length} ${isEn ? 'topics' : 'đề thi'}</span>
+          </div>
+          <div class="sp-mm-topics-grid ${topics.length === 1 ? 'is-single' : ''}">
+            ${topics.map((t) => `
+              <div class="sp-mm-topic-card">
+                <div class="sp-mm-topic-code">${isEn ? 'TOPIC' : 'ĐỀ'} ${esc(t.code)}</div>
+                <div class="sp-mm-topic-title">${esc(isEn ? t.titleEn : t.titleVi)}</div>
+                <ul class="sp-mm-topic-bullets">
+                  ${(isEn ? t.bulletsEn : t.bulletsVi).map((b) => `<li>${esc(b)}</li>`).join('')}
+                </ul>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        ${arrowCol('')}
+
+        <div class="sp-mm-node-box is-b12">
+          <div class="sp-mm-node-head">
+            <span>${isEn ? 'OPENING & IDENTITY' : 'MỞ BÀI & NHẬN DIỆN NHÂN VẬT'}</span>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(grp.b12En).replace(/'/g, "\\'")}', 'en-GB', event)"><span>UK</span></button>
+          </div>
+          <div class="sp-mm-node-text">${esc(isEn ? grp.b12En : grp.b12Vi)}</div>
+        </div>
+
+        ${arrowCol('')}
+
+        <div class="sp-mm-node-box is-b3">
+          <div class="sp-mm-node-head">
+            <span>${isEn ? 'STORY PIVOT' : 'DẪN CHUYỆN BẺ LÁI'}</span>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(grp.b3En).replace(/'/g, "\\'")}', 'en-GB', event)"><span>UK</span></button>
+          </div>
+          <div class="sp-mm-node-text is-quote">“${esc(isEn ? grp.b3En : grp.b3Vi)}”</div>
+        </div>
+
+        ${arrowCol(isEn ? 'CONTINUE' : 'KỂ TIẾP')}
+
+        <div class="sp-mm-col-b4 is-compact">
+          <div class="sp-mm-b4-head">
+            <span>${isEn ? 'ACTION STORY' : 'CỐT TRUYỆN HÀNH ĐỘNG'}</span>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(b4FullEn).replace(/'/g, "\\'")}', 'en-GB', event)"><span>UK</span></button>
+          </div>
+          <div class="sp-mm-b4-paras">
+            ${b4Paras.map((p) => `<p>${esc(p)}</p>`).join('')}
+          </div>
+        </div>
+
+        ${arrowCol(isEn ? 'WRAP UP' : 'CHỐT BÀI')}
+
+        <div class="sp-mm-node-box is-b5">
+          <div class="sp-mm-node-head">
+            <span>${isEn ? `TOPIC CLOSURE (${(grp.topicCodes || []).join(', ')})` : `ĐỀ ${(grp.topicCodes || []).join(', ')} · KẾT BÀI CHỐT ĐÚNG ĐỀ`}</span>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(grp.b5En).replace(/'/g, "\\'")}', 'en-GB', event)"><span>UK</span></button>
+          </div>
+          <div class="sp-mm-node-text is-quote">“${esc(isEn ? grp.b5En : grp.b5Vi)}”</div>
+        </div>
+      `;
+    }
+
+    root.innerHTML = `
+      <div class="sp-mm-float-left">
+        <div class="sp-mm-seg">
+          <button type="button" class="sp-mm-seg-btn ${mmState.mode === 'master' ? 'active' : ''}" onclick="SpeakingStudio.setMindmapMode('master')">Sơ đồ Story 01</button>
+          <button type="button" class="sp-mm-seg-btn ${mmState.mode === 'group' ? 'active' : ''}" onclick="SpeakingStudio.setMindmapMode('group')">Mindmap Bẻ Lái (14 cụm)</button>
+        </div>
+        <div class="sp-mm-seg">
+          <button type="button" class="sp-mm-seg-btn ${mmState.lang === 'vi' ? 'active' : ''}" onclick="SpeakingStudio.setMindmapLang('vi')">Tiếng Việt</button>
+          <button type="button" class="sp-mm-seg-btn ${mmState.lang === 'en' ? 'active' : ''}" onclick="SpeakingStudio.setMindmapLang('en')">English</button>
+        </div>
+        ${mmState.mode === 'group' ? `
+          <select class="sp-mm-select" aria-label="Chọn cụm đề bẻ lái" onchange="SpeakingStudio.selectMindmapGroup(this.value)">
+            ${groups.map((g) => `<option value="${esc(g.id)}" ${g.id === mmState.groupId ? 'selected' : ''}>${esc(g.label)} (${esc((g.topicCodes || []).join(', '))})</option>`).join('')}
+          </select>
+        ` : ''}
+      </div>
+
+      <div class="sp-mm-float-right">
+        <button type="button" class="sp-mm-ctrl" onclick="SpeakingStudio.zoomMindmap(0.85)" title="Thu nhỏ (-)">−</button>
+        <span class="sp-mm-zoom-val tabular" id="sp-mm-zoom-val">100%</span>
+        <button type="button" class="sp-mm-ctrl" onclick="SpeakingStudio.zoomMindmap(1.15)" title="Phóng to (+)">+</button>
+        <button type="button" class="sp-mm-ctrl is-fit" onclick="SpeakingStudio.fitMindmapToScreen()" title="Căn vừa màn hình">Fit</button>
+        <button type="button" class="sp-mm-ctrl is-close" onclick="SpeakingStudio.closeMindmapModal()" title="Đóng Mindmap (Esc)">✕</button>
+      </div>
+
+      <div class="sp-mm-viewport" id="sp-mm-viewport">
+        <div class="sp-mm-canvas" id="sp-mm-canvas">${canvasInner}</div>
+      </div>
+
+      <div class="sp-mm-hint-bar">Kéo chuột để di chuyển · Lăn chuột để phóng to / thu nhỏ · Chuyển nhanh Tiếng Việt / English</div>
+    `;
+
+    bindMindmapViewportEvents();
+    requestAnimationFrame(() => fitMindmapToScreen());
+  }
+
+  /* ================= TAB 3: TASK HUB (1 STORY = 1 CLEAN EDITORIAL TASK CARD) ================= */
   function renderTaskHub(tabsEl, gridEl) {
     const story = getStory();
     if (!story || !gridEl) return;
@@ -1506,65 +1816,74 @@
     if (titleEl) titleEl.textContent = 'Task bài tập · Speaking';
     const mStats = getStoryMasteryStats(story);
     const doneInfo = getTaskDoneMap()[story.id] || null;
-    if (subEl) subEl.textContent = `Story 01 · ${mStats.done}/${mStats.total} thẻ đã thuộc · Quy trình 4 bước (Viết B4 → Nói B4 → Bẻ lái → Nói 2 phút).`;
+    const maxSt = doneInfo?.completed ? 4 : (doneInfo?.maxStage || 0);
+    const pct = Math.round((maxSt / 4) * 100);
+    if (subEl) subEl.textContent = `${maxSt} / 4 bước Story 01 hoàn thành · ${mStats.done}/${mStats.total} thẻ Flashcard.`;
     if (tabsEl) {
-      tabsEl.innerHTML = `<button type="button" class="tot-seg-btn active">Story 01 · Describe a Person</button>`;
+      tabsEl.innerHTML = `<button type="button" class="tot-seg-btn active">Story Series · Part 2</button>`;
     }
 
-    const maxSt = doneInfo?.maxStage || 0;
+    const firstCue = (story.cueCards || [])[0];
+    const stepList = [
+      { n: 1, title: 'Viết Sơ Đồ Story 01', sub: 'Tự viết tiếng Anh trọn mạch Mở bài → Dẫn chuyện → Cốt truyện → Kết bài' },
+      { n: 2, title: 'Kể Story qua Mic', sub: 'Nói trọn mạch câu chuyện theo 5 trạm' },
+      { n: 3, title: 'Viết Mindmap Bẻ Lái', sub: 'Tự viết Mở bài, Dẫn chuyện, Kết bài có hướng dẫn' },
+      { n: 4, title: 'Nói Đề Thi Thật', sub: '1 Cue Card cụ thể · 60s chuẩn bị + 2p nói' }
+    ];
+
     gridEl.innerHTML = `
-      <article class="sp-task-hero-card">
-        <div class="sp-task-hero-top">
-          <div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <span class="sp-pill ok">STORY 01</span>
-              <span class="sp-pill">${mStats.done}/${mStats.total} thẻ Flashcard</span>
-              ${doneInfo?.completed ? `<span class="sp-pill ok">✓ Hoàn thành Task</span>` : ''}
-            </div>
-            <h3 style="margin:8px 0 4px;font-size:19px;font-weight:800;color:var(--ink);">${esc(story.title)}</h3>
-            <p style="margin:0;font-size:13.5px;color:var(--ink-2);">${esc(story.subtitle)}</p>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn" onclick="window.TotoroUI.switchView('flashcard')">Học Flashcard</button>
-            <button type="button" class="btn" onclick="SpeakingStudio.openPictureBook(0)">Sách Tranh</button>
-            <button type="button" class="btn" onclick="window.TotoroUI.switchView('practice')">Luyện Cue Card</button>
-            <button type="button" class="btn btn-primary" onclick="SpeakingStudio.startTaskExam()">
-              ${doneInfo?.completed ? 'Làm lại Task 4 Bước →' : 'Vào Task · 4 Bước →'}
-            </button>
-          </div>
+      <article class="ws-task-card is-core sp-story-task-card ${doneInfo?.completed ? 'is-done' : ''}">
+        <div class="sp-story-task-media" onclick="SpeakingStudio.startTaskExam(${Math.min(4, maxSt + 1)})">
+          <img src="assets/speaking/story1/scene_01.webp" alt="${esc(story.title)}" loading="lazy">
         </div>
 
-        <div class="sp-task-steps-grid">
-          <div class="sp-task-step-box ${maxSt >= 1 ? 'is-done' : ''}">
-            <span class="sp-task-step-num">Test 1 · 05:00</span>
-            <div class="sp-task-step-title">Viết Lại 5 Chặng Lõi B4</div>
-            <div class="sp-task-step-desc">Gõ Tiếng Anh trực tiếp cho 5 chặng B4.1 → B4.5.</div>
+        <div class="sp-story-task-content">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <span class="ws-task-code">STORY 01 · 4 BƯỚC THỰC CHIẾN</span>
+            <span class="ws-pill ${doneInfo?.completed ? 'ok' : ''} tabular">${doneInfo?.completed ? 'Hoàn thành 4/4 ✓' : `${maxSt} / 4 bước`}</span>
           </div>
-          <div class="sp-task-step-box ${maxSt >= 2 ? 'is-done' : ''}">
-            <span class="sp-task-step-num">Test 2 · 05:00</span>
-            <div class="sp-task-step-title">Kể Lại 5 Chặng B4 Qua Mic</div>
-            <div class="sp-task-step-desc">Nói từng chặng bằng Tiếng Anh, chấm độ phủ từ khóa &amp; nghe lại giọng.</div>
+
+          <div class="sp-story-task-title">${esc(story.title)}</div>
+          <div class="ws-task-meta">${esc(story.subtitle)}</div>
+
+          <div class="sp-story-steps-grid">
+            ${stepList.map((st) => {
+              const isDone = maxSt >= st.n;
+              return `
+                <button type="button" class="sp-story-step-item is-s${st.n} ${isDone ? 'is-done' : ''}" onclick="SpeakingStudio.startTaskExam(${st.n})">
+                  <span class="sp-story-step-num">${isDone ? '✓' : st.n}</span>
+                  <div class="sp-story-step-copy">
+                    <div class="sp-story-step-name">${esc(st.title)}</div>
+                    <div class="sp-story-step-sub">${esc(st.sub)}</div>
+                  </div>
+                </button>
+              `;
+            }).join('')}
           </div>
-          <div class="sp-task-step-box ${maxSt >= 3 ? 'is-done' : ''}">
-            <span class="sp-task-step-num">Test 3 · 04:00</span>
-            <div class="sp-task-step-title">Luyện Bẻ Lái (B1–B3 + B5)</div>
-            <div class="sp-task-step-desc">Xoay 3 đề khác góc nhìn (Person · Cross-Topic · Cross-Category) giữ nguyên lõi B4.</div>
-          </div>
-          <div class="sp-task-step-box ${doneInfo?.completed ? 'is-done' : ''}">
-            <span class="sp-task-step-num">Test 4 · 02:00</span>
-            <div class="sp-task-step-title">Kể Nguyên Bài 2 Phút</div>
-            <div class="sp-task-step-desc">Nói liền mạch 2 phút theo 5 mốc ngắn → xem Thời lượng, WPM, Chunks &amp; đối chiếu bài mẫu.</div>
+
+          <div class="sp-story-task-bottom">
+            <div class="ws-task-prog" style="flex:1;min-width:150px;">
+              <div class="ws-task-prog-track"><div class="ws-task-prog-fill" style="width:${pct}%;"></div></div>
+              <span class="ws-task-prog-pct tabular">${pct}%</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="btn" style="padding:7px 12px;font-size:12.5px;" onclick="SpeakingStudio.openMindmapModal('master')">Mindmap</button>
+              <button type="button" class="btn" style="padding:7px 12px;font-size:12.5px;" onclick="SpeakingStudio.openPictureBook(0)">Sách Tranh</button>
+              <button type="button" class="btn btn-primary" style="padding:7px 16px;font-size:13px;" onclick="SpeakingStudio.startTaskExam(${Math.min(4, maxSt + 1)})">
+                ${doneInfo?.completed ? 'Làm lại Task →' : (maxSt > 0 ? `Tiếp Bước ${maxSt + 1} →` : 'Vào Task Story 01 →')}
+              </button>
+            </div>
           </div>
         </div>
       </article>
     `;
   }
 
-  function getStageLimitSec(stageNum) {
-    if (stageNum === 1) return 5 * 60;
-    if (stageNum === 2) return 5 * 60;
-    if (stageNum === 3) return 4 * 60;
-    return 2 * 60;
+  function getStageLimitSec(stageNum, t4Phase) {
+    if (stageNum === 1) return 8 * 60;
+    if (stageNum === 2) return 6 * 60;
+    if (stageNum === 3) return 6 * 60;
+    return t4Phase === 'speak' ? 2 * 60 : 60;
   }
 
   function startTaskExam(initialStage) {
@@ -1577,25 +1896,29 @@
     examState = {
       story,
       stage: st,
-      secsLeft: getStageLimitSec(st),
+      secsLeft: getStageLimitSec(st, 'prep'),
       timerId: null,
-      // Test 1: Inline Tab-Controlled Flow (5 stages B4)
+      // Test 1: Radial Hub Mindmap Story 01 (7 simplified ghost-text nodes: B1-B3, B4.1..B4.5, B5)
       t1Drafts: {},
       t1Locked: {},
+      t1ClauseIdx: {},
       t1Audit: {},
-      // Test 2: Speak 5 stages B4 via Mic (or typing fallback)
-      t2ActiveStage: 1,
-      t2Results: {}, // stageNum -> { text, audioUrl, hits, misses, pass }
+      // Test 2: Speak Full Story B1 -> B5 via 5 Mic stations
+      t2ActiveStation: 1,
+      t2Results: {},
       t2TypeMode: {},
-      t2RecordingStage: null,
-      t2ProcessingStage: null,
-      // Test 3: Steering Drills (3 prompts)
+      t2RecordingStation: null,
+      t2ProcessingStation: null,
+      // Test 3: Guided Steering Mindmap (5-block Miro canvas with Writing-style ghost text)
       t3Idx: 0,
-      t3Results: {}, // drillId -> { text, audioUrl, hits, pass }
-      t3TypeMode: false,
-      t3Recording: false,
-      t3Processing: false,
-      // Test 4: Full 2-Min Run
+      t3Drafts: {}, // `${mapId}_${nodeId}` -> text
+      t3Locked: {},
+      t3ClauseIdx: {},
+      t3Audit: {},  // mapId -> { pass, nodeAudit: { b12, b3, b5 } }
+      // Test 4: Concrete IELTS Part 2 Exam Cue Card (60s prep -> 2m speak -> result)
+      t4CueIdx: 0,
+      t4Phase: 'prep', // 'prep' (60s) -> 'speak' (120s) -> 'result'
+      t4PrepNote: '',
       t4Recording: false,
       t4Processing: false,
       t4TypeMode: false,
@@ -1618,12 +1941,17 @@
       examState.secsLeft--;
       const el = document.getElementById('sp-exam-timer');
       if (el) {
-        el.textContent = fmtMmSs(examState.secsLeft);
-        el.classList.toggle('urgent', examState.secsLeft <= 45);
+        const lbl = el.querySelector('span') || el;
+        lbl.textContent = fmtMmSs(examState.secsLeft);
+        el.classList.toggle('urgent', examState.secsLeft <= 15);
       }
+      const ringTimeEl = document.getElementById('sp-t4-ring-time');
+      if (ringTimeEl) ringTimeEl.textContent = fmtMmSs(examState.secsLeft);
       if (examState.secsLeft <= 0) {
         clearInterval(examState.timerId);
-        if (examState.stage === 4 && examState.t4Recording) {
+        if (examState.stage === 4 && examState.t4Phase === 'prep') {
+          beginT4Speaking();
+        } else if (examState.stage === 4 && examState.t4Phase === 'speak' && examState.t4Recording) {
           toggleT4Mic();
         } else {
           toast(`Hết giờ Bước ${examState.stage} — bạn có thể bấm Nộp/Kiểm tra ngay!`);
@@ -1642,7 +1970,11 @@
     saveTaskDoneMap(map);
 
     examState.stage = nextStage;
-    examState.secsLeft = getStageLimitSec(nextStage);
+    if (nextStage === 4) {
+      examState.t4Phase = 'prep';
+      examState.t4Finalized = false;
+    }
+    examState.secsLeft = getStageLimitSec(nextStage, examState.t4Phase);
     startExamTimer();
     renderExamModal();
   }
@@ -1662,12 +1994,62 @@
     advanceExamStage(stageNum);
   }
 
-  /* --- Test 1 Helpers: Inline Tab-Controlled Monkeytype Flow (5 stages B4) --- */
+  /* --- Test 1 & Test 3 Helpers: Shared Ghost-Text Inline Typing (100% Writing Parity!) --- */
   const spCaretTimers = new WeakMap();
   function splitClauses(viText) {
     const parts = String(viText || '').split(/(?<=[.;?!])\s+/).filter(Boolean);
     return parts.length ? parts : [String(viText || '')];
   }
+  function buildClauseList(viText, paragraphs) {
+    if (Array.isArray(paragraphs) && paragraphs.length) {
+      const list = [];
+      paragraphs.forEach((p, pIdx) => {
+        splitClauses(p).forEach((cl, cIdx) => {
+          list.push({ text: cl, paraBreak: pIdx > 0 && cIdx === 0 });
+        });
+      });
+      return list.length ? list : [{ text: String(viText || ''), paraBreak: false }];
+    }
+    return splitClauses(viText).map((cl) => ({ text: cl, paraBreak: false }));
+  }
+  function getT1LinearNodes(story) {
+    const g0 = (story?.mindmapGroups || [])[0] || {};
+    const stages = story?.stages || [];
+    const b4Paras = stages.map((s) => s.textVi).filter(Boolean);
+    const b4Kws = Array.from(new Set(stages.flatMap((s) => s.keywords || [])));
+    return [
+      {
+        id: 'B1_B2',
+        block: 'b12',
+        code: 'MỞ BÀI & NHẬN DIỆN NHÂN VẬT',
+        textVi: g0.b12Vi || 'Ông ngoại tôi là một giáo viên Toán đã nghỉ hưu ngoài 70 tuổi, có mái tóc bạc và nụ cười ấm áp, đã dành 30 năm truyền cảm hứng cho học trò.',
+        keywords: ['grandfather', 'retired', 'maths', 'teacher', 'seventies', 'smile', 'thirty']
+      },
+      {
+        id: 'B3',
+        block: 'b3',
+        code: 'DẪN CHUYỆN BẺ LÁI',
+        textVi: g0.b3Vi || 'Ông là hình mẫu lý tưởng và là người tôi luôn muốn trở thành.',
+        keywords: ['role model', 'admire', 'respect', 'calm', 'like', 'become', 'patience']
+      },
+      {
+        id: 'B4',
+        block: 'b4',
+        code: 'CỐT TRUYỆN HÀNH ĐỘNG',
+        textVi: b4Paras.join(' '),
+        paragraphs: b4Paras,
+        keywords: b4Kws
+      },
+      {
+        id: 'B5',
+        block: 'b5',
+        code: 'KẾT BÀI CHỐT ĐÚNG ĐỀ',
+        textVi: g0.b5Vi || 'Nhìn lại, tôi luôn mong noi theo tấm gương của ông bằng cách giữ bình tĩnh và lắng nghe cẩn thận mỗi khi giúp đỡ hay làm việc cùng người khác.',
+        keywords: ['looking back', 'follow', 'example', 'calm', 'listening', 'help', 'work']
+      }
+    ];
+  }
+
   function renderSpT1Mirror(text, isAtEnd, targetPhrases) {
     if (!text) return { html: '', typos: 0 };
     const parts = text.match(/(\s+|\S+)/g) || [];
@@ -1710,100 +2092,128 @@
     }
   }
 
-  function bindSpT1InlineFlow() {
-    if (!examState || examState.stage !== 1) return;
-    const stages = examState.story.stages || [];
-    const allChunks = (examState.story.spokenChunks || []).map((c) => c.en);
-    const entries = [];
-    const typoByStage = {};
+  function safeDomId(id) {
+    return String(id || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+  }
 
-    const updateTelemetry = () => {
+  // Reusable Writing-parity Ghost-Text Inline Binder for BOTH Test 1 & Test 3!
+  function bindGhostFlowCells(opts) {
+    const { items, draftsMap, lockedMap, clauseIdxMap, idPrefix, targetPhrases, onTelemetry, onAfterSync } = opts;
+    const entries = [];
+    const typoByKey = {};
+    let focusedIdx = 0;
+
+    const refreshAll = () => {
       let done = 0, words = 0, typos = 0;
+      const litMap = {};
       entries.forEach((en) => {
         const val = en.ta.value.trim();
         if (val) words += countWords(val);
-        const locked = Boolean(examState.t1Locked[en.stage]);
-        if (locked) done++;
-        typos += typoByStage[en.stage] || 0;
-        const conn = document.getElementById(`sp-t1-conn-${en.stage}`);
-        if (conn) conn.classList.toggle('is-lit', locked);
+        const cIdx = Number(clauseIdxMap[en.key] || 0);
+        const isDone = Boolean(lockedMap[en.key]) || (cIdx >= en.clauses.length && val.length > 0);
+        if (isDone) { done++; litMap[en.key] = true; }
+        typos += typoByKey[en.key] || 0;
       });
-      const doneEl = document.getElementById('sp-t1-stat-done');
-      const wcEl = document.getElementById('sp-t1-stat-words');
-      const errEl = document.getElementById('sp-t1-stat-typos');
-      const errWrap = document.getElementById('sp-t1-stat-err-wrap');
-      const ringEl = document.getElementById('sp-t1-ring-fg');
-      if (doneEl) doneEl.textContent = `${done}/${stages.length}`;
-      if (wcEl) wcEl.textContent = String(words);
-      if (errEl) errEl.textContent = String(typos);
-      if (errWrap) errWrap.classList.toggle('is-err', typos > 0);
-      if (ringEl) ringEl.style.strokeDashoffset = (44 * (1 - done / Math.max(1, stages.length))).toFixed(1);
+      if (onTelemetry) onTelemetry({ done, total: entries.length, words, typos, litMap });
     };
 
     const syncEntry = (en, isTyping) => {
       const val = en.ta.value;
-      examState.t1Drafts[en.stage] = val;
+      draftsMap[en.key] = val;
       const focused = document.activeElement === en.ta;
-      const locked = Boolean(examState.t1Locked[en.stage]);
-      const caretPos = focused ? (en.ta.selectionStart ?? val.length) : val.length;
-      const before = val.slice(0, caretPos);
-      const after = val.slice(caretPos);
-      const m1 = renderSpT1Mirror(before, caretPos === val.length, allChunks);
-      const m2 = renderSpT1Mirror(after, false, allChunks);
-      typoByStage[en.stage] = m1.typos + m2.typos;
-      en.mirror.innerHTML = val
-        ? `${m1.html}<span class="sp-t1-anchor"></span>${m2.html}`
-        : `<span class="sp-t1-anchor"></span><span class="sp-t1-placeholder">Gõ Tiếng Anh cho Chặng B4.${en.stage}... (Tab / Enter khi xong)</span>`;
+      if (focused) focusedIdx = en.idx;
+      const locked = Boolean(lockedMap[en.key]);
+      if (!val.trim() && !locked) clauseIdxMap[en.key] = 0;
+      const activeIdx = locked ? en.clauses.length : Number(clauseIdxMap[en.key] || 0);
+
+      const sel = focused ? (en.ta.selectionStart ?? val.length) : val.length;
+      const before = val.slice(0, sel);
+      const after = val.slice(sel);
+      const m1 = renderSpT1Mirror(before, after.length === 0, targetPhrases);
+      const m2 = renderSpT1Mirror(after, true, targetPhrases);
+      typoByKey[en.key] = m1.typos + m2.typos;
+
+      // Exact Writing "chữ ma" (Vietnamese ghost text inline inside the same box — supports multi-paragraph B4!)
+      let viHtml = '';
+      if (activeIdx < en.clauses.length) {
+        const activeObj = en.clauses[activeIdx];
+        const gap = val.length > 0
+          ? (activeObj.paraBreak ? '<span class="sp-t1-pbreak"></span>' : (!/\s$/.test(val) ? '<span class="ws-t1-gap"></span>' : '<span class="ws-t1-pad"></span>'))
+          : '';
+        const activeTxt = `<span class="ws-t1-vi-active">${esc(activeObj.text)}</span>`;
+        const restParts = en.clauses.slice(activeIdx + 1).map((c) => {
+          const sep = c.paraBreak ? '<span class="sp-t1-pbreak"></span>' : ' ';
+          return `${sep}<span class="ws-t1-vi-upcoming">${esc(c.text)}</span>`;
+        }).join('');
+        viHtml = `${gap}${activeTxt}${restParts}`;
+      }
+
+      en.mirror.innerHTML = `${m1.html}<span class="sp-t1-anchor"></span>${m2.html}${viHtml}`;
       en.ta.style.height = 'auto';
       en.ta.style.height = `${Math.max(46, en.mirror.scrollHeight)}px`;
+
+      const isDone = locked || (activeIdx >= en.clauses.length && val.trim().length > 0);
       en.cell.classList.toggle('is-focused', focused);
-      en.cell.classList.toggle('is-done', locked && !en.cell.classList.contains('is-bad'));
-      en.cue.classList.toggle('is-hidden', locked && !focused);
-      positionSpCaret(en.wrap, en.caret, focused, isTyping);
-      updateTelemetry();
+      en.cell.classList.toggle('is-done', isDone && !en.cell.classList.contains('is-bad'));
+      requestAnimationFrame(() => {
+        positionSpCaret(en.wrap, en.caret, focused && !locked, isTyping);
+        if (onAfterSync) onAfterSync();
+      });
+      refreshAll();
     };
 
-    const confirmStage = (idx) => {
+    const stepForward = (idx) => {
       const en = entries[idx];
       if (!en) return;
-      if (countWords(en.ta.value) >= 5) {
-        examState.t1Locked[en.stage] = true;
-        en.cell.classList.remove('is-bad');
-      }
-      syncEntry(en, false);
-      const next = entries[idx + 1];
-      if (next) {
-        next.ta.focus();
-      } else {
-        en.ta.blur();
+      const locked = Boolean(lockedMap[en.key]);
+      let cIdx = Number(clauseIdxMap[en.key] || 0);
+      if (!locked && en.ta.value.trim().length > 0 && cIdx < en.clauses.length) {
+        if (cIdx < en.clauses.length - 1 && !/\s$/.test(en.ta.value)) {
+          en.ta.value += ' ';
+          en.ta.selectionStart = en.ta.selectionEnd = en.ta.value.length;
+        }
+        clauseIdxMap[en.key] = cIdx + 1;
+        if (clauseIdxMap[en.key] >= en.clauses.length && countWords(en.ta.value) >= 5) {
+          en.cell.classList.remove('is-bad');
+        }
+        syncEntry(en, true);
+        if (clauseIdxMap[en.key] >= en.clauses.length && entries[idx + 1]) {
+          entries[idx + 1].ta.focus();
+        }
+      } else if (entries[idx + 1]) {
+        entries[idx + 1].ta.focus();
       }
     };
 
-    const stepBack = (idx) => {
+    const stepBackward = (idx) => {
       const en = entries[idx];
       if (!en) return;
-      if (examState.t1Locked[en.stage]) {
-        examState.t1Locked[en.stage] = false;
-        syncEntry(en, false);
+      if (lockedMap[en.key]) {
+        lockedMap[en.key] = false;
+        clauseIdxMap[en.key] = Math.max(0, en.clauses.length - 1);
+        syncEntry(en, true);
+        en.ta.focus();
         return;
       }
-      const prev = entries[idx - 1];
-      if (prev) {
-        examState.t1Locked[prev.stage] = false;
-        syncEntry(prev, false);
-        prev.ta.focus();
+      const cIdx = Number(clauseIdxMap[en.key] || 0);
+      if (cIdx > 0) {
+        clauseIdxMap[en.key] = cIdx - 1;
+        syncEntry(en, true);
+        en.ta.focus();
+      } else if (entries[idx - 1]) {
+        entries[idx - 1].ta.focus();
       }
     };
 
-    stages.forEach((st, idx) => {
-      const cell = document.getElementById(`sp-t1-cell-${st.stage}`);
-      const ta = document.getElementById(`sp-t1-ta-${st.stage}`);
-      const mirror = document.getElementById(`sp-t1-mirror-${st.stage}`);
-      const caret = document.getElementById(`sp-t1-caret-${st.stage}`);
-      const cue = document.getElementById(`sp-t1-cue-${st.stage}`);
+    items.forEach((it, idx) => {
+      const sid = safeDomId(it.domKey || it.key);
+      const cell = document.getElementById(`${idPrefix}-cell-${sid}`);
+      const ta = document.getElementById(`${idPrefix}-ta-${sid}`);
+      const mirror = document.getElementById(`${idPrefix}-mirror-${sid}`);
+      const caret = document.getElementById(`${idPrefix}-caret-${sid}`);
       const wrap = cell?.querySelector('.sp-t1-input-wrap');
-      if (!cell || !ta || !mirror || !caret || !cue || !wrap) return;
-      const en = { stage: st.stage, idx, cell, ta, mirror, caret, cue, wrap };
+      if (!cell || !ta || !mirror || !caret || !wrap) return;
+      const en = { key: it.key, idx, clauses: buildClauseList(it.viText, it.paragraphs), cell, ta, mirror, caret, wrap };
       entries.push(en);
 
       cell.addEventListener('click', () => ta.focus());
@@ -1814,215 +2224,261 @@
         if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) syncEntry(en, false);
       });
       ta.addEventListener('keydown', (e) => {
-        if (e.key === 'Tab' && !e.shiftKey) {
-          e.preventDefault();
-          confirmStage(idx);
-        } else if (e.key === 'Tab' && e.shiftKey) {
-          e.preventDefault();
-          stepBack(idx);
-        } else if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          confirmStage(idx);
-        }
+        if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); stepForward(idx); }
+        else if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); stepBackward(idx); }
+        else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); stepForward(idx); }
       });
       syncEntry(en, false);
     });
 
-    document.getElementById('sp-t1-btn-next')?.addEventListener('click', () => {
-      const activeIdx = entries.findIndex((e) => document.activeElement === e.ta);
-      confirmStage(activeIdx >= 0 ? activeIdx : 0);
-    });
-    document.getElementById('sp-t1-btn-prev')?.addEventListener('click', () => {
-      const activeIdx = entries.findIndex((e) => document.activeElement === e.ta);
-      stepBack(activeIdx >= 0 ? activeIdx : Math.max(0, entries.length - 1));
-    });
-
+    document.getElementById(`${idPrefix}-btn-next`)?.addEventListener('click', () => stepForward(focusedIdx));
+    document.getElementById(`${idPrefix}-btn-prev`)?.addEventListener('click', () => stepBackward(focusedIdx));
     setTimeout(() => entries[0]?.ta?.focus(), 40);
+  }
+
+  function bindSpT1InlineFlow() {
+    if (!examState || examState.stage !== 1) return;
+    const nodes = getT1LinearNodes(examState.story);
+    const allChunks = (examState.story.spokenChunks || []).map((c) => c.en);
+
+    bindGhostFlowCells({
+      items: nodes.map((n) => ({ key: n.id, domKey: n.id, viText: n.textVi, paragraphs: n.paragraphs })),
+      draftsMap: examState.t1Drafts,
+      lockedMap: examState.t1Locked,
+      clauseIdxMap: examState.t1ClauseIdx,
+      idPrefix: 'sp-t1',
+      targetPhrases: allChunks,
+      onTelemetry: ({ done, total, words, typos, litMap }) => {
+        const doneEl = document.getElementById('sp-t1-stat-done');
+        const wcEl = document.getElementById('sp-t1-stat-words');
+        const errEl = document.getElementById('sp-t1-stat-typos');
+        const errWrap = document.getElementById('sp-t1-stat-err-wrap');
+        const ringEl = document.getElementById('sp-t1-ring-fg');
+        if (doneEl) doneEl.textContent = `${done}/${total}`;
+        if (wcEl) wcEl.textContent = String(words);
+        if (errEl) errEl.textContent = String(typos);
+        if (errWrap) errWrap.classList.toggle('is-err', typos > 0);
+        if (ringEl) ringEl.style.strokeDashoffset = (44 * (1 - done / Math.max(1, total))).toFixed(1);
+
+        document.getElementById('sp-t1-arr-1')?.classList.toggle('is-lit', Boolean(litMap['B1_B2']));
+        document.getElementById('sp-t1-arr-2')?.classList.toggle('is-lit', Boolean(litMap['B3']));
+        document.getElementById('sp-t1-arr-3')?.classList.toggle('is-lit', Boolean(litMap['B4']));
+      }
+    });
+  }
+
+  function bindSpT3InlineFlow() {
+    if (!examState || examState.stage !== 3) return;
+    const maps = examState.story.steerMindmaps || [];
+    const cur = maps[examState.t3Idx];
+    if (!cur) return;
+    const allChunks = (examState.story.spokenChunks || []).map((c) => c.en);
+    const targetPhrases = [...allChunks, ...(cur.nodes || []).flatMap((n) => n.keywords || [])];
+
+    bindGhostFlowCells({
+      items: (cur.nodes || []).map((nd) => ({
+        key: `${cur.id}_${nd.id}`,
+        domKey: `${cur.id}-${nd.id}`,
+        viText: nd.guideVi
+      })),
+      draftsMap: examState.t3Drafts,
+      lockedMap: examState.t3Locked,
+      clauseIdxMap: examState.t3ClauseIdx,
+      idPrefix: 'sp-t3',
+      targetPhrases
+    });
   }
 
   function checkTaskTest1() {
     if (!examState) return;
-    const stages = examState.story.stages || [];
+    const nodes = getT1LinearNodes(examState.story);
     const allChunks = (examState.story.spokenChunks || []).map((c) => c.en);
     let allOk = true;
-    stages.forEach((st) => {
-      const txt = String(examState.t1Drafts[st.stage] || '').trim();
-      const ev = evaluateKeywords(txt, st.keywords);
+    nodes.forEach((nd) => {
+      const txt = String(examState.t1Drafts[nd.id] || '').trim();
+      const ev = evaluateKeywords(txt, nd.keywords);
       const typos = detectTypos(txt, allChunks);
-      const pass = ev.words >= 8 && ev.hits.length >= 2 && typos.length === 0;
-      examState.t1Audit[st.stage] = { pass, words: ev.words, hits: ev.hits.length, typos };
-      if (pass) examState.t1Locked[st.stage] = true;
+      const minW = nd.id === 'B4' ? 35 : (nd.id === 'B3' ? 5 : 6);
+      const minH = nd.id === 'B4' ? 6 : (nd.id === 'B3' ? 1 : 2);
+      const pass = ev.words >= minW && ev.hits.length >= minH && typos.length === 0;
+      examState.t1Audit[nd.id] = { pass, words: ev.words, hits: ev.hits.length, typos };
+      if (pass) examState.t1Locked[nd.id] = true;
       else allOk = false;
     });
     if (allOk) {
-      toast('Tuyệt vời! Đã thuộc mặt chữ cả 5 chặng lõi B4 → Sang Test 2 (Nói qua Mic)!');
+      toast('Xuất sắc! Bạn đã hoàn thành trọn Sơ đồ Story 01 (B1–B2 → B3 → B4 → B5) → Sang Test 2!');
       advanceExamStage(2);
     } else {
-      toast('Một số chặng chưa đủ ý hoặc còn lỗi chính tả (viền đỏ) — hãy bổ sung nhé!');
+      toast('Một số ô chưa đủ ý hoặc còn lỗi chính tả (viền đỏ) — hãy bổ sung nhé!');
       renderExamModal();
     }
   }
 
-  /* --- Test 2 Helpers: Speak 5 stages B4 via Mic --- */
-  function toggleT2TypeMode(stageNum) {
+  /* --- Test 2 Helpers: Speak Full Story B1 -> B5 (5 Mic Stations) --- */
+  function selectT2Station(stationNum) {
     if (!examState) return;
-    examState.t2TypeMode[stageNum] = !examState.t2TypeMode[stageNum];
+    STT()?.abort?.();
+    examState.t2RecordingStation = null;
+    examState.t2ProcessingStation = null;
+    const maxLen = (examState.story.speakStations || []).length || 5;
+    examState.t2ActiveStation = Math.max(1, Math.min(maxLen, Number(stationNum) || 1));
     renderExamModal();
   }
-  function submitT2Typed(stageNum) {
+  function toggleT2TypeMode(stationNum) {
     if (!examState) return;
-    const val = (document.getElementById(`sp-t2-ta-${stageNum}`)?.value || '').trim();
-    if (!val) { toast('Hãy nhập nội dung Chặng B4.' + stageNum); return; }
-    gradeT2Stage(stageNum, val, '');
+    examState.t2TypeMode[stationNum] = !examState.t2TypeMode[stationNum];
+    renderExamModal();
   }
-  function toggleT2Mic(stageNum) {
+  function submitT2Typed(stationNum) {
+    if (!examState) return;
+    const val = (document.getElementById(`sp-t2-ta-${stationNum}`)?.value || '').trim();
+    if (!val) { toast(`Hãy nhập bản kể Tiếng Anh cho Trạm ${stationNum}!`); return; }
+    gradeT2Station(stationNum, val, '');
+  }
+  function toggleT2Mic(stationNum) {
     if (!examState) return;
     const stt = STT();
     if (!stt?.isSupported?.()) {
-      toast('Thiết bị không có Micro — chuyển sang gõ dự phòng cho chặng này.');
-      examState.t2TypeMode[stageNum] = true;
+      toast('Thiết bị không có Micro — chuyển sang gõ dự phòng cho trạm này.');
+      examState.t2TypeMode[stationNum] = true;
       renderExamModal();
       return;
     }
-    if (examState.t2RecordingStage === stageNum) {
+    if (examState.t2RecordingStation === stationNum) {
       stt.stop();
-      examState.t2RecordingStage = null;
-      examState.t2ProcessingStage = stageNum;
+      examState.t2RecordingStation = null;
+      examState.t2ProcessingStation = stationNum;
       renderExamModal();
       return;
     }
     stt.abort();
-    examState.t2RecordingStage = stageNum;
-    examState.t2ProcessingStage = null;
+    examState.t2RecordingStation = stationNum;
+    examState.t2ProcessingStation = null;
     renderExamModal();
     stt.startRecording({
       mode: 'sentence',
       autoStopOnSilence: false,
-      maxDurationMs: 45000,
-      onLevel: ({ bars }) => updateWaveBars(`t2_${stageNum}`, bars),
+      maxDurationMs: 50000,
+      onLevel: ({ bars }) => updateWaveBars(`t2_${stationNum}`, bars),
       onProcessing: () => {
         if (!examState) return;
-        examState.t2RecordingStage = null;
-        examState.t2ProcessingStage = stageNum;
+        examState.t2RecordingStation = null;
+        examState.t2ProcessingStation = stationNum;
         renderExamModal();
       },
       onResult: (res) => {
         if (!examState) return;
-        examState.t2RecordingStage = null;
-        examState.t2ProcessingStage = null;
+        examState.t2RecordingStation = null;
+        examState.t2ProcessingStation = null;
         if (res.silent || !res.text) {
           toast('Chưa nghe rõ giọng bạn — hãy nói gần Micro hơn nhé!');
           renderExamModal();
           return;
         }
-        gradeT2Stage(stageNum, res.text, res.audioUrl || '');
+        gradeT2Station(stationNum, res.text, res.audioUrl || '');
       },
       onError: (msg) => {
         if (!examState) return;
-        examState.t2RecordingStage = null;
-        examState.t2ProcessingStage = null;
+        examState.t2RecordingStation = null;
+        examState.t2ProcessingStation = null;
         toast(String(msg || 'Lỗi thu âm Micro.'));
         renderExamModal();
       }
     });
   }
-  function gradeT2Stage(stageNum, text, audioUrl) {
-    const st = (examState.story.stages || []).find((s) => s.stage === stageNum);
+  function gradeT2Station(stationNum, text, audioUrl) {
+    const stations = examState.story.speakStations || [];
+    const st = stations.find((s) => s.station === stationNum);
     if (!st) return;
     const ev = evaluateKeywords(text, st.keywords);
-    const pass = ev.words >= 10 && (ev.hits.length >= 2 || ev.ratio >= 0.3);
-    examState.t2Results[stageNum] = { text, audioUrl, hits: ev.hits, misses: ev.misses, words: ev.words, pass };
-    if (pass && stageNum < 5) examState.t2ActiveStage = stageNum + 1;
+    const pass = ev.words >= 10 && (ev.hits.length >= 2 || ev.ratio >= 0.25);
+    examState.t2Results[stationNum] = { text, audioUrl, hits: ev.hits, misses: ev.misses, words: ev.words, pass };
+    if (pass && stationNum < stations.length) examState.t2ActiveStation = stationNum + 1;
     renderExamModal();
   }
   function checkTaskTest2() {
     if (!examState) return;
-    const stages = examState.story.stages || [];
-    const passedCnt = stages.filter((s) => examState.t2Results[s.stage]?.pass).length;
-    if (passedCnt >= stages.length) {
-      toast('Đạt 5/5 chặng nói B4 → Sang Test 3 (Luyện Bẻ Lái B1–B3 & B5)!');
+    const stations = examState.story.speakStations || [];
+    const passedCnt = stations.filter((s) => examState.t2Results[s.station]?.pass).length;
+    if (passedCnt >= stations.length) {
+      toast('Tuyệt vời! Đã kể trôi chảy Story 01 (B1 → B5) → Sang Test 3 (Viết Mindmap Bẻ Lái)!');
       advanceExamStage(3);
     } else {
-      toast(`Cần đạt đủ ${stages.length}/5 chặng nói B4 (hiện tại ${passedCnt}/5).`);
+      toast(`Cần đạt đủ ${stations.length}/5 trạm nói (hiện tại ${passedCnt}/${stations.length}).`);
     }
   }
 
-  /* --- Test 3 Helpers: Steering Drills (3 prompts) --- */
-  function selectT3Drill(idx) {
+  /* --- Test 3 Helpers: Guided Steering Mindmap Writing (B1–B2 -> B3 -> [B4 locked] -> B5) --- */
+  function selectT3Map(idx) {
     if (!examState) return;
-    STT()?.abort?.();
-    examState.t3Recording = false;
-    examState.t3Processing = false;
     examState.t3Idx = idx;
     renderExamModal();
   }
-  function toggleT3TypeMode() {
+  function saveT3Draft(mapId, nodeId, val) {
     if (!examState) return;
-    examState.t3TypeMode = !examState.t3TypeMode;
-    renderExamModal();
+    examState.t3Drafts[`${mapId}_${nodeId}`] = val;
   }
-  function submitT3Typed() {
+  function gradeCurrentSteerMap() {
     if (!examState) return;
-    const drill = (examState.story.steerDrills || [])[examState.t3Idx];
-    const val = (document.getElementById('sp-t3-ta')?.value || '').trim();
-    if (!drill || !val) { toast('Hãy nhập câu Mở bài B1–B3 và Chốt bài B5!'); return; }
-    gradeT3Drill(drill, val, '');
-  }
-  function toggleT3Mic() {
-    if (!examState) return;
-    const drill = (examState.story.steerDrills || [])[examState.t3Idx];
-    const stt = STT();
-    if (!stt?.isSupported?.()) {
-      examState.t3TypeMode = true;
-      renderExamModal();
-      return;
-    }
-    if (examState.t3Recording) {
-      stt.stop();
-      examState.t3Recording = false;
-      examState.t3Processing = true;
-      renderExamModal();
-      return;
-    }
-    stt.abort();
-    examState.t3Recording = true;
-    examState.t3Processing = false;
-    renderExamModal();
-    stt.startRecording({
-      mode: 'sentence',
-      autoStopOnSilence: false,
-      maxDurationMs: 45000,
-      onLevel: ({ bars }) => updateWaveBars('t3', bars),
-      onProcessing: () => { if (examState) { examState.t3Recording = false; examState.t3Processing = true; renderExamModal(); } },
-      onResult: (res) => {
-        if (!examState) return;
-        examState.t3Recording = false;
-        examState.t3Processing = false;
-        if (res.silent || !res.text) { toast('Chưa nghe rõ giọng bạn — hãy nói lại nhé!'); renderExamModal(); return; }
-        gradeT3Drill(drill, res.text, res.audioUrl || '');
-      },
-      onError: (msg) => { if (examState) { examState.t3Recording = false; examState.t3Processing = false; toast(String(msg)); renderExamModal(); } }
+    const maps = examState.story.steerMindmaps || [];
+    const cur = maps[examState.t3Idx];
+    if (!cur) return;
+    const allChunks = (examState.story.spokenChunks || []).map((c) => c.en);
+    const nodeAudit = {};
+    let allNodesOk = true;
+    (cur.nodes || []).forEach((nd) => {
+      const domKey = safeDomId(`${cur.id}-${nd.id}`);
+      const el = document.getElementById(`sp-t3-ta-${domKey}`);
+      const txt = String(el ? el.value : (examState.t3Drafts[`${cur.id}_${nd.id}`] || '')).trim();
+      examState.t3Drafts[`${cur.id}_${nd.id}`] = txt;
+      const ev = evaluateKeywords(txt, nd.keywords);
+      const typos = detectTypos(txt, [...allChunks, ...(nd.keywords || [])]);
+      const pass = ev.words >= 6 && ev.hits.length >= 1 && typos.length === 0;
+      nodeAudit[nd.id] = { pass, words: ev.words, hits: ev.hits, typos };
+      if (pass) examState.t3Locked[`${cur.id}_${nd.id}`] = true;
+      else allNodesOk = false;
     });
-  }
-  function gradeT3Drill(drill, text, audioUrl) {
-    const ev = evaluateKeywords(text, drill.keywords);
-    const pass = ev.words >= 12 && ev.hits.length >= 2;
-    examState.t3Results[drill.id] = { text, audioUrl, hits: ev.hits, misses: ev.misses, words: ev.words, pass };
+    examState.t3Audit[cur.id] = { pass: allNodesOk, nodeAudit };
+    if (allNodesOk) {
+      toast(`Đạt Mindmap Bẻ Lái "${cur.tag}"! Đã mở mẫu Band 8.5 để bạn đối chiếu.`);
+    } else {
+      toast('Một số nút Bẻ Lái chưa đủ ý hoặc còn lỗi chính tả — hãy kiểm tra lại nhé!');
+    }
     renderExamModal();
   }
   function checkTaskTest3() {
     if (!examState) return;
-    const drills = examState.story.steerDrills || [];
-    const passedCnt = drills.filter((d) => examState.t3Results[d.id]?.pass).length;
-    if (passedCnt >= drills.length) {
-      toast('Hoàn thành cả 3 góc bẻ lái → Sang Test 4 (Kể nguyên bài 2 phút)!');
+    const maps = examState.story.steerMindmaps || [];
+    const passedCnt = maps.filter((m) => examState.t3Audit[m.id]?.pass).length;
+    if (passedCnt >= maps.length) {
+      toast('Hoàn thành cả 3 Mindmap Bẻ Lái → Sang Test 4 (Nói đề thi thật 60s chuẩn bị + 2 phút nói)!');
       advanceExamStage(4);
     } else {
-      toast(`Hãy hoàn thành đủ ${drills.length}/3 đề bẻ lái (hiện đạt ${passedCnt}/${drills.length}).`);
+      toast(`Cần đạt đủ ${maps.length}/3 Mindmap Bẻ Lái (hiện đạt ${passedCnt}/${maps.length}).`);
     }
   }
 
-  /* --- Test 4 Helpers: Full 2-Minute Monologue Run --- */
+  /* --- Test 4 Helpers: Concrete IELTS Part 2 Exam Cue Card (60s Prep -> 2m Speak -> Result) --- */
+  function cycleT4Cue() {
+    if (!examState || examState.t4Phase !== 'prep') return;
+    const cues = examState.story.cueCards || [];
+    if (!cues.length) return;
+    examState.t4CueIdx = (examState.t4CueIdx + 1) % cues.length;
+    examState.t4PrepNote = '';
+    examState.secsLeft = 60;
+    startExamTimer();
+    renderExamModal();
+  }
+  function saveT4PrepNote(val) {
+    if (examState) examState.t4PrepNote = val;
+  }
+  function beginT4Speaking() {
+    if (!examState) return;
+    examState.t4Phase = 'speak';
+    examState.secsLeft = 120;
+    startExamTimer();
+    renderExamModal();
+  }
   function toggleT4TypeMode() {
     if (!examState) return;
     examState.t4TypeMode = !examState.t4TypeMode;
@@ -2059,7 +2515,7 @@
         examState.t4Recording = false;
         examState.t4Processing = false;
         const dur = res.durationSec || Math.max(10, Math.round((Date.now() - examState.t4RecStartedAt) / 1000));
-        if (res.silent || !res.text) { toast('Chưa thu được giọng nói — hãy thử lại hoặc dùng gõ dự phòng!'); renderExamModal(); return; }
+        if (res.silent || !res.text) { toast('Chưa thu được giọng nói — hãy thử lại hoặc dùng Gõ dự phòng!'); renderExamModal(); return; }
         finalizeTaskTest4(res.text, dur, res.audioUrl || '');
       },
       onError: (msg) => { if (examState) { examState.t4Recording = false; examState.t4Processing = false; toast(String(msg)); renderExamModal(); } }
@@ -2068,7 +2524,7 @@
   function submitT4Typed() {
     if (!examState) return;
     const val = (document.getElementById('sp-t4-ta')?.value || '').trim();
-    if (countWords(val) < 40) { toast('Bài kể Full Run cần tối thiểu 40 từ bao quát 5 chặng B4!'); return; }
+    if (countWords(val) < 40) { toast('Bài nói 2 phút cần tối thiểu 40 từ bao quát trọn Story 01!'); return; }
     const estDur = Math.min(120, Math.max(45, Math.round(countWords(val) / 2.2)));
     finalizeTaskTest4(val, estDur, '');
   }
@@ -2078,6 +2534,7 @@
     examState.t4Transcript = text;
     examState.t4AudioUrl = audioUrl;
     examState.t4Metrics = evaluateFullSpeech(text, durationSec);
+    examState.t4Phase = 'result';
     examState.t4Finalized = true;
 
     const map = getTaskDoneMap();
@@ -2093,12 +2550,30 @@
       }
     };
     saveTaskDoneMap(map);
+
+    const cue = (examState.story.cueCards || [])[examState.t4CueIdx];
+    if (cue) {
+      const hist = getPracHistory();
+      hist.unshift({
+        cueId: cue.id,
+        cueTitle: cue.title,
+        mode: 'exam',
+        durationSec: examState.t4Metrics.durationSec,
+        wpm: examState.t4Metrics.wpm,
+        words: examState.t4Metrics.words,
+        chunksCount: examState.t4Metrics.usedChunks.length,
+        fillerCount: examState.t4Metrics.fillerCount,
+        at: Date.now()
+      });
+      savePracHistory(hist.slice(0, 40));
+    }
+
     renderExamModal();
     toast('Chúc mừng! Bạn đã hoàn thành trọn vẹn Task 4 Bước · Story 01!');
   }
 
   function launchCueCardFromTask() {
-    const firstCue = (getStory()?.cueCards || [])[0];
+    const firstCue = (getStory()?.cueCards || [])[1] || (getStory()?.cueCards || [])[0];
     closeTaskExamModal();
     window.TotoroUI?.switchView?.('practice');
     if (firstCue) openPracticeRoom(firstCue.id, 'practice');
@@ -2107,22 +2582,50 @@
   function renderExamModal() {
     if (!examState) return;
     const { story, stage } = examState;
-    const stages = story.stages || [];
     const card = document.getElementById('sp-task-exam-card');
-    const teacherJump = isTeacherBypass() ? `
-      <div style="display:flex;gap:4px;">
-        ${[1, 2, 3, 4].map((n) => `<button type="button" class="btn" style="padding:4px 8px;font-size:11.5px;" onclick="SpeakingStudio.teacherJumpExam(${n})">T${n}</button>`).join('')}
-      </div>
-    ` : '';
 
     let bodyHtml = '';
 
     if (stage === 1) {
+      const nodes = getT1LinearNodes(story);
+      const ndB12 = nodes.find((n) => n.id === 'B1_B2');
+      const ndB3 = nodes.find((n) => n.id === 'B3');
+      const ndB4 = nodes.find((n) => n.id === 'B4');
+      const ndB5 = nodes.find((n) => n.id === 'B5');
+
+      const renderLinearCell = (nd, extraCls) => {
+        if (!nd) return '';
+        const sid = safeDomId(nd.id);
+        const aud = examState.t1Audit[nd.id];
+        const isBad = aud && !aud.pass;
+        const locked = Boolean(examState.t1Locked[nd.id]);
+        return `
+          <div class="sp-t1-cell ${extraCls} ${isBad ? 'is-bad' : (locked ? 'is-done' : '')}" id="sp-t1-cell-${sid}">
+            <div class="sp-t1-cell-head">
+              <span class="sp-t1-step-lbl">${esc(nd.code)}</span>
+              ${aud ? `<span class="sp-t1-badge ${aud.pass ? 'ok' : 'bad'}">${aud.pass ? '✓ Đạt' : (aud.typos.length ? `Lỗi: ${esc(aud.typos[0])}` : 'Cần đủ ý')}</span>` : ''}
+            </div>
+            <div class="sp-t1-input-wrap">
+              <div class="sp-t1-mirror" id="sp-t1-mirror-${sid}" aria-hidden="true"></div>
+              <div class="sp-t1-caret" id="sp-t1-caret-${sid}" aria-hidden="true"></div>
+              <textarea class="sp-t1-ta" id="sp-t1-ta-${sid}" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">${esc(examState.t1Drafts[nd.id] || '')}</textarea>
+            </div>
+          </div>
+        `;
+      };
+
+      const renderLinArrow = (id, tag) => `
+        <div class="sp-t1-lin-arrow" id="${id}" aria-hidden="true">
+          ${tag ? `<span class="sp-mm-arrow-tag">${esc(tag)}</span>` : ''}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+        </div>
+      `;
+
       bodyHtml = `
         <div class="ws-t1-stage-head">
           <div>
-            <div class="ws-t1-stage-title">Test 1 · Viết Lại 5 Chặng Lõi B4 Trực Tiếp Trong Sơ Đồ Flow</div>
-            <div class="ws-t1-stage-sub">Gõ Tiếng Anh cho từng chặng <strong>B4.1 → B4.5</strong> — chữ Tiếng Việt giữ nguyên lúc gõ; xong chặng nào nhấn <strong>Tab</strong> hoặc <strong>Enter</strong> để khóa xanh và sáng mũi tên sang chặng kế tiếp.</div>
+            <div class="ws-t1-stage-title">Test 1 · Viết Sơ Đồ Story 01</div>
+            <div class="ws-t1-stage-sub">Gõ Tiếng Anh ngay trên chữ ma Tiếng Việt trong cùng 1 ô — dịch xong từng ý nhấn <strong>Tab</strong> hoặc <strong>Enter</strong> để ẩn và chuyển tiếp.</div>
           </div>
           <div class="ws-t1-telemetry">
             <div class="ws-t1-stat is-accent">
@@ -2130,7 +2633,7 @@
                 <circle class="ws-t1-ring-bg" cx="9" cy="9" r="7"/>
                 <circle class="ws-t1-ring-fg" id="sp-t1-ring-fg" cx="9" cy="9" r="7"/>
               </svg>
-              <strong id="sp-t1-stat-done">0/5</strong><span>chặng</span>
+              <strong id="sp-t1-stat-done">0/${nodes.length}</strong><span>ô</span>
             </div>
             <div class="ws-t1-stat"><strong id="sp-t1-stat-words">0</strong><span>từ</span></div>
             <div class="ws-t1-stat" id="sp-t1-stat-err-wrap"><strong id="sp-t1-stat-typos">0</strong><span>lỗi</span></div>
@@ -2138,277 +2641,414 @@
           </div>
         </div>
 
-        <div class="sp-t1-grid">
-          ${stages.map((st, idx) => {
-            const aud = examState.t1Audit[st.stage];
-            const isBad = aud && !aud.pass;
-            const locked = Boolean(examState.t1Locked[st.stage]);
-            const clauses = splitClauses(st.textVi);
-            return `
-              <div class="sp-t1-cell ${isBad ? 'is-bad' : (locked ? 'is-done' : '')}" id="sp-t1-cell-${st.stage}">
-                <div class="sp-t1-cell-head">
-                  <span class="sp-t1-step-lbl">B4.${st.stage} · ${esc(st.titleVi)}</span>
-                  ${aud ? `<span style="font-size:11.5px;font-weight:700;color:${aud.pass ? 'var(--ok)' : 'var(--danger)'};">${aud.pass ? '✓ Đạt chặng' : (aud.typos.length ? `Sai chính tả: ${esc(aud.typos.join(', '))}` : 'Cần viết đủ ý hơn (≥8 từ & ≥2 từ khóa)')}</span>` : ''}
-                </div>
-                <div class="sp-t1-cue" id="sp-t1-cue-${st.stage}">
-                  ${clauses.map((cl, cIdx) => `<span class="sp-t1-clause ${cIdx === 0 ? 'is-active' : ''}">${esc(cl)} </span>`).join('')}
-                </div>
-                <div class="sp-t1-input-wrap">
-                  <div class="sp-t1-mirror" id="sp-t1-mirror-${st.stage}"></div>
-                  <div class="sp-t1-caret" id="sp-t1-caret-${st.stage}"></div>
-                  <textarea class="sp-t1-ta" id="sp-t1-ta-${st.stage}" spellcheck="false" autocomplete="off">${esc(examState.t1Drafts[st.stage] || '')}</textarea>
-                </div>
-              </div>
-              ${idx < stages.length - 1 ? `
-                <div class="sp-t1-connector ${locked ? 'is-lit' : ''}" id="sp-t1-conn-${st.stage}" aria-hidden="true">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
-                </div>
-              ` : ''}
-            `;
-          }).join('')}
+        <div class="sp-t1-miro-stage">
+          <div class="sp-t1-linear-flow">
+            ${renderLinearCell(ndB12, 'sp-t1-lin-card is-b12')}
+            ${renderLinArrow('sp-t1-arr-1', '')}
+            ${renderLinearCell(ndB3, 'sp-t1-lin-card is-b3')}
+            ${renderLinArrow('sp-t1-arr-2', 'KỂ TIẾP')}
+            ${renderLinearCell(ndB4, 'sp-t1-lin-card is-b4')}
+            ${renderLinArrow('sp-t1-arr-3', 'CHỐT BÀI')}
+            ${renderLinearCell(ndB5, 'sp-t1-lin-card is-b5')}
+          </div>
         </div>
 
         <div class="ws-t1-footer">
-          <span class="ws-t1-footer-note">Tự do paraphrase theo mạch kể của bạn — chữ Tiếng Việt chỉ ẩn khi tự bạn nhấn Tab / Enter xác nhận.</span>
+          <span class="ws-t1-footer-note">Tự do paraphrase tự nhiên — chữ ma Tiếng Việt giữ nguyên lúc gõ và chỉ ẩn khi bạn bấm Tab.</span>
           <div class="ws-t1-kb-group">
-            <button type="button" class="ws-t1-kb-btn is-primary" id="sp-t1-btn-next">Xong chặng này <kbd>Tab</kbd></button>
+            <button type="button" class="ws-t1-kb-btn is-primary" id="sp-t1-btn-next">Xong ý này <kbd>Tab</kbd></button>
             <button type="button" class="ws-t1-kb-btn" id="sp-t1-btn-prev">Hiện lại / Lùi ô <kbd>Shift</kbd>+<kbd>Tab</kbd></button>
           </div>
         </div>
       `;
     } else if (stage === 2) {
-      const passedCnt = stages.filter((s) => examState.t2Results[s.stage]?.pass).length;
+      const stations = story.speakStations || [];
+      const passedCnt = stations.filter((s) => examState.t2Results[s.station]?.pass).length;
+      const activeNum = Math.max(1, Math.min(stations.length, examState.t2ActiveStation || 1));
+      const st = stations.find((s) => s.station === activeNum) || stations[0];
+      const res = st ? examState.t2Results[st.station] : null;
+      const isRec = examState.t2RecordingStation === st?.station;
+      const isProc = examState.t2ProcessingStation === st?.station;
+      const isType = Boolean(examState.t2TypeMode[st?.station]);
+
       bodyHtml = `
         <div class="ws-t1-stage-head">
           <div>
-            <div class="ws-t1-stage-title">Test 2 · Kể Lại 5 Chặng Lõi B4 Qua Mic</div>
-            <div class="ws-t1-stage-sub">Bấm Mic nói Tiếng Anh cho từng chặng <strong>B4.1 → B4.5</strong>. Chặng đạt độ phủ từ khóa cốt lõi sẽ khóa xanh ✓ và cho nghe lại giọng của bạn.</div>
+            <div class="ws-t1-stage-title">Test 2 · Kể Lại Trọn Story 01 Qua Mic</div>
+            <div class="ws-t1-stage-sub">Đi mượt qua <strong>5 trạm kể chuyện</strong>, nhìn tranh &amp; mạch ý rồi kể lại bằng Tiếng Anh.</div>
           </div>
           <div class="ws-t1-telemetry">
-            <span class="sp-pill ${passedCnt === 5 ? 'ok' : ''}">${passedCnt} / 5 chặng đạt</span>
-            <button type="button" class="btn btn-primary" onclick="SpeakingStudio.checkTaskTest2()">Sang Test 3 · Bẻ Lái →</button>
+            <span class="sp-pill ${passedCnt === stations.length ? 'ok' : ''} tabular">${passedCnt} / ${stations.length} trạm đạt</span>
+            <button type="button" class="btn btn-primary" onclick="SpeakingStudio.checkTaskTest2()">Sang Test 3 · Mindmap Bẻ Lái →</button>
           </div>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:11px;">
-          ${stages.map((st) => {
-            const res = examState.t2Results[st.stage];
-            const isRec = examState.t2RecordingStage === st.stage;
-            const isProc = examState.t2ProcessingStage === st.stage;
-            const isType = Boolean(examState.t2TypeMode[st.stage]);
+        <div class="sp-stepper-5">
+          ${stations.map((s) => {
+            const p = examState.t2Results[s.station]?.pass;
+            const cur = s.station === st.station;
             return `
-              <div class="sp-stage-speak-card ${res?.pass ? 'is-pass' : ''}">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-                  <div style="display:flex;align-items:center;gap:8px;">
-                    <span class="sp-stage-badge">B4.${st.stage}</span>
-                    <strong style="font-size:14px;">${esc(st.titleVi)}</strong>
-                    ${res?.pass ? `<span class="sp-pill ok">✓ Đạt (${res.hits.length}/${st.keywords.length} từ khóa)</span>` : ''}
-                  </div>
-                  <div style="display:flex;align-items:center;gap:6px;">
-                    <button type="button" class="btn" style="padding:5px 10px;font-size:12px;" onclick="SpeakingStudio.toggleT2TypeMode(${st.stage})">${isType ? 'Dùng Mic' : 'Gõ dự phòng'}</button>
-                    ${!isType ? `
-                      <button type="button" class="btn ${isRec ? '' : 'btn-primary'}" style="padding:6px 13px;font-size:12.5px;${isRec ? 'background:var(--danger);color:#fff;border-color:var(--danger);' : ''}" ${isProc ? 'disabled' : ''} onclick="SpeakingStudio.toggleT2Mic(${st.stage})">
-                        ${isProc ? 'Đang nhận diện...' : (isRec ? 'Dừng & Chấm' : (res ? 'Nói lại chặng này' : 'Bấm Mic nói'))}
-                      </button>
-                    ` : ''}
-                  </div>
-                </div>
-                <div style="font-size:13.2px;color:var(--ink-2);line-height:1.55;">${esc(st.textVi)}</div>
-                ${isRec ? `<div class="sp-wave-bars" style="justify-content:flex-start;">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="t2_${st.stage}" style="background:var(--danger);opacity:0.9;"></span>`).join('')}</div>` : ''}
-                ${isType ? `
-                  <div style="display:flex;gap:8px;align-items:flex-end;">
-                    <textarea class="sp-note-ta" id="sp-t2-ta-${st.stage}" style="min-height:60px;" placeholder="Gõ bản kể Tiếng Anh cho chặng B4.${st.stage}...">${esc(res?.text || '')}</textarea>
-                    <button type="button" class="btn btn-primary" onclick="SpeakingStudio.submitT2Typed(${st.stage})">Chấm</button>
-                  </div>
-                ` : ''}
-                ${res ? `
-                  <div class="sp-transcript-box" style="font-size:13.5px;">
-                    <div><strong>Bản kể của bạn (${res.words} từ):</strong> ${esc(res.text)}</div>
-                    ${res.audioUrl ? `<audio class="sp-audio-replay" style="margin-top:8px;" controls src="${esc(res.audioUrl)}"></audio>` : ''}
-                    <div class="sp-kw-row" style="margin-top:8px;">
-                      ${st.keywords.map((kw) => `<span class="sp-kw-chip ${res.hits.includes(kw) ? 'hit' : ''}">${res.hits.includes(kw) ? '✓ ' : ''}${esc(kw)}</span>`).join('')}
-                    </div>
-                  </div>
-                ` : ''}
-              </div>
+              <button type="button" class="sp-stepper-btn ${cur ? 'is-active' : ''} ${p ? 'is-pass' : ''}" onclick="SpeakingStudio.selectT2Station(${s.station})">
+                <span class="sp-stepper-num">${p ? '✓' : esc(s.code)}</span>
+                <span class="sp-stepper-lbl">${esc(s.titleVi)}</span>
+              </button>
             `;
           }).join('')}
         </div>
+
+        <div class="sp-studio-2col">
+          <div class="sp-studio-story-pane">
+            ${st.sceneImg ? `
+              <div class="sp-studio-scene">
+                <img src="${esc(st.sceneImg)}" alt="${esc(st.titleVi)}">
+              </div>
+            ` : ''}
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <span class="ws-task-code">TRẠM ${st.station} / ${stations.length} · ${esc(st.code)}</span>
+              <span class="ws-pill ${res?.pass ? 'ok' : ''}">${res?.pass ? 'Đạt ✓' : 'Chưa chấm'}</span>
+            </div>
+            <div class="sp-studio-stage-title">${esc(st.titleVi)}</div>
+            <div class="sp-studio-stage-vi">${esc(st.textVi)}</div>
+            <div class="sp-studio-nav-row">
+              <button type="button" class="btn" ${st.station <= 1 ? 'disabled' : ''} onclick="SpeakingStudio.selectT2Station(${st.station - 1})">← Trạm trước</button>
+              <button type="button" class="btn" ${st.station >= stations.length ? 'disabled' : ''} onclick="SpeakingStudio.selectT2Station(${st.station + 1})">Trạm tiếp →</button>
+            </div>
+          </div>
+
+          <div class="sp-studio-mic-pane ${res?.pass ? 'is-pass' : ''}">
+            <div class="sp-studio-mic-head">
+              <div>
+                <div style="font-size:14.5px;font-weight:800;color:var(--ink);">Bàn Thu Âm · ${esc(st.code)}</div>
+                <div style="font-size:12px;color:var(--ink-2);">${res?.pass ? `✓ Đạt chuẩn (${res.hits.length}/${st.keywords.length} từ khóa)` : 'Bấm Mic và kể lại tự nhiên bằng Tiếng Anh'}</div>
+              </div>
+              <button type="button" class="btn" style="padding:5px 10px;font-size:12px;" onclick="SpeakingStudio.toggleT2TypeMode(${st.station})">
+                ${isType ? 'Dùng Mic' : 'Gõ dự phòng'}
+              </button>
+            </div>
+
+            ${isType ? `
+              <textarea class="sp-note-ta" id="sp-t2-ta-${st.station}" style="min-height:132px;" placeholder="Gõ bản kể Tiếng Anh cho trạm ${esc(st.code)}...">${esc(res?.text || '')}</textarea>
+              <div style="display:flex;justify-content:flex-end;">
+                <button type="button" class="btn btn-primary" onclick="SpeakingStudio.submitT2Typed(${st.station})">Chấm trạm ${esc(st.code)} →</button>
+              </div>
+            ` : `
+              <div class="sp-mic-stage ${isRec ? 'is-rec' : ''}" style="flex:1;justify-content:center;">
+                <div class="sp-wave-bars">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="t2_${st.station}"></span>`).join('')}</div>
+                <button type="button" class="sp-mic-btn ${isRec ? 'is-recording' : ''}" ${isProc ? 'disabled' : ''} onclick="SpeakingStudio.toggleT2Mic(${st.station})">
+                  <span>${isProc ? 'Đang chấm giọng...' : (isRec ? 'Dừng & Chấm trạm này' : (res ? 'Thu âm lại trạm này' : 'Bấm Mic kể trạm này'))}</span>
+                </button>
+                <div style="font-size:12.5px;color:var(--ink-2);">${isRec ? 'Đang thu âm — nói xong bấm dừng để AI chấm...' : 'Giữ nhịp nói tự nhiên, rõ ràng.'}</div>
+              </div>
+            `}
+
+            ${res ? `
+              <div class="sp-transcript-box" style="font-size:13.5px;">
+                <div><strong>Bản kể của bạn (${res.words} từ):</strong> ${esc(res.text)}</div>
+                ${res.audioUrl ? `<audio class="sp-audio-replay" style="margin-top:8px;" controls src="${esc(res.audioUrl)}"></audio>` : ''}
+                <div class="sp-kw-row" style="margin-top:8px;">
+                  ${st.keywords.map((kw) => `<span class="sp-kw-chip ${res.hits.includes(kw) ? 'hit' : ''}">${res.hits.includes(kw) ? '✓ ' : ''}${esc(kw)}</span>`).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
       `;
     } else if (stage === 3) {
-      const drills = story.steerDrills || [];
-      const cur = drills[examState.t3Idx] || drills[0];
-      const res = cur ? examState.t3Results[cur.id] : null;
-      const passedCnt = drills.filter((d) => examState.t3Results[d.id]?.pass).length;
+      const maps = story.steerMindmaps || [];
+      const cur = maps[examState.t3Idx] || maps[0];
+      const audit = cur ? examState.t3Audit[cur.id] : null;
+      const passedCnt = maps.filter((m) => examState.t3Audit[m.id]?.pass).length;
+      const ndB12 = cur?.nodes?.find((n) => n.id === 'b12');
+      const ndB3 = cur?.nodes?.find((n) => n.id === 'b3');
+      const ndB5 = cur?.nodes?.find((n) => n.id === 'b5');
+
+      const renderSteerNode = (nd) => {
+        if (!nd) return '';
+        const key = `${cur.id}_${nd.id}`;
+        const domKey = safeDomId(`${cur.id}-${nd.id}`);
+        const val = examState.t3Drafts[key] || '';
+        const na = audit?.nodeAudit?.[nd.id];
+        const cls = na ? (na.pass ? 'is-done' : 'is-bad') : (examState.t3Locked[key] ? 'is-done' : '');
+        return `
+          <div class="sp-t1-cell sp-steer-node ${cls}" id="sp-t3-cell-${domKey}">
+            <div class="sp-t1-cell-head">
+              <span class="sp-t1-step-lbl">${esc(nd.code)}</span>
+              ${na ? `<span class="sp-t1-badge ${na.pass ? 'ok' : 'bad'}">${na.pass ? '✓ Đạt' : (na.typos.length ? `Lỗi: ${esc(na.typos[0])}` : 'Cần đủ ý')}</span>` : ''}
+            </div>
+            <div class="sp-t1-input-wrap">
+              <div class="sp-t1-mirror" id="sp-t3-mirror-${domKey}" aria-hidden="true"></div>
+              <div class="sp-t1-caret" id="sp-t3-caret-${domKey}" aria-hidden="true"></div>
+              <textarea class="sp-t1-ta" id="sp-t3-ta-${domKey}" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">${esc(val)}</textarea>
+            </div>
+          </div>
+        `;
+      };
+
+      const steerArrow = (tag) => `
+        <div class="sp-steer-arrow-col" aria-hidden="true">
+          ${tag ? `<span class="sp-mm-arrow-tag">${esc(tag)}</span>` : ''}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+        </div>
+      `;
+      const b4ShortList = (story.stages || []).map((s) => `<li><strong>${esc(s.code)}</strong> ${esc(s.titleVi)}</li>`).join('');
+
       bodyHtml = `
         <div class="ws-t1-stage-head">
           <div>
-            <div class="ws-t1-stage-title">Test 3 · Luyện Bẻ Lái Đề (B1–B3 Mở Bài &amp; B5 Chốt Đề)</div>
-            <div class="ws-t1-stage-sub">Giữ nguyên lõi B4 trong đầu — chỉ cần nói <strong>2 câu mở B1–B3 + 1 câu chốt B5</strong> khớp đúng từng đề dưới đây.</div>
+            <div class="ws-t1-stage-title">Test 3 · Tự Viết Mindmap Bẻ Lái Có Hướng Dẫn</div>
+            <div class="ws-t1-stage-sub">Giữ nguyên <strong>Cốt truyện khóa sẵn</strong> — tự viết Tiếng Anh vào 3 ô <strong>Mở bài, Dẫn chuyện, Kết bài</strong> để khớp từng đề thi.</div>
           </div>
           <div class="ws-t1-telemetry">
-            <span class="sp-pill ${passedCnt === drills.length ? 'ok' : ''}">${passedCnt} / ${drills.length} đề đạt</span>
-            <button type="button" class="btn btn-primary" onclick="SpeakingStudio.checkTaskTest3()">Sang Test 4 · Nói 2 Phút →</button>
+            <span class="sp-pill ${passedCnt === maps.length ? 'ok' : ''} tabular">${passedCnt} / ${maps.length} đề đạt</span>
+            <button type="button" class="btn btn-primary" onclick="SpeakingStudio.checkTaskTest3()">Sang Test 4 · Đề Thi Thật →</button>
           </div>
         </div>
 
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          ${drills.map((d, idx) => `
-            <button type="button" class="sp-persp-tab ${idx === examState.t3Idx ? 'active' : ''}" onclick="SpeakingStudio.selectT3Drill(${idx})">
-              ${examState.t3Results[d.id]?.pass ? '✓ ' : ''}Đề ${idx + 1}: ${esc(d.tag)}
+        <div class="sp-stepper-3">
+          ${maps.map((m, idx) => `
+            <button type="button" class="sp-stepper-btn ${idx === examState.t3Idx ? 'is-active' : ''} ${examState.t3Audit[m.id]?.pass ? 'is-pass' : ''}" onclick="SpeakingStudio.selectT3Map(${idx})">
+              <span class="sp-stepper-num">${examState.t3Audit[m.id]?.pass ? '✓' : `0${idx + 1}`}</span>
+              <span class="sp-stepper-lbl">${esc(m.tag)}</span>
             </button>
           `).join('')}
         </div>
 
         ${cur ? `
-          <div class="sp-stage-speak-card ${res?.pass ? 'is-pass' : ''}">
-            <span class="sp-pill ok" style="width:fit-content;">${esc(cur.tag)}</span>
-            <div style="font-size:18px;font-weight:800;color:var(--ink);">${esc(cur.promptEn)}</div>
-            <div style="font-size:13.5px;color:var(--ink-2);">${esc(cur.promptVi)}</div>
-
-            <div style="display:flex;justify-content:flex-end;">
-              <button type="button" class="btn" style="padding:5px 11px;font-size:12px;" onclick="SpeakingStudio.toggleT3TypeMode()">
-                ${examState.t3TypeMode ? 'Chuyển sang Mic AI' : 'Gõ dự phòng'}
-              </button>
-            </div>
-
-            ${examState.t3TypeMode ? `
-              <textarea class="sp-note-ta" id="sp-t3-ta" style="min-height:92px;" placeholder="Gõ 2 câu mở bài (B1–B3) và 1 câu chốt đề (B5) bằng Tiếng Anh...">${esc(res?.text || '')}</textarea>
-              <div style="display:flex;justify-content:flex-end;">
-                <button type="button" class="btn btn-primary" onclick="SpeakingStudio.submitT3Typed()">Chấm câu bẻ lái</button>
-              </div>
-            ` : `
-              <div class="sp-mic-stage ${examState.t3Recording ? 'is-rec' : ''}">
-                <div class="sp-wave-bars">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="t3"></span>`).join('')}</div>
-                <button type="button" class="sp-mic-btn ${examState.t3Recording ? 'is-recording' : ''}" ${examState.t3Processing ? 'disabled' : ''} onclick="SpeakingStudio.toggleT3Mic()">
-                  <span>${examState.t3Processing ? 'Đang chấm giọng...' : (examState.t3Recording ? 'Dừng & Chấm câu bẻ lái' : 'Bấm Mic nói Mở (B1–B3) + Chốt (B5)')}</span>
-                </button>
-              </div>
-            `}
-
-            ${res ? `
-              <div class="sp-transcript-box">
-                <div style="font-weight:800;color:${res.pass ? 'var(--ok)' : 'var(--danger)'};margin-bottom:4px;">${res.pass ? '✓ Bẻ lái khớp đề!' : 'Cần bám sát góc đề hơn (≥12 từ & ≥2 từ khóa trọng tâm)'}</div>
-                <div>${esc(res.text)}</div>
-                ${res.audioUrl ? `<audio class="sp-audio-replay" style="margin-top:8px;" controls src="${esc(res.audioUrl)}"></audio>` : ''}
-              </div>
-              <div class="ws-recall-model-box">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <strong style="font-size:12.5px;color:var(--accent);text-transform:uppercase;">Mẫu Bẻ Lái Chuẩn Band 8.5</strong>
-                  <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(cur.b13Ref + ' ' + cur.b5Ref).replace(/'/g, "\\'")}', 'en-GB')"><span>UK</span></button>
+          <div class="sp-steer-miro-board">
+            <div class="sp-steer-flow-5">
+              <!-- KHỐI 1: ĐỀ THI ÁP DỤNG -->
+              <div class="sp-steer-node is-cue">
+                <div class="sp-t1-cell-head">
+                  <span class="sp-t1-step-lbl">ĐỀ THI ÁP DỤNG</span>
+                  <span class="sp-t1-badge ok">${esc(cur.tag.split('·')[0].trim())}</span>
                 </div>
-                <div style="font-size:13.8px;"><strong>B1–B3 Mở bài:</strong> ${esc(cur.b13Ref)}</div>
-                <div style="font-size:13.8px;"><strong>B5 Chốt đề:</strong> ${esc(cur.b5Ref)}</div>
+                <div style="font-size:14px;font-weight:800;color:var(--ink);line-height:1.38;">${esc(cur.cueTitle)}</div>
+                <ul class="sp-steer-cue-list">
+                  ${(cur.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('')}
+                </ul>
               </div>
-            ` : ''}
+
+              ${steerArrow('')}
+              ${renderSteerNode(ndB12)}
+              ${steerArrow('')}
+              ${renderSteerNode(ndB3)}
+              ${steerArrow('KỂ TIẾP')}
+
+              <!-- KHỐI 4: CỐT TRUYỆN HÀNH ĐỘNG (KHÓA SẴN) -->
+              <div class="sp-steer-node is-locked">
+                <div class="sp-t1-cell-head">
+                  <span class="sp-t1-step-lbl">CỐT TRUYỆN LÕI</span>
+                  <span class="sp-t1-badge ok">Khóa sẵn</span>
+                </div>
+                <ul class="sp-steer-b4-list">${b4ShortList}</ul>
+              </div>
+
+              ${steerArrow('CHỐT BÀI')}
+              ${renderSteerNode(ndB5)}
+            </div>
           </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:12.5px;color:var(--ink-2);">Tự viết 3 ô Mở bài, Dẫn chuyện, Kết bài rồi bấm Kiểm tra để đối chiếu ngay với mẫu Band 8.5.</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              ${audit ? `<button type="button" class="btn" onclick="SpeakingStudio.openMindmapModal('master')">Mở Mindmap Tổng Thể</button>` : ''}
+              ${examState.t3Idx < maps.length - 1 && audit?.pass ? `<button type="button" class="btn" onclick="SpeakingStudio.selectT3Map(${examState.t3Idx + 1})">Sang đề bẻ lái tiếp →</button>` : ''}
+              <button type="button" class="btn btn-primary" onclick="SpeakingStudio.gradeCurrentSteerMap()">Kiểm tra Mindmap Bẻ Lái →</button>
+            </div>
+          </div>
+
+          ${audit ? `
+            <div class="ws-recall-model-box" style="border-left-color:${audit.pass ? 'var(--ok)' : 'var(--accent)'};">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                <strong style="font-size:12.5px;color:var(--accent);text-transform:uppercase;">Mẫu Mindmap Bẻ Lái Band 8.5 · ${esc(cur.tag)}</strong>
+                <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc([ndB12?.refEn, ndB3?.refEn, ndB5?.refEn].filter(Boolean).join(' ')).replace(/'/g, "\\'")}', 'en-GB')"><span>UK</span></button>
+              </div>
+              <div style="font-size:13.5px;"><strong>Mở bài:</strong> ${esc(ndB12?.refEn || '')}</div>
+              <div style="font-size:13.5px;"><strong>Dẫn chuyện:</strong> ${esc(ndB3?.refEn || '')}</div>
+              <div style="font-size:13.5px;"><strong>Kết bài:</strong> ${esc(ndB5?.refEn || '')}</div>
+            </div>
+          ` : ''}
         ` : ''}
       `;
     } else {
+      const cues = story.cueCards || [];
+      const curCue = cues[examState.t4CueIdx] || cues[0];
+      const phase = examState.t4Phase;
       const m = examState.t4Metrics;
       const fs = story.fullSpeech || { en: [], vi: [] };
+      const totalSec = phase === 'prep' ? 60 : 120;
+      const dialCirc = 314.16;
+      const dialOff = (dialCirc * (1 - Math.max(0, Math.min(1, examState.secsLeft / totalSec)))).toFixed(1);
+
       bodyHtml = `
         <div class="ws-t1-stage-head">
           <div>
-            <div class="ws-t1-stage-title">Test 4 · Kể Nguyên Bài 2 Phút (Full Run · Story 01)</div>
-            <div class="ws-t1-stage-sub">Chỉ nhìn 5 mốc phao ngắn bên dưới và kể trọn vẹn câu chuyện trong <strong>1:30 – 2:00</strong>.</div>
+            <div class="ws-t1-stage-title">Test 4 · Thực Chiến 1 Đề Cụ Thể (60s Chuẩn Bị → 2 Phút Nói)</div>
+            <div class="ws-t1-stage-sub">
+              ${phase === 'prep'
+                ? '<strong>Giai đoạn 1 / 2 · Chuẩn bị 60 giây:</strong> Đọc kỹ Cue Card bên trái và ghi nhanh từ khóa dàn ý.'
+                : (phase === 'speak'
+                  ? '<strong>Giai đoạn 2 / 2 · Nói liên tục 2 phút:</strong> Bấm Mic và trình bày trọn bài (B1 → B5) theo ghi chú của bạn.'
+                  : '<strong>Hoàn thành bài nói Part 2!</strong> Xem chỉ số, nghe lại giọng nói và đối chiếu bài mẫu.')}
+            </div>
           </div>
           <div class="ws-t1-telemetry">
-            ${!examState.t4Finalized
-              ? `<button type="button" class="btn" style="padding:6px 11px;font-size:12px;" onclick="SpeakingStudio.toggleT4TypeMode()">${examState.t4TypeMode ? 'Dùng Mic AI' : 'Gõ dự phòng'}</button>`
-              : `
-                <button type="button" class="btn btn-primary" onclick="SpeakingStudio.launchCueCardFromTask()">Luyện ngay Cue Card thật →</button>
-                <button type="button" class="btn" onclick="SpeakingStudio.closeTaskExamModal()">Hoàn tất Task ✓</button>
-              `}
+            ${phase === 'prep' ? `<button type="button" class="btn" style="padding:6px 11px;font-size:12px;" onclick="SpeakingStudio.cycleT4Cue()">Đổi đề khác</button>` : ''}
+            ${phase === 'speak' ? `<button type="button" class="btn" style="padding:6px 11px;font-size:12px;" onclick="SpeakingStudio.toggleT4TypeMode()">${examState.t4TypeMode ? 'Dùng Mic' : 'Gõ dự phòng'}</button>` : ''}
+            ${phase === 'result' ? `
+              <button type="button" class="btn btn-primary" onclick="SpeakingStudio.launchCueCardFromTask()">Luyện thêm 14 Cue Cards →</button>
+              <button type="button" class="btn" onclick="SpeakingStudio.closeTaskExamModal()">Hoàn tất Task ✓</button>
+            ` : ''}
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:repeat(5, minmax(0, 1fr));gap:8px;">
-          ${stages.map((st) => `
-            <div style="padding:9px 10px;border-radius:10px;background:var(--surface-item);border:1px solid var(--border);text-align:left;">
-              <span class="sp-stage-badge" style="margin-bottom:4px;">B4.${st.stage}</span>
-              <div style="font-size:12px;font-weight:700;color:var(--ink);line-height:1.35;">${esc(st.titleVi)}</div>
-            </div>
-          `).join('')}
-        </div>
-
-        ${!examState.t4Finalized ? (
-          examState.t4TypeMode ? `
-            <textarea class="sp-note-ta" id="sp-t4-ta" style="min-height:170px;" placeholder="Gõ nguyên bài kể Story 01 của bạn bằng Tiếng Anh (mục tiêu 180–280 từ)...">${esc(examState.t4Transcript)}</textarea>
-            <div style="display:flex;justify-content:flex-end;">
-              <button type="button" class="btn btn-primary" onclick="SpeakingStudio.submitT4Typed()">Nộp bài &amp; Chấm chỉ số →</button>
-            </div>
-          ` : `
-            <div class="sp-mic-stage ${examState.t4Recording ? 'is-rec' : ''}">
-              <div class="sp-wave-bars">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="t4"></span>`).join('')}</div>
-              <button type="button" class="sp-mic-btn ${examState.t4Recording ? 'is-recording' : ''}" ${examState.t4Processing ? 'disabled' : ''} onclick="SpeakingStudio.toggleT4Mic()">
-                <span>${examState.t4Processing ? 'Đang phân tích bài nói 2 phút...' : (examState.t4Recording ? 'Dừng & Nộp bài nói 2 phút' : 'Bắt đầu kể 2 phút (Mic AI)')}</span>
-              </button>
-              <div style="font-size:12.5px;color:var(--ink-2);">Kể liền mạch theo 5 mốc phao phía trên — kết thúc bấm dừng để xem WPM, Chunks &amp; nghe lại giọng.</div>
-            </div>
-          `
-        ) : `
-          <div class="sp-metrics-grid">
-            <div class="sp-metric-box">
-              <div class="sp-metric-val">${fmtMmSs(m.durationSec)}</div>
-              <div class="sp-metric-lbl">Thời lượng (Chuẩn 1:30–2:00)</div>
-            </div>
-            <div class="sp-metric-box">
-              <div class="sp-metric-val">${m.wpm}</div>
-              <div class="sp-metric-lbl">Tốc độ nói (WPM)</div>
-            </div>
-            <div class="sp-metric-box">
-              <div class="sp-metric-val">${m.usedChunks.length}</div>
-              <div class="sp-metric-lbl">Spoken Chunks đã dùng</div>
-            </div>
-            <div class="sp-metric-box">
-              <div class="sp-metric-val">${m.fillerCount}</div>
-              <div class="sp-metric-lbl">Từ đệm (um/uh/like)</div>
-            </div>
-          </div>
-
-          ${examState.t4AudioUrl ? `<audio class="sp-audio-replay" style="max-width:100%;" controls src="${esc(examState.t4AudioUrl)}"></audio>` : ''}
-          <div class="sp-transcript-box">
-            <strong>Bản kể của bạn (${m.words} từ · ${m.stageHits}/5 chặng):</strong><br>${esc(examState.t4Transcript)}
-            ${m.usedChunks.length ? `<div class="sp-kw-row" style="margin-top:8px;">${m.usedChunks.map((c) => `<span class="sp-kw-chip hit">✓ ${esc(c)}</span>`).join('')}</div>` : ''}
-          </div>
-
-          <div class="ws-recall-model-box">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-              <strong style="font-size:13px;color:var(--accent);text-transform:uppercase;">Bài Nói Mẫu Nguyên Bài · Story 01 (${esc(fs.wordTarget || '~300 từ')})</strong>
-              <button type="button" class="btn" style="padding:5px 11px;font-size:12px;" onclick="SpeakingStudio.speakRaw('${esc(fs.en.join(' ')).replace(/'/g, "\\'")}', 'en-GB')">Nghe toàn bài (UK)</button>
-            </div>
-            ${fs.en.map((para, i) => `
-              <div style="padding:8px 0;border-top:${i > 0 ? '1px solid var(--border)' : 'none'};">
-                <div style="font-size:14px;line-height:1.65;color:var(--ink);">${esc(para)}</div>
-                ${fs.vi[i] ? `<div style="font-size:12.8px;line-height:1.55;color:var(--ink-2);margin-top:3px;">${esc(fs.vi[i])}</div>` : ''}
+        ${phase !== 'result' && curCue ? `
+          <div class="sp-studio-2col">
+            <div class="sp-cue-paper" style="padding:20px 22px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);">IELTS Speaking · Part 2 Cue Card</span>
+                <span class="sp-pill ${phase === 'prep' ? '' : 'ok'}">${phase === 'prep' ? '60s chuẩn bị' : '2 phút nói'}</span>
               </div>
-            `).join('')}
+              <div class="sp-cue-paper-title" style="font-size:19px;">${esc(curCue.title)}</div>
+              <div style="font-size:13.5px;font-weight:700;opacity:0.82;">You should say:</div>
+              <ul class="sp-cue-paper-list" style="font-size:14px;">
+                ${(curCue.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('')}
+              </ul>
+              ${phase === 'speak' && examState.t4PrepNote.trim() ? `
+                <div style="padding:11px 14px;border-radius:11px;background:var(--surface-item);border:1px dashed var(--border-strong);font-size:13px;line-height:1.55;white-space:pre-line;">
+                  <strong>Ghi chú 60 giây của bạn:</strong>\n${esc(examState.t4PrepNote)}
+                </div>
+              ` : `
+                <div style="font-size:12.5px;color:var(--ink-3);padding-top:10px;border-top:1px dashed var(--border-strong);">
+                  You will have to talk about the topic for <strong>1 to 2 minutes</strong>. You have <strong>1 minute</strong> to think about what you are going to say.
+                </div>
+              `}
+            </div>
+
+            <div class="sp-studio-mic-pane">
+              <div class="sp-t4-clock-inline">
+                <div class="sp-t4-ring-wrap" style="width:108px;height:108px;">
+                  <svg viewBox="0 0 120 120" class="sp-t4-ring-svg" aria-hidden="true">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg-subtle)" stroke-width="8"/>
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="${examState.t4Recording ? 'var(--danger)' : 'var(--accent)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dialCirc}" stroke-dashoffset="${dialOff}"/>
+                  </svg>
+                  <div class="sp-t4-ring-center">
+                    <div class="sp-t4-ring-time tabular" id="sp-t4-ring-time" style="font-size:22px;">${fmtMmSs(examState.secsLeft)}</div>
+                    <div class="sp-t4-ring-sub">${phase === 'prep' ? 'Chuẩn bị' : (examState.t4Recording ? 'Đang thu' : 'Nói 2 phút')}</div>
+                  </div>
+                </div>
+                <div style="flex:1;min-width:160px;">
+                  <div style="font-size:15px;font-weight:800;color:var(--ink);">${phase === 'prep' ? 'Giai đoạn 1 · Chuẩn bị 60 giây' : 'Giai đoạn 2 · Trình bày 2 phút'}</div>
+                  <div style="font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:3px;">
+                    ${phase === 'prep'
+                      ? 'Ghi nhanh các từ khóa chính trước khi vào phần nói 2 phút (hết 60s tự chuyển).'
+                      : 'Nói liền mạch theo dàn ý bạn đã chuẩn bị, giữ nhịp tự nhiên 120–155 WPM.'}
+                  </div>
+                </div>
+              </div>
+
+              ${phase === 'prep' ? `
+                <textarea class="sp-note-ta" id="sp-t4-prep-ta" style="min-height:150px;"
+                  placeholder="Ghi chú từ khóa của bạn trong 60 giây chuẩn bị..."
+                  oninput="SpeakingStudio.saveT4PrepNote(this.value)">${esc(examState.t4PrepNote)}</textarea>
+                <div style="display:flex;justify-content:flex-end;">
+                  <button type="button" class="btn btn-primary" onclick="SpeakingStudio.beginT4Speaking()">Bắt đầu nói 2 phút ngay →</button>
+                </div>
+              ` : (examState.t4TypeMode ? `
+                <textarea class="sp-note-ta" id="sp-t4-ta" style="min-height:165px;" placeholder="Gõ bài nói Part 2 của bạn bằng Tiếng Anh...">${esc(examState.t4Transcript)}</textarea>
+                <div style="display:flex;justify-content:flex-end;">
+                  <button type="button" class="btn btn-primary" onclick="SpeakingStudio.submitT4Typed()">Nộp bài &amp; Xem chỉ số →</button>
+                </div>
+              ` : `
+                <div class="sp-mic-stage ${examState.t4Recording ? 'is-rec' : ''}" style="flex:1;justify-content:center;">
+                  <div class="sp-wave-bars">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="t4"></span>`).join('')}</div>
+                  <button type="button" class="sp-mic-btn ${examState.t4Recording ? 'is-recording' : ''}" ${examState.t4Processing ? 'disabled' : ''} onclick="SpeakingStudio.toggleT4Mic()">
+                    <span>${examState.t4Processing ? 'Đang chấm bài nói...' : (examState.t4Recording ? 'Dừng & Nộp bài nói 2 phút' : 'Bấm Mic nói 2 phút')}</span>
+                  </button>
+                  <div style="font-size:12.5px;color:var(--ink-2);">Kết thúc bấm dừng để xem Thời lượng, WPM, Spoken Chunks &amp; nghe lại giọng.</div>
+                </div>
+              `)}
+            </div>
+          </div>
+        ` : `
+          <div class="sp-metrics-grid">
+            <div class="sp-metric-box"><div class="sp-metric-val">${fmtMmSs(m.durationSec)}</div><div class="sp-metric-lbl">Thời lượng (1:30–2:00)</div></div>
+            <div class="sp-metric-box"><div class="sp-metric-val">${m.wpm}</div><div class="sp-metric-lbl">Tốc độ nói (WPM)</div></div>
+            <div class="sp-metric-box"><div class="sp-metric-val">${m.usedChunks.length}</div><div class="sp-metric-lbl">Spoken Chunks đã dùng</div></div>
+            <div class="sp-metric-box"><div class="sp-metric-val">${m.fillerCount}</div><div class="sp-metric-lbl">Từ đệm (um/uh/like)</div></div>
+          </div>
+
+          <div class="sp-studio-2col">
+            <div class="sp-transcript-box" style="display:flex;flex-direction:column;gap:10px;">
+              <div><strong>Bài nói của bạn (${m.words} từ · ${m.stageHits}/5 phần):</strong></div>
+              <div style="font-size:13.8px;line-height:1.65;">${esc(examState.t4Transcript)}</div>
+              ${examState.t4AudioUrl ? `<audio class="sp-audio-replay" style="max-width:100%;" controls src="${esc(examState.t4AudioUrl)}"></audio>` : ''}
+              ${m.usedChunks.length ? `<div class="sp-kw-row">${m.usedChunks.map((c) => `<span class="sp-kw-chip hit">✓ ${esc(c)}</span>`).join('')}</div>` : ''}
+            </div>
+
+            <div class="ws-recall-model-box" style="max-height:330px;overflow-y:auto;">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <strong style="font-size:12.5px;color:var(--accent);text-transform:uppercase;">Bài Nói Mẫu Nguyên Bài · Story 01</strong>
+                <button type="button" class="btn" style="padding:4px 10px;font-size:12px;" onclick="SpeakingStudio.speakRaw('${esc(fs.en.join(' ')).replace(/'/g, "\\'")}', 'en-GB')">Nghe toàn bài (UK)</button>
+              </div>
+              ${curCue ? `
+                <div style="padding:8px 10px;border-radius:9px;background:var(--surface);border:1px solid var(--border);font-size:13px;">
+                  <div><strong>Mở bài bẻ lái (B1–B3):</strong> ${esc(curCue.b13En)}</div>
+                  <div style="margin-top:4px;"><strong>Chốt đề (B5):</strong> ${esc(curCue.b5En)}</div>
+                </div>
+              ` : ''}
+              ${fs.en.map((para, i) => `
+                <div style="padding:7px 0;border-top:${i > 0 ? '1px solid var(--border)' : 'none'};">
+                  <div style="font-size:13.5px;line-height:1.6;color:var(--ink);">${esc(para)}</div>
+                  ${fs.vi[i] ? `<div style="font-size:12.3px;line-height:1.5;color:var(--ink-2);margin-top:3px;">${esc(fs.vi[i])}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
           </div>
         `}
       `;
     }
 
+    const clockSvg = '<svg width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>';
+    const examSteps = [
+      { n: 1, label: 'Sơ đồ' },
+      { n: 2, label: 'Kể Mic' },
+      { n: 3, label: 'Bẻ lái' },
+      { n: 4, label: 'Đề thi' }
+    ];
+
     card.innerHTML = `
-      <div class="sp-modal-head" style="padding-bottom:10px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <button type="button" class="btn" style="padding:6px 11px;" onclick="SpeakingStudio.closeTaskExamModal()">←</button>
-          <div class="sp-modal-title">STORY 01 · Task 4 Bước</div>
+      <div class="sp-modal-head sp-task-hdr is-pro">
+        <div class="sp-task-hdr-left">
+          <button type="button" class="sp-task-exit-pill" onclick="SpeakingStudio.closeTaskExamModal()" aria-label="Thoát">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            <span>Thoát</span>
+          </button>
+          <div class="sp-modal-title">Story 01 · Task 4 Bước</div>
         </div>
-        <div class="ws-step-pills">
-          <span class="ws-step-pill ${stage === 1 ? 'active' : 'done'}">1. Viết B4</span>
-          <span class="ws-step-pill ${stage === 2 ? 'active' : (stage > 2 ? 'done' : '')}">2. Nói B4</span>
-          <span class="ws-step-pill ${stage === 3 ? 'active' : (stage > 3 ? 'done' : '')}">3. Bẻ Lái</span>
-          <span class="ws-step-pill ${stage === 4 ? 'active' : ''}">4. Nói 2 Phút</span>
+        <div class="sp-step-track" role="tablist" aria-label="Tiến trình 4 bước Speaking Task">
+          ${examSteps.map((s, idx) => `
+            ${idx > 0 ? '<span class="sp-step-conn" aria-hidden="true"></span>' : ''}
+            <button type="button" role="tab" aria-selected="${stage === s.n ? 'true' : 'false'}"
+              class="sp-step-btn ${stage === s.n ? 'active' : (stage > s.n ? 'done' : '')}"
+              onclick="SpeakingStudio.startTaskExam(${s.n})">
+              <span class="sp-step-dot">${stage > s.n ? '✓' : s.n}</span>
+              <span>${s.label}</span>
+            </button>
+          `).join('')}
         </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          ${teacherJump}
-          <span class="sp-pill tabular ${examState.secsLeft <= 45 ? 'urgent' : ''}" id="sp-exam-timer">${fmtMmSs(examState.secsLeft)}</span>
+        <div class="sp-task-hdr-right">
+          <span class="rp-ac-shield" title="Chống gian lận đang bật trong bài kiểm tra">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>Anti-Cheat</span>
+          </span>
+          <span class="sp-timer-pill tabular ${examState.secsLeft <= 15 && !examState.t4Finalized ? 'urgent' : ''}" id="sp-exam-timer">${clockSvg}<span>${examState.t4Finalized ? 'Hoàn tất' : fmtMmSs(examState.secsLeft)}</span></span>
         </div>
       </div>
       ${bodyHtml}
     `;
     if (stage === 1) bindSpT1InlineFlow();
+    if (stage === 3) bindSpT3InlineFlow();
     card.scrollTop = 0;
   }
 
@@ -2419,6 +3059,11 @@
   }
   function setPracticeQuery(q) {
     state.pracQuery = q;
+    renderPracticeHub();
+  }
+  function resetPracticeFilters() {
+    state.pracCat = 'all';
+    state.pracQuery = '';
     renderPracticeHub();
   }
 
@@ -2441,64 +3086,83 @@
     });
 
     const catLabel = { person: 'Person · Bẻ lái', cross_topic: 'Cross-Topic', cross_category: 'Cross-Category' };
-    const catPillCls = { person: 'is-cause', cross_topic: 'is-adv', cross_category: 'is-twopart' };
+    const catPillCls = { person: 'is-cause', cross_topic: 'is-adv', cross_category: 'is-opinion' };
+
+    const activeSearchFocused = document.activeElement?.id === 'sp-prac-search-input';
+    const selStart = activeSearchFocused ? document.activeElement.selectionStart : null;
 
     root.innerHTML = `
-      <div class="sp-prac-shell">
-        <div class="sp-prac-header">
+      <div class="tot-section-shell sp-prac-shell">
+        <div class="tot-shell-head">
           <div>
-            <h2 class="tot-shell-title" style="margin:0;">Kho Đề IELTS Speaking Part 2 · Story 01</h2>
-            <p class="tot-shell-sub" style="margin:4px 0 0;">Dùng duy nhất cốt truyện <strong>Ông Ngoại &amp; Bạn Nam (B4)</strong> để xử lý trọn bộ ${allCues.length} Cue Card thi thật.</p>
+            <h2 class="tot-shell-title">Luyện đề IELTS Speaking Part 2</h2>
+            <p class="tot-shell-sub">Ngân hàng ${allCues.length} Cue Card thi thật áp dụng trọn mạch <strong>Story 01 (B1 → B5)</strong> · 1 phút chuẩn bị + 2 phút nói.</p>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <span class="sp-pill ok">${Object.keys(lastByCue).length} / ${allCues.length} đề đã luyện</span>
-            <button type="button" class="btn" onclick="SpeakingStudio.openPictureBook(0)">Sách Tranh Story 01</button>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openMindmapModal('master')">Mindmap</button>
+            <span class="ws-pill tabular">${Object.keys(lastByCue).length} / ${allCues.length} đề đã luyện</span>
           </div>
         </div>
 
-        <div class="sp-prac-filters">
-          <div class="sp-filter-pills">
-            <button type="button" class="sp-filter-pill ${state.pracCat === 'all' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('all')">Tất cả (${allCues.length})</button>
-            <button type="button" class="sp-filter-pill ${state.pracCat === 'person' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('person')">Person (${allCues.filter((c) => c.category === 'person').length})</button>
-            <button type="button" class="sp-filter-pill ${state.pracCat === 'cross_topic' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('cross_topic')">Cross-Topic (${allCues.filter((c) => c.category === 'cross_topic').length})</button>
-            <button type="button" class="sp-filter-pill ${state.pracCat === 'cross_category' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('cross_category')">Cross-Category (${allCues.filter((c) => c.category === 'cross_category').length})</button>
+        <div class="sp-prac-toolbar-pro">
+          <div class="ws-prac-subtabs" role="tablist" aria-label="Lọc theo nhóm Cue Card">
+            <button type="button" class="ws-prac-subtab ${state.pracCat === 'all' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('all')">Tất cả</button>
+            <button type="button" class="ws-prac-subtab ${state.pracCat === 'person' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('person')">Person</button>
+            <button type="button" class="ws-prac-subtab ${state.pracCat === 'cross_topic' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('cross_topic')">Cross-Topic</button>
+            <button type="button" class="ws-prac-subtab ${state.pracCat === 'cross_category' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('cross_category')">Cross-Category</button>
           </div>
-          <input type="search" class="sp-note-ta" style="min-height:36px;height:36px;width:260px;padding:6px 12px;resize:none;"
-            placeholder="Tìm đề Cue Card..." value="${esc(state.pracQuery)}"
-            oninput="SpeakingStudio.setPracticeQuery(this.value)">
+
+          <div class="sp-prac-toolbar-r">
+            <span class="ws-prac-count tabular">${filtered.length} / ${allCues.length} đề</span>
+            <div class="ws-prac-search-wrap">
+              <svg class="ws-prac-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="search" id="sp-prac-search-input" class="ws-prac-search" placeholder="Tìm đề Speaking..." value="${esc(state.pracQuery)}" oninput="SpeakingStudio.setPracticeQuery(this.value)" />
+            </div>
+          </div>
         </div>
 
-        <div class="sp-cue-grid">
-          ${filtered.map((cue) => {
+        <div class="ws-prac-grid">
+          ${filtered.length ? filtered.map((cue) => {
             const prev = lastByCue[cue.id];
             return `
-              <article class="sp-cue-card ${prev ? 'is-done' : ''}">
-                <div style="display:flex;flex-direction:column;gap:9px;">
+              <article class="ws-prac-card sp-cue-card ${prev ? 'is-done' : ''}">
+                <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
                   <div class="ws-prac-head">
-                    <span class="ws-type-pill ${catPillCls[cue.category] || ''}">${catLabel[cue.category] || cue.category}</span>
-                    <span class="ws-prac-sub-tag">${esc(cue.source || 'Actual Test')}</span>
+                    <span class="ws-type-pill ${catPillCls[cue.category] || 'is-cause'}">${catLabel[cue.category] || cue.category}</span>
+                    ${prev ? `<span class="ws-pill ok tabular">${fmtMmSs(prev.durationSec)} · ${prev.wpm} WPM</span>` : `<span class="ws-prac-sub-tag">${esc(cue.source || 'Actual Test')}</span>`}
                   </div>
-                  <h3 class="sp-cue-title">${esc(cue.title)}</h3>
+                  <p class="ws-prac-prompt">${esc(cue.title)}</p>
                   <ul class="sp-cue-bullets">
                     ${(cue.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('')}
                   </ul>
                 </div>
 
                 <div class="ws-prac-foot">
-                  <div class="ws-prac-meta-row">
-                    <span>${prev ? `✓ Lần gần nhất: ${fmtMmSs(prev.durationSec)} · ${prev.wpm} WPM` : '1 phút chuẩn bị + 2 phút nói'}</span>
-                  </div>
                   <div class="ws-prac-btns">
-                    <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'practice')">Luyện tập</button>
-                    <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'exam')">Thi thật</button>
+                    <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'practice')">Luyện tập</button>
+                    <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'exam')">Thi thật →</button>
                   </div>
                 </div>
               </article>
             `;
-          }).join('')}
+          }).join('') : `
+            <div class="ws-prac-empty">
+              <div style="font-size:14.5px;font-weight:750;color:var(--ink);">Không tìm thấy đề phù hợp</div>
+              <div style="font-size:12.5px;">Hãy thử từ khóa khác hoặc đặt lại bộ lọc nhóm đề.</div>
+              <button type="button" class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="SpeakingStudio.resetPracticeFilters()">Xóa bộ lọc</button>
+            </div>
+          `}
         </div>
       </div>
     `;
+
+    if (activeSearchFocused) {
+      const inp = document.getElementById('sp-prac-search-input');
+      if (inp) {
+        inp.focus();
+        if (typeof selStart === 'number') inp.setSelectionRange(selStart, selStart);
+      }
+    }
   }
 
   /* --- Speaking Part 2 Room (1-Min Prep -> 2-Min Speaking -> Review & Pivot Model) --- */
@@ -2509,13 +3173,27 @@
     const cue = (story?.cueCards || []).find((c) => c.id === cueId);
     if (!cue) return;
 
+    const DEFAULT_SP_PLAN = [
+      '1. Mở bài (B1–B3):',
+      '- ',
+      '',
+      '2. Cốt truyện chính (B4):',
+      '- ',
+      '',
+      '3. Kết bài chốt đề (B5):',
+      '- '
+    ].join('\n');
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const initContrast = mode === 'exam' ? 'cd' : (isDark ? 'dark' : 'totoro');
+
     roomState = {
       cue,
       mode: mode === 'exam' ? 'exam' : 'practice',
-      phase: 'prep', // 'prep' (60s) -> 'speak' (120s) -> 'review'
+      phase: 'prep',
       secsLeft: 60,
       timerId: null,
-      notes: { b13: '', b4: '', b5: '', blank: '' },
+      notes: { sheet: mode === 'exam' ? '' : DEFAULT_SP_PLAN },
       recording: false,
       processing: false,
       typeMode: false,
@@ -2523,13 +3201,49 @@
       transcript: '',
       audioUrl: '',
       metrics: null,
-      showFullB4: false
+      showFullB4: false,
+      strikes: 0,
+      contrast: initContrast,
+      textSize: 'regular'
     };
 
     const el = document.getElementById('sp-practice-room');
-    el.className = `sp-exam-room open ${roomState.mode === 'exam' ? 'is-real-exam' : ''}`;
+    el.className = `sp-exam-room open ins-shell ins-contrast-${initContrast} ins-size-regular ${roomState.mode === 'exam' ? 'is-exam ins-mode-exam' : 'is-practice'}`;
     startRoomTimer();
     renderPracticeRoom();
+  }
+
+  function toggleRoomOptions(forceState) {
+    const pop = document.getElementById('sp-prac-opt-pop');
+    if (!pop) return;
+    if (typeof forceState === 'boolean') pop.classList.toggle('open', forceState);
+    else pop.classList.toggle('open');
+  }
+
+  function setRoomContrast(contrast) {
+    if (!roomState) return;
+    roomState.contrast = contrast;
+    const el = document.getElementById('sp-practice-room');
+    if (el) {
+      el.classList.remove('ins-contrast-totoro', 'ins-contrast-dark', 'ins-contrast-cd', 'ins-contrast-yellow');
+      el.classList.add(`ins-contrast-${contrast}`);
+    }
+    document.querySelectorAll('#sp-prac-opt-pop [data-contrast]').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-contrast') === contrast);
+    });
+  }
+
+  function setRoomTextSize(size) {
+    if (!roomState) return;
+    roomState.textSize = size;
+    const el = document.getElementById('sp-practice-room');
+    if (el) {
+      el.classList.remove('ins-size-regular', 'ins-size-large', 'ins-size-xlarge');
+      el.classList.add(`ins-size-${size}`);
+    }
+    document.querySelectorAll('#sp-prac-opt-pop [data-size]').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-size') === size);
+    });
   }
 
   function closePracticeRoom() {
@@ -2548,9 +3262,11 @@
       roomState.secsLeft--;
       const el = document.getElementById('sp-room-timer');
       if (el) {
-        el.textContent = fmtMmSs(roomState.secsLeft);
-        el.classList.toggle('urgent', roomState.secsLeft <= 15);
+        const suffix = roomState.phase === 'prep' ? ' chuẩn bị' : ' trình bày';
+        el.textContent = `${fmtMmSs(roomState.secsLeft)}${suffix}`;
       }
+      const ringEl = document.getElementById('sp-room-ring-time');
+      if (ringEl) ringEl.textContent = fmtMmSs(roomState.secsLeft);
       if (roomState.secsLeft <= 0) {
         if (roomState.phase === 'prep') {
           beginRoomSpeaking(roomState.mode === 'exam');
@@ -2565,6 +3281,13 @@
 
   function saveRoomNote(key, val) {
     if (roomState) roomState.notes[key] = val;
+  }
+
+  function resetRoomPlan() {
+    if (!roomState) return;
+    roomState.notes.sheet = roomState.mode === 'exam' ? '' : '1. Mở bài (B1–B3):\n- \n\n2. Cốt truyện chính (B4):\n- \n\n3. Kết bài chốt đề (B5):\n- ';
+    const ta = document.getElementById('sp-room-plan-ta');
+    if (ta) ta.value = roomState.notes.sheet;
   }
 
   function beginRoomSpeaking(autoStartMic) {
@@ -2677,145 +3400,283 @@
     const isExam = mode === 'exam';
     const root = document.getElementById('sp-practice-room');
     const story = getStory();
+    const fs = story?.fullSpeech || { en: [] };
 
-    const phaseLbl = phase === 'prep'
-      ? 'Giai đoạn 1 · Chuẩn bị 1 phút'
-      : (phase === 'speak' ? 'Giai đoạn 2 · Nói liên tục 2 phút' : 'Hoàn tất · Đối chiếu B1–B3 & B5');
+    const headerBrandHtml = isExam
+      ? `<span class="ins-brand-mark">IELTS</span>`
+      : `<span class="ws-prac-brand-badge" aria-hidden="true">
+           <svg viewBox="2 2 24 24" width="22" height="22" fill="none">
+             <path d="M8.5 11.2L7 5.6L11.2 9C12.5 8.5 14 8.5 15.3 9L19.5 5.6L18 11.2C20.2 12.8 21.2 15.2 21 18.2C20.7 21.5 17.8 23.2 13.2 23.2C8.6 23.2 5.7 21.5 5.4 18.2C5.2 15.2 6.2 12.8 8.5 11.2Z" fill="#6F6B64" stroke="#484540" stroke-width="1.1"/>
+             <path d="M13.2 8.4C14.8 5.4 17.5 5 19.2 6.6C17.4 8.3 15 8.8 13.2 8.4Z" fill="#52A063" stroke="#2D6A3B" stroke-width="0.9"/>
+             <ellipse cx="13.2" cy="18.8" rx="5.2" ry="3.4" fill="#FBF6E8"/>
+             <circle cx="10.6" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="10.8" cy="13.5" r="0.75" fill="#181A1F"/>
+             <circle cx="15.8" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="15.6" cy="13.5" r="0.75" fill="#181A1F"/>
+           </svg>
+         </span>`;
 
-    let rightHtml = '';
+    const acChipHtml = phase !== 'review' ? `
+      <span class="rp-ac-shield ${roomState.strikes > 0 ? 'is-warn' : ''}" id="sp-prac-ac-pill" title="Chống gian lận đang bật trong phòng nói (khóa rời tab, tối đa 2 lần)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span id="sp-prac-ac-text">${roomState.strikes > 0 ? `Cảnh báo ${roomState.strikes}/2` : 'Anti-Cheat'}</span>
+      </span>
+    ` : '';
+
+    const timerLabel = phase === 'review'
+      ? 'Đã hoàn thành Part 2'
+      : `${fmtMmSs(secsLeft)} ${phase === 'prep' ? 'chuẩn bị' : 'trình bày'}`;
+
+    const meterPct = phase === 'prep' ? 33 : (phase === 'speak' ? 68 : 100);
+    const dialCirc = 314.16;
+    const dialOff = (dialCirc * (1 - Math.max(0, Math.min(1, secsLeft / 120)))).toFixed(1);
+
+    let rightPaperHtml = '';
     if (phase === 'prep') {
-      rightHtml = `
-        <div class="sp-room-panel">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-            <div>
-              <div style="font-size:16px;font-weight:800;">${isExam ? 'Giấy Nháp Thi Thật (1 Phút)' : 'Khung Planning (1 Phút)'}</div>
-              <div style="font-size:12.5px;color:var(--ink-2);margin-top:2px;">Ghi nhanh từ khóa dàn ý trước khi bắt đầu nói 2 phút.</div>
+      rightPaperHtml = `
+        <div class="ws-prac-paper-card sp-studio-paper">
+          <div class="ws-prac-paper-head">
+            <div class="ws-prac-paper-title-grp">
+              <span class="ws-prac-paper-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </span>
+              <span class="ws-prac-paper-title">${isExam ? 'Giấy Nháp Thi Thật (60 giây)' : 'Planning · Dàn ý nhanh (60 giây)'}</span>
             </div>
-            <button type="button" class="btn btn-primary" onclick="SpeakingStudio.beginRoomSpeaking(false)">Bắt đầu nói ngay →</button>
+            <div class="ws-prac-paper-badges">
+              ${!isExam ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.resetRoomPlan()">Đặt lại</button>` : ''}
+              <span class="ws-prac-wc-pill tabular" id="sp-room-ring-time">${fmtMmSs(secsLeft)}</span>
+            </div>
           </div>
-
-          ${isExam ? `
-            <textarea class="sp-note-ta" placeholder="Ghi chú từ khóa của bạn tại đây..."
-              oninput="SpeakingStudio.saveRoomNote('blank', this.value)">${esc(notes.blank)}</textarea>
-          ` : `
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <div>
-                <div style="font-size:12px;font-weight:800;color:var(--accent);margin-bottom:4px;">1. Mở bài (B1–B3)</div>
-                <textarea class="sp-note-ta" placeholder="Ghi ngắn gọn ý mở bài..." oninput="SpeakingStudio.saveRoomNote('b13', this.value)">${esc(notes.b13)}</textarea>
-              </div>
-              <div>
-                <div style="font-size:12px;font-weight:800;color:var(--accent);margin-bottom:4px;">2. Cốt truyện chính (B4)</div>
-                <textarea class="sp-note-ta" placeholder="Ghi các từ khóa chính..." oninput="SpeakingStudio.saveRoomNote('b4', this.value)">${esc(notes.b4)}</textarea>
-              </div>
-              <div>
-                <div style="font-size:12px;font-weight:800;color:var(--accent);margin-bottom:4px;">3. Kết bài (B5)</div>
-                <textarea class="sp-note-ta" placeholder="Ghi ý chốt bài..." oninput="SpeakingStudio.saveRoomNote('b5', this.value)">${esc(notes.b5)}</textarea>
-              </div>
+          <div class="ws-prac-paper-meter" aria-hidden="true">
+            <span class="ws-prac-paper-meter-fill" style="width:${meterPct}%"></span>
+          </div>
+          <textarea class="ws-ins-editor ws-prac-editor sp-room-sheet-ta" id="sp-room-plan-ta" spellcheck="false"
+            placeholder="Ghi nhanh các từ khóa dàn ý trước khi bắt đầu nói 2 phút..."
+            oninput="SpeakingStudio.saveRoomNote('sheet', this.value)">${esc(notes.sheet || '')}</textarea>
+          <div class="ws-prac-paper-foot">
+            <div class="ws-prac-paper-foot-l">
+              <span class="ws-prac-wc-note">Ghi nhanh từ khóa cốt lõi · Hết 60 giây tự chuyển sang phần nói 2 phút</span>
             </div>
-          `}
+            <button type="button" class="ws-prac-submit-pill" onclick="SpeakingStudio.beginRoomSpeaking(false)">Bắt đầu nói ngay →</button>
+          </div>
         </div>
       `;
     } else if (phase === 'speak') {
-      const noteSummary = isExam
-        ? notes.blank
-        : [notes.b13 && `B1–B3: ${notes.b13}`, notes.b4 && `B4: ${notes.b4}`, notes.b5 && `B5: ${notes.b5}`].filter(Boolean).join('\n');
-      rightHtml = `
-        <div class="sp-room-panel">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-            <div style="font-size:16px;font-weight:800;">Phòng Thu Âm Part 2 (02:00)</div>
-            ${!isExam ? `<button type="button" class="btn" style="padding:5px 11px;font-size:12px;" onclick="SpeakingStudio.toggleRoomTypeMode()">${typeMode ? 'Dùng Mic AI' : 'Gõ dự phòng'}</button>` : ''}
+      rightPaperHtml = `
+        <div class="ws-prac-paper-card sp-studio-paper">
+          <div class="ws-prac-paper-head">
+            <div class="ws-prac-paper-title-grp">
+              <span class="ws-prac-paper-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              </span>
+              <span class="ws-prac-paper-title">Phòng Thu Âm Part 2</span>
+              <span class="ws-prac-para-pill tabular">1:30 – 2:00</span>
+            </div>
+            <div class="ws-prac-paper-badges">
+              ${!isExam ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.toggleRoomTypeMode()">${typeMode ? 'Dùng Mic AI' : 'Gõ dự phòng'}</button>` : ''}
+            </div>
+          </div>
+          <div class="ws-prac-paper-meter" aria-hidden="true">
+            <span class="ws-prac-paper-meter-fill" style="width:${meterPct}%"></span>
           </div>
 
-          ${noteSummary ? `
-            <div style="padding:11px 14px;border-radius:11px;background:var(--surface-item);border:1px dashed var(--border-strong);font-size:13px;line-height:1.55;white-space:pre-line;">
-              <strong>Ghi chú 1 phút của bạn:</strong>\n${esc(noteSummary)}
-            </div>
-          ` : ''}
-
           ${typeMode ? `
-            <textarea class="sp-note-ta" id="sp-room-ta" style="min-height:180px;" placeholder="Gõ bài nói Part 2 của bạn tại đây..."></textarea>
-            <div style="display:flex;justify-content:flex-end;">
-              <button type="button" class="btn btn-primary" onclick="SpeakingStudio.submitRoomTyped()">Nộp bài &amp; Mở đối chiếu →</button>
+            <textarea class="ws-ins-editor ws-prac-editor sp-room-sheet-ta" id="sp-room-ta" spellcheck="false"
+              placeholder="Gõ bài nói Part 2 của bạn tại đây..."></textarea>
+            <div class="ws-prac-paper-foot">
+              <div class="ws-prac-paper-foot-l"><span class="ws-prac-wc-note">Chế độ gõ dự phòng · Tối thiểu 20 từ để chấm đối chiếu</span></div>
+              <button type="button" class="ws-prac-submit-pill" onclick="SpeakingStudio.submitRoomTyped()">Nộp bài →</button>
             </div>
           ` : `
-            <div class="sp-mic-stage ${recording ? 'is-rec' : ''}">
+            <div class="sp-room-mic-body">
+              <div class="sp-t4-ring-wrap" style="width:132px;height:132px;">
+                <svg viewBox="0 0 120 120" class="sp-t4-ring-svg" aria-hidden="true">
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg-subtle)" stroke-width="7"/>
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="${recording ? 'var(--danger)' : 'var(--accent)'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${dialCirc}" stroke-dashoffset="${dialOff}"/>
+                </svg>
+                <div class="sp-t4-ring-center">
+                  <div class="sp-t4-ring-time tabular" id="sp-room-ring-time">${fmtMmSs(secsLeft)}</div>
+                  <div class="sp-t4-ring-sub">${recording ? 'Đang thu âm' : 'Mục tiêu 2 phút'}</div>
+                </div>
+              </div>
               <div class="sp-wave-bars">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="room"></span>`).join('')}</div>
               <button type="button" class="sp-mic-btn ${recording ? 'is-recording' : ''}" ${processing ? 'disabled' : ''} onclick="SpeakingStudio.toggleRoomMic()">
                 <span>${processing ? 'Đang chấm giọng nói...' : (recording ? 'Dừng & Nộp bài nói' : 'Bấm Mic bắt đầu nói 2 phút')}</span>
               </button>
-              <div style="font-size:12.5px;color:var(--ink-2);">Hãy nói tự nhiên, rõ ràng trong khoảng 1:30 – 2:00.</div>
+              <div style="font-size:13px;color:var(--ink-2);">Giữ nhịp nói tự nhiên 120–155 WPM · Nối mượt B1–B3 → B4 → B5.</div>
+            </div>
+            <div class="ws-prac-paper-foot">
+              <div class="ws-prac-paper-foot-l"><span class="ws-prac-wc-note">Ghi âm tự động chuyển sang bản chữ &amp; đối chiếu Spoken Chunks</span></div>
+              ${!isExam ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.toggleRoomTypeMode()">Gõ dự phòng</button>` : ''}
             </div>
           `}
         </div>
       `;
     } else {
       const m = metrics;
-      const fs = story?.fullSpeech || { en: [] };
-      rightHtml = `
-        <div class="sp-room-panel">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-            <div style="font-size:16.5px;font-weight:800;color:var(--ok);">✓ Đã Hoàn Thành Bài Nói Part 2</div>
-            <div style="display:flex;gap:8px;">
-              <button type="button" class="btn" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', '${esc(mode)}')">Nói lại đề này</button>
-              <button type="button" class="btn btn-primary" onclick="SpeakingStudio.closePracticeRoom()">Về kho Cue Card</button>
+      rightPaperHtml = `
+        <div class="ws-prac-paper-card sp-studio-paper">
+          <div class="ws-prac-paper-head">
+            <div class="ws-prac-paper-title-grp">
+              <span class="ws-prac-paper-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="ws-prac-paper-title">Kết quả bài nói Part 2</span>
+              <span class="ws-prac-para-pill tabular">${m.words} từ</span>
+            </div>
+            <div class="ws-prac-paper-badges">
+              <button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', '${esc(mode)}')">Nói lại</button>
+              <button type="button" class="ws-prac-submit-pill" style="height:30px;padding:0 13px;font-size:12px;" onclick="SpeakingStudio.closePracticeRoom()">Về kho đề</button>
             </div>
           </div>
-
-          <div class="sp-metrics-grid">
-            <div class="sp-metric-box"><div class="sp-metric-val">${fmtMmSs(m.durationSec)}</div><div class="sp-metric-lbl">Thời lượng</div></div>
-            <div class="sp-metric-box"><div class="sp-metric-val">${m.wpm}</div><div class="sp-metric-lbl">Tốc độ (WPM)</div></div>
-            <div class="sp-metric-box"><div class="sp-metric-val">${m.usedChunks.length}</div><div class="sp-metric-lbl">Spoken Chunks</div></div>
-            <div class="sp-metric-box"><div class="sp-metric-val">${m.fillerCount}</div><div class="sp-metric-lbl">Từ đệm thừa</div></div>
+          <div class="ws-prac-paper-meter" aria-hidden="true">
+            <span class="ws-prac-paper-meter-fill" style="width:100%"></span>
           </div>
-
-          ${audioUrl ? `<audio class="sp-audio-replay" style="max-width:100%;" controls src="${esc(audioUrl)}"></audio>` : ''}
-          <div class="sp-transcript-box">
-            <strong>Bản nói của bạn (${m.words} từ):</strong><br>${esc(transcript)}
-            ${m.usedChunks.length ? `<div class="sp-kw-row" style="margin-top:8px;">${m.usedChunks.map((c) => `<span class="sp-kw-chip hit">✓ ${esc(c)}</span>`).join('')}</div>` : ''}
-          </div>
-
-          <div class="ws-recall-model-box">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-              <strong style="font-size:12.5px;color:var(--accent);text-transform:uppercase;">Mẫu Bẻ Lái Chuẩn Cho Đề Này (B1–B3 &amp; B5)</strong>
-              <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(cue.b13En + ' ' + cue.b5En).replace(/'/g, "\\'")}', 'en-GB')"><span>UK</span></button>
+          <div class="sp-room-review-scroll">
+            <div class="sp-metrics-grid">
+              <div class="sp-metric-box"><div class="sp-metric-val">${fmtMmSs(m.durationSec)}</div><div class="sp-metric-lbl">Thời lượng</div></div>
+              <div class="sp-metric-box"><div class="sp-metric-val">${m.wpm}</div><div class="sp-metric-lbl">Tốc độ (WPM)</div></div>
+              <div class="sp-metric-box"><div class="sp-metric-val">${m.usedChunks.length}</div><div class="sp-metric-lbl">Spoken Chunks</div></div>
+              <div class="sp-metric-box"><div class="sp-metric-val">${m.fillerCount}</div><div class="sp-metric-lbl">Từ đệm</div></div>
             </div>
-            <div style="font-size:14px;line-height:1.6;"><strong>B1–B3 Mở bài:</strong> ${esc(cue.b13En)}</div>
-            <div style="font-size:14px;line-height:1.6;"><strong>B5 Chốt đề:</strong> ${esc(cue.b5En)}</div>
-            <div>
-              <button type="button" class="btn-reading-tip" onclick="SpeakingStudio.toggleRoomFullB4()">
-                ${roomState.showFullB4 ? 'Ẩn lõi B4 nguyên văn' : 'Xem lại lõi B4 bất biến (~220 từ)'}
-              </button>
+            ${audioUrl ? `<audio class="sp-audio-replay" style="max-width:100%;" controls src="${esc(audioUrl)}"></audio>` : ''}
+            <div class="sp-transcript-box">
+              <div style="font-size:12.5px;font-weight:800;color:var(--ink-2);margin-bottom:6px;">Bản nói của bạn</div>
+              <div>${esc(transcript)}</div>
+              ${m.usedChunks.length ? `<div class="sp-kw-row" style="margin-top:10px;">${m.usedChunks.map((c) => `<span class="sp-kw-chip hit">✓ ${esc(c)}</span>`).join('')}</div>` : ''}
             </div>
-            ${roomState.showFullB4 ? `<div style="font-size:13.5px;line-height:1.65;color:var(--ink-2);padding-top:6px;border-top:1px solid var(--border);">${esc((fs.en || []).slice(1).join(' '))}</div>` : ''}
           </div>
         </div>
       `;
     }
 
-    root.innerHTML = `
-      <div class="sp-room-bar">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <button type="button" class="btn" style="padding:6px 12px;" onclick="SpeakingStudio.closePracticeRoom()">← Thoát</button>
-          <span class="sp-pill ${isExam ? 'urgent' : 'ok'}">${isExam ? 'THI THẬT · EXAMINER ROOM' : 'LUYỆN TẬP · PART 2'}</span>
-          <span style="font-size:13.5px;font-weight:750;">${phaseLbl}</span>
-        </div>
-        <span class="sp-pill tabular ${secsLeft <= 15 && phase !== 'review' ? 'urgent' : ''}" id="sp-room-timer" style="font-size:14px;padding:5px 14px;">${phase === 'review' ? 'Đã nộp' : fmtMmSs(secsLeft)}</span>
-      </div>
-
-      <div class="sp-room-body">
-        <div class="sp-cue-paper">
-          <div style="font-size:11.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);">IELTS Speaking · Part 2 Cue Card</div>
-          <div class="sp-cue-paper-title">${esc(cue.title)}</div>
-          <div style="font-size:14px;font-weight:700;opacity:0.8;">You should say:</div>
-          <ul class="sp-cue-paper-list">
-            ${(cue.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('')}
-          </ul>
-          <div style="font-size:12.5px;color:var(--ink-3);padding-top:10px;border-top:1px dashed var(--border-strong);">
-            You will have to talk about the topic for <strong>1 to 2 minutes</strong>. You have <strong>1 minute</strong> to think about what you are going to say.
+    const roomOptHtml = isExam
+      ? `
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Contrast</div>
+          <div class="ws-ins-opt-grid">
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'cd' ? 'active' : ''}" data-contrast="cd" onclick="SpeakingStudio.setRoomContrast('cd')">Black on White</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'totoro' ? 'active' : ''}" data-contrast="totoro" onclick="SpeakingStudio.setRoomContrast('totoro')">Totoro Washi</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'dark' ? 'active' : ''}" data-contrast="dark" onclick="SpeakingStudio.setRoomContrast('dark')">White on Black</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'yellow' ? 'active' : ''}" data-contrast="yellow" onclick="SpeakingStudio.setRoomContrast('yellow')">Yellow on Black</button>
           </div>
         </div>
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Text size</div>
+          <div class="ws-ins-opt-row">
+            <button type="button" class="ws-ins-opt-choice ${roomState.textSize === 'regular' ? 'active' : ''}" data-size="regular" onclick="SpeakingStudio.setRoomTextSize('regular')">Regular</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.textSize === 'large' ? 'active' : ''}" data-size="large" onclick="SpeakingStudio.setRoomTextSize('large')">Large</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.textSize === 'xlarge' ? 'active' : ''}" data-size="xlarge" onclick="SpeakingStudio.setRoomTextSize('xlarge')">Extra large</button>
+          </div>
+        </div>
+      `
+      : `
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Màu sắc</div>
+          <div class="ws-ins-opt-row">
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'totoro' ? 'active' : ''}" data-contrast="totoro" onclick="SpeakingStudio.setRoomContrast('totoro')">Totoro Sáng</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'dark' ? 'active' : ''}" data-contrast="dark" onclick="SpeakingStudio.setRoomContrast('dark')">Chế độ Tối</button>
+          </div>
+        </div>
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Cỡ chữ hiển thị</div>
+          <div class="ws-ins-opt-row">
+            <button type="button" class="ws-ins-opt-choice ${roomState.textSize === 'regular' ? 'active' : ''}" data-size="regular" onclick="SpeakingStudio.setRoomTextSize('regular')">Vừa</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.textSize === 'large' ? 'active' : ''}" data-size="large" onclick="SpeakingStudio.setRoomTextSize('large')">Lớn</button>
+          </div>
+        </div>
+      `;
 
-        ${rightHtml}
+    const noteText = String(notes.sheet || '').trim();
+    root.innerHTML = `
+      <div class="ins-main-col" onclick="SpeakingStudio.toggleRoomOptions(false)">
+        <header class="ins-header ${isExam ? '' : 'ws-prac-custom-hdr'}">
+          <div class="ins-hdr-left">
+            ${headerBrandHtml}
+            <div class="ins-hdr-meta">
+              <div class="ins-hdr-title">${isExam ? 'Test taker · Speaking Part 2' : 'Speaking Studio · Luyện tập Part 2'}</div>
+              <div class="ins-hdr-timer" style="cursor:default;"><span id="sp-room-timer">${timerLabel}</span></div>
+            </div>
+          </div>
+          <div class="ins-hdr-right">
+            ${acChipHtml}
+            <div class="ws-ins-opt-wrap" onclick="event.stopPropagation()">
+              <button type="button" class="ins-hdr-ico" id="sp-prac-opt-btn" onclick="SpeakingStudio.toggleRoomOptions()" title="Màu sắc &amp; Cỡ chữ" aria-label="Options">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+              </button>
+              <div class="ws-ins-opt-pop" id="sp-prac-opt-pop">${roomOptHtml}</div>
+            </div>
+            <button type="button" class="ins-hdr-exit" onclick="SpeakingStudio.closePracticeRoom()">Thoát</button>
+          </div>
+        </header>
+
+        ${isExam ? `
+          <div class="ins-part-banner">
+            <strong>Part 2</strong>
+            <span>You have 1 minute to prepare and 1 to 2 minutes to speak about this topic.</span>
+          </div>
+        ` : ''}
+
+        <div class="ins-split-body">
+          <section class="ins-pane ins-pane-left sp-ins-left">
+            <div class="ws-prac-prompt-meta">
+              <span class="ws-prac-part-badge">Part 2</span>
+              <span>1 phút chuẩn bị · 2 phút nói</span>
+            </div>
+
+            <div class="sp-ins-cue-card">
+              <div class="sp-ins-cue-title">${esc(cue.title)}</div>
+              <div class="sp-ins-cue-sub">You should say:</div>
+              <ul class="sp-ins-cue-list">
+                ${(cue.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('')}
+              </ul>
+            </div>
+
+            ${phase === 'prep' ? `
+              <p class="ws-ins-inst">You will have to talk about the topic for 1 to 2 minutes. You have 1 minute to think about what you are going to say. You can make some notes to help you if you wish.</p>
+            ` : ''}
+
+            ${phase === 'speak' && noteText ? `
+              <div class="sp-ins-notes-card">
+                <div class="sp-ins-notes-lbl">Ghi chú chuẩn bị của bạn</div>
+                <div class="sp-ins-notes-body">${esc(noteText)}</div>
+              </div>
+            ` : ''}
+
+            ${phase === 'review' ? `
+              <div class="sp-model-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <strong style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;">Mẫu Bẻ Lái Chuẩn Cho Đề Này</strong>
+                  <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(cue.b13En + ' ' + cue.b5En).replace(/'/g, "\\'")}', 'en-GB')"><span>UK</span></button>
+                </div>
+                <div style="font-size:13.6px;line-height:1.6;"><strong>Mở bài bẻ lái:</strong> ${esc(cue.b13En)}</div>
+                <div style="font-size:13.6px;line-height:1.6;"><strong>Chốt đề:</strong> ${esc(cue.b5En)}</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:4px;">
+                  <button type="button" class="btn-reading-tip" onclick="SpeakingStudio.toggleRoomFullB4()">
+                    ${roomState.showFullB4 ? 'Ẩn cốt truyện nguyên văn' : 'Xem cốt truyện chính (~220 từ)'}
+                  </button>
+                  <button type="button" class="btn" style="padding:4px 10px;font-size:12px;" onclick="SpeakingStudio.openMindmapModal('master')">Mở Mindmap</button>
+                </div>
+                ${roomState.showFullB4 ? `<div style="font-size:13.2px;line-height:1.62;color:var(--ink-2);padding-top:8px;border-top:1px solid var(--border);">${esc((fs.en || []).slice(1).join(' '))}</div>` : ''}
+              </div>
+            ` : ''}
+          </section>
+
+          <section class="ins-pane ins-pane-right sp-ins-right">
+            ${rightPaperHtml}
+          </section>
+        </div>
+
+        <footer class="ins-footer">
+          <div class="ins-footer-parts">
+            <div class="sp-foot-steps">
+              <span class="sp-foot-step ${phase === 'prep' ? 'is-active' : 'is-done'}">1. Chuẩn bị (1p)</span>
+              <span class="sp-foot-sep">→</span>
+              <span class="sp-foot-step ${phase === 'speak' ? 'is-active' : (phase === 'review' ? 'is-done' : '')}">2. Trình bày (2p)</span>
+              <span class="sp-foot-sep">→</span>
+              <span class="sp-foot-step ${phase === 'review' ? 'is-active' : ''}">3. Đối chiếu</span>
+            </div>
+          </div>
+          <button type="button" class="sp-foot-action-btn" onclick="${phase === 'prep' ? 'SpeakingStudio.beginRoomSpeaking(false)' : (phase === 'review' ? 'SpeakingStudio.closePracticeRoom()' : (typeMode ? 'SpeakingStudio.submitRoomTyped()' : 'SpeakingStudio.toggleRoomMic()'))}">${phase === 'prep' ? 'Bắt đầu nói →' : (phase === 'review' ? 'Về kho đề ✓' : (typeMode ? 'Nộp bài →' : (recording ? 'Dừng & Nộp' : 'Bắt đầu thu âm')))}</button>
+        </footer>
       </div>
     `;
   }
@@ -2835,7 +3696,7 @@
       </div>
       <div class="sp-metrics-grid">
         <div class="sp-metric-box"><div class="sp-metric-val">${mStats.done}/${mStats.total}</div><div class="sp-metric-lbl">Thẻ đã thuộc</div></div>
-        <div class="sp-metric-box"><div class="sp-metric-val">${done?.completed ? '4/4' : `${done?.maxStage || 0}/4`}</div><div class="sp-metric-lbl">Task 4 Bước</div></div>
+        <div class="sp-metric-box"><div class="sp-metric-val">${done?.completed ? '4/4' : `${done?.maxStage || 0}/4`}</div><div class="sp-metric-lbl">Task Story 01</div></div>
         <div class="sp-metric-box"><div class="sp-metric-val">${new Set(hist.map((h) => h.cueId)).size}/14</div><div class="sp-metric-lbl">Cue Card đã luyện</div></div>
         <div class="sp-metric-box"><div class="sp-metric-val">${hist.length}</div><div class="sp-metric-lbl">Tổng lượt nói</div></div>
       </div>
@@ -2858,16 +3719,16 @@
     flipCard,
     stepCard,
     jumpCard,
+    jumpToPart,
     speakCurrent,
-    speakStageEn,
+    speakSectionEn,
     speakRaw,
     toggleUnmastered,
     toggleFlowMask,
     revealFlowNode,
-    selectPerspective,
-    toggleStageEn,
+    toggleSectionEn,
     assessCard,
-    // Recall modal
+    // Recall modal (B1 Gõ -> B2 Nói)
     toggleRecallMode,
     toggleRecallMic,
     submitRecallTyped,
@@ -2880,20 +3741,31 @@
     stepPictureBook,
     jumpPictureBook,
     togglePbVi,
+    // Fullscreen Mindmap Bẻ Lái (Pan/Zoom/Fit/VI-EN)
+    openMindmapModal,
+    closeMindmapModal,
+    setMindmapMode,
+    setMindmapLang,
+    selectMindmapGroup,
+    zoomMindmap,
+    fitMindmapToScreen,
     // Task 4-step
     startTaskExam,
     closeTaskExamModal,
     teacherJumpExam,
     checkTaskTest1,
+    selectT2Station,
     toggleT2TypeMode,
     toggleT2Mic,
     submitT2Typed,
     checkTaskTest2,
-    selectT3Drill,
-    toggleT3TypeMode,
-    toggleT3Mic,
-    submitT3Typed,
+    selectT3Map,
+    saveT3Draft,
+    gradeCurrentSteerMap,
     checkTaskTest3,
+    cycleT4Cue,
+    saveT4PrepNote,
+    beginT4Speaking,
     toggleT4TypeMode,
     toggleT4Mic,
     submitT4Typed,
@@ -2901,13 +3773,18 @@
     // Practice hub & room
     setPracticeCat,
     setPracticeQuery,
+    resetPracticeFilters,
     openPracticeRoom,
     closePracticeRoom,
     saveRoomNote,
+    resetRoomPlan,
     beginRoomSpeaking,
     toggleRoomTypeMode,
     toggleRoomMic,
     submitRoomTyped,
-    toggleRoomFullB4
+    toggleRoomFullB4,
+    toggleRoomOptions,
+    setRoomContrast,
+    setRoomTextSize
   };
 })();
