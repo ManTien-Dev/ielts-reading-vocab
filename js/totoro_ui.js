@@ -73,12 +73,29 @@
     } catch (_) {}
   }
 
+  function detectSkillFromUrlTaskParam() {
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      const raw = (sp.get('task') || sp.get('wtask') || (sp.get('tasks') || '').split(',')[0] || '').trim();
+      if (!raw) return '';
+      if (/^(?:lp|lp_full):/i.test(raw) || /^(lp\d|lmap|lcf|lcore|ltask)_/i.test(raw)) return 'Listening';
+      if (/^wp:/i.test(raw) || /^w_/i.test(raw)) return 'Writing';
+      if (/^sp_/i.test(raw)) return 'Speaking';
+      if (/^(?:rp|rp_full):/i.test(raw) || /^(task|fnd|acd|adv)_\d+$/i.test(raw) || /^\d{1,2}$/.test(raw)) return 'Reading';
+    } catch (_) {}
+    return '';
+  }
+
   function resolveInitialView() {
     try {
       const sp = new URLSearchParams(window.location.search || '');
       const tParam = `${sp.get('task') || ''},${sp.get('tasks') || ''}`;
       if (/\b(?:rp|rp_full|lp|lp_full|wp):/i.test(tParam)) return 'practice';
-      if (sp.get('task') || sp.get('tasks') || sp.get('wtask') || sp.get('adminTest')) return 'flashcard';
+      if (sp.get('task') || sp.get('tasks') || sp.get('wtask') || sp.get('adminTest')) {
+        const urlSk = detectSkillFromUrlTaskParam();
+        if (urlSk === 'Listening' || urlSk === 'Speaking') return 'task';
+        return 'flashcard';
+      }
       const urlView = parseViewFromLocation();
       if (VALID_VIEWS.includes(urlView)) return urlView;
       const saved = sessionStorage.getItem(ACTIVE_VIEW_SESSION_KEY) || '';
@@ -1933,8 +1950,10 @@
     let activeSkill = 'Reading';
     let activeMode = 'Overview'; // 'Overview' (Home chung) | 'Reading' | 'Listening' | 'Writing'
     try {
+      const urlSkill = detectSkillFromUrlTaskParam();
       const savedSkill = localStorage.getItem(SKILL_STORAGE_KEY);
-      if (savedSkill === 'Listening' || savedSkill === 'Reading' || savedSkill === 'Writing' || savedSkill === 'Speaking') activeSkill = savedSkill;
+      if (urlSkill) activeSkill = urlSkill;
+      else if (savedSkill === 'Listening' || savedSkill === 'Reading' || savedSkill === 'Writing' || savedSkill === 'Speaking') activeSkill = savedSkill;
     } catch (_) {}
 
     function syncSkillDropdownUI(modeVal) {

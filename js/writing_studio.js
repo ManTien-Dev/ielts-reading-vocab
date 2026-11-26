@@ -948,6 +948,7 @@
     const cdSec = getCardCooldownSec(card.id);
     const stLevel = mmap[card.id]?.level || 0;
     const isTaskMode = Boolean(state.activeTaskModId);
+    const taskDlInfo = isTaskMode ? (window.TeacherStudio?.getTaskDeadlineInfo?.(mod.id) || { hasDeadline: false }) : { hasDeadline: false };
     const canStartTest = isTeacherBypass() || mStats.done >= mStats.total;
     const idleElapsedSec = Math.floor((Date.now() - state.lastActivityAt) / 1000);
     // Keep Task Study controls merged cleanly into the single .study-top-bar (zero extra row pushing Flashcard controls off-screen!)
@@ -1056,6 +1057,7 @@
               <span class="ws-pill">TASK</span>
               <strong class="ws-inline-task-name">${esc(flowLabel(mod))}</strong>
               <span class="ws-pill ${canStartTest ? 'ok' : ''}" title="Số thẻ từ vựng/paraphrase đã thuộc (không tính thẻ bản đồ Flow)">Thuộc ${mStats.done}/${mStats.total}</span>
+              ${taskDlInfo.hasDeadline ? `<span class="ws-pill ${taskDlInfo.expired ? 'danger' : ''}" title="${taskDlInfo.expired ? `Đã đóng lúc ${esc(taskDlInfo.formattedAt)}` : `Đóng lúc ${esc(taskDlInfo.formattedAt)}`}">⏱ ${taskDlInfo.expired ? 'Hết hạn' : `Còn ${esc(taskDlInfo.remainingText)}`}</span>` : ''}
             </div>
           ` : `
             <div class="scope-select-wrap has-custom-scope" id="ws-scope-wrap">
@@ -2223,6 +2225,13 @@
     }
     const mod = getModById(modId);
     if (!mod) return;
+    if (!isTeacherBypass()) {
+      const dlInfo = window.TeacherStudio?.getTaskDeadlineInfo?.(mod.id);
+      if (dlInfo?.hasDeadline && dlInfo.expired) {
+        showAntiCheatModal('TASK WRITING ĐÃ HẾT HẠN', `Task ${flowLabel(mod)} đã đóng hạn nộp lúc ${dlInfo.formattedAt}. Vui lòng liên hệ giáo viên nếu cần gia hạn!`, true);
+        return;
+      }
+    }
 
     // From Task 2+, require 4s Old-Review Speed Quiz if student has mastered cards from OTHER modules
     const allMods = DATA().MODULES || [];
@@ -3999,9 +4008,11 @@
     );
   }
 
-  /* Check ?wtask=... assignment link on boot */
+  /* Check ?wtask=... assignment link on boot (fallback only if TeacherStudio is unavailable) */
   function checkIncomingWritingTaskParam() {
     try {
+      if (window.TeacherStudio?.handleIncomingUrlIfMultiSkill) return;
+      if (!B()?.getCurrentUser?.()) return;
       const sp = new URLSearchParams(window.location.search || '');
       const wtid = sp.get('wtask');
       if (wtid && getModById(wtid)) {

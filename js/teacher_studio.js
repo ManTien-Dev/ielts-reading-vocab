@@ -63,6 +63,7 @@
     remindedKeys: new Set(),
     tickerId: null,
     quickAssignCtx: null,
+    handledUrlKey: '',
   };
 
   function B() { return window.__VOCAB_BRIDGE__ || null; }
@@ -329,16 +330,30 @@
 
   function getSpeakingCatalog() {
     const raw = window.SPEAKING_TASKS_DATA?.tasks || [];
-    return raw.map((t, idx) => ({
-      id: t.id || `sp_${String(idx + 1).padStart(2, '0')}`,
+    if (raw.length) {
+      return raw.map((t, idx) => ({
+        id: t.id || `sp_${String(idx + 1).padStart(2, '0')}`,
+        skill: 'speaking',
+        suite: t.suite || 'part1',
+        num: t.num || (idx + 1),
+        code: t.label || `Speaking ${idx + 1}`,
+        shortCode: `S${idx + 1}`,
+        theme: t.theme || t.title || '',
+        wordTotal: Number(t.totalItems || 10),
+        raw: t,
+      }));
+    }
+    const stories = window.SPEAKING_STUDIO_DATA?.STORIES || [];
+    return stories.map((st, idx) => ({
+      id: st.id || `sp_story_${String(idx + 1).padStart(2, '0')}`,
       skill: 'speaking',
-      suite: t.suite || 'part1',
-      num: t.num || (idx + 1),
-      code: t.label || `Speaking ${idx + 1}`,
+      suite: 'part2',
+      num: idx + 1,
+      code: st.code || `STORY ${String(idx + 1).padStart(2, '0')}`,
       shortCode: `S${idx + 1}`,
-      theme: t.theme || t.title || '',
-      wordTotal: Number(t.totalItems || 10),
-      raw: t,
+      theme: st.shortTitle || st.title || '',
+      wordTotal: Array.isArray(st.vocab) ? st.vocab.length : 30,
+      raw: st,
     }));
   }
 
@@ -1586,6 +1601,8 @@
         previewBtns = `<button type="button" class="ts-pick-mini-btn" onclick="TeacherStudio.previewSkillTask('listening', '${esc(t.id)}')">Xem bài</button>`;
       } else if (t.skill === 'writing') {
         previewBtns = `<button type="button" class="ts-pick-mini-btn" onclick="TeacherStudio.previewSkillTask('writing', '${esc(t.id)}')">Xem bài</button>`;
+      } else if (t.skill === 'speaking') {
+        previewBtns = `<button type="button" class="ts-pick-mini-btn" onclick="TeacherStudio.previewSkillTask('speaking', '${esc(t.id)}')">Xem bài</button>`;
       }
 
       const dlMiniBtns = isLive
@@ -2088,7 +2105,53 @@
     } else if (skillKey === 'writing') {
       window.TotoroUI?.enterSkillMode?.('Writing', 'task');
       setTimeout(() => window.WritingStudio?.openTask?.(taskId), 120);
+    } else if (skillKey === 'speaking') {
+      window.TotoroUI?.enterSkillMode?.('Speaking', 'task');
+    } else if (skillKey === 'reading') {
+      window.TotoroUI?.enterSkillMode?.('Reading', 'task');
+      setTimeout(() => window.TasksModule?.openTaskBriefModal?.(taskId), 120);
     }
+  }
+
+  function getTaskDeadlineInfo(rawTaskId) {
+    const tid = normalizeAnyTaskId(rawTaskId);
+    if (!tid) return { hasDeadline: false, deadlineAt: 0, remainingMs: 0, expired: false, formattedAt: '', remainingText: '' };
+    const candidates = [];
+    const live = loadLiveDeadlines()[tid];
+    if (live && typeof live === 'object') candidates.push(live);
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      const urlIds = [];
+      const single = sp.get('task') || sp.get('wtask');
+      const multi = sp.get('tasks');
+      if (single) urlIds.push(normalizeAnyTaskId(single));
+      if (multi) multi.split(',').map(normalizeAnyTaskId).filter(Boolean).forEach((x) => { if (!urlIds.includes(x)) urlIds.push(x); });
+      if (urlIds.includes(tid)) {
+        const rawDl = Number(sp.get('deadline') || sp.get('due') || 0);
+        const rawIss = Number(sp.get('issued') || 0);
+        if (Number.isFinite(rawDl) && rawDl > 1e11) {
+          candidates.push({ deadlineAt: rawDl, issuedAt: rawIss });
+        }
+      }
+    } catch (_) {}
+    if (!candidates.length) {
+      return { hasDeadline: false, deadlineAt: 0, remainingMs: 0, expired: false, formattedAt: '', remainingText: '' };
+    }
+    candidates.sort((a, b) => Number(b.issuedAt || 0) - Number(a.issuedAt || 0));
+    const chosen = candidates[0];
+    const deadlineAt = Number(chosen.deadlineAt || 0);
+    if (!Number.isFinite(deadlineAt) || deadlineAt <= 0) {
+      return { hasDeadline: false, deadlineAt: 0, remainingMs: 0, expired: false, formattedAt: '', remainingText: '' };
+    }
+    const remainingMs = Math.max(0, deadlineAt - Date.now());
+    return {
+      hasDeadline: true,
+      deadlineAt,
+      remainingMs,
+      expired: remainingMs <= 0,
+      formattedAt: formatDeadlineTs(deadlineAt),
+      remainingText: formatDeadlineRemaining(remainingMs),
+    };
   }
 
   function openStudentSkillTask(taskId) {
@@ -2117,6 +2180,8 @@
     } else if (taskObj.skill === 'writing') {
       window.TotoroUI?.enterSkillMode?.('Writing', 'task');
       setTimeout(() => window.WritingStudio?.openTask?.(taskObj.id), 120);
+    } else if (taskObj.skill === 'speaking') {
+      window.TotoroUI?.enterSkillMode?.('Speaking', 'task');
     }
   }
 
@@ -2311,33 +2376,64 @@
 
   function handleIncomingUrlIfMultiSkill() {
     try {
+      const curUser = B()?.getCurrentUser?.();
+      if (!curUser) return false;
       const sp = new URLSearchParams(window.location.search || '');
-      const single = sp.get('task');
+      if (sp.get('adminTest') || (B()?.isTeacherUser?.() && sp.get('test'))) return false;
+      const single = sp.get('task') || sp.get('wtask');
       const multi = sp.get('tasks');
-      const dl = Number(sp.get('deadline') || 0);
+      const dl = Number(sp.get('deadline') || sp.get('due') || 0);
       const rawList = [];
-      if (single) rawList.push(normalizeAnyTaskId(single));
-      if (multi) multi.split(',').map(normalizeAnyTaskId).filter(Boolean).forEach((x) => { if (!rawList.includes(x)) rawList.push(x); });
+      if (single) {
+        const norm = normalizeAnyTaskId(single);
+        if (norm) rawList.push(norm);
+      }
+      if (multi) {
+        multi.split(',').map(normalizeAnyTaskId).filter(Boolean).forEach((x) => {
+          if (!rawList.includes(x)) rawList.push(x);
+        });
+      }
       if (!rawList.length) return false;
-      const hasNonReading = rawList.some((id) => detectSkillByTaskId(id) !== 'reading');
-      const hasPractice = rawList.some((id) => Boolean(parsePracticeTaskId(id)));
-      if (!hasNonReading && !hasPractice) return false;
+      // Only handle IDs that resolve to a real catalog or practice item
+      const validList = rawList.filter((id) => Boolean(getTaskById(id)));
+      if (!validList.length) return false;
+
+      const dedupKey = `${curUser.id}|${window.location.search || ''}`;
+      if (state.handledUrlKey === dedupKey) return true;
+      state.handledUrlKey = dedupKey;
+
       // Record deadline locally if present
-      if (dl > 0) {
+      if (Number.isFinite(dl) && dl > 1e11) {
         const live = loadLiveDeadlines();
         const iss = Number(sp.get('issued') || Date.now());
-        rawList.forEach((tid) => {
+        validList.forEach((tid) => {
           if (!live[tid] || iss > Number(live[tid].issuedAt || 0)) live[tid] = { deadlineAt: dl, issuedAt: iss };
         });
         writeJson(LIVE_DL_KEY, live);
       }
-      if (!B()?.isTeacherUser?.()) {
-        setTimeout(() => openStudentComboModal(rawList, dl), 450);
-      }
+
+      const isTeacher = Boolean(B()?.isTeacherUser?.());
+      const openResolved = () => {
+        if (isTeacher && typeof window.toggleTeacherStudyPreview === 'function') {
+          window.toggleTeacherStudyPreview(true);
+        }
+        openStudentComboModal(validList, dl);
+        if (isTeacher) {
+          B()?.showToast?.('Đang xem trước bài giao (Giáo viên) — bấm "Quay lại Quản lý" để về bảng lớp.');
+        }
+      };
+
+      // Defer slightly so TotoroUI finishes initial mount/view sync before switching skill & opening modal
+      setTimeout(openResolved, 260);
       return true;
     } catch (_) {
       return false;
     }
+  }
+
+  function onUserLogout() {
+    state.handledUrlKey = '';
+    document.getElementById('modal-student-combo-tasks')?.remove();
   }
 
   /* =========================================================
@@ -2427,7 +2523,15 @@
     openStudentSkillTask,
     openStudentComboModal,
     handleIncomingUrlIfMultiSkill,
+    onUserLogout,
+    getTaskDeadlineInfo,
     getTaskById,
     readStudentAllLocks,
   };
+
+  // CRITICAL BOOT HOOK: When app.js already restored a saved login session BEFORE teacher_studio.js loaded,
+  // tasks.js ran early while window.TeacherStudio was undefined. Route any incoming ?task=/?tasks=/?wtask= now!
+  if (B()?.getCurrentUser?.()) {
+    setTimeout(() => handleIncomingUrlIfMultiSkill(), 80);
+  }
 })();

@@ -634,6 +634,9 @@
     const rec = loadProgress()[task.id] || null;
     const hasFull3 = Boolean(task.hasFullTests);
     const teacher = isTeacherMode();
+    const dlInfo = window.TeacherStudio?.getTaskDeadlineInfo?.(task.id) || { hasDeadline: false };
+    const isExpired = !teacher && dlInfo.hasDeadline && dlInfo.expired;
+    const isCompleted = Boolean(rec?.completed);
 
     const pillEl = document.getElementById('lt-brief-pill');
     const titleEl = document.getElementById('lt-brief-title');
@@ -646,6 +649,14 @@
           ? '<strong>Test 1</strong> Dictation → <strong>Test 2</strong> Short Conversations → <strong>Test 3</strong> Map Labelling.'
           : '<strong>Test 1</strong> Dictation → <strong>Test 2</strong> Short Conversations → <strong>Test 3</strong> Note Completion.')
         : `<strong>Test 1</strong> Dictation · ${totalW} từ.`;
+
+      const deadlineLine = dlInfo.hasDeadline
+        ? `<div style="margin-top:6px;font-weight:700;color:${dlInfo.expired ? '#dc2626' : 'var(--accent)'};">${
+            dlInfo.expired
+              ? `Đã hết hạn lúc ${esc(dlInfo.formattedAt)}${isCompleted ? ' (Bạn đã hoàn thành Task này).' : ' — không thể vào làm mới.'}`
+              : `⏱ Thời hạn: còn ${esc(dlInfo.remainingText)} (đóng lúc ${esc(dlInfo.formattedAt)})`
+          }</div>`
+        : '';
 
       const scoreRow = rec
         ? `<div class="lt-score-strip" style="margin-bottom:14px;">
@@ -663,21 +674,24 @@
           ${hasFull3 ? `<button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 3)">Test 3</button>` : ''}
           <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 1)">${hasFull3 ? 'Bắt đầu Test →' : 'Làm Test 1 →'}</button>
         `
-        : (allReady
-          ? `
-            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Quiz</button>
-            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Flashcard</button>
-            <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 1)">${hasFull3 ? 'Bắt đầu Test →' : 'Làm Test 1 →'}</button>
-          `
-          : `
-            <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Quiz</button>
-            <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Học từ vựng →</button>
-          `);
+        : (isExpired
+          ? `<button type="button" class="btn btn-primary" disabled>Task đã kết thúc</button>`
+          : (allReady
+            ? `
+              <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Quiz</button>
+              <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Flashcard</button>
+              <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.openExam('${esc(task.id)}', 1)">${hasFull3 ? 'Bắt đầu Test →' : 'Làm Test 1 →'}</button>
+            `
+            : `
+              <button type="button" class="btn-subtle" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.startTaskSpeedQuiz('${esc(task.id)}')">Speed Quiz</button>
+              <button type="button" class="btn btn-primary" onclick="ListeningTasksModule.closeTaskBrief(); ListeningTasksModule.studyTaskWords('${esc(task.id)}')">Học từ vựng →</button>
+            `));
 
       bodyEl.innerHTML = `
         <div class="task-notice-box" style="margin-bottom:14px;font-size:14px;line-height:1.6;">
           <div><strong>Bước 1 · Học từ vựng:</strong> Đã thuộc <strong>${mastered}/${totalW}</strong> từ. Thuộc đủ <strong>${totalW}/${totalW}</strong> trên Flashcard hoặc Speed Quiz để mở Test.</div>
           <div style="margin-top:6px;"><strong>Bước 2 · Làm Test:</strong> ${testDesc}</div>
+          ${deadlineLine}
         </div>
         ${scoreRow}
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
@@ -823,8 +837,14 @@
       return;
     }
 
-    // Reading-parity mastery gate: students must master 100% (e.g. 30/30) task words via Flashcard or Speed Test first
+    // Reading-parity mastery & deadline gate: students must respect deadline and master 100% task words first
     if (!isTeacherMode() && !opts?.fromPractice) {
+      const dlInfo = window.TeacherStudio?.getTaskDeadlineInfo?.(task.id);
+      if (dlInfo?.hasDeadline && dlInfo.expired) {
+        window.__VOCAB_BRIDGE__?.showToast?.(`Task ${task.label} đã hết hạn lúc ${dlInfo.formattedAt}!`);
+        openTaskBrief(task.id);
+        return;
+      }
       const totalW = (task.wordIds || []).length;
       const mastered = getMasteredCount(task);
       if (totalW > 0 && mastered < totalW) {
@@ -1950,6 +1970,12 @@
   function studyTaskWords(taskId) {
     const task = (getTasksData().tasks || []).find((t) => t.id === taskId);
     if (!task) return;
+    const dlInfo = !isTeacherMode() ? window.TeacherStudio?.getTaskDeadlineInfo?.(task.id) : null;
+    if (dlInfo?.hasDeadline && dlInfo.expired) {
+      window.__VOCAB_BRIDGE__?.showToast?.(`Task ${task.label} đã hết hạn lúc ${dlInfo.formattedAt}!`);
+      openTaskBrief(task.id);
+      return;
+    }
     readyToastShownForId = null;
     if (window.TotoroUI?.getActiveSkill?.() !== 'Listening') {
       window.TotoroUI?.setActiveSkill?.('Listening', { silent: true });
@@ -1962,6 +1988,12 @@
   function startTaskSpeedQuiz(taskId) {
     const task = (getTasksData().tasks || []).find((t) => t.id === taskId);
     if (!task) return;
+    const dlInfo = !isTeacherMode() ? window.TeacherStudio?.getTaskDeadlineInfo?.(task.id) : null;
+    if (dlInfo?.hasDeadline && dlInfo.expired) {
+      window.__VOCAB_BRIDGE__?.showToast?.(`Task ${task.label} đã hết hạn lúc ${dlInfo.formattedAt}!`);
+      openTaskBrief(task.id);
+      return;
+    }
     readyToastShownForId = null;
     if (window.TotoroUI?.getActiveSkill?.() !== 'Listening') {
       window.TotoroUI?.setActiveSkill?.('Listening', { silent: true });

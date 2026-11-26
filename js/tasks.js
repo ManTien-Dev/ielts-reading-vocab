@@ -3095,6 +3095,9 @@
     closeStudentTasksModal();
 
     // Load 50 words of this Task directly inside the unified main #screen-study UI (Flashcard vocabulary study first!)
+    if (window.TotoroUI?.getActiveSkill?.() !== 'Reading') {
+      window.TotoroUI?.setActiveSkill?.('Reading', { silent: true });
+    }
     syncAssignedTaskScopes(task);
     B()?.activateTaskScope?.(task.id);
     window.TotoroUI?.switchView?.('flashcard', { fromUser: true });
@@ -6774,6 +6777,8 @@
       renderTeacherDashboard();
       if (previewStage > 0) {
         openAdminTestPreview(previewStage, assignedUrlTaskIds[0] || 'task_01');
+      } else {
+        window.TeacherStudio?.handleIncomingUrlIfMultiSkill?.();
       }
       return;
     }
@@ -6827,14 +6832,26 @@
       return;
     }
     if (urlCheckedForUid !== account.id) {
-      if (window.TeacherStudio?.handleIncomingUrlIfMultiSkill?.()) {
-        urlCheckedForUid = account.id;
-        return;
+      if (window.TeacherStudio?.handleIncomingUrlIfMultiSkill) {
+        if (window.TeacherStudio.handleIncomingUrlIfMultiSkill()) {
+          urlCheckedForUid = account.id;
+          return;
+        }
+      } else {
+        // TeacherStudio script loads right after tasks.js; defer URL task routing to TeacherStudio boot hook
+        // so Listening / Writing / Speaking / Multi-skill links are never dropped on restored sessions!
+        const sp = new URLSearchParams(window.location.search || '');
+        if (sp.get('task') || sp.get('tasks') || sp.get('wtask')) {
+          return;
+        }
       }
       if (assignedUrlTaskIds.length > 0) {
         urlCheckedForUid = account.id;
         if (!curTask || !assignedUrlTaskIds.includes(curTask.id)) {
           if (assignedUrlTaskIds.length === 1) {
+            if (window.TotoroUI?.getActiveSkill?.() !== 'Reading') {
+              window.TotoroUI?.setActiveSkill?.('Reading', { silent: true });
+            }
             openTaskBriefModal(assignedUrlTaskIds[0]);
           } else {
             openStudentTasksModal();
@@ -6846,6 +6863,7 @@
 
   function onUserLogout() {
     urlCheckedForUid = null;
+    window.TeacherStudio?.onUserLogout?.();
     isPreviewTestMode = false;
     dismissTaskExitWarn();
     const savedExam = loadActiveExamSession();
