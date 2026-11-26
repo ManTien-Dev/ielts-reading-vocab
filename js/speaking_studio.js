@@ -1118,14 +1118,14 @@
     STT()?.abort?.();
     recallState = {
       card,
-      step: 1, // 1: Gõ lại chính xác (30s, default type) | 2: Nói lại câu (60s, default voice)
+      step: 1, // 1: Gõ lại chính xác (45s, default type) | 2: Nói lại câu (90s, default voice)
       inputMode: 'type',
       recording: false,
       processing: '',
       transcript: '',
       audioUrl: '',
       feedback: null,
-      secsLeft: 30,
+      secsLeft: 45,
       timerId: null
     };
     document.getElementById('sp-recall-modal').classList.add('open');
@@ -1258,7 +1258,7 @@
           if (!recallState) return;
           recallState.step = 2;
           recallState.inputMode = 'voice';
-          recallState.secsLeft = 60;
+          recallState.secsLeft = 90;
           recallState.transcript = '';
           recallState.audioUrl = '';
           recallState.feedback = null;
@@ -1880,9 +1880,9 @@
   }
 
   function getStageLimitSec(stageNum, t4Phase) {
-    if (stageNum === 1) return 8 * 60;
-    if (stageNum === 2) return 6 * 60;
-    if (stageNum === 3) return 6 * 60;
+    if (stageNum === 1) return 12 * 60;
+    if (stageNum === 2) return 10 * 60;
+    if (stageNum === 3) return 10 * 60;
     return t4Phase === 'speak' ? 2 * 60 : 60;
   }
 

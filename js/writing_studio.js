@@ -20,8 +20,8 @@
 
   const IDLE_LIMIT_MS = 10 * 60 * 1000;
   const LOCK_PENALTY_MS = 30 * 60 * 1000;
-  const T1_TIME_LIMIT_SEC = 60;
-  const T2_PER_SENT_SEC = 35;
+  const T1_TIME_LIMIT_SEC = 120;
+  const T2_PER_SENT_SEC = 60;
   const SQ_PER_Q_MS = 4000;
 
   function B() { return window.__VOCAB_BRIDGE__ || null; }
@@ -1874,10 +1874,10 @@
     recallState = {
       card,
       mod,
-      stage: 1, // 1: Hint-Free Exact Typing (30s, 2 tries) -> 2: VI->EN Sentence (90s, 3 tries)
+      stage: 1, // 1: Hint-Free Exact Typing (45s, 2 tries) -> 2: VI->EN Sentence (120s, 3 tries)
       isStrictSrs,
       attemptsLeft: isStrictSrs ? 1 : 2,
-      secLeft: 30,
+      secLeft: 45,
       timerId: null,
       targetPhrase: correctAns,
       sentenceDraft: '',
@@ -2017,7 +2017,7 @@
 
     if (accepted.includes(typed)) {
       recallState.stage = 2;
-      recallState.secLeft = 90;
+      recallState.secLeft = 120;
       recallState.attemptsLeft = recallState.isStrictSrs ? 2 : 3;
       recallState.targetPhrase = card.kind === 'paraphrase' ? rawTyped : card.en;
       recallState.sentenceDraft = '';
@@ -2324,7 +2324,7 @@
         <div class="ws-modal-title">SPEED QUIZ · ÔN TỪ CŨ MỞ KHÓA TASK</div>
         <div style="display:flex;gap:8px;align-items:center;">
           <span class="ws-pill">${sqState.idx + 1} / ${sqState.items.length}</span>
-          <span class="ws-pill urgent" id="ws-sq-timer">4.0s</span>
+          <span class="ws-pill urgent" id="ws-sq-timer">${(SQ_PER_Q_MS / 1000).toFixed(1)}s</span>
         </div>
       </div>
       <div style="text-align:center;padding:18px 10px;background:var(--surface-panel);border-radius:14px;border:1px solid var(--border);">
@@ -2395,9 +2395,9 @@
   }
 
   function getTaskStageLimitSec(mod, stageNum) {
-    if (stageNum === 1) return mod?.smartFlow?.mode === 'branches' ? 4 * 60 : 3 * 60;
-    if (stageNum === 2) return 8 * 60;
-    return 12 * 60;
+    if (stageNum === 1) return mod?.smartFlow?.mode === 'branches' ? 8 * 60 : 6 * 60;
+    if (stageNum === 2) return 12 * 60;
+    return 18 * 60;
   }
 
   function startTaskExam(modId) {
@@ -2473,11 +2473,11 @@
           const raw = String(examState.t3Body || '').trim();
           if (raw && raw.split(/\s+/).length >= 10) {
             examState.t3RetriesLeft = 0;
-            toast('Hết 12 phút — hệ thống tự động nộp và chấm đoạn Body hiện tại!');
+            toast('Hết 18 phút — hệ thống tự động nộp và chấm đoạn Body hiện tại!');
             submitTaskTest3();
           } else {
             closeTaskExamModal(true);
-            showAntiCheatModal('HẾT THỜI GIAN · TEST 3', 'Đã hết 12 phút viết đoạn Body nhưng chưa có nội dung. Hãy ôn kỹ bài và thử lại.', true);
+            showAntiCheatModal('HẾT THỜI GIAN · TEST 3', 'Đã hết 18 phút viết đoạn Body nhưng chưa có nội dung. Hãy ôn kỹ bài và thử lại.', true);
           }
         } else {
           const stNum = examState.stage;
