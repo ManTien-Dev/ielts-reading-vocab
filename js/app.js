@@ -1483,6 +1483,7 @@
         if (liveChanged) {
           localStorage.setItem(LIVE_DL_KEY, JSON.stringify(liveMap));
         }
+        window.TeacherStudio?.updateStudentHomeworkBadge?.();
       } catch (_) {}
 
       if (currentUser) {
@@ -5974,7 +5975,10 @@
     const tRefreshBtn = document.getElementById('btn-teacher-refresh');
     if (tRefreshBtn) tRefreshBtn.style.display = (teacher && !teacherPreviewStudy) ? 'inline-flex' : 'none';
     const sTasksBtn = document.getElementById('btn-open-student-tasks');
-    if (sTasksBtn && teacher) sTasksBtn.style.display = 'none';
+    if (sTasksBtn) {
+      sTasksBtn.style.display = (teacher && !teacherPreviewStudy) ? 'none' : 'inline-flex';
+      window.TeacherStudio?.updateStudentHomeworkBadge?.();
+    }
     const chipTxt = document.getElementById('header-mode-chip-text');
     if (chipTxt) chipTxt.textContent = (teacher && !teacherPreviewStudy) ? 'Quản lý lớp' : 'Reading 95,5%';
     // Toggle Teacher Dashboard vs Student Study Workspace cleanly

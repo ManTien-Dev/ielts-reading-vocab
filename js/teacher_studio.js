@@ -13,14 +13,32 @@
   const SENT_KEY = 'ielts_teacher_sent_tasks_v1';
   const LIVE_DL_KEY = 'ielts_teacher_live_deadlines_v1';
   const DISMISSED_KEY = 'ielts_teacher_dismissed_hw_v1';
+  const COMPOSER_TPL_KEY = 'ielts_teacher_composer_tpl_v1';
+  const WEEKLY_BATCHES_KEY = 'ielts_teacher_weekly_batches_v1';
   const LOCK_PENALTY_MS = 30 * 60 * 1000;
+
+  const WEEKLY_SECTIONS = [
+    { key: 'listening', short: '1. Nghe',  heading: 'BÀI TẬP MÔN NGHE' },
+    { key: 'speaking',  short: '2. Nói',   heading: 'BÀI TẬP MÔN NÓI' },
+    { key: 'reading',   short: '3. Đọc',   heading: 'BÀI TẬP MÔN ĐỌC' },
+    { key: 'writing',   short: '4. Viết',  heading: 'BÀI TẬP MÔN VIẾT' },
+    { key: 'vocab',     short: '5. TV/NP', heading: 'BÀI TẬP TỪ VỰNG/NGỮ PHÁP' },
+  ];
+
+  const REPORT_4_SKILLS = [
+    { key: 'listening', num: 1, label: 'Nghe' },
+    { key: 'speaking',  num: 2, label: 'Nói' },
+    { key: 'reading',   num: 3, label: 'Đọc' },
+    { key: 'writing',   num: 4, label: 'Viết' },
+  ];
 
   const LISTENING_PROG_BASE = 'totoro_listening_task_progress_v1_';
   const LISTENING_LOCK_BASE = 'totoro_listening_task_locks_v1_';
   const WRITING_PROG_BASE = 'totoro_writing_task_prog_v1_';
   const WRITING_LOCK_BASE = 'totoro_writing_task_lock_v1_';
   const WRITING_PRAC_LOCK_BASE = 'totoro_writing_prac_lock_v1_';
-  const SPEAKING_PROG_BASE = 'totoro_speaking_task_prog_v1_';
+  const SPEAKING_PROG_BASE = 'totoro_speaking_task_done_v1_';
+  const SPEAKING_PROG_LEGACY_BASE = 'totoro_speaking_task_prog_v1_';
   const SPEAKING_LOCK_BASE = 'totoro_speaking_task_locks_v1_';
 
   const SKILLS = [
@@ -53,6 +71,7 @@
       speaking: 'all',
     },
     pickerPracticeMode: 'practice', // 'practice' | 'exam'
+    pickerHideFull: true,           // Default to individual Passages & Sections (no Full Test clutter)
     pickerLoadingBank: false,
     pickerQuery: '',
     pickerHideAllDone: false,
@@ -64,6 +83,26 @@
     tickerId: null,
     quickAssignCtx: null,
     handledUrlKey: '',
+    composerTemplate: (() => {
+      try {
+        const saved = localStorage.getItem(COMPOSER_TPL_KEY);
+        return saved === 'daily' ? 'daily' : 'weekly';
+      } catch (_) { return 'weekly'; }
+    })(),
+    weeklyTitle: '',
+    weeklyTitleDirty: false,
+    weeklyIssuedDate: '',
+    weeklyAutoSource: 'cambridge',
+    weeklyAutoOffset: 0,
+    weeklyAutoLoading: false,
+    showEmptySections: false,
+    sectionOverrides: {},
+    reportBatchKey: '',
+    reportCustomTitle: '',
+    reportMode: 'student', // 'student' | 'class'
+    reportStudentId: '',
+    reportIncludeName: true,
+    reportIncludeClassDetails: false,
   };
 
   function B() { return window.__VOCAB_BRIDGE__ || null; }
@@ -142,12 +181,14 @@
      ========================================================= */
   function parsePracticeTaskId(rawId) {
     const s = String(rawId || '').trim();
-    const m = s.match(/^(rp_full|rp|lp_full|lp|wp):([^:\s]+)(?::(practice|exam))?$/i);
+    const m = s.match(/^(rp_full|rp|lp_full|lp|wp|sp):([^:\s]+)(?::(practice|exam))?$/i);
     if (!m) return null;
     const prefix = m[1].toLowerCase();
     const itemId = m[2];
     const mode = (m[3] || 'practice').toLowerCase() === 'exam' ? 'exam' : 'practice';
-    const skill = prefix.startsWith('rp') ? 'reading' : (prefix.startsWith('lp') ? 'listening' : 'writing');
+    const skill = prefix.startsWith('rp')
+      ? 'reading'
+      : (prefix.startsWith('lp') ? 'listening' : (prefix === 'sp' ? 'speaking' : 'writing'));
     const isFull = prefix.endsWith('_full');
     return {
       prefix,
@@ -163,6 +204,7 @@
     const cleanMode = mode === 'exam' ? 'exam' : 'practice';
     if (skill === 'reading') return `${isFull ? 'rp_full' : 'rp'}:${itemId}:${cleanMode}`;
     if (skill === 'listening') return `${isFull ? 'lp_full' : 'lp'}:${itemId}:${cleanMode}`;
+    if (skill === 'speaking') return `sp:${itemId}:${cleanMode}`;
     return `wp:${itemId}:${cleanMode}`;
   }
 
@@ -182,6 +224,9 @@
       const mVol = raw.match(/^lvol_(\d+)_t(\d+)(?:_p(\d+))?$/i);
       if (mVol) return { code: `LVol ${mVol[1]} · T${mVol[2]}${mVol[3] ? ` · P${mVol[3]}` : ' Full'}`, shortCode: `LV${mVol[1]}T${mVol[2]}${mVol[3] ? `P${mVol[3]}` : ''}`, theme: `Listening Volume (${modeTag})` };
       return { code: pm.isFull ? `Listening Full (${raw})` : `Listening (${raw})`, shortCode: raw.slice(0, 10), theme: `Listening Practice (${modeTag})` };
+    }
+    if (pm.skill === 'speaking') {
+      return { code: `Speaking · ${raw.toUpperCase()}`, shortCode: raw.toUpperCase().slice(0, 8), theme: `Speaking Cue Card (${modeTag})` };
     }
     return { code: `Writing ${raw.toUpperCase()}`, shortCode: raw.toUpperCase().slice(0, 8), theme: `Writing Task 2 (${modeTag})` };
   }
@@ -221,12 +266,21 @@
         const snippet = String(p.prompt || '').trim();
         theme = `${snippet.length > 76 ? snippet.slice(0, 76) + '…' : snippet} (${modeTag})`;
       }
+    } else if (pm.skill === 'speaking') {
+      const allCues = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []);
+      const cue = allCues.find((x) => x.id === pm.itemId);
+      if (cue) {
+        code = `Speaking · Cue Card`;
+        shortCode = cue.id.replace(/^sp_s\d+_/i, 'SC').toUpperCase();
+        const snippet = String(cue.title || '').trim();
+        theme = `${snippet.length > 76 ? snippet.slice(0, 76) + '…' : snippet} (${modeTag})`;
+      }
     }
 
     return {
       id: pm.canonicalId,
       skill: pm.skill,
-      suite: pm.skill === 'writing' ? 'wp_practice' : `${pm.skill === 'reading' ? 'rp' : 'lp'}_practice`,
+      suite: pm.skill === 'writing' ? 'wp_practice' : (pm.skill === 'speaking' ? 'sp_practice' : `${pm.skill === 'reading' ? 'rp' : 'lp'}_practice`),
       num: 0,
       code,
       shortCode,
@@ -468,6 +522,29 @@
     });
   }
 
+  function getSpeakingPracticeCatalog() {
+    const cues = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []);
+    const mode = state.pickerPracticeMode === 'exam' ? 'exam' : 'practice';
+    const modeTag = mode === 'exam' ? 'Thi thật' : 'Luyện tập';
+    return cues.map((c, idx) => {
+      const id = buildPracticeTaskId('speaking', c.id, false, mode);
+      const snippet = String(c.title || '').trim();
+      return {
+        id,
+        skill: 'speaking',
+        suite: 'sp_practice',
+        num: idx + 1,
+        code: `Cue #${String(idx + 1).padStart(2, '0')}`,
+        shortCode: `SC${idx + 1}`,
+        theme: `${snippet.length > 86 ? snippet.slice(0, 86) + '…' : snippet} (${modeTag})`,
+        wordTotal: 1,
+        isPractice: true,
+        practiceMeta: parsePracticeTaskId(id),
+        raw: c,
+      };
+    });
+  }
+
   function getCatalogBySkill(skillKey) {
     if (skillKey === 'reading') {
       const curSuite = state.pickerSuite.reading || 'foundation';
@@ -484,7 +561,11 @@
       if (curSuite === 'wp_practice') return getWritingPracticeCatalog();
       return getWritingCatalog();
     }
-    if (skillKey === 'speaking') return getSpeakingCatalog();
+    if (skillKey === 'speaking') {
+      const curSuite = state.pickerSuite.speaking || 'all';
+      if (curSuite === 'sp_practice') return getSpeakingPracticeCatalog();
+      return getSpeakingCatalog();
+    }
     return [];
   }
 
@@ -536,7 +617,11 @@
       ];
     }
     if (skillKey === 'speaking') {
-      return [{ key: 'all', label: 'Tất cả' }];
+      const spCues = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []).length;
+      return [
+        { key: 'all', label: `Story Task (${getSpeakingCatalog().length})` },
+        ...(spCues ? [{ key: 'sp_practice', label: `🎙 Đề Cue Card (${spCues})` }] : []),
+      ];
     }
     return [];
   }
@@ -687,7 +772,9 @@
       local = readJson(`${WRITING_PROG_BASE}${uid}`, {});
     } else if (skillKey === 'speaking') {
       remote = (sd.speakingTaskProgress && typeof sd.speakingTaskProgress === 'object') ? sd.speakingTaskProgress : {};
-      local = readJson(`${SPEAKING_PROG_BASE}${uid}`, {});
+      const curLocal = readJson(`${SPEAKING_PROG_BASE}${uid}`, {});
+      const legacyLocal = readJson(`${SPEAKING_PROG_LEGACY_BASE}${uid}`, {});
+      local = { ...legacyLocal, ...curLocal };
     }
 
     const merged = { ...remote };
@@ -786,6 +873,21 @@
         completed: true,
         scoreLabel: latest.wordCount ? `${latest.wordCount} từ${latest.band ? ` · B${Number(latest.band).toFixed(1)}` : ''}` : 'Đã nộp',
         updatedAt: Number(latest.completedAt || 0),
+        raw: latest,
+      };
+    }
+    if (pm.skill === 'speaking') {
+      const localArr = readJson(`totoro_speaking_prac_hist_v1_${uid}`, []);
+      const remoteArr = Array.isArray(sd.speakingPracticeHistory) ? sd.speakingPracticeHistory : [];
+      const all = [...(Array.isArray(localArr) ? localArr : []), ...remoteArr];
+      const hits = all.filter((h) => h && h.cueId === pm.itemId);
+      if (!hits.length) return null;
+      hits.sort((a, b) => Number(b.at || b.completedAt || 0) - Number(a.at || a.completedAt || 0));
+      const latest = hits[0];
+      return {
+        completed: true,
+        scoreLabel: latest.durationSec ? `${latest.durationSec}s${latest.wpm ? ` · ${latest.wpm} wpm` : ''}` : 'Đã nói',
+        updatedAt: Number(latest.at || latest.completedAt || 0),
         raw: latest,
       };
     }
@@ -1476,8 +1578,12 @@
     if (tabsEl) {
       tabsEl.innerHTML = SKILLS.map((sk) => {
         const list = getCatalogBySkill(sk.key);
-        const selCnt = list.filter((t) => state.selectedIds.has(t.id)).length;
-        const countText = list.length ? `${list.length} bài` : 'Sắp mở';
+        const selCnt = [...state.selectedIds].filter((tid) => detectSkillByTaskId(tid) === sk.key).length;
+        let countText = list.length ? `${list.length} bài` : 'Sắp mở';
+        if (sk.key === 'speaking') {
+          const totalSp = getSpeakingCatalog().length + getSpeakingPracticeCatalog().length;
+          countText = totalSp ? `${totalSp} bài` : 'Sắp mở';
+        }
         return `
           <button type="button" class="ts-skill-tab is-${sk.key} ${state.pickerSkill === sk.key ? 'active' : ''}" onclick="TeacherStudio.setPickerSkill('${sk.key}')">
             <div class="ts-skill-tab-left">
@@ -1497,15 +1603,24 @@
     const basketEl = document.getElementById('ts-selected-basket');
     if (basketEl) {
       const selArr = [...state.selectedIds];
+      const isWeekly = state.composerTemplate === 'weekly';
       if (!selArr.length) {
-        basketEl.innerHTML = '<span class="ts-basket-empty">Tick 1–4 bài ở bất kỳ kỹ năng nào bên dưới để gom vào cùng 1 link giao bài trong ngày.</span>';
+        basketEl.innerHTML = isWeekly
+          ? '<span class="ts-basket-empty">Tick các bài Nghe / Nói / Đọc / Viết / Từ vựng bên dưới — hệ thống tự phân đúng 5 mục và gắn link cho học viên tự làm.</span>'
+          : '<span class="ts-basket-empty">Tick 1–4 bài ở bất kỳ kỹ năng nào bên dưới để gom vào cùng 1 mẫu giao bài trong ngày.</span>';
       } else {
         basketEl.innerHTML = selArr.map((tid) => {
           const t = getTaskById(tid);
           const sk = t?.skill || detectSkillByTaskId(tid);
           const sm = skillMeta(sk);
+          const secKey = getTaskSection(tid);
+          const secMeta = WEEKLY_SECTIONS.find((x) => x.key === secKey) || WEEKLY_SECTIONS[0];
+          const secPill = isWeekly
+            ? `<button type="button" class="ts-basket-sec-btn" onclick="TeacherStudio.cycleTaskSection('${esc(tid)}')" title="Bấm để chuyển mục (Nghe → Nói → Đọc → Viết → Từ vựng/Ngữ pháp)">${esc(secMeta.short)}</button>`
+            : '';
           return `
             <span class="ts-basket-chip is-${sk}">
+              ${secPill}
               <strong>${sm.short}</strong> · ${esc(t?.shortCode || t?.code || tid)}
               <button type="button" class="ts-basket-rm" onclick="TeacherStudio.toggleSelectTask('${esc(tid)}', false)" aria-label="Bỏ chọn">×</button>
             </span>
@@ -1514,17 +1629,23 @@
       }
     }
 
-    // 3. Sub-suite tabs (+ Practice Mode Bar when viewing Reading/Listening/Writing Practice suites!)
+    // 3. Sub-suite tabs (+ Practice Mode Bar when viewing Reading/Listening/Writing/Speaking Practice suites!)
     const suites = getSuitesForSkill(state.pickerSkill);
     const curSuite = state.pickerSuite[state.pickerSkill] || (suites[0]?.key || 'all');
-    const isPracticeSuite = /^(?:rp_|lp_|wp_practice)/.test(curSuite);
+    const isPracticeSuite = /^(?:rp_|lp_|wp_practice|sp_practice)/.test(curSuite);
     const suiteTabsEl = document.getElementById('teacher-task-suite-tabs');
     if (suiteTabsEl) {
+      const hasFullToggle = /^(?:rp_|lp_)/.test(curSuite);
       const modeBarHtml = isPracticeSuite ? `
         <div class="ts-prac-mode-bar">
           <span class="ts-prac-mode-lbl">Chế độ học sinh làm bài:</span>
           <button type="button" class="ts-prac-mode-btn ${state.pickerPracticeMode === 'practice' ? 'active' : ''}" onclick="TeacherStudio.setPickerPracticeMode('practice')">Luyện tập</button>
           <button type="button" class="ts-prac-mode-btn ${state.pickerPracticeMode === 'exam' ? 'active' : ''}" onclick="TeacherStudio.setPickerPracticeMode('exam')">Thi thật</button>
+          ${hasFullToggle ? `
+            <button type="button" class="ts-prac-mode-btn ${state.pickerHideFull ? 'active' : ''}" onclick="TeacherStudio.togglePickerHideFull()" title="Ẩn các đề Full Test, chỉ hiện từng Passage / Section lẻ">
+              ${state.pickerHideFull ? '✓ Chỉ Passage / Section' : 'Hiện cả Full Test'}
+            </button>
+          ` : ''}
         </div>
       ` : '';
       suiteTabsEl.innerHTML = suites.map((s) => `
@@ -1559,6 +1680,7 @@
     const liveMap = loadLiveDeadlines();
     const catalog = getCatalogBySkill(state.pickerSkill).filter((t) => {
       if (curSuite !== 'all' && t.suite !== curSuite) return false;
+      if (state.pickerHideFull && t.practiceMeta?.isFull) return false;
       if (q && !t.code.toLowerCase().includes(q) && !t.theme.toLowerCase().includes(q) && !t.id.toLowerCase().includes(q)) return false;
       if (state.pickerHideAllDone && isTaskAllDone(t, nowMs)) return false;
       return true;
@@ -1720,6 +1842,234 @@
     return url;
   }
 
+  function formatDotDate(dt) {
+    if (!dt || Number.isNaN(dt.getTime())) return '';
+    const p = (n) => String(n).padStart(2, '0');
+    return `${p(dt.getDate())}.${p(dt.getMonth() + 1)}.${dt.getFullYear()}`;
+  }
+
+  function toIsoDateInput(dt) {
+    const p = (n) => String(n).padStart(2, '0');
+    return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
+  }
+
+  function computeAutoWeeklyTitle(dateObj) {
+    const d = (dateObj && !Number.isNaN(dateObj.getTime())) ? dateObj : new Date();
+    const weekNum = Math.min(5, Math.max(1, Math.ceil(d.getDate() / 7)));
+    return `THÁNG ${d.getMonth() + 1} TUẦN ${weekNum}`;
+  }
+
+  function ensureWeeklyMetaDefaults(nowTs = Date.now()) {
+    const nowDt = new Date(nowTs);
+    if (!state.weeklyIssuedDate) state.weeklyIssuedDate = toIsoDateInput(nowDt);
+    const issuedDt = parseIsoDateLocal(state.weeklyIssuedDate) || nowDt;
+    if (!state.weeklyTitleDirty || !state.weeklyTitle) {
+      state.weeklyTitle = computeAutoWeeklyTitle(issuedDt);
+    }
+    const titleEl = document.getElementById('ts-weekly-title');
+    if (titleEl && document.activeElement !== titleEl && titleEl.value !== state.weeklyTitle) {
+      titleEl.value = state.weeklyTitle;
+    }
+    const dateEl = document.getElementById('ts-weekly-issued-date');
+    if (dateEl && document.activeElement !== dateEl && dateEl.value !== state.weeklyIssuedDate) {
+      dateEl.value = state.weeklyIssuedDate;
+    }
+    const isWeekly = state.composerTemplate === 'weekly';
+    document.querySelectorAll('[data-ts-tpl]').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-ts-tpl') === state.composerTemplate);
+    });
+    const metaRow = document.getElementById('ts-weekly-meta-row');
+    if (metaRow) metaRow.style.display = isWeekly ? '' : 'none';
+    const emptyWrap = document.getElementById('ts-show-empty-wrap');
+    if (emptyWrap) emptyWrap.style.display = isWeekly ? '' : 'none';
+    const emptyChk = document.getElementById('ts-show-empty-sections');
+    if (emptyChk) emptyChk.checked = Boolean(state.showEmptySections);
+  }
+
+  function parseIsoDateLocal(isoStr) {
+    const m = String(isoStr || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+  }
+
+  function getDefaultSectionForTask(rawId) {
+    const tid = normalizeAnyTaskId(rawId);
+    const pm = parsePracticeTaskId(tid);
+    if (pm) return pm.skill; // 'listening' | 'speaking' | 'reading' | 'writing'
+    const sk = detectSkillByTaskId(tid);
+    // Reading vocab suites (Nền tảng / Học thuật / Paraphrase / Chuyên sâu) -> Mục 5: Từ vựng / Ngữ pháp
+    if (sk === 'reading') return 'vocab';
+    if (sk === 'listening') return 'listening';
+    if (sk === 'speaking') return 'speaking';
+    if (sk === 'writing') return 'writing';
+    return 'vocab';
+  }
+
+  function getTaskSection(rawId) {
+    const tid = normalizeAnyTaskId(rawId);
+    const ov = state.sectionOverrides[tid];
+    if (ov && WEEKLY_SECTIONS.some((s) => s.key === ov)) return ov;
+    return getDefaultSectionForTask(tid);
+  }
+
+  function formatWeeklyDeadlineLine(deadlineMs) {
+    if (!deadlineMs || deadlineMs <= 0) return 'Không giới hạn';
+    const d = new Date(Number(deadlineMs));
+    if (Number.isNaN(d.getTime())) return 'Không giới hạn';
+    const dot = formatDotDate(d);
+    const h = d.getHours();
+    const m = d.getMinutes();
+    if (h === 23 && m >= 55) return dot;
+    const p = (n) => String(n).padStart(2, '0');
+    return `${p(h)}:${p(m)} ngày ${dot}`;
+  }
+
+  function buildWeeklyHomeworkMessage(ids, deadlineMs, issuedAt, nowTs = Date.now()) {
+    const hasIds = Array.isArray(ids) && ids.length > 0;
+    if (!hasIds && !state.showEmptySections) return '';
+    ensureWeeklyMetaDefaults(nowTs);
+
+    const base = buildBaseUrl();
+    const dlQuery = deadlineMs > 0 ? `&deadline=${deadlineMs}&issued=${issuedAt}` : '';
+    const issuedDt = parseIsoDateLocal(state.weeklyIssuedDate) || new Date(nowTs);
+    const weekTitle = (state.weeklyTitle || computeAutoWeeklyTitle(issuedDt)).trim().toUpperCase();
+
+    const bySection = { listening: [], speaking: [], reading: [], writing: [], vocab: [] };
+    (ids || []).forEach((tid) => {
+      const sec = getTaskSection(tid);
+      if (bySection[sec]) bySection[sec].push(tid);
+      else bySection.vocab.push(tid);
+    });
+
+    const lines = [
+      `BÀI TẬP VỀ NHÀ ${weekTitle}`,
+      `Ngày giáo viên giao bài: ${formatDotDate(issuedDt)}`,
+      `Học viên nộp bài trước: ${formatWeeklyDeadlineLine(deadlineMs)}`,
+    ];
+
+    let num = 0;
+    WEEKLY_SECTIONS.forEach((sec) => {
+      const list = bySection[sec.key] || [];
+      if (!list.length && !state.showEmptySections) return;
+      num += 1;
+      lines.push('');
+      lines.push(`${num}. ${sec.heading}`);
+      if (!list.length) {
+        lines.push('- Link: ');
+      } else if (list.length === 1) {
+        lines.push(`- Link: ${base}?task=${encodeURIComponent(list[0])}${dlQuery}`);
+      } else {
+        lines.push(`- Link: ${base}?tasks=${list.map(encodeURIComponent).join(',')}${dlQuery}`);
+      }
+    });
+
+    return lines.join('\n');
+  }
+
+  function pickNextCandidate(items, offset, sentMap, liveMap, nowMs) {
+    if (!Array.isArray(items) || !items.length) return null;
+    // Prefer items not previously sent/live and not already 100% finished by the whole class
+    const fresh = items.filter((it) => !sentMap[it.id] && !liveMap[it.id] && !isTaskAllDone(it, nowMs));
+    const pending = fresh.length ? fresh : items.filter((it) => !isTaskAllDone(it, nowMs));
+    const pool = pending.length ? pending : items;
+    const idx = ((Number(offset) || 0) % pool.length + pool.length) % pool.length;
+    return pool[idx] || null;
+  }
+
+  async function autoPickWeeklyBundle() {
+    if (state.weeklyAutoLoading) return;
+    state.weeklyAutoLoading = true;
+    const btn = document.getElementById('ts-btn-auto-weekly');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Đang chọn gói...';
+    }
+    const src = ['cambridge', 'volume', 'actual'].includes(state.weeklyAutoSource) ? state.weeklyAutoSource : 'cambridge';
+    try {
+      const loaders = [];
+      if (window.ReadingPracticeApp?.ensureSourceBankLoaded) {
+        loaders.push(window.ReadingPracticeApp.ensureSourceBankLoaded(src).catch(() => {}));
+      }
+      if (window.ListeningPracticeApp?.ensureSourceBankLoaded) {
+        loaders.push(window.ListeningPracticeApp.ensureSourceBankLoaded(src).catch(() => {}));
+      }
+      if (loaders.length) await Promise.all(loaders);
+
+      const nowMs = Date.now();
+      const sentMap = loadSentMap();
+      const liveMap = loadLiveDeadlines();
+      const offset = state.weeklyAutoOffset;
+      state.weeklyAutoOffset += 1;
+
+      // 1. Listening Section/Part ONLY (NEVER Full Test!)
+      const listenParts = getListeningPracticeCatalog(src).filter((it) => !it.practiceMeta?.isFull);
+      const pickedListen = pickNextCandidate(listenParts, offset, sentMap, liveMap, nowMs)
+        || pickNextCandidate(getListeningCatalog(), offset, sentMap, liveMap, nowMs);
+
+      // 2. Speaking Cue Card (or Story Task fallback)
+      const spCues = getSpeakingPracticeCatalog();
+      const pickedSpeak = pickNextCandidate(spCues, offset, sentMap, liveMap, nowMs)
+        || pickNextCandidate(getSpeakingCatalog(), offset, sentMap, liveMap, nowMs);
+
+      // 3. Reading Passage ONLY (NEVER Full Test!) — newest Cambridge book first (Cam 20 -> 19 -> 18...)
+      const readPassages = getReadingPracticeCatalog(src)
+        .filter((it) => !it.practiceMeta?.isFull)
+        .sort((a, b) => {
+          const ma = String(a.practiceMeta?.itemId || '').match(/_(\d+)_t(\d+)_p(\d+)/i);
+          const mb = String(b.practiceMeta?.itemId || '').match(/_(\d+)_t(\d+)_p(\d+)/i);
+          if (ma && mb) {
+            return (Number(mb[1]) - Number(ma[1])) || (Number(ma[2]) - Number(mb[2])) || (Number(ma[3]) - Number(mb[3]));
+          }
+          return 0;
+        });
+      const pickedRead = pickNextCandidate(readPassages, offset, sentMap, liveMap, nowMs);
+
+      // 4. Writing Task 2 Practice Prompt (or Flow Task fallback)
+      const writePrompts = getWritingPracticeCatalog();
+      const pickedWrite = pickNextCandidate(writePrompts, offset, sentMap, liveMap, nowMs)
+        || pickNextCandidate(getWritingCatalog(), offset, sentMap, liveMap, nowMs);
+
+      // 5. Vocab / Grammar Task (Reading Vocab Suite)
+      const vocabTasks = getReadingCatalog();
+      const pickedVocab = pickNextCandidate(vocabTasks, offset, sentMap, liveMap, nowMs);
+
+      state.composerTemplate = 'weekly';
+      try { localStorage.setItem(COMPOSER_TPL_KEY, 'weekly'); } catch (_) {}
+      state.selectedIds.clear();
+      state.sectionOverrides = {};
+
+      const picked = [
+        { item: pickedListen, sec: 'listening' },
+        { item: pickedSpeak,  sec: 'speaking' },
+        { item: pickedRead,   sec: 'reading' },
+        { item: pickedWrite,  sec: 'writing' },
+        { item: pickedVocab,  sec: 'vocab' },
+      ].filter((x) => x.item);
+
+      picked.forEach(({ item, sec }) => {
+        state.selectedIds.add(item.id);
+        state.sectionOverrides[item.id] = sec;
+      });
+
+      // Default deadline to 7 days (1 week) when switching from daily default
+      const dlSel = document.getElementById('teacher-task-deadline-preset');
+      if (dlSel && (!state.presetDirty || dlSel.value === 'tonight_24' || dlSel.value === 'tomorrow_24')) {
+        dlSel.value = '10080';
+        state.presetDirty = true;
+      }
+
+      renderPickerSection(Date.now());
+      const names = picked.map((x) => x.item.shortCode || x.item.code).join(' · ');
+      B()?.showToast?.(`Đã chọn sẵn gói tuần (${picked.length} bài lẻ Passage/Section): ${names}`);
+    } finally {
+      state.weeklyAutoLoading = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = state.weeklyAutoOffset > 0 ? '↻ Đổi gói tuần khác' : '✨ Chọn nhanh gói tuần';
+      }
+    }
+  }
+
   function buildDailyHomeworkMessage(ids, deadlineMs, issuedAt, nowTs = Date.now()) {
     if (!Array.isArray(ids) || !ids.length) return '';
     const base = buildBaseUrl();
@@ -1749,18 +2099,22 @@
   }
 
   function updateLinkPreview() {
+    ensureWeeklyMetaDefaults(Date.now());
     const ids = [...state.selectedIds];
     const cntEl = document.getElementById('teacher-dash-sel-count');
     if (cntEl) cntEl.textContent = `Đã chọn: ${ids.length} bài`;
     const nowTs = Date.now();
     const resolved = resolveComposerDeadline(ids, nowTs);
-    const message = buildDailyHomeworkMessage(ids, resolved.deadlineMs, resolved.issuedAt, nowTs);
+    const message = state.composerTemplate === 'weekly'
+      ? buildWeeklyHomeworkMessage(ids, resolved.deadlineMs, resolved.issuedAt, nowTs)
+      : buildDailyHomeworkMessage(ids, resolved.deadlineMs, resolved.issuedAt, nowTs);
     const inp = document.getElementById('teacher-dash-link-preview');
     if (inp) {
       inp.value = message;
       if (inp.tagName === 'TEXTAREA') {
-        const lineCount = message ? message.split('\n').length : 2;
-        inp.rows = Math.min(6, Math.max(2, lineCount));
+        const lineCount = message ? message.split('\n').length : 3;
+        const maxRows = state.composerTemplate === 'weekly' ? 14 : 6;
+        inp.rows = Math.min(maxRows, Math.max(3, lineCount));
       }
     }
     return { url: message, message, ...resolved };
@@ -1791,30 +2145,72 @@
     } catch (_) {}
   }
 
+  function loadWeeklyBatches() {
+    return readJson(WEEKLY_BATCHES_KEY, {});
+  }
+
+  function computeWeekKeyFromDate(dateObj) {
+    const d = (dateObj && !Number.isNaN(dateObj.getTime())) ? dateObj : new Date();
+    const weekNum = Math.min(5, Math.max(1, Math.ceil(d.getDate() / 7)));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-W${weekNum}`;
+  }
+
+  function recordWeeklyBatch(ids, titleOverride = '', issuedDateIso = '', deadlineMs = 0) {
+    const cleanIds = (Array.isArray(ids) ? ids : []).map(normalizeAnyTaskId).filter(Boolean);
+    if (!cleanIds.length) return;
+    const nowTs = Date.now();
+    const dt = parseIsoDateLocal(issuedDateIso) || new Date(nowTs);
+    const weekKey = computeWeekKeyFromDate(dt);
+    const title = (titleOverride || computeAutoWeeklyTitle(dt)).trim().toUpperCase();
+    const batches = loadWeeklyBatches();
+    const prev = batches[weekKey] || { weekKey, title, issuedDate: toIsoDateInput(dt), taskIds: [], updatedAt: 0 };
+    const mergedIds = [...new Set([...(Array.isArray(prev.taskIds) ? prev.taskIds : []), ...cleanIds])];
+    batches[weekKey] = {
+      weekKey,
+      title,
+      issuedDate: issuedDateIso || prev.issuedDate || toIsoDateInput(dt),
+      deadlineAt: deadlineMs > 0 ? Number(deadlineMs) : Number(prev.deadlineAt || 0),
+      taskIds: mergedIds,
+      updatedAt: nowTs,
+    };
+    writeJson(WEEKLY_BATCHES_KEY, batches);
+  }
+
   function copySelectedLink() {
     const ids = [...state.selectedIds];
-    if (!ids.length) {
+    const previewEl = document.getElementById('teacher-dash-link-preview');
+    const manualTxt = (previewEl?.value || '').trim();
+    if (!ids.length && !manualTxt) {
       B()?.showToast?.('Vui lòng tick ít nhất 1 bài trước khi tạo mẫu gửi Zalo.');
       return;
     }
-    const info = updateLinkPreview();
-    if (!info.message) return;
+    const nowTs = Date.now();
+    const resolved = resolveComposerDeadline(ids, nowTs);
+    const autoMsg = state.composerTemplate === 'weekly'
+      ? buildWeeklyHomeworkMessage(ids, resolved.deadlineMs, resolved.issuedAt, nowTs)
+      : buildDailyHomeworkMessage(ids, resolved.deadlineMs, resolved.issuedAt, nowTs);
+    const finalMsg = manualTxt || autoMsg;
+    if (!finalMsg) return;
 
-    if (info.deadlineMs > 0 && !info.fromExistingLive) {
-      const liveMap = loadLiveDeadlines();
-      const toSave = ids.filter((tid) => state.presetDirty || !(liveMap[tid] && Number(liveMap[tid].deadlineAt || 0) > Date.now()));
-      if (toSave.length) updateLiveDeadlines(toSave, info.deadlineMs);
-    } else if (info.deadlineMs === 0) {
-      const liveMap = loadLiveDeadlines();
-      const needStamp = ids.filter((tid) => !liveMap[tid]);
-      if (needStamp.length) updateLiveDeadlines(needStamp, 0);
+    if (ids.length) {
+      if (resolved.deadlineMs > 0 && !resolved.fromExistingLive) {
+        const liveMap = loadLiveDeadlines();
+        const toSave = ids.filter((tid) => state.presetDirty || !(liveMap[tid] && Number(liveMap[tid].deadlineAt || 0) > Date.now()));
+        if (toSave.length) updateLiveDeadlines(toSave, resolved.deadlineMs);
+      } else if (resolved.deadlineMs === 0) {
+        const liveMap = loadLiveDeadlines();
+        const needStamp = ids.filter((tid) => !liveMap[tid]);
+        if (needStamp.length) updateLiveDeadlines(needStamp, 0);
+      }
+      saveSentTasks(ids);
+      recordWeeklyBatch(ids, state.weeklyTitle, state.weeklyIssuedDate, resolved.deadlineMs);
     }
     state.presetDirty = false;
-    saveSentTasks(ids);
     state.monitorTab = 'active';
-    const dlNote = info.deadlineMs > 0 ? ` (${formatVietnameseDeadlinePhrase(info.deadlineMs)})` : '';
-    copySafe(info.message, () => {
-      B()?.showToast?.(`Đã copy mẫu DAILY HOMEWORK (${ids.length} bài${dlNote}) — dán thẳng vào Zalo!`);
+    const tplLbl = state.composerTemplate === 'weekly' ? 'BÀI TẬP TUẦN' : 'DAILY HOMEWORK';
+    const dlNote = resolved.deadlineMs > 0 ? ` (${formatVietnameseDeadlinePhrase(resolved.deadlineMs)})` : '';
+    copySafe(finalMsg, () => {
+      B()?.showToast?.(`Đã copy mẫu ${tplLbl} (${ids.length} bài${dlNote}) — dán thẳng vào Zalo!`);
       renderDashboard();
     });
   }
@@ -2037,6 +2433,302 @@
   }
 
   /* =========================================================
+     9B. WEEKLY 4-SKILL COMPLETION REPORT MODAL (1% - 100%)
+     ========================================================= */
+  function getAvailableWeeklyBatches(nowMs = Date.now()) {
+    const stored = loadWeeklyBatches();
+    const list = Object.values(stored)
+      .filter((b) => b && Array.isArray(b.taskIds) && b.taskIds.length > 0)
+      .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+
+    // Also synthesize a "Tất cả bài đang giao / hết hạn gần nhất" batch if not already represented or as fallback
+    const buckets = getMonitorBuckets(nowMs);
+    const monitorIds = [...buckets.activeList, ...buckets.expiredList].map((x) => x.task.id);
+    const curWeekKey = computeWeekKeyFromDate(new Date(nowMs));
+    const curTitle = computeAutoWeeklyTitle(new Date(nowMs));
+
+    if (!list.length) {
+      return [{
+        weekKey: '__monitor__',
+        title: curTitle,
+        taskIds: monitorIds,
+        isFallback: true,
+        label: `${curTitle} (${monitorIds.length} bài đang theo dõi)`,
+      }];
+    }
+
+    const out = list.map((b) => ({
+      ...b,
+      label: `${b.title || b.weekKey} (${b.taskIds.length} bài)`,
+    }));
+    if (monitorIds.length && !out.some((b) => b.weekKey === curWeekKey)) {
+      out.unshift({
+        weekKey: '__monitor__',
+        title: curTitle,
+        taskIds: monitorIds,
+        isFallback: true,
+        label: `Bài đang theo dõi · ${curTitle} (${monitorIds.length} bài)`,
+      });
+    }
+    return out;
+  }
+
+  function computeWeeklyReportMetrics(taskIds, nowMs = Date.now()) {
+    const students = B()?.getStudentAccounts?.() || [];
+    const tasks = (taskIds || []).map(getTaskById).filter(Boolean);
+    const bySkill = { listening: [], speaking: [], reading: [], writing: [] };
+    tasks.forEach((t) => {
+      if (bySkill[t.skill]) bySkill[t.skill].push(t);
+    });
+
+    const studentStats = students.map((st) => {
+      const skills = {};
+      let assignedSkills = 0;
+      let pctSum = 0;
+      REPORT_4_SKILLS.forEach((sk) => {
+        const list = bySkill[sk.key];
+        const total = list.length;
+        const done = total ? list.filter((t) => getStudentHomeworkRow(t, st, nowMs).completed).length : 0;
+        const pct = total ? Math.round((done / total) * 100) : null;
+        skills[sk.key] = { done, total, pct };
+        if (pct !== null) {
+          assignedSkills += 1;
+          pctSum += pct;
+        }
+      });
+      const avgPct = assignedSkills ? Math.round(pctSum / assignedSkills) : null;
+      return { student: st, skills, avgPct };
+    });
+
+    const classSkills = {};
+    REPORT_4_SKILLS.forEach((sk) => {
+      const list = bySkill[sk.key];
+      const totalTasks = list.length;
+      const totalSlots = totalTasks * students.length;
+      const doneSlots = totalSlots
+        ? studentStats.reduce((acc, s) => acc + s.skills[sk.key].done, 0)
+        : 0;
+      const pct = totalSlots ? Math.round((doneSlots / totalSlots) * 100) : null;
+      classSkills[sk.key] = { totalTasks, doneSlots, totalSlots, pct };
+    });
+
+    return { tasks, bySkill, students, studentStats, classSkills };
+  }
+
+  function formatReportPctValue(pct) {
+    return pct === null ? 'Chưa giao' : `${pct}%`;
+  }
+
+  function buildWeeklyReportText(titleRaw, metrics, opts = {}) {
+    const title = String(titleRaw || computeAutoWeeklyTitle(new Date())).trim().toUpperCase();
+    const mode = opts.mode || state.reportMode;
+    const includeName = opts.includeName ?? state.reportIncludeName;
+    const includeDetails = opts.includeDetails ?? state.reportIncludeClassDetails;
+
+    if (mode === 'student') {
+      const stRow = metrics.studentStats.find((s) => String(s.student.id) === String(opts.studentId || state.reportStudentId))
+        || metrics.studentStats[0]
+        || null;
+      const lines = [`BÁO CÁO BÀI TẬP HOÀN THÀNH ${title}`];
+      if (includeName && stRow) lines.push(`Học viên: ${stRow.student.name}`);
+      lines.push('Tỉ lệ hoàn thành (thang đo 1% - 100% theo số bài)');
+      REPORT_4_SKILLS.forEach((sk) => {
+        const pct = stRow ? stRow.skills[sk.key].pct : null;
+        lines.push(`${sk.num}- ${sk.label}: ${formatReportPctValue(pct)}`);
+      });
+      return lines.join('\n');
+    }
+
+    const lines = [
+      `BÁO CÁO BÀI TẬP HOÀN THÀNH ${title}`,
+      'Tỉ lệ hoàn thành (thang đo 1% - 100% theo số bài)',
+    ];
+    REPORT_4_SKILLS.forEach((sk) => {
+      lines.push(`${sk.num}- ${sk.label}: ${formatReportPctValue(metrics.classSkills[sk.key].pct)}`);
+    });
+    if (includeDetails && metrics.studentStats.length) {
+      lines.push('');
+      lines.push('Chi tiết từng học viên:');
+      metrics.studentStats.forEach((s) => {
+        const parts = REPORT_4_SKILLS.map((sk) => `${sk.label} ${formatReportPctValue(s.skills[sk.key].pct)}`);
+        lines.push(`• ${s.student.name}: ${parts.join(' · ')}`);
+      });
+    }
+    return lines.join('\n');
+  }
+
+  function renderPctPillHtml(info) {
+    if (!info || info.pct === null) {
+      return '<span class="ts-wr-pct is-none">—</span>';
+    }
+    const cls = info.pct >= 100 ? 'is-full' : (info.pct > 0 ? 'is-mid' : 'is-zero');
+    const sub = info.total > 1 ? ` <small style="opacity:.75;font-weight:650;">(${info.done}/${info.total})</small>` : '';
+    return `<span class="ts-wr-pct tabular ${cls}">${info.pct}%${sub}</span>`;
+  }
+
+  function ensureWeeklyReportModal() {
+    let ov = document.getElementById('modal-teacher-weekly-report');
+    if (ov) return ov;
+    ov = document.createElement('div');
+    ov.id = 'modal-teacher-weekly-report';
+    ov.className = 'modal-overlay';
+    ov.style.zIndex = '2550';
+    ov.onclick = (e) => { if (e.target === ov) ov.classList.remove('open'); };
+    ov.innerHTML = `
+      <div class="modal-card ts-wr-modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <div class="modal-title" style="font-size:17px;">Báo Cáo Bài Tập Hoàn Thành Theo Tuần</div>
+            <div id="ts-wr-subtitle" style="font-size:12.5px; color:var(--text-muted); margin-top:2px;">Thang đo 1% - 100% theo số bài giao của 4 kỹ năng (Nghe · Nói · Đọc · Viết)</div>
+          </div>
+          <button type="button" class="btn-icon-glass" style="width:32px;height:32px;" onclick="document.getElementById('modal-teacher-weekly-report')?.classList.remove('open')" aria-label="Đóng">✕</button>
+        </div>
+        <div class="modal-body ts-wr-body" id="ts-wr-body"></div>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    return ov;
+  }
+
+  function renderWeeklyReportModal() {
+    const bodyEl = document.getElementById('ts-wr-body');
+    if (!bodyEl) return;
+    const nowMs = Date.now();
+    const batches = getAvailableWeeklyBatches(nowMs);
+    let activeBatch = batches.find((b) => b.weekKey === state.reportBatchKey) || batches[0];
+    state.reportBatchKey = activeBatch.weekKey;
+    if (!state.reportCustomTitle) {
+      state.reportCustomTitle = activeBatch.title || computeAutoWeeklyTitle(new Date(nowMs));
+    }
+
+    const metrics = computeWeeklyReportMetrics(activeBatch.taskIds, nowMs);
+    if (!state.reportStudentId || !metrics.studentStats.some((s) => String(s.student.id) === String(state.reportStudentId))) {
+      state.reportStudentId = metrics.studentStats[0]?.student?.id || '';
+    }
+
+    const previewText = buildWeeklyReportText(state.reportCustomTitle, metrics);
+    const previewRows = Math.min(14, Math.max(6, previewText.split('\n').length + 1));
+
+    const kpiHtml = REPORT_4_SKILLS.map((sk) => {
+      const c = metrics.classSkills[sk.key];
+      const val = c.pct === null ? '—' : `${c.pct}%`;
+      const sub = c.totalTasks ? `${c.totalTasks} bài · ${c.doneSlots}/${c.totalSlots} lượt nộp` : 'Chưa giao bài tuần này';
+      return `
+        <div class="ts-wr-kpi is-${sk.key}">
+          <span class="ts-wr-kpi-lbl">${sk.num}- ${sk.label}</span>
+          <span class="ts-wr-kpi-val tabular">${val}</span>
+          <span class="ts-wr-kpi-sub tabular">${esc(sub)}</span>
+        </div>
+      `;
+    }).join('');
+
+    const rowsHtml = metrics.studentStats.map((s, idx) => {
+      const isSel = state.reportMode === 'student' && String(s.student.id) === String(state.reportStudentId);
+      return `
+        <tr class="${isSel ? 'is-selected' : ''}" onclick="TeacherStudio.selectWeeklyReportStudent('${esc(s.student.id)}')">
+          <td>
+            <div class="teacher-student-cell">
+              <span class="board-avatar tone-${idx % 4}">${esc(monogram(s.student.name))}</span>
+              <strong>${esc(s.student.name)}</strong>
+            </div>
+          </td>
+          <td>${renderPctPillHtml(s.skills.listening)}</td>
+          <td>${renderPctPillHtml(s.skills.speaking)}</td>
+          <td>${renderPctPillHtml(s.skills.reading)}</td>
+          <td>${renderPctPillHtml(s.skills.writing)}</td>
+          <td onclick="event.stopPropagation()">
+            <button type="button" class="btn-subtle ts-wr-copy-btn" onclick="TeacherStudio.copyWeeklyReportForStudent('${esc(s.student.id)}')">Copy Zalo</button>
+          </td>
+        </tr>
+      `;
+    }).join('') || '<tr><td colspan="6" style="text-align:center; padding:16px; color:var(--ink-3);">Chưa có dữ liệu học viên.</td></tr>';
+
+    const optCheckHtml = state.reportMode === 'student'
+      ? `<label class="ts-empty-sec-toggle"><input type="checkbox" ${state.reportIncludeName ? 'checked' : ''} onchange="TeacherStudio.setWeeklyReportOption('includeName', this.checked)"><span>Kèm tên học viên</span></label>`
+      : `<label class="ts-empty-sec-toggle"><input type="checkbox" ${state.reportIncludeClassDetails ? 'checked' : ''} onchange="TeacherStudio.setWeeklyReportOption('includeDetails', this.checked)"><span>Kèm chi tiết từng bạn</span></label>`;
+
+    bodyEl.innerHTML = `
+      <div class="ts-wr-toolbar">
+        <div class="ts-wr-toolbar-left">
+          <select class="scope-select" id="ts-wr-batch-sel" onchange="TeacherStudio.setWeeklyReportBatch(this.value)" title="Chọn tuần giao bài">
+            ${batches.map((b) => `<option value="${esc(b.weekKey)}" ${b.weekKey === activeBatch.weekKey ? 'selected' : ''}>${esc(b.label)}</option>`).join('')}
+          </select>
+          <input type="text" class="task-link-input ts-wr-title-inp" id="ts-wr-title-input" value="${esc(state.reportCustomTitle)}" placeholder="VD: THÁNG 11 TUẦN 2" oninput="TeacherStudio.setWeeklyReportTitle(this.value)">
+        </div>
+        <div class="ts-mode-seg" role="tablist" aria-label="Phạm vi báo cáo tuần">
+          <button type="button" class="ts-mode-btn ${state.reportMode === 'student' ? 'active' : ''}" onclick="TeacherStudio.setWeeklyReportMode('student')">Từng học viên</button>
+          <button type="button" class="ts-mode-btn ${state.reportMode === 'class' ? 'active' : ''}" onclick="TeacherStudio.setWeeklyReportMode('class')">Cả lớp</button>
+        </div>
+      </div>
+
+      <div class="ts-wr-kpi-grid">${kpiHtml}</div>
+
+      <div class="ts-wr-table-wrap">
+        <table class="ts-wr-table">
+          <thead>
+            <tr>
+              <th>Học viên (bấm dòng để xem mẫu)</th>
+              <th>1- Nghe</th>
+              <th>2- Nói</th>
+              <th>3- Đọc</th>
+              <th>4- Viết</th>
+              <th>Gửi nhanh</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+
+      <div class="ts-wr-preview-wrap">
+        <div class="ts-wr-preview-head">
+          <span class="ts-wr-preview-lbl">Mẫu tin nhắn Zalo ${state.reportMode === 'student' ? '(theo học viên đang chọn)' : '(tổng hợp cả lớp)'}</span>
+          <div class="ts-wr-preview-opts">
+            ${optCheckHtml}
+            <button type="button" class="btn btn-primary ts-wr-copy-btn" onclick="TeacherStudio.copyWeeklyReportPreview()">Copy báo cáo Zalo</button>
+          </div>
+        </div>
+        <textarea class="task-link-input ts-zalo-preview" id="ts-wr-preview-box" rows="${previewRows}">${esc(previewText)}</textarea>
+      </div>
+    `;
+  }
+
+  function openWeeklyReportModal() {
+    if (!B()?.isTeacherUser?.()) return;
+    state.reportCustomTitle = '';
+    const ov = ensureWeeklyReportModal();
+    renderWeeklyReportModal();
+    ov.classList.add('open');
+  }
+
+  function copyWeeklyReportForStudent(studentId) {
+    const nowMs = Date.now();
+    const batches = getAvailableWeeklyBatches(nowMs);
+    const activeBatch = batches.find((b) => b.weekKey === state.reportBatchKey) || batches[0];
+    const metrics = computeWeeklyReportMetrics(activeBatch.taskIds, nowMs);
+    const st = metrics.studentStats.find((s) => String(s.student.id) === String(studentId));
+    if (!st) return;
+    state.reportMode = 'student';
+    state.reportStudentId = st.student.id;
+    const txt = buildWeeklyReportText(state.reportCustomTitle || activeBatch.title, metrics, {
+      mode: 'student',
+      studentId: st.student.id,
+      includeName: state.reportIncludeName,
+    });
+    copySafe(txt, () => {
+      B()?.showToast?.(`Đã copy báo cáo tuần của ${shortName(st.student.name)} — dán thẳng vào Zalo!`);
+      renderWeeklyReportModal();
+    });
+  }
+
+  function copyWeeklyReportPreview() {
+    const txt = (document.getElementById('ts-wr-preview-box')?.value || '').trim();
+    if (!txt) return;
+    copySafe(txt, () => {
+      B()?.showToast?.('Đã copy báo cáo bài tập hoàn thành theo tuần — dán thẳng vào Zalo!');
+    });
+  }
+
+  /* =========================================================
      10. LIVE 1-SECOND TICKER FOR LOCKS & DEADLINES
      ========================================================= */
   function ensureTicker() {
@@ -2158,6 +2850,7 @@
     const cleanId = normalizeAnyTaskId(taskId);
     const pm = parsePracticeTaskId(cleanId);
     document.getElementById('modal-student-combo-tasks')?.remove();
+    closeAllAssignedHomeworkModal();
     if (pm) {
       if (pm.skill === 'reading') {
         window.ReadingPracticeApp?.openAssignedItem?.(pm.itemId, pm.isFull, pm.mode);
@@ -2166,6 +2859,9 @@
       } else if (pm.skill === 'writing') {
         window.TotoroUI?.enterSkillMode?.('Writing', 'practice');
         setTimeout(() => window.WritingStudio?.startPracticePrompt?.(pm.itemId, pm.mode), 160);
+      } else if (pm.skill === 'speaking') {
+        window.TotoroUI?.enterSkillMode?.('Speaking', 'practice');
+        setTimeout(() => window.SpeakingStudio?.openPracticeRoom?.(pm.itemId, pm.mode), 160);
       }
       return;
     }
@@ -2474,6 +3170,15 @@
       state.pickerPracticeMode = mode === 'exam' ? 'exam' : 'practice';
       renderPickerSection(Date.now());
     },
+    togglePickerHideFull: () => {
+      state.pickerHideFull = !state.pickerHideFull;
+      renderPickerSection(Date.now());
+    },
+    setWeeklyAutoSource: (src) => {
+      state.weeklyAutoSource = ['cambridge', 'volume', 'actual'].includes(src) ? src : 'cambridge';
+      state.weeklyAutoOffset = 0;
+    },
+    autoPickWeeklyBundle,
     openPracticeAssignModal,
     setQuickAssignMode,
     updateQuickAssignPreview,
@@ -2493,7 +3198,40 @@
       else state.selectedIds.delete(id);
       renderPickerSection(Date.now());
     },
-    clearSelection: () => { state.selectedIds.clear(); renderPickerSection(Date.now()); },
+    clearSelection: () => { state.selectedIds.clear(); state.sectionOverrides = {}; renderPickerSection(Date.now()); },
+    setComposerTemplate: (tpl) => {
+      state.composerTemplate = tpl === 'daily' ? 'daily' : 'weekly';
+      try { localStorage.setItem(COMPOSER_TPL_KEY, state.composerTemplate); } catch (_) {}
+      renderPickerSection(Date.now());
+    },
+    toggleShowEmptySections: (checked) => {
+      state.showEmptySections = Boolean(checked);
+      updateLinkPreview();
+    },
+    onWeeklyMetaChange: (field) => {
+      if (field === 'title') {
+        const v = document.getElementById('ts-weekly-title')?.value || '';
+        state.weeklyTitle = v;
+        state.weeklyTitleDirty = Boolean(v.trim());
+      } else if (field === 'issued') {
+        const v = document.getElementById('ts-weekly-issued-date')?.value || '';
+        state.weeklyIssuedDate = v;
+        if (!state.weeklyTitleDirty) {
+          const dt = parseIsoDateLocal(v);
+          if (dt) state.weeklyTitle = computeAutoWeeklyTitle(dt);
+        }
+      }
+      updateLinkPreview();
+    },
+    cycleTaskSection: (tid) => {
+      const id = normalizeAnyTaskId(tid);
+      if (!id) return;
+      const cur = getTaskSection(id);
+      const idx = WEEKLY_SECTIONS.findIndex((s) => s.key === cur);
+      const next = WEEKLY_SECTIONS[(idx + 1) % WEEKLY_SECTIONS.length];
+      state.sectionOverrides[id] = next.key;
+      renderPickerSection(Date.now());
+    },
     onDeadlinePresetChange: () => {
       state.presetDirty = true;
       const p = document.getElementById('teacher-task-deadline-preset');
@@ -2516,6 +3254,38 @@
     dismissMonitorTask,
     unlockStudentTask,
     openTaskDetailModal,
+    openWeeklyReportModal,
+    setWeeklyReportBatch: (weekKey) => {
+      state.reportBatchKey = weekKey || '';
+      const b = getAvailableWeeklyBatches(Date.now()).find((x) => x.weekKey === state.reportBatchKey);
+      state.reportCustomTitle = b?.title || '';
+      renderWeeklyReportModal();
+    },
+    setWeeklyReportTitle: (val) => {
+      state.reportCustomTitle = String(val || '');
+      const nowMs = Date.now();
+      const batches = getAvailableWeeklyBatches(nowMs);
+      const activeBatch = batches.find((b) => b.weekKey === state.reportBatchKey) || batches[0];
+      const metrics = computeWeeklyReportMetrics(activeBatch.taskIds, nowMs);
+      const box = document.getElementById('ts-wr-preview-box');
+      if (box) box.value = buildWeeklyReportText(state.reportCustomTitle, metrics);
+    },
+    setWeeklyReportMode: (mode) => {
+      state.reportMode = mode === 'class' ? 'class' : 'student';
+      renderWeeklyReportModal();
+    },
+    selectWeeklyReportStudent: (sid) => {
+      state.reportMode = 'student';
+      state.reportStudentId = String(sid || '');
+      renderWeeklyReportModal();
+    },
+    setWeeklyReportOption: (key, val) => {
+      if (key === 'includeName') state.reportIncludeName = Boolean(val);
+      if (key === 'includeDetails') state.reportIncludeClassDetails = Boolean(val);
+      renderWeeklyReportModal();
+    },
+    copyWeeklyReportForStudent,
+    copyWeeklyReportPreview,
     setDetailFilter: (f) => { state.detailFilter = f || 'all'; renderDetailModalBody(); },
     copyStudentReminder,
     copyGroupReminder,
@@ -2529,9 +3299,323 @@
     readStudentAllLocks,
   };
 
+  /* =========================================================
+     13. UNIFIED 4-SKILL STUDENT ASSIGNED HOMEWORK CENTER
+     Accessible from EVERY mode (Overview · Reading · Listening · Writing · Speaking)
+     ========================================================= */
+  let allHwModalTicker = null;
+  let allHwFilterSkill = 'all';
+  let allHwBucket = 'active';
+
+  function getStudentAssignedHomeworkBuckets(nowMs = Date.now()) {
+    const liveMap = loadLiveDeadlines();
+    const sentMap = loadSentMap();
+    const dismissedMap = loadDismissedMap();
+    const curUser = B()?.getCurrentUser?.() || null;
+
+    const urlIds = [];
+    let urlDl = 0;
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      const single = sp.get('task') || sp.get('wtask');
+      const multi = sp.get('tasks');
+      urlDl = Number(sp.get('deadline') || sp.get('due') || 0);
+      if (single) urlIds.push(normalizeAnyTaskId(single));
+      if (multi) multi.split(',').map(normalizeAnyTaskId).filter(Boolean).forEach((x) => { if (!urlIds.includes(x)) urlIds.push(x); });
+    } catch (_) {}
+
+    const seen = new Set();
+    const activeList = [];
+    const expiredList = [];
+
+    const inspect = (rawId, fromUrl = false) => {
+      const tid = normalizeAnyTaskId(rawId);
+      if (!tid || seen.has(tid)) return;
+      const taskObj = getTaskById(tid);
+      if (!taskObj) return;
+      seen.add(tid);
+
+      const dlRec = liveMap[tid] || null;
+      const sentTs = Number(sentMap[tid] || 0);
+      const issuedAt = Math.max(Number(dlRec?.issuedAt || 0), sentTs, fromUrl ? nowMs : 0);
+      const deadlineAt = Number(dlRec?.deadlineAt || (fromUrl && urlDl > 1e11 ? urlDl : 0));
+      const dismissedAt = Number(dismissedMap[tid] || 0);
+      const lastEventTs = Math.max(issuedAt, deadlineAt > 0 && deadlineAt <= nowMs ? deadlineAt : 0);
+      if (dismissedAt > 0 && dismissedAt >= lastEventTs) return;
+
+      const row = curUser ? getStudentHomeworkRow(taskObj, curUser, nowMs) : null;
+      const entry = {
+        task: taskObj,
+        deadlineAt,
+        issuedAt,
+        row,
+        completed: Boolean(row?.completed),
+        locked: Boolean(row?.lock),
+      };
+
+      if (deadlineAt > nowMs) {
+        activeList.push(entry);
+      } else if (deadlineAt > 0 && deadlineAt <= nowMs) {
+        if (nowMs - deadlineAt <= 7 * 24 * 60 * 60 * 1000) {
+          expiredList.push(entry);
+        }
+      } else if (issuedAt > 0) {
+        activeList.push(entry);
+      }
+    };
+
+    Object.keys(liveMap).forEach((k) => inspect(k, false));
+    Object.keys(sentMap).forEach((k) => inspect(k, false));
+    urlIds.forEach((k) => inspect(k, true));
+
+    const skillRank = { reading: 1, listening: 2, writing: 3, speaking: 4 };
+    activeList.sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      const aHasDl = a.deadlineAt > 0;
+      const bHasDl = b.deadlineAt > 0;
+      if (aHasDl && bHasDl && a.deadlineAt !== b.deadlineAt) return a.deadlineAt - b.deadlineAt;
+      if (aHasDl !== bHasDl) return aHasDl ? -1 : 1;
+      if (b.issuedAt !== a.issuedAt) return b.issuedAt - a.issuedAt;
+      return (skillRank[a.task.skill] || 9) - (skillRank[b.task.skill] || 9);
+    });
+    expiredList.sort((a, b) => b.deadlineAt - a.deadlineAt);
+    return { activeList, expiredList };
+  }
+
+  function updateStudentHomeworkBadge() {
+    const badge = document.getElementById('hdr-hw-badge');
+    const btn = document.getElementById('btn-open-student-tasks');
+    if (!badge || !btn) return;
+    const { activeList } = getStudentAssignedHomeworkBuckets(Date.now());
+    const pendingCnt = activeList.filter((e) => !e.completed).length;
+    if (pendingCnt > 0) {
+      badge.textContent = pendingCnt > 99 ? '99+' : String(pendingCnt);
+      badge.style.display = 'inline-block';
+      btn.title = `Có ${pendingCnt} bài tập đang được giao chưa hoàn thành (4 kỹ năng)`;
+    } else if (activeList.length > 0) {
+      badge.style.display = 'none';
+      btn.title = `Đã hoàn thành ${activeList.length}/${activeList.length} bài tập đang giao`;
+    } else {
+      badge.style.display = 'none';
+      btn.title = 'Tất cả bài tập đang được giao (4 kỹ năng)';
+    }
+  }
+
+  function closeAllAssignedHomeworkModal(event) {
+    const ov = document.getElementById('modal-all-assigned-hw');
+    if (event && event.target !== ov) return;
+    if (allHwModalTicker) {
+      clearInterval(allHwModalTicker);
+      allHwModalTicker = null;
+    }
+    ov?.remove();
+  }
+
+  function tickAllAssignedHomeworkCountdowns() {
+    const ov = document.getElementById('modal-all-assigned-hw');
+    if (!ov) {
+      if (allHwModalTicker) { clearInterval(allHwModalTicker); allHwModalTicker = null; }
+      return;
+    }
+    const nowMs = Date.now();
+    ov.querySelectorAll('[data-shw-dl]').forEach((el) => {
+      const dl = Number(el.getAttribute('data-shw-dl') || 0);
+      if (!dl) return;
+      const rem = dl - nowMs;
+      if (rem <= 0) {
+        el.classList.add('is-urgent');
+        el.textContent = 'Hết giờ';
+      } else {
+        el.classList.toggle('is-urgent', rem <= 15 * 60 * 1000);
+        el.textContent = `Còn ${formatDeadlineRemaining(rem)}`;
+      }
+    });
+  }
+
+  function renderAllAssignedHomeworkModal() {
+    const ov = document.getElementById('modal-all-assigned-hw');
+    if (!ov) return;
+    const nowMs = Date.now();
+    const { activeList, expiredList } = getStudentAssignedHomeworkBuckets(nowMs);
+    if (allHwBucket === 'expired' && !expiredList.length) allHwBucket = 'active';
+    const baseList = allHwBucket === 'expired' ? expiredList : activeList;
+
+    const counts = { all: baseList.length, reading: 0, listening: 0, writing: 0, speaking: 0 };
+    baseList.forEach((e) => {
+      if (counts[e.task.skill] != null) counts[e.task.skill] += 1;
+    });
+    if (allHwFilterSkill !== 'all' && counts[allHwFilterSkill] === 0) {
+      allHwFilterSkill = 'all';
+    }
+
+    const visibleList = allHwFilterSkill === 'all'
+      ? baseList
+      : baseList.filter((e) => e.task.skill === allHwFilterSkill);
+
+    const activeDone = activeList.filter((e) => e.completed).length;
+    const activeTotal = activeList.length;
+    const activePct = activeTotal ? Math.round((activeDone / activeTotal) * 100) : 0;
+
+    const skillTabsHtml = [
+      { key: 'all', label: 'Tất cả' },
+      { key: 'reading', label: 'Reading' },
+      { key: 'listening', label: 'Listening' },
+      { key: 'writing', label: 'Writing' },
+      { key: 'speaking', label: 'Speaking' },
+    ].filter((st) => st.key === 'all' || counts[st.key] > 0).map((st) => `
+      <button type="button" class="shw-skill-tab ${allHwFilterSkill === st.key ? 'active' : ''}"
+        onclick="TeacherStudio.setAllHwFilter('${st.key}')">
+        <span>${st.label}</span>
+        <span class="shw-tab-cnt tabular">${counts[st.key]}</span>
+      </button>
+    `).join('');
+
+    const clockSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>';
+
+    const cardsHtml = visibleList.length
+      ? visibleList.map((e) => {
+          const t = e.task;
+          const sm = skillMeta(t.skill);
+          const isPrac = Boolean(parsePracticeTaskId(t.id));
+          const isExp = e.deadlineAt > 0 && e.deadlineAt <= nowMs;
+          const remMs = e.deadlineAt > 0 ? Math.max(0, e.deadlineAt - nowMs) : 0;
+
+          let statusPill = '<span class="thw-status-pill is-missing">Chưa làm</span>';
+          let stateCls = '';
+          if (e.completed) {
+            statusPill = `<span class="thw-status-pill is-done">✓ ${esc(e.row?.scoreLabel || 'Đã nộp')}</span>`;
+            stateCls = 'is-done';
+          } else if (e.locked) {
+            statusPill = `<span class="ts-skill-pill" style="background:var(--ts-danger-bg);color:var(--ts-danger);border-color:var(--ts-danger-bd);">Khóa ${formatMmSs(e.row.lock.remainingMs)}</span>`;
+            stateCls = 'is-locked';
+          } else if (e.row?.bucket === 'progress') {
+            statusPill = `<span class="thw-status-pill is-progress">${esc(e.row.progressLabel || 'Đang làm')}</span>`;
+          } else if (isExp) {
+            statusPill = '<span class="thw-status-pill is-missing">Quá hạn</span>';
+            stateCls = 'is-expired';
+          }
+
+          let dlPill = `<span class="shw-dl-pill is-unlimited">${clockSvg}<span>Không giới hạn</span></span>`;
+          if (isExp) {
+            dlPill = `<span class="shw-dl-pill is-urgent" title="Đóng lúc ${esc(formatDeadlineTs(e.deadlineAt))}">${clockSvg}<span>Hết hạn ${esc(formatDeadlineTs(e.deadlineAt))}</span></span>`;
+          } else if (e.deadlineAt > nowMs) {
+            const urg = remMs <= 15 * 60 * 1000;
+            dlPill = `<span class="shw-dl-pill ${urg ? 'is-urgent' : ''} tabular" title="Đóng lúc ${esc(formatDeadlineTs(e.deadlineAt))}">${clockSvg}<span data-shw-dl="${e.deadlineAt}">Còn ${esc(formatDeadlineRemaining(remMs))}</span></span>`;
+          }
+
+          const btnLabel = e.completed ? 'Xem lại' : (isExp ? 'Mở xem' : 'Vào làm →');
+          const btnCls = e.completed || isExp ? 'btn shw-open-btn' : 'btn btn-primary shw-open-btn';
+
+          return `
+            <article class="shw-item ${stateCls}">
+              <div class="shw-item-top">
+                <div class="shw-item-badges">
+                  <span class="ts-skill-pill is-${esc(t.skill)}">${esc(sm.label.toUpperCase())}</span>
+                  <span class="shw-kind-pill">${isPrac ? 'Practice' : 'Task'}</span>
+                </div>
+                ${statusPill}
+              </div>
+              <div class="shw-item-title">${esc(t.code)}</div>
+              <div class="shw-item-sub">${esc(t.theme || sm.sub)}</div>
+              <div class="shw-item-foot">
+                ${dlPill}
+                <button type="button" class="${btnCls}" onclick="TeacherStudio.openStudentSkillTask('${esc(t.id)}')">${btnLabel}</button>
+              </div>
+            </article>
+          `;
+        }).join('')
+      : `
+        <div class="shw-empty" style="grid-column:1 / -1;">
+          <div class="shw-empty-title">Hiện chưa có bài tập nào đang được giao</div>
+          <div class="shw-empty-sub">Khi giáo viên giao bài ở bất kỳ kỹ năng nào (Reading, Listening, Writing, Speaking — cả Task &amp; Practice), tất cả sẽ tự động hiển thị tại đây.</div>
+          <div class="shw-empty-pills">
+            <button type="button" class="tot-demo-btn" style="height:32px;padding:0 12px;font-size:12px;" onclick="TeacherStudio.closeAllAssignedHomeworkModal(); window.TotoroUI?.enterSkillMode?.('Reading', 'task')">Reading</button>
+            <button type="button" class="tot-demo-btn" style="height:32px;padding:0 12px;font-size:12px;" onclick="TeacherStudio.closeAllAssignedHomeworkModal(); window.TotoroUI?.enterSkillMode?.('Listening', 'task')">Listening</button>
+            <button type="button" class="tot-demo-btn" style="height:32px;padding:0 12px;font-size:12px;" onclick="TeacherStudio.closeAllAssignedHomeworkModal(); window.TotoroUI?.enterSkillMode?.('Writing', 'task')">Writing</button>
+            <button type="button" class="tot-demo-btn" style="height:32px;padding:0 12px;font-size:12px;" onclick="TeacherStudio.closeAllAssignedHomeworkModal(); window.TotoroUI?.enterSkillMode?.('Speaking', 'task')">Speaking</button>
+          </div>
+        </div>
+      `;
+
+    ov.innerHTML = `
+      <div class="modal-card shw-card" onclick="event.stopPropagation()">
+        <div class="modal-header shw-head">
+          <div>
+            <div class="modal-title" style="font-size:17px;">Bài tập đang được giao · 4 kỹ năng</div>
+            <div style="font-size:12.5px;color:var(--ink-2);margin-top:2px;">Tổng hợp tất cả bài Task &amp; Practice thầy giao ở Reading, Listening, Writing và Speaking</div>
+          </div>
+          <button type="button" class="btn-icon-glass" style="width:32px;height:32px;" onclick="TeacherStudio.closeAllAssignedHomeworkModal()" aria-label="Đóng">✕</button>
+        </div>
+        <div class="modal-body shw-body">
+          ${activeTotal > 0 ? `
+            <div class="shw-prog-bar">
+              <div class="shw-prog-top">
+                <span>Tiến độ bài tập đang giao (tất cả chế độ)</span>
+                <strong class="tabular">${activeDone} / ${activeTotal} hoàn thành (${activePct}%)</strong>
+              </div>
+              <div class="shw-prog-track"><div class="shw-prog-fill" style="width:${activePct}%"></div></div>
+            </div>
+          ` : ''}
+
+          ${(activeTotal > 0 || expiredList.length > 0) ? `
+            <div class="shw-filter-bar">
+              <div class="shw-skill-tabs" role="tablist">${skillTabsHtml}</div>
+              ${expiredList.length > 0 ? `
+                <div class="shw-bucket-seg" role="tablist">
+                  <button type="button" class="shw-bucket-btn ${allHwBucket === 'active' ? 'active' : ''}" onclick="TeacherStudio.setAllHwBucket('active')">Đang giao (${activeTotal})</button>
+                  <button type="button" class="shw-bucket-btn ${allHwBucket === 'expired' ? 'active' : ''}" onclick="TeacherStudio.setAllHwBucket('expired')">Hết hạn (${expiredList.length})</button>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <div class="shw-grid">${cardsHtml}</div>
+        </div>
+      </div>
+    `;
+    updateStudentHomeworkBadge();
+  }
+
+  function openAllAssignedHomeworkModal() {
+    document.getElementById('modal-all-assigned-hw')?.remove();
+    allHwFilterSkill = 'all';
+    allHwBucket = 'active';
+    const ov = document.createElement('div');
+    ov.id = 'modal-all-assigned-hw';
+    ov.className = 'modal-overlay open';
+    ov.style.zIndex = '2550';
+    ov.onclick = (e) => closeAllAssignedHomeworkModal(e);
+    document.body.appendChild(ov);
+    renderAllAssignedHomeworkModal();
+    if (allHwModalTicker) clearInterval(allHwModalTicker);
+    allHwModalTicker = setInterval(tickAllAssignedHomeworkCountdowns, 1000);
+    if (typeof B()?.syncPullClassData === 'function' && !B()?.isTeacherUser?.()) {
+      Promise.resolve(B().syncPullClassData()).then(() => {
+        if (document.getElementById('modal-all-assigned-hw')) renderAllAssignedHomeworkModal();
+        else updateStudentHomeworkBadge();
+      }).catch(() => {});
+    }
+  }
+
+  Object.assign(window.TeacherStudio, {
+    openAllAssignedHomeworkModal,
+    closeAllAssignedHomeworkModal,
+    setAllHwFilter: (sk) => { allHwFilterSkill = sk || 'all'; renderAllAssignedHomeworkModal(); },
+    setAllHwBucket: (b) => { allHwBucket = b === 'expired' ? 'expired' : 'active'; renderAllAssignedHomeworkModal(); },
+    updateStudentHomeworkBadge,
+    getStudentAssignedHomeworkBuckets,
+  });
+
+  window.addEventListener('reading-practice-updated', () => updateStudentHomeworkBadge());
+  window.addEventListener('listening-practice-updated', () => updateStudentHomeworkBadge());
+  window.addEventListener('storage', () => updateStudentHomeworkBadge());
+
   // CRITICAL BOOT HOOK: When app.js already restored a saved login session BEFORE teacher_studio.js loaded,
   // tasks.js ran early while window.TeacherStudio was undefined. Route any incoming ?task=/?tasks=/?wtask= now!
   if (B()?.getCurrentUser?.()) {
-    setTimeout(() => handleIncomingUrlIfMultiSkill(), 80);
+    setTimeout(() => {
+      handleIncomingUrlIfMultiSkill();
+      updateStudentHomeworkBadge();
+    }, 80);
   }
 })();

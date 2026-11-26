@@ -2423,6 +2423,10 @@
   }
 
   function openStudentTasksModal() {
+    if (typeof window.TeacherStudio?.openAllAssignedHomeworkModal === 'function') {
+      window.TeacherStudio.openAllAssignedHomeworkModal();
+      return;
+    }
     const curScope = B()?.getCurrentScopeKey?.() || '';
     if (isAnyTaskId(curScope)) {
       const curT = getTaskById(curScope);

@@ -80,7 +80,7 @@
       if (!raw) return '';
       if (/^(?:lp|lp_full):/i.test(raw) || /^(lp\d|lmap|lcf|lcore|ltask)_/i.test(raw)) return 'Listening';
       if (/^wp:/i.test(raw) || /^w_/i.test(raw)) return 'Writing';
-      if (/^sp_/i.test(raw)) return 'Speaking';
+      if (/^sp:/i.test(raw) || /^sp_/i.test(raw)) return 'Speaking';
       if (/^(?:rp|rp_full):/i.test(raw) || /^(task|fnd|acd|adv)_\d+$/i.test(raw) || /^\d{1,2}$/.test(raw)) return 'Reading';
     } catch (_) {}
     return '';
@@ -90,7 +90,7 @@
     try {
       const sp = new URLSearchParams(window.location.search || '');
       const tParam = `${sp.get('task') || ''},${sp.get('tasks') || ''}`;
-      if (/\b(?:rp|rp_full|lp|lp_full|wp):/i.test(tParam)) return 'practice';
+      if (/\b(?:rp|rp_full|lp|lp_full|wp|sp):/i.test(tParam)) return 'practice';
       if (sp.get('task') || sp.get('tasks') || sp.get('wtask') || sp.get('adminTest')) {
         const urlSk = detectSkillFromUrlTaskParam();
         if (urlSk === 'Listening' || urlSk === 'Speaking') return 'task';
