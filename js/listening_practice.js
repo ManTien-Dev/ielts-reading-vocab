@@ -778,6 +778,7 @@
           </div>
         </div>
         <div class="lp-row-actions">
+          ${B()?.isTeacherUser?.() ? `<button type="button" class="rp-btn-assign lp-row-btn" style="flex:0 0 auto;padding:0 10px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'listening', itemId: '${esc(item.id)}', isFull: ${isFull ? 'true' : 'false'}, title: '${esc(item.title || item.id).replace(/'/g, "\\'")}', subtitle: '${esc(partLabel).replace(/'/g, "\\'")}' })" title="Tạo link giao bài Zalo cho học sinh">🔗 Giao</button>` : ''}
           <button type="button" class="btn-subtle lp-row-btn" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'practice')">Luyện tập</button>
           <button type="button" class="btn btn-primary lp-row-btn" onclick="ListeningPracticeApp.startItem('${esc(item.id)}', ${isFull ? 'true' : 'false'}, 'exam')">${isFull ? 'Thi Full Test →' : 'Thi thật →'}</button>
         </div>
@@ -2166,6 +2167,7 @@
 
             <div class="ins-hdr-right">
               ${isPractice ? timerBlockHtml : '<span class="lp-ins-mode-tag is-exam">Thi thật</span>'}
+              <span class="rp-ac-shield" title="Chống gian lận đang bật trong phòng làm bài"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Anti-Cheat</span></span>
               ${practiceProgPillHtml}
               <button type="button" class="ins-hdr-ico ${isPractice ? 'prac-hdr-ico' : ''} ${s.notesOpen ? 'active' : ''}" onclick="ListeningPracticeApp.toggleNotesDrawer()" title="Notes" aria-label="Notes">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -2183,26 +2185,34 @@
           <!-- Official Listening Audio Strip (Washi styled in Practice · Official locked in Exam) -->
           ${renderAudioBarHtml(part, false)}
 
-          <!-- Full-width Official Part Sub-Banner (BOTH Practice & Exam — 1:1 CD-IELTS hierarchy!) -->
-          <div class="ins-part-banner ${isPractice ? 'is-practice' : ''}">
-            <div class="lp-part-banner-row">
-              <div>
-                <strong>Part ${part.partNum || 1}</strong>
-                <span>Listen and answer questions ${qMin}–${qMax}.</span>
+          ${!isPractice ? `
+            <!-- Full-width Official Part Sub-Banner (flush above paper in Exam mode) -->
+            <div class="ins-part-banner">
+              <div class="lp-part-banner-row">
+                <div>
+                  <strong>Part ${part.partNum || 1}</strong>
+                  <span>Listen and answer questions ${qMin}–${qMax}.</span>
+                </div>
               </div>
-              ${isPractice ? `
-                <button type="button" class="prac-eyebrow-clear is-empty" id="lp-prac-hl-clear" disabled
-                  onclick="ListeningPracticeApp.clearAllPaperHighlights()">
-                  Xóa <span id="lp-prac-hl-cnt">0</span> màu
-                </button>
-              ` : ''}
             </div>
-          </div>
+          ` : ''}
 
-          <!-- Question Paper Body (Full-width authentic CD-IELTS layout in BOTH modes!) -->
+          <!-- Question Paper Body (Unified single-sheet layout — NO split card gap between Part banner & questions!) -->
           <div class="lp-ins-body ${isPractice ? 'lp-prac-desk' : ''}">
             ${isPractice ? `
-              <div class="prac-sheet-shell ink-brackets lp-prac-folio">
+              <div class="prac-sheet-shell lp-prac-folio">
+                <div class="lp-prac-folio-head">
+                  <div class="lp-part-banner-row">
+                    <div>
+                      <strong>Part ${part.partNum || 1}</strong>
+                      <span>Listen and answer questions ${qMin}–${qMax}.</span>
+                    </div>
+                    <button type="button" class="prac-eyebrow-clear is-empty" id="lp-prac-hl-clear" disabled
+                      onclick="ListeningPracticeApp.clearAllPaperHighlights()">
+                      Xóa <span id="lp-prac-hl-cnt">0</span> màu
+                    </button>
+                  </div>
+                </div>
                 <main class="lp-ins-scroll">
                   <div class="lp-ins-paper" id="lp-ex-paper">${part.html || ''}</div>
                 </main>
@@ -2303,6 +2313,8 @@
       title: s.title,
       partIds: s.partIds.slice(),
       activePartIdx: 0,
+      rightTab: 'paper',
+      activeQNum: rows[0]?.num || 1,
       transcriptQuery: '',
       score: totalCorrect,
       total: totalQuestions,
@@ -2312,24 +2324,336 @@
     };
   }
 
-  function renderHighlightedTranscript(transcript, query) {
+  function extractSearchableAnswerTerms(officialStr) {
+    const raw = String(officialStr || '').trim();
+    if (!raw) return [];
+    const variants = buildAcceptedVariants(raw);
+    const out = [];
+    const seen = new Set();
+    variants.forEach((v) => {
+      const clean = String(v || '').trim();
+      if (!clean) return;
+      // Skip bare single-letter MCQ keys (A, B, C, D...) to avoid noisy false matches in transcript
+      if (/^[a-z]$/i.test(clean)) return;
+      if (clean.length < 2 && !/^\d+$/.test(clean)) return;
+      const low = clean.toLowerCase();
+      if (!seen.has(low)) {
+        seen.add(low);
+        out.push(clean);
+      }
+    });
+    return out.sort((a, b) => b.length - a.length);
+  }
+
+  function buildTranscriptEvidenceHtml(transcript, partRows, query) {
     if (!transcript) {
-      return '<p class="lp-rev-empty-tr">Bài nghe này chưa có bản ghi Transcript đi kèm. Bạn có thể nghe lại trực tiếp bằng thanh Audio phía trên.</p>';
+      return {
+        html: '<div class="lp-yrev-empty-tr"><strong>Chưa có Transcript cho bài nghe này</strong><p>Bạn vẫn có thể nghe lại từng đoạn bằng thanh Audio phía trên và đối chiếu trực tiếp đáp án ở khung bên phải.</p></div>',
+        matchedQSet: new Set()
+      };
     }
-    const q = String(query || '').trim();
+
     const lines = String(transcript).split('\n').filter((x) => x.trim());
-    return lines.map((ln) => {
-      let safe = esc(ln);
-      if (q.length >= 2) {
-        const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-        safe = safe.replace(re, '<mark class="lp-tr-mark">$1</mark>');
+    const matchedQSet = new Set();
+    // Map each line index -> list of evidence spans { start, end, num, ok, official }
+    const lineSpans = lines.map(() => []);
+
+    const sortedRows = (partRows || []).slice().sort((a, b) => Number(a.num) - Number(b.num));
+    let searchFromLine = 0;
+
+    sortedRows.forEach((row) => {
+      const terms = extractSearchableAnswerTerms(row.official);
+      if (!terms.length) return;
+
+      const findInRange = (startIdx, endIdx) => {
+        for (let li = startIdx; li < endIdx; li++) {
+          const ln = lines[li];
+          // Skip matching inside speaker prefix (e.g. "WOMAN:")
+          const spkM = ln.match(/^([A-Z][a-zA-Z0-9 .'-]{1,22}:)\s*/);
+          const bodyStart = spkM ? spkM[0].length : 0;
+          const bodyTxt = ln.slice(bodyStart);
+
+          for (const term of terms) {
+            const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+            const re = new RegExp(`(?<![A-Za-z0-9])${escaped}(?![A-Za-z0-9])`, 'i');
+            const m = re.exec(bodyTxt);
+            if (m) {
+              const absStart = bodyStart + m.index;
+              const absEnd = absStart + m[0].length;
+              const overlaps = lineSpans[li].some((sp) => !(absEnd <= sp.start || absStart >= sp.end));
+              if (!overlaps) {
+                lineSpans[li].push({
+                  start: absStart,
+                  end: absEnd,
+                  num: row.num,
+                  ok: !!row.ok,
+                  official: row.official
+                });
+                matchedQSet.add(Number(row.num));
+                return li;
+              }
+            }
+          }
+        }
+        return -1;
+      };
+
+      let hitLine = findInRange(searchFromLine, lines.length);
+      if (hitLine < 0 && searchFromLine > 0) {
+        hitLine = findInRange(0, searchFromLine);
       }
-      const isSpeaker = /^([A-Z][a-zA-Z0-9 .'-]{1,22}:)\s*/.test(ln);
-      if (isSpeaker) {
-        safe = safe.replace(/^([^:]{1,24}:)/, '<strong class="lp-tr-spk">$1</strong>');
+      if (hitLine >= 0) {
+        searchFromLine = hitLine;
       }
-      return `<p class="lp-tr-line">${safe}</p>`;
+    });
+
+    const q = String(query || '').trim();
+    const qRe = q.length >= 2 ? new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi') : null;
+
+    const applyQueryMark = (rawStr) => {
+      const safe = esc(rawStr);
+      return qRe ? safe.replace(qRe, '<mark class="lp-tr-mark">$1</mark>') : safe;
+    };
+
+    const html = lines.map((ln, li) => {
+      const spkM = ln.match(/^([A-Z][a-zA-Z0-9 .'-]{1,22}:)\s*/);
+      const spkLabel = spkM ? spkM[1].replace(/:$/, '').trim() : '';
+      const bodyStart = spkM ? spkM[0].length : 0;
+
+      const spans = lineSpans[li].slice().sort((a, b) => a.start - b.start);
+      let cursor = bodyStart;
+      let bodyHtml = '';
+      spans.forEach((sp) => {
+        if (sp.start > cursor) {
+          bodyHtml += applyQueryMark(ln.slice(cursor, sp.start));
+        }
+        const sliceTxt = applyQueryMark(ln.slice(sp.start, sp.end));
+        bodyHtml += `<mark class="lp-tr-ev ${sp.ok ? 'is-ok' : 'is-bad'}" id="lp-rev-ev-${sp.num}" data-ev-q="${sp.num}" onclick="ListeningPracticeApp.jumpReviewQuestion(${sp.num})" title="Dẫn chứng Câu ${sp.num} · Đáp án: ${esc(sp.official)}"><span class="lp-tr-ev-tag">Q${sp.num}</span>${sliceTxt}</mark>`;
+        cursor = sp.end;
+      });
+      if (cursor < ln.length) {
+        bodyHtml += applyQueryMark(ln.slice(cursor));
+      }
+
+      const hasEv = spans.length > 0;
+      const evNumsAttr = hasEv ? ` data-line-qs="${spans.map((s) => s.num).join(',')}"` : '';
+      if (spkLabel) {
+        const spkTone = /^(MAN|MALE|TOM|JOHN|DAVID|MARK|ALEX|BEN|TUTOR|LECTURER|INTERVIEWER)/i.test(spkLabel) ? 'is-spk-b' : 'is-spk-a';
+        return `
+          <div class="lp-yrev-turn ${hasEv ? 'has-ev' : ''}"${evNumsAttr}>
+            <span class="lp-yrev-spk ${spkTone}">${esc(spkLabel)}</span>
+            <p class="lp-yrev-txt">${bodyHtml}</p>
+          </div>
+        `;
+      }
+      return `<div class="lp-yrev-turn is-narration ${hasEv ? 'has-ev' : ''}"${evNumsAttr}><p class="lp-yrev-txt">${bodyHtml}</p></div>`;
     }).join('');
+
+    return { html, matchedQSet };
+  }
+
+  function decorateReviewPaper(paper, partRows, matchedQSet) {
+    if (!paper) return;
+    enhanceListeningPaperLayout(paper);
+
+    const rowMap = {};
+    (partRows || []).forEach((r) => { rowMap[Number(r.num)] = r; });
+
+    const makeLocBtn = (qNum) => {
+      if (!matchedQSet || !matchedQSet.has(Number(qNum))) return null;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'lp-rev-loc-btn';
+      btn.title = `Xem dẫn chứng Câu ${qNum} trong Transcript`;
+      btn.textContent = '📍';
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        jumpReviewQuestion(qNum, true);
+      });
+      return btn;
+    };
+
+    // 1. Decorate text inputs (.lp-ex-gap)
+    paper.querySelectorAll('input.lp-ex-gap[data-q]').forEach((inp) => {
+      const qNum = Number(inp.getAttribute('data-q'));
+      const row = rowMap[qNum];
+      inp.readOnly = true;
+      inp.disabled = true;
+      if (!row) return;
+
+      inp.value = row.user || '';
+      if (!row.user) inp.placeholder = '—';
+      inp.classList.add(row.ok ? 'is-rev-ok' : 'is-rev-bad');
+
+      const wrap = document.createElement('span');
+      wrap.className = `lp-rev-inline-wrap ${row.ok ? 'is-ok' : 'is-bad'}`;
+      wrap.id = `lp-rev-q-${qNum}`;
+      wrap.setAttribute('data-rev-q', String(qNum));
+      wrap.addEventListener('click', () => jumpReviewQuestion(qNum, true));
+
+      inp.parentNode.insertBefore(wrap, inp);
+      wrap.appendChild(inp);
+
+      const chip = document.createElement('span');
+      chip.className = `lp-rev-ans-chip ${row.ok ? 'is-ok' : 'is-ans'}`;
+      chip.textContent = row.ok ? '✓' : `✓ ${row.official}`;
+      wrap.appendChild(chip);
+
+      const loc = makeLocBtn(qNum);
+      if (loc) wrap.appendChild(loc);
+    });
+
+    // 2. Decorate selects (.lp-ex-select)
+    paper.querySelectorAll('select.lp-ex-select[data-q]').forEach((sel) => {
+      const qNum = Number(sel.getAttribute('data-q'));
+      const row = rowMap[qNum];
+      sel.disabled = true;
+      if (!row) return;
+      sel.value = row.user || '';
+      sel.classList.add(row.ok ? 'is-rev-ok' : 'is-rev-bad');
+
+      const wrap = document.createElement('span');
+      wrap.className = `lp-rev-inline-wrap ${row.ok ? 'is-ok' : 'is-bad'}`;
+      wrap.id = `lp-rev-q-${qNum}`;
+      wrap.setAttribute('data-rev-q', String(qNum));
+      wrap.addEventListener('click', () => jumpReviewQuestion(qNum, true));
+
+      sel.parentNode.insertBefore(wrap, sel);
+      wrap.appendChild(sel);
+
+      const chip = document.createElement('span');
+      chip.className = `lp-rev-ans-chip ${row.ok ? 'is-ok' : 'is-ans'}`;
+      chip.textContent = row.ok ? '✓' : `✓ ${row.official}`;
+      wrap.appendChild(chip);
+
+      const loc = makeLocBtn(qNum);
+      if (loc) wrap.appendChild(loc);
+    });
+
+    // 3. Decorate Radio MCQ options (.lp-ex-radio)
+    const anchoredQs = new Set();
+    paper.querySelectorAll('input.lp-ex-radio[data-q]').forEach((rad) => {
+      const qNum = Number(rad.getAttribute('data-q'));
+      const val = String(rad.value || '').trim().toUpperCase();
+      const row = rowMap[qNum];
+      rad.disabled = true;
+      if (!row) return;
+
+      const userUp = String(row.user || '').trim().toUpperCase();
+      const validSet = new Set(String(row.official || '').split('/').map((x) => x.trim().toUpperCase()).filter(Boolean));
+      const isUserPick = Boolean(userUp && val === userUp);
+      const isCorrectOpt = validSet.has(val);
+      rad.checked = isUserPick;
+
+      const lbl = rad.closest('label') || rad.parentElement;
+      if (lbl) {
+        if (!anchoredQs.has(qNum)) {
+          anchoredQs.add(qNum);
+          if (!document.getElementById(`lp-rev-q-${qNum}`)) {
+            const container = lbl.closest('.lp-ex-q-inline, .lp-cam-group, li, p') || lbl;
+            if (!container.id) container.id = `lp-rev-q-${qNum}`;
+          }
+        }
+        lbl.classList.remove('is-selected');
+        if (isUserPick && row.ok) {
+          lbl.classList.add('is-rev-ok');
+          lbl.insertAdjacentHTML('beforeend', '<span class="lp-rev-opt-tag is-ok">✓ Đúng</span>');
+        } else if (isUserPick && !row.ok) {
+          lbl.classList.add('is-rev-bad');
+          lbl.insertAdjacentHTML('beforeend', '<span class="lp-rev-opt-tag is-bad">✕ Bạn chọn</span>');
+        } else if (isCorrectOpt) {
+          lbl.classList.add('is-rev-correct');
+          lbl.insertAdjacentHTML('beforeend', '<span class="lp-rev-opt-tag is-ans">✓ Đáp án đúng</span>');
+        }
+        lbl.addEventListener('click', () => jumpReviewQuestion(qNum, true));
+      }
+    });
+
+    // 4. Decorate Checkbox Multi-Select options (.lp-ex-check)
+    paper.querySelectorAll('input.lp-ex-check[data-qnums]').forEach((chk) => {
+      const qnums = String(chk.getAttribute('data-qnums') || '').split(',').map((n) => Number(n.trim())).filter(Boolean);
+      const val = String(chk.value || '').trim().toUpperCase();
+      chk.disabled = true;
+      if (!qnums.length) return;
+      const firstQ = qnums[0];
+      const rowsGrp = qnums.map((n) => rowMap[n]).filter(Boolean);
+      if (!rowsGrp.length) return;
+
+      const userSet = new Set(rowsGrp.map((r) => String(r.user || '').trim().toUpperCase()).filter(Boolean));
+      const validSet = new Set(String(rowsGrp[0].official || '').split('/').map((x) => x.trim().toUpperCase()).filter(Boolean));
+      const isUserPick = userSet.has(val);
+      const isCorrectOpt = validSet.has(val);
+      chk.checked = isUserPick;
+
+      const lbl = chk.closest('label') || chk.parentElement;
+      if (lbl) {
+        qnums.forEach((qn) => {
+          if (!anchoredQs.has(qn)) {
+            anchoredQs.add(qn);
+            if (!document.getElementById(`lp-rev-q-${qn}`)) {
+              const container = lbl.closest('.lp-ex-q-inline, .lp-cam-group') || lbl;
+              if (!container.id) container.id = `lp-rev-q-${qn}`;
+            }
+          }
+        });
+        lbl.classList.remove('is-selected');
+        if (isUserPick && isCorrectOpt) {
+          lbl.classList.add('is-rev-ok');
+          lbl.insertAdjacentHTML('beforeend', '<span class="lp-rev-opt-tag is-ok">✓ Đúng</span>');
+        } else if (isUserPick && !isCorrectOpt) {
+          lbl.classList.add('is-rev-bad');
+          lbl.insertAdjacentHTML('beforeend', '<span class="lp-rev-opt-tag is-bad">✕ Bạn chọn</span>');
+        } else if (isCorrectOpt) {
+          lbl.classList.add('is-rev-correct');
+          lbl.insertAdjacentHTML('beforeend', '<span class="lp-rev-opt-tag is-ans">✓ Đáp án đúng</span>');
+        }
+        lbl.addEventListener('click', () => jumpReviewQuestion(firstQ, true));
+      }
+    });
+
+    // Enable diagram lightbox click in review mode too
+    paper.querySelectorAll('img').forEach((img) => {
+      img.classList.add('lp-ex-diagram');
+      img.title = 'Nhấn để phóng to sơ đồ / bản đồ';
+      img.addEventListener('click', () => openDiagramLightbox(img.src, img.alt));
+    });
+  }
+
+  function renderReviewSummaryTableHtml(partRows, matchedQSet, activeQNum) {
+    return `
+      <div class="lp-yrev-sum-wrap">
+        <table class="lp-yrev-sum-table">
+          <thead>
+            <tr>
+              <th style="width:62px;">Câu</th>
+              <th>Bạn điền</th>
+              <th>Đáp án chuẩn</th>
+              <th style="width:92px;">Kết quả</th>
+              <th style="width:128px;">Dẫn chứng</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${partRows.map((r) => {
+              const hasEv = matchedQSet && matchedQSet.has(Number(r.num));
+              const isAct = Number(activeQNum) === Number(r.num);
+              return `
+                <tr id="lp-rev-row-${r.num}" class="${r.ok ? 'is-ok' : 'is-bad'} ${isAct ? 'is-active' : ''}" onclick="ListeningPracticeApp.jumpReviewQuestion(${r.num}, true)">
+                  <td class="tabular"><span class="lp-yrev-qbadge ${r.ok ? 'is-ok' : 'is-bad'}">${r.num}</span></td>
+                  <td>${r.user ? `<span class="lp-yrev-userval ${r.ok ? 'is-ok' : 'is-bad'}">${esc(r.user)}</span>` : '<span class="lp-rev-blank">Bỏ trống</span>'}</td>
+                  <td class="lp-rev-off">${esc(r.official)}</td>
+                  <td><span class="lp-yrev-stpill ${r.ok ? 'is-ok' : 'is-bad'}">${r.ok ? '✓ Đúng' : '✕ Sai'}</span></td>
+                  <td>
+                    ${hasEv
+                      ? `<button type="button" class="lp-yrev-evbtn" onclick="event.stopPropagation(); ListeningPracticeApp.jumpReviewQuestion(${r.num}, true)">📍 Xem câu</button>`
+                      : '<span class="lp-rev-blank">—</span>'}
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
   }
 
   function renderReviewView() {
@@ -2349,108 +2673,196 @@
     const partRows = parts.length > 1
       ? rev.rows.filter((r) => r.partId === activePart?.id)
       : rev.rows;
+    const partOkCount = partRows.filter((r) => r.ok).length;
+    const partBadCount = partRows.length - partOkCount;
+    const rightTab = rev.rightTab === 'summary' ? 'summary' : 'paper';
 
-    const partTabsHtml = parts.length > 1 ? `
-      <div class="lp-ins-rev-tabs" role="tablist">
-        ${parts.map((pt, idx) => {
-          const pRows = rev.rows.filter((r) => r.partId === pt.id);
-          const pOk = pRows.filter((r) => r.ok).length;
-          return `
-            <button type="button" role="tab"
-              class="lp-ex-ptab ${idx === rev.activePartIdx ? 'active' : ''}"
-              onclick="ListeningPracticeApp.switchReviewPart(${idx})">
-              <span>Part ${pt.partNum || idx + 1}</span>
-              <small class="tabular">${pOk}/${pRows.length}</small>
-            </button>
-          `;
-        }).join('')}
-      </div>
-    ` : '';
+    const trBuilt = buildTranscriptEvidenceHtml(activePart?.transcript || '', partRows, rev.transcriptQuery || '');
+    rev._matchedQSet = trBuilt.matchedQSet;
+
+    const bandTone = rev.band >= 7.0 ? 'is-high' : (rev.band >= 5.5 ? 'is-mid' : 'is-low');
+
+    const bottomPartsHtml = parts.map((pt, pIdx) => {
+      const isCur = pIdx === (rev.activePartIdx || 0);
+      const pRows = rev.rows.filter((r) => r.partId === pt.id);
+      const pOk = pRows.filter((r) => r.ok).length;
+      if (!isCur) {
+        return `
+          <div class="ins-fpart-tab" onclick="ListeningPracticeApp.switchReviewPart(${pIdx})">
+            <span class="ins-fpart-lbl">Part ${pt.partNum || pIdx + 1}</span>
+            <span class="ins-fpart-stat tabular">${pOk}/${pRows.length}</span>
+          </div>
+        `;
+      }
+      return `
+        <div class="ins-fpart-group is-active">
+          <button type="button" class="ins-fpart-btn" onclick="ListeningPracticeApp.switchReviewPart(${pIdx})">
+            <strong>Part ${pt.partNum || pIdx + 1}</strong>
+          </button>
+          <div class="lp-yrev-qstrip">
+            ${pRows.map((r) => `
+              <button type="button"
+                class="lp-yrev-qpill ${r.ok ? 'is-ok' : 'is-bad'} ${Number(rev.activeQNum) === Number(r.num) ? 'is-active' : ''}"
+                data-rev-pill="${r.num}"
+                onclick="ListeningPracticeApp.jumpReviewQuestion(${r.num}, true)"
+                title="Câu ${r.num}: ${r.ok ? 'Đúng' : `Sai · Đáp án: ${esc(r.official)}`}">
+                ${r.num}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
 
     root.innerHTML = `
-      <div class="ins-shell lp-ins-shell ins-contrast-cd ins-size-regular">
+      <div class="ins-shell lp-ins-shell lp-yrev-shell ins-contrast-cd ins-size-regular">
         <div class="ins-main-col">
-          <header class="ins-header">
+          <!-- Compact YouPass-style Unified Review Header -->
+          <header class="ins-header lp-yrev-header">
             <div class="ins-hdr-left">
+              <button type="button" class="lp-yrev-back" onclick="ListeningPracticeApp.backToSourceFromReview()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                <span>Kho đề</span>
+              </button>
               <span class="ins-brand-mark">IELTS</span>
               <div class="ins-hdr-meta">
                 <div class="ins-hdr-title">${esc(rev.title)}</div>
-                <div class="ins-hdr-review-lbl">Review Mode · Answer Key &amp; Transcript Unlocked</div>
+                <div class="lp-yrev-sub">Chế độ xem lại · Đối chiếu Transcript &amp; Đáp án trực tiếp trên đề</div>
               </div>
             </div>
-            <div class="ins-hdr-right">
-              <button type="button" class="ins-hdr-exit" onclick="ListeningPracticeApp.startItem('${esc(rev.itemId)}', ${rev.isFull ? 'true' : 'false'}, '${esc(rev.mode)}')">Làm lại</button>
-              <button type="button" class="ins-hdr-pill active" onclick="ListeningPracticeApp.backToSourceFromReview()">← Quay lại bộ đề</button>
+
+            <div class="lp-yrev-hdr-right">
+              <div class="lp-yrev-kpis">
+                <span class="lp-yrev-kpi is-band ${bandTone}">
+                  <small>Band</small><strong class="tabular">${rev.band.toFixed(1)}</strong>
+                </span>
+                <span class="lp-yrev-kpi is-score">
+                  <strong class="tabular">${rev.score}/${rev.total}</strong><small>đúng (${pct}%)</small>
+                </span>
+                <span class="lp-yrev-kpi is-time tabular">⏱ ${formatMMSS(rev.elapsedSec)}</span>
+              </div>
+              <button type="button" class="lp-yrev-retry-btn" onclick="ListeningPracticeApp.startItem('${esc(rev.itemId)}', ${rev.isFull ? 'true' : 'false'}, '${esc(rev.mode)}')">
+                ↻ Làm lại
+              </button>
             </div>
           </header>
 
-          <div class="ins-review-strip lp-ins-rev-strip">
-            <div class="lp-ins-rev-metrics">
-              <div class="lp-rev-metric is-band">
-                <span class="lp-rev-mval tabular">${rev.band.toFixed(1)}</span>
-                <span class="lp-rev-mlbl">Band ước tính</span>
-              </div>
-              <div class="lp-rev-metric">
-                <span class="lp-rev-mval tabular">${rev.score}/${rev.total}</span>
-                <span class="lp-rev-mlbl">Chính xác ${pct}%</span>
-              </div>
-              <div class="lp-rev-metric">
-                <span class="lp-rev-mval tabular">${formatMMSS(rev.elapsedSec)}</span>
-                <span class="lp-rev-mlbl">Thời gian</span>
-              </div>
-            </div>
-            ${partTabsHtml}
-          </div>
-
+          <!-- Full-width Audio Player Bar -->
           ${activePart ? renderAudioBarHtml(activePart, true) : ''}
 
-          <div class="lp-ins-rev-scroll">
-            <div class="lp-rev-grid">
-              <section class="lp-rev-card">
-                <div class="lp-rev-card-head">
-                  <h3>Answer Key · Part ${activePart?.partNum || 1}</h3>
-                  <span class="lp-rev-card-pill tabular">${partRows.filter((r) => r.ok).length}/${partRows.length} đúng</span>
+          <!-- Full-Viewport 2-Column Split Workbench: LEFT = Transcript | RIGHT = Graded Question Paper / Answer Table -->
+          <div class="lp-yrev-split">
+            <section class="lp-yrev-pane is-transcript">
+              <div class="lp-yrev-pane-head">
+                <div class="lp-yrev-pane-title">
+                  <h3>Audio Script · Part ${activePart?.partNum || 1}</h3>
+                  ${trBuilt.matchedQSet.size > 0
+                    ? `<span class="lp-yrev-ev-chip tabular">📍 ${trBuilt.matchedQSet.size}/${partRows.length} dẫn chứng</span>`
+                    : ''}
                 </div>
-                <div class="lp-rev-table-wrap">
-                  <table class="lp-rev-table">
-                    <thead>
-                      <tr>
-                        <th>Câu</th>
-                        <th>Bạn điền</th>
-                        <th>Đáp án đúng</th>
-                        <th>KQ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${partRows.map((r) => `
-                        <tr class="${r.ok ? 'is-ok' : 'is-bad'}">
-                          <td class="tabular"><strong>${r.num}</strong></td>
-                          <td>${r.user ? esc(r.user) : '<span class="lp-rev-blank">—</span>'}</td>
-                          <td class="lp-rev-off">${esc(r.official)}</td>
-                          <td><span class="lp-rev-dot ${r.ok ? 'is-ok' : 'is-bad'}">${r.ok ? '✓' : '✕'}</span></td>
-                        </tr>
-                      `).join('')}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+                <input type="search" class="lp-tr-search" value="${esc(rev.transcriptQuery || '')}" placeholder="Tìm từ trong transcript..." oninput="ListeningPracticeApp.onTranscriptSearch(this.value)" autocomplete="off">
+              </div>
+              <div class="lp-yrev-pane-body lp-yrev-tr-body" id="lp-rev-transcript">
+                ${trBuilt.html}
+              </div>
+            </section>
 
-              <section class="lp-rev-card">
-                <div class="lp-rev-card-head">
-                  <h3>Transcript · ${esc(activePart?.title || '')}</h3>
-                  <input type="search" class="lp-tr-search" value="${esc(rev.transcriptQuery || '')}" placeholder="Tìm từ khóa trong Transcript..." oninput="ListeningPracticeApp.onTranscriptSearch(this.value)" autocomplete="off">
+            <section class="lp-yrev-pane is-paper">
+              <div class="lp-yrev-pane-head">
+                <div class="lp-yrev-seg" role="tablist">
+                  <button type="button" role="tab" class="lp-yrev-seg-btn ${rightTab === 'paper' ? 'active' : ''}" onclick="ListeningPracticeApp.switchReviewRightTab('paper')">
+                    📄 Đề thi &amp; Đáp án
+                  </button>
+                  <button type="button" role="tab" class="lp-yrev-seg-btn ${rightTab === 'summary' ? 'active' : ''}" onclick="ListeningPracticeApp.switchReviewRightTab('summary')">
+                    📋 Bảng tổng hợp
+                  </button>
                 </div>
-                <div class="lp-rev-transcript" id="lp-rev-transcript">
-                  ${renderHighlightedTranscript(activePart?.transcript || '', rev.transcriptQuery || '')}
+                <div class="lp-yrev-stat-pills tabular">
+                  <span class="lp-yrev-pill is-ok">✓ ${partOkCount} đúng</span>
+                  <span class="lp-yrev-pill is-bad">✕ ${partBadCount} sai</span>
                 </div>
-              </section>
-            </div>
+              </div>
+              <div class="lp-yrev-pane-body lp-yrev-paper-body" id="lp-rev-right-body">
+                ${rightTab === 'paper'
+                  ? `<div class="lp-ins-paper lp-yrev-paper" id="lp-rev-paper">${activePart?.html || ''}</div>`
+                  : renderReviewSummaryTableHtml(partRows, trBuilt.matchedQSet, rev.activeQNum)}
+              </div>
+            </section>
           </div>
+
+          <!-- Sticky Bottom Question Navigator Bar -->
+          <footer class="ins-footer lp-yrev-footer">
+            <div class="ins-footer-parts">${bottomPartsHtml}</div>
+            <div class="lp-yrev-foot-legend">
+              <span class="lp-yrev-leg"><i class="is-ok"></i>Đúng</span>
+              <span class="lp-yrev-leg"><i class="is-bad"></i>Sai / Trống</span>
+              <span class="lp-yrev-leg-hint">Nhấn số câu để nhảy tới dẫn chứng</span>
+            </div>
+          </footer>
         </div>
       </div>
     `;
 
+    if (rightTab === 'paper') {
+      const revPaper = document.getElementById('lp-rev-paper');
+      decorateReviewPaper(revPaper, partRows, trBuilt.matchedQSet);
+    }
     bindAudioPlayer(true);
+  }
+
+  function switchReviewRightTab(tab) {
+    const rev = state.lastReview;
+    if (!rev) return;
+    rev.rightTab = tab === 'summary' ? 'summary' : 'paper';
+    const rightBody = document.getElementById('lp-rev-right-body');
+    const map = DATA().PARTS || {};
+    const parts = rev.partIds.map((pid) => map[pid]).filter(Boolean);
+    const activePart = parts[rev.activePartIdx || 0] || parts[0];
+    const partRows = parts.length > 1 ? rev.rows.filter((r) => r.partId === activePart?.id) : rev.rows;
+
+    document.querySelectorAll('.lp-yrev-seg-btn').forEach((btn, idx) => {
+      btn.classList.toggle('active', (idx === 0 && rev.rightTab === 'paper') || (idx === 1 && rev.rightTab === 'summary'));
+    });
+
+    if (rightBody) {
+      if (rev.rightTab === 'paper') {
+        rightBody.innerHTML = `<div class="lp-ins-paper lp-yrev-paper" id="lp-rev-paper">${activePart?.html || ''}</div>`;
+        decorateReviewPaper(document.getElementById('lp-rev-paper'), partRows, rev._matchedQSet);
+      } else {
+        rightBody.innerHTML = renderReviewSummaryTableHtml(partRows, rev._matchedQSet, rev.activeQNum);
+      }
+    }
+  }
+
+  function jumpReviewQuestion(qNum, scrollTranscript = true) {
+    const rev = state.lastReview;
+    if (!rev) return;
+    const num = Number(qNum);
+    rev.activeQNum = num;
+
+    document.querySelectorAll('[data-rev-pill]').forEach((btn) => {
+      btn.classList.toggle('is-active', Number(btn.getAttribute('data-rev-pill')) === num);
+    });
+
+    // Scroll & pulse target in right pane (paper or summary row)
+    const targetRight = document.getElementById(rev.rightTab === 'summary' ? `lp-rev-row-${num}` : `lp-rev-q-${num}`);
+    if (targetRight) {
+      targetRight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetRight.classList.remove('lp-yrev-pulse');
+      void targetRight.offsetWidth;
+      targetRight.classList.add('lp-yrev-pulse');
+    }
+
+    // Scroll & pulse matching evidence in left transcript pane
+    if (scrollTranscript) {
+      const evEl = document.getElementById(`lp-rev-ev-${num}`);
+      if (evEl) {
+        evEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        evEl.classList.remove('lp-yrev-pulse');
+        void evEl.offsetWidth;
+        evEl.classList.add('lp-yrev-pulse');
+      }
+    }
   }
 
   function startItem(itemId, isFull, mode) {
@@ -2682,8 +3094,13 @@
     const map = DATA().PARTS || {};
     const parts = state.lastReview.partIds.map((pid) => map[pid]).filter(Boolean);
     const activePart = parts[state.lastReview.activePartIdx || 0] || parts[0];
+    const partRows = parts.length > 1
+      ? state.lastReview.rows.filter((r) => r.partId === activePart?.id)
+      : state.lastReview.rows;
     if (box) {
-      box.innerHTML = renderHighlightedTranscript(activePart?.transcript || '', state.lastReview.transcriptQuery);
+      const built = buildTranscriptEvidenceHtml(activePart?.transcript || '', partRows, state.lastReview.transcriptQuery);
+      state.lastReview._matchedQSet = built.matchedQSet;
+      box.innerHTML = built.html;
     }
   }
 
@@ -2733,6 +3150,16 @@
     launchListeningSpeedQuiz,
     openSignalDeck,
     startItem,
+    ensureSourceBankLoaded,
+    openAssignedItem: async (itemId, isFull, mode = 'practice') => {
+      const cleanId = String(itemId || '').trim();
+      if (!cleanId) return;
+      const src = /^lvol/i.test(cleanId) ? 'volume' : (/^l?act/i.test(cleanId) ? 'actual' : 'cambridge');
+      window.TotoroUI?.setListeningPracticeSub?.('exams');
+      window.TotoroUI?.enterSkillMode?.('Listening', 'practice');
+      await ensureSourceBankLoaded(src);
+      startItem(cleanId, !!isFull, mode === 'exam' ? 'exam' : 'practice');
+    },
     switchExamPart,
     focusQuestion,
     stepQuestion,
@@ -2751,6 +3178,8 @@
     submitExam,
     exitExam,
     switchReviewPart,
+    switchReviewRightTab,
+    jumpReviewQuestion,
     onTranscriptSearch,
     backToSourceFromReview,
     renderTotoroBookSvg,

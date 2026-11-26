@@ -1005,7 +1005,8 @@
   let cloudPushDebounce = null;
   let lastCloudSyncTime = '';
   let cloudGasVersion = 0;
-  let initialCloudPullSettled = true;
+  let initialCloudPullSettled = false;
+  let initialCloudPullUid = '';
 
   function getSyncUrl() {
     return String(window.APP_SYNC_URL || '').trim();
@@ -1216,10 +1217,20 @@
 
     if (currentUser && getScopedUid(currentUser.id) === scoped && sd.assessments && typeof sd.assessments === 'object') {
       let assessAdded = false;
+      const cloudSrsMap = (sd.srsData && typeof sd.srsData === 'object') ? sd.srsData : {};
       Object.entries(sd.assessments).forEach(([wid, lvl]) => {
-        if (!assessments[wid] && (lvl === 1 || lvl === 2 || lvl === 3)) {
+        if (lvl !== 1 && lvl !== 2 && lvl !== 3) return;
+        const curLvl = assessments[wid];
+        if (!curLvl) {
           assessments[wid] = lvl;
           assessAdded = true;
+        } else if (curLvl !== lvl) {
+          const cloudLast = Number(cloudSrsMap[wid]?.lastAt || 0);
+          const localLast = Number(srsData[wid]?.lastAt || 0);
+          if ((cloudLast > localLast) || (cloudLast === localLast && lvl > curLvl)) {
+            assessments[wid] = lvl;
+            assessAdded = true;
+          }
         }
       });
       if (sd.srsData && typeof sd.srsData === 'object') {
@@ -1403,6 +1414,7 @@
     updateCloudSyncBadge();
     if (!url) {
       initialCloudPullSettled = true;
+      initialCloudPullUid = currentUser ? getScopedUid(currentUser.id) : '';
       return;
     }
     try {
@@ -1449,7 +1461,6 @@
         nextCache[uid] = st;
       });
       cloudClassCache = nextCache;
-      initialCloudPullSettled = true;
 
       // Sync teacher live task deadlines (extend / end early / reopen) into localStorage for all clients
       try {
@@ -1479,16 +1490,24 @@
         const mine = cloudClassCache[activeUid];
         if (activeCloudNeedsReset && !isTeacherUser()) {
           if (mine) mergeCloudEntryIntoLocal(currentUser.id, mine);
+          initialCloudPullSettled = true;
+          initialCloudPullUid = activeUid;
           syncPushCurrentUser(false, { force: true, retries: 1 });
         } else if (mine) {
           mergeCloudEntryIntoLocal(currentUser.id, mine);
+          initialCloudPullSettled = true;
+          initialCloudPullUid = activeUid;
           if (!isTeacherUser() && hasPendingCloudPush(activeUid)) {
             syncPushCurrentUser(false, { force: true, retries: 1 });
           }
-        } else if (!isTeacherUser()) {
-          window.TasksModule?.onCloudMerged?.();
-          if (hasPendingCloudPush(activeUid)) {
-            syncPushCurrentUser(false, { force: true, retries: 1 });
+        } else {
+          initialCloudPullSettled = true;
+          initialCloudPullUid = activeUid;
+          if (!isTeacherUser()) {
+            window.TasksModule?.onCloudMerged?.();
+            if (hasPendingCloudPush(activeUid)) {
+              syncPushCurrentUser(false, { force: true, retries: 1 });
+            }
           }
         }
       }
@@ -1505,8 +1524,7 @@
       }
     } catch (err) {
       console.warn('Cloud pull skipped:', err);
-    } finally {
-      initialCloudPullSettled = true;
+      // Do NOT set initialCloudPullSettled = true on failure; prevents a blank browser from pushing empty state over cloud history!
     }
   }
 
@@ -1807,15 +1825,30 @@
     const force = Boolean(opts && opts.force);
     const maxRetries = Math.max(0, Number(opts && opts.retries || 0));
     if (!url || !currentUser || isTeacherUser()) return Promise.resolve(false);
-    if (!initialCloudPullSettled && !force) {
-      markPendingCloudPush(getScopedUid(currentUser.id), true);
+    const pushedUid = getScopedUid(currentUser.id);
+    const pullMatchesUser = initialCloudPullSettled && (!initialCloudPullUid || initialCloudPullUid === pushedUid);
+    if (!pullMatchesUser && !force) {
+      markPendingCloudPush(pushedUid, true);
       return Promise.resolve(false);
     }
     try {
-      const pushedUid = getScopedUid(currentUser.id);
+      // Safety merge: ensure any known cloud progress in cache is merged into local before building outgoing payload
+      if (cloudClassCache[pushedUid]?.syncData) {
+        mergeCloudEntryIntoLocal(currentUser.id, cloudClassCache[pushedUid]);
+      }
       const mins = getUserPeriodMinutes(currentUser.id);
       const mastered = getUserMasteredCount(currentUser.id);
       const streak = computeConsecutiveStreakForUser(currentUser.id);
+      const outSyncData = buildUserSyncData(currentUser.id);
+
+      // Anti-clobber guard: never let an empty outgoing payload overwrite non-empty cloud cache
+      const cachedCloudAssessCnt = Object.keys(cloudClassCache[pushedUid]?.syncData?.assessments || {}).length;
+      const outAssessCnt = Object.keys(outSyncData.assessments || {}).length;
+      if (!force && cachedCloudAssessCnt > 0 && outAssessCnt === 0) {
+        markPendingCloudPush(pushedUid, true);
+        return Promise.resolve(false);
+      }
+
       const payload = {
         id: currentUser.id,
         name: currentUser.name,
@@ -1824,7 +1857,7 @@
         monthMins: mins.monthMins,
         mastered,
         streak,
-        syncData: buildUserSyncData(currentUser.id),
+        syncData: outSyncData,
       };
 
       cloudClassCache[pushedUid] = {
@@ -6235,6 +6268,7 @@
   function enterAppForUser(account, options = {}) {
     resetInMemoryStudyState();
     currentUser = account;
+    initialCloudPullUid = '';
     initialCloudPullSettled = !getSyncUrl();
 
     const gateEl = document.getElementById('auth-gate');
@@ -6345,7 +6379,8 @@
       saveState();
       syncPushCurrentUser(true);
     }
-    initialCloudPullSettled = true;
+    initialCloudPullSettled = false;
+    initialCloudPullUid = '';
     resetInMemoryStudyState();
     currentUser = null;
     closeRecallModal(null, true);

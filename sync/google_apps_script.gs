@@ -218,7 +218,7 @@ function doGet(e) {
         syncData: syncData
       });
     }
-    return jsonOut_({ ok: true, gasVersion: 2, students: students, serverTime: new Date().toISOString() });
+    return jsonOut_({ ok: true, gasVersion: 3, students: students, serverTime: new Date().toISOString() });
   } catch (err) {
     return jsonOut_({ ok: false, error: String(err) });
   }
@@ -244,8 +244,11 @@ function compactSyncData_(sd, maxChars) {
   // Preserve all SYNC_META_KEYS first — NEVER drop resetEpoch, teacherUnlockedAt, taskLocks, taskProgress
   var slim = {
     resetEpoch: Number(sd.resetEpoch || 0),
+    skillNamespaceVersion: Number(sd.skillNamespaceVersion || 2),
+    activeSkillId: String(sd.activeSkillId || 'reading'),
     teacherUnlockedAt: Number(sd.teacherUnlockedAt || 0),
     teacherTaskUnlocks: (sd.teacherTaskUnlocks && typeof sd.teacherTaskUnlocks === 'object') ? sd.teacherTaskUnlocks : {},
+    teacherTaskDeadlines: (sd.teacherTaskDeadlines && typeof sd.teacherTaskDeadlines === 'object') ? sd.teacherTaskDeadlines : undefined,
     taskLocks: (sd.taskLocks && typeof sd.taskLocks === 'object') ? sd.taskLocks : {},
     taskProgress: (sd.taskProgress && typeof sd.taskProgress === 'object') ? sd.taskProgress : {},
     listeningTaskProgress: (sd.listeningTaskProgress && typeof sd.listeningTaskProgress === 'object') ? sd.listeningTaskProgress : {},
@@ -261,6 +264,7 @@ function compactSyncData_(sd, maxChars) {
     assessments: {},
     srsData: {}
   };
+  if (!slim.teacherTaskDeadlines) delete slim.teacherTaskDeadlines;
 
   var assessSrc = (sd.assessments && typeof sd.assessments === 'object') ? sd.assessments : {};
   var srsSrc = (sd.srsData && typeof sd.srsData === 'object') ? sd.srsData : {};
@@ -349,6 +353,263 @@ function parseSyncJsonSafe_(rawCell) {
   } catch (_) {
     return {};
   }
+}
+
+function mergeNumericMaxMap_(curMap, incMap) {
+  var out = {};
+  if (curMap && typeof curMap === 'object') {
+    Object.keys(curMap).forEach(function(k) {
+      var v = Number(curMap[k] || 0);
+      if (v > 0) out[k] = v;
+    });
+  }
+  if (incMap && typeof incMap === 'object') {
+    Object.keys(incMap).forEach(function(k) {
+      var v = Number(incMap[k] || 0);
+      if (v > Number(out[k] || 0)) out[k] = v;
+    });
+  }
+  return out;
+}
+
+function mergeStringArrayUnion_(curArr, incArr) {
+  var seen = {};
+  var pushAll = function(arr) {
+    if (!Array.isArray(arr)) return;
+    for (var i = 0; i < arr.length; i++) {
+      var s = String(arr[i] || '').trim();
+      if (s) seen[s] = true;
+    }
+  };
+  pushAll(curArr);
+  pushAll(incArr);
+  return Object.keys(seen).sort();
+}
+
+function mergeAssessmentsAndSrs_(curAssess, curSrs, incAssess, incSrs) {
+  var cA = (curAssess && typeof curAssess === 'object') ? curAssess : {};
+  var cS = (curSrs && typeof curSrs === 'object') ? curSrs : {};
+  var iA = (incAssess && typeof incAssess === 'object') ? incAssess : {};
+  var iS = (incSrs && typeof incSrs === 'object') ? incSrs : {};
+
+  var mA = {};
+  var mS = {};
+
+  Object.keys(cA).forEach(function(wid) {
+    var lv = Number(cA[wid] || 0);
+    if (lv === 1 || lv === 2 || lv === 3) mA[wid] = lv;
+  });
+  Object.keys(cS).forEach(function(wid) {
+    if (cS[wid] && typeof cS[wid] === 'object') mS[wid] = cS[wid];
+  });
+
+  // Merge SRS first by newest lastAt
+  Object.keys(iS).forEach(function(wid) {
+    var rec = iS[wid];
+    if (!rec || typeof rec !== 'object') return;
+    var prev = mS[wid];
+    if (!prev || Number(rec.lastAt || 0) >= Number(prev.lastAt || 0)) {
+      mS[wid] = rec;
+    }
+  });
+
+  // Merge assessments: never drop existing words; when both present, newer lastAt wins, tie -> higher level
+  Object.keys(iA).forEach(function(wid) {
+    var incLv = Number(iA[wid] || 0);
+    if (incLv !== 1 && incLv !== 2 && incLv !== 3) return;
+    var curLv = Number(mA[wid] || 0);
+    if (!curLv) {
+      mA[wid] = incLv;
+      return;
+    }
+    if (curLv === incLv) return;
+    var curLast = Number((cS[wid] && cS[wid].lastAt) || 0);
+    var incLast = Number((iS[wid] && iS[wid].lastAt) || 0);
+    if (incLast > curLast) {
+      mA[wid] = incLv;
+    } else if (curLast > incLast) {
+      mA[wid] = curLv;
+    } else {
+      mA[wid] = Math.max(curLv, incLv);
+    }
+  });
+
+  return { assessments: mA, srsData: mS };
+}
+
+function mergeTaskProgressMap_(curMap, incMap) {
+  var out = {};
+  if (curMap && typeof curMap === 'object') {
+    Object.keys(curMap).forEach(function(tid) {
+      if (curMap[tid] && typeof curMap[tid] === 'object') out[tid] = curMap[tid];
+    });
+  }
+  if (incMap && typeof incMap === 'object') {
+    Object.keys(incMap).forEach(function(tid) {
+      var rec = incMap[tid];
+      if (!rec || typeof rec !== 'object') return;
+      var prev = out[tid];
+      if (!prev) {
+        out[tid] = rec;
+        return;
+      }
+      var prevDone = Boolean(prev.completed || prev.passed || prev.status === 'completed');
+      var recDone = Boolean(rec.completed || rec.passed || rec.status === 'completed');
+      if (recDone && !prevDone) {
+        out[tid] = rec;
+      } else if (prevDone && !recDone) {
+        // Never downgrade a completed task back to incomplete
+        return;
+      } else {
+        var prevTs = Number(prev.updatedAt || prev.completedAt || 0);
+        var recTs = Number(rec.updatedAt || rec.completedAt || 0);
+        if (recTs >= prevTs) out[tid] = rec;
+      }
+    });
+  }
+  return out;
+}
+
+function mergeCertsMap_(curMap, incMap) {
+  var out = {};
+  if (curMap && typeof curMap === 'object') {
+    Object.keys(curMap).forEach(function(k) {
+      if (curMap[k] && typeof curMap[k] === 'object') out[k] = curMap[k];
+    });
+  }
+  if (incMap && typeof incMap === 'object') {
+    Object.keys(incMap).forEach(function(k) {
+      var rec = incMap[k];
+      if (!rec || typeof rec !== 'object') return;
+      var prev = out[k];
+      if (!prev) {
+        out[k] = rec;
+        return;
+      }
+      var prevPass = Boolean(prev.passed);
+      var recPass = Boolean(rec.passed);
+      if (recPass && !prevPass) {
+        out[k] = rec;
+      } else if (prevPass && !recPass) {
+        return;
+      } else {
+        var prevTs = Number(prev.completedAt || prev.updatedAt || 0);
+        var recTs = Number(rec.completedAt || rec.updatedAt || 0);
+        if (recTs >= prevTs) out[k] = rec;
+      }
+    });
+  }
+  return out;
+}
+
+function mergeDeadlinesMap_(curMap, incMap) {
+  var out = {};
+  if (curMap && typeof curMap === 'object') {
+    Object.keys(curMap).forEach(function(k) {
+      if (curMap[k] && typeof curMap[k] === 'object') out[k] = curMap[k];
+    });
+  }
+  if (incMap && typeof incMap === 'object') {
+    Object.keys(incMap).forEach(function(k) {
+      var rec = incMap[k];
+      if (!rec || typeof rec !== 'object') return;
+      var prev = out[k];
+      if (!prev || Number(rec.issuedAt || 0) >= Number(prev.issuedAt || 0)) {
+        out[k] = rec;
+      }
+    });
+  }
+  return out;
+}
+
+function mergeScopePositions_(curMap, incMap) {
+  var out = {};
+  if (curMap && typeof curMap === 'object') {
+    Object.keys(curMap).forEach(function(k) {
+      if (curMap[k]) out[k] = curMap[k];
+    });
+  }
+  if (incMap && typeof incMap === 'object') {
+    Object.keys(incMap).forEach(function(k) {
+      if (incMap[k]) out[k] = incMap[k];
+    });
+  }
+  return out;
+}
+
+function countLevel3Assessments_(assessObj) {
+  if (!assessObj || typeof assessObj !== 'object') return 0;
+  var cnt = 0;
+  Object.keys(assessObj).forEach(function(k) {
+    if (String(k).indexOf('mv_w_') === 0) return;
+    if (Number(assessObj[k] || 0) === 3) cnt++;
+  });
+  return cnt;
+}
+
+function formatDayKeyYmd_(y, m, d) {
+  return y + '-' + (m < 10 ? '0' + m : String(m)) + '-' + (d < 10 ? '0' + d : String(d));
+}
+
+function computeServerMetricsFromSync_(sd, tz) {
+  var zone = tz || 'Asia/Ho_Chi_Minh';
+  var now = new Date();
+  var todayStr = Utilities.formatDate(now, zone, 'yyyy-MM-dd');
+  var parts = todayStr.split('-');
+  var y = Number(parts[0]);
+  var m = Number(parts[1]); // 1..12
+  var d = Number(parts[2]);
+
+  var tMap = (sd && sd.timerByDay && typeof sd.timerByDay === 'object') ? sd.timerByDay : {};
+  var todaySecs = Number(tMap[todayStr] || 0);
+
+  // Use UTC-noon calendar math so DST/timezone offsets never shift dates
+  var todayNoon = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  var todayIdx = (todayNoon.getUTCDay() + 6) % 7; // Mon=0 .. Sun=6
+  var mondayMs = todayNoon.getTime() - todayIdx * 86400000;
+  var weekSecs = 0;
+  for (var i = 0; i < 7; i++) {
+    var wd = new Date(mondayMs + i * 86400000);
+    var wkKey = formatDayKeyYmd_(wd.getUTCFullYear(), wd.getUTCMonth() + 1, wd.getUTCDate());
+    weekSecs += Number(tMap[wkKey] || 0);
+  }
+
+  var daysInMonth = new Date(Date.UTC(y, m, 0, 12, 0, 0)).getUTCDate();
+  var monthSecs = 0;
+  for (var day = 1; day <= daysInMonth; day++) {
+    var moKey = formatDayKeyYmd_(y, m, day);
+    monthSecs += Number(tMap[moKey] || 0);
+  }
+
+  // Consecutive streak up to today (or yesterday if today not studied yet)
+  var completed = {};
+  if (sd && Array.isArray(sd.streakDays)) {
+    for (var s = 0; s < sd.streakDays.length; s++) {
+      var ds = String(sd.streakDays[s] || '').trim();
+      if (ds) completed[ds] = true;
+    }
+  }
+  Object.keys(tMap).forEach(function(dk) {
+    if (Number(tMap[dk] || 0) > 0) completed[dk] = true;
+  });
+
+  var streak = 0;
+  var cursorMs = todayNoon.getTime();
+  if (!completed[todayStr]) cursorMs -= 86400000;
+  while (streak < 1000) {
+    var cd = new Date(cursorMs);
+    var cKey = formatDayKeyYmd_(cd.getUTCFullYear(), cd.getUTCMonth() + 1, cd.getUTCDate());
+    if (!completed[cKey]) break;
+    streak++;
+    cursorMs -= 86400000;
+  }
+
+  return {
+    todayMins: Math.floor(todaySecs / 60),
+    weekMins: Math.floor(weekSecs / 60),
+    monthMins: Math.floor(monthSecs / 60),
+    streak: streak
+  };
 }
 
 function doPost(e) {
@@ -444,10 +705,18 @@ function doPost(e) {
       });
     }
 
-    // Default sync_user path
+    // Default sync_user path (monotonic union merge prevents blank/stale devices from wiping history!)
+    var tz = Session.getScriptTimeZone() || 'Asia/Ho_Chi_Minh';
     var incomingSync = (payload.syncData && typeof payload.syncData === 'object') ? payload.syncData : null;
+    var existingRowForSync = targetRow > 0 ? values[targetRow - 1] : null;
+    var finalTodayMins = Number(payload.todayMins || 0);
+    var finalWeekMins = Number(payload.weekMins || 0);
+    var finalMonthMins = Number(payload.monthMins || 0);
+    var finalMastered = Number(payload.mastered || 0);
+    var finalStreak = Number(payload.streak || 0);
+
     if (targetRow > 0 && incomingSync) {
-      var curSync = parseSyncJsonSafe_(values[targetRow - 1][8]);
+      var curSync = parseSyncJsonSafe_(existingRowForSync[8]);
       var existingEpoch = Number(curSync.resetEpoch || 0);
       var incomingEpoch = Number(incomingSync.resetEpoch || 0);
 
@@ -460,8 +729,32 @@ function doPost(e) {
         });
       }
 
-      // Guard 2: preserve newer teacherUnlockedAt + teacherTaskUnlocks & strip superseded taskLocks unless epoch increased
+      // Guard 2: monotonic union merge when in the same resetEpoch (NEVER lose historical progress!)
       if (incomingEpoch === existingEpoch) {
+        var rawIncAssess = (incomingSync.assessments && typeof incomingSync.assessments === 'object') ? incomingSync.assessments : {};
+        var rawIncL3 = countLevel3Assessments_(rawIncAssess);
+
+        incomingSync.timerByDay = mergeNumericMaxMap_(curSync.timerByDay, incomingSync.timerByDay);
+        incomingSync.wordsByDay = mergeNumericMaxMap_(curSync.wordsByDay, incomingSync.wordsByDay);
+        incomingSync.streakDays = mergeStringArrayUnion_(curSync.streakDays, incomingSync.streakDays);
+
+        var mergedVocab = mergeAssessmentsAndSrs_(curSync.assessments, curSync.srsData, incomingSync.assessments, incomingSync.srsData);
+        incomingSync.assessments = mergedVocab.assessments;
+        incomingSync.srsData = mergedVocab.srsData;
+
+        incomingSync.taskProgress = mergeTaskProgressMap_(curSync.taskProgress, incomingSync.taskProgress);
+        incomingSync.listeningTaskProgress = mergeTaskProgressMap_(curSync.listeningTaskProgress, incomingSync.listeningTaskProgress);
+        incomingSync.writingTaskProgress = mergeTaskProgressMap_(curSync.writingTaskProgress, incomingSync.writingTaskProgress);
+        incomingSync.speakingTaskProgress = mergeTaskProgressMap_(curSync.speakingTaskProgress, incomingSync.speakingTaskProgress);
+        incomingSync.listFinalCheckpoints = mergeCertsMap_(curSync.listFinalCheckpoints, incomingSync.listFinalCheckpoints);
+        incomingSync.listMasteryCerts = mergeCertsMap_(curSync.listMasteryCerts, incomingSync.listMasteryCerts);
+        incomingSync.scopePositions = mergeScopePositions_(curSync.scopePositions, incomingSync.scopePositions);
+
+        if (curSync.teacherTaskDeadlines || incomingSync.teacherTaskDeadlines) {
+          incomingSync.teacherTaskDeadlines = mergeDeadlinesMap_(curSync.teacherTaskDeadlines, incomingSync.teacherTaskDeadlines);
+        }
+
+        // Preserve newer teacherUnlockedAt + teacherTaskUnlocks & strip superseded taskLocks
         var existingUnlockAt = Number(curSync.teacherUnlockedAt || 0);
         var incomingUnlockAt = Number(incomingSync.teacherUnlockedAt || 0);
         var mergedUnlockAt = Math.max(existingUnlockAt, incomingUnlockAt);
@@ -477,10 +770,11 @@ function doPost(e) {
         });
         incomingSync.teacherTaskUnlocks = mergedPer;
 
-        var rawLocks = (incomingSync.taskLocks && typeof incomingSync.taskLocks === 'object') ? incomingSync.taskLocks : {};
+        // Union active taskLocks from both curSync and incomingSync, then strip any superseded by unlock
+        var combinedLocks = mergeNumericMaxMap_(curSync.taskLocks, incomingSync.taskLocks);
         var cleanLocks = {};
-        Object.keys(rawLocks).forEach(function(tid) {
-          var untilMs = Number(rawLocks[tid] || 0);
+        Object.keys(combinedLocks).forEach(function(tid) {
+          var untilMs = Number(combinedLocks[tid] || 0);
           var origin = untilMs - LOCK_WINDOW_MS;
           var perAt = Number(mergedPer[tid] || 0);
           if (untilMs > 0 && (mergedUnlockAt <= 0 || origin > mergedUnlockAt) && (perAt <= 0 || origin > perAt)) {
@@ -488,18 +782,31 @@ function doPost(e) {
           }
         });
         incomingSync.taskLocks = cleanLocks;
+
+        // Recompute summary metrics from mergedSync so a blank client pushing 0 can NEVER zero out Sheet columns!
+        var srvMetrics = computeServerMetricsFromSync_(incomingSync, tz);
+        finalTodayMins = Math.max(srvMetrics.todayMins, finalTodayMins);
+        finalWeekMins = Math.max(srvMetrics.weekMins, finalWeekMins);
+        finalMonthMins = Math.max(srvMetrics.monthMins, finalMonthMins);
+        finalStreak = Math.max(srvMetrics.streak, finalStreak);
+
+        var existingMastered = Number(existingRowForSync[5] || 0);
+        var mergedL3 = countLevel3Assessments_(incomingSync.assessments);
+        if (rawIncL3 < mergedL3 || (finalMastered === 0 && existingMastered > 0 && mergedL3 > 0)) {
+          finalMastered = Math.max(existingMastered, finalMastered);
+        }
       }
     }
 
     var syncJson = incomingSync ? compactSyncData_(incomingSync, MAX_SYNC_CELL_CHARS) : '';
     var rowData = [
       id,
-      String(payload.name || id),
-      Number(payload.todayMins || 0),
-      Number(payload.weekMins || 0),
-      Number(payload.monthMins || 0),
-      Number(payload.mastered || 0),
-      Number(payload.streak || 0),
+      String(payload.name || (existingRowForSync ? existingRowForSync[1] : '') || id),
+      finalTodayMins,
+      finalWeekMins,
+      finalMonthMins,
+      finalMastered,
+      finalStreak,
       nowStr,
       syncJson
     ];
@@ -512,8 +819,14 @@ function doPost(e) {
 
     return jsonOut_({
       ok: true,
+      gasVersion: 3,
       id: id,
       updatedAt: nowStr,
+      todayMins: finalTodayMins,
+      weekMins: finalWeekMins,
+      monthMins: finalMonthMins,
+      mastered: finalMastered,
+      streak: finalStreak,
       teacherUnlockedAt: incomingSync ? Number(incomingSync.teacherUnlockedAt || 0) : 0,
       taskLocks: (incomingSync && incomingSync.taskLocks) ? incomingSync.taskLocks : {}
     });
