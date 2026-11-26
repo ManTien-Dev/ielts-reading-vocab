@@ -80,6 +80,7 @@
     detailTaskId: '',
     detailFilter: 'all',
     remindedKeys: new Set(),
+    unlockingIds: new Set(),
     tickerId: null,
     quickAssignCtx: null,
     handledUrlKey: '',
@@ -1056,16 +1057,21 @@
     const acct = (bridge.getStudentAccounts?.() || []).find((a) => bridge.getScopedUid(a.id) === bridge.getScopedUid(studentId));
     const displayName = acct?.name || studentId;
 
+    state.unlockingIds.add(String(studentId));
     const p = bridge.unlockStudentCloudLocks?.(studentId, nowTs, lockKey || null);
     renderDashboard();
     if (document.getElementById('modal-teacher-task-detail')?.classList.contains('open') && state.detailTaskId) {
       renderDetailModalBody();
     }
+    const friendlyKey = lockKey === 'rp_prac_lock'
+      ? 'Reading Practice'
+      : (lockKey === 'w_prac_lock' ? 'Writing Practice' : (lockKey === 'w_task_lock' ? 'Writing Task' : (getTaskById(lockKey)?.shortCode || lockKey)));
     const labelMsg = lockKey
-      ? `Đã mở khóa bài ${getTaskById(lockKey)?.shortCode || lockKey} cho ${shortName(displayName)}!`
-      : `Đã mở khóa tất cả bài đang bị khóa cho ${shortName(displayName)}!`;
+      ? `✓ Đã mở khóa ${friendlyKey} cho ${shortName(displayName)} — bảo bạn tải lại trang (F5)!`
+      : `✓ Đã gửi lệnh mở khóa toàn bộ 4 kỹ năng cho ${shortName(displayName)} — bảo bạn tải lại trang (F5)!`;
     if (p && typeof p.then === 'function') {
       p.then((ok) => {
+        state.unlockingIds.delete(String(studentId));
         if (ok) bridge.showToast?.(labelMsg);
         renderDashboard();
         if (document.getElementById('modal-teacher-task-detail')?.classList.contains('open') && state.detailTaskId) {
@@ -1073,7 +1079,9 @@
         }
       });
     } else {
+      state.unlockingIds.delete(String(studentId));
       bridge.showToast?.(labelMsg);
+      renderDashboard();
     }
   }
 
@@ -1129,8 +1137,16 @@
   }
 
   function renderStatusUnlockCell(student, locks, nowMs) {
+    const busy = state.unlockingIds.has(String(student.id));
     if (!locks.length) {
-      return '<span class="ts-status-ok">Bình thường</span>';
+      return `
+        <div class="ts-status-row">
+          <span class="ts-status-ok">Bình thường</span>
+          <button type="button" class="ts-btn-force-unlock" ${busy ? 'disabled' : ''} onclick="TeacherStudio.unlockStudentTask('${esc(student.id)}')" title="Gửi lệnh mở khóa toàn bộ 4 kỹ năng (Reading Task, Reading Practice, Listening, Writing, Speaking) lên Google Sheet cho học viên này">
+            ${busy ? 'Đang mở...' : 'Mở khóa'}
+          </button>
+        </div>
+      `;
     }
     if (locks.length === 1) {
       const lk = locks[0];
