@@ -2627,14 +2627,49 @@
     return w;
   }
 
+  let syncPackPromise = null;
+  function getRealSyncCuesForPart(partId) {
+    if (!partId) return null;
+    const raw = window.__LISTENING_SYNC__?.[partId];
+    return Array.isArray(raw) && raw.length ? raw : null;
+  }
+
+  function ensureListeningSyncPackLoaded(partId) {
+    if (!partId || getRealSyncCuesForPart(partId)) return Promise.resolve(true);
+    if (!/^lcam_(1[5-9]|20)_/i.test(String(partId))) return Promise.resolve(false);
+    if (syncPackPromise) return syncPackPromise;
+    syncPackPromise = new Promise((resolve) => {
+      const sc = document.createElement('script');
+      sc.src = 'data/listening_sync_cam15_20.js?v=20261128f';
+      sc.async = true;
+      sc.onload = () => resolve(Boolean(getRealSyncCuesForPart(partId)));
+      sc.onerror = () => resolve(false);
+      document.head.appendChild(sc);
+    });
+    return syncPackPromise;
+  }
+
   function buildReviewTimelineFromSyncCues(syncCues) {
     if (!Array.isArray(syncCues) || !syncCues.length) return null;
-    const turns = syncCues.map((c, idx) => ({
-      idx,
-      start: Number(c.start) || 0,
-      end: Number(c.end) || 0,
-      words: Array.isArray(c.words) ? c.words : []
-    }));
+    const turns = syncCues.map((c, idx) => {
+      if (Array.isArray(c)) {
+        const start = (Number(c[0]) || 0) / 10;
+        const end = (Number(c[1]) || 0) / 10;
+        const wArr = Array.isArray(c[2]) ? c[2] : [];
+        const words = wArr.map((ws10, wi) => {
+          const ws = (Number(ws10) || 0) / 10;
+          const nextWs = wi + 1 < wArr.length ? (Number(wArr[wi + 1]) || 0) / 10 : end;
+          return { start: ws, end: Math.max(ws + 0.06, nextWs) };
+        });
+        return { idx, start, end, words };
+      }
+      return {
+        idx,
+        start: Number(c.start) || 0,
+        end: Number(c.end) || 0,
+        words: Array.isArray(c.words) ? c.words : []
+      };
+    });
     const lastEnd = turns.length ? turns[turns.length - 1].end : 0;
     return { duration: lastEnd, turns, verified: true };
   }
@@ -2673,21 +2708,21 @@
   }
 
   function syncReviewKaraokeAtTime(currentSec, allowAutoScroll = true) {
-    if (!reviewTimeline || !reviewTimeline.turns.length) return;
+    if (!reviewTimeline || !reviewTimeline.verified || !reviewTimeline.turns.length) return;
     const t = Math.max(0, Number(currentSec) || 0);
     const turns = reviewTimeline.turns;
 
-    // Find active turn
+    // Find active turn ONLY within its real spoken window (stays clean during narrator intro / mid-part silence / outro!)
     let activeIdx = -1;
     for (let i = 0; i < turns.length; i++) {
-      const nextStart = i + 1 < turns.length ? turns[i + 1].start : turns[i].end + 4;
-      if (t >= turns[i].start - 0.15 && t < nextStart - 0.05) {
+      const turn = turns[i];
+      const nextStart = i + 1 < turns.length ? turns[i + 1].start : turn.end + 0.6;
+      const gapToNext = nextStart - turn.end;
+      const endBound = gapToNext > 3.5 ? turn.end + 0.45 : nextStart - 0.05;
+      if (t >= turn.start - 0.15 && t <= endBound) {
         activeIdx = i;
         break;
       }
-    }
-    if (activeIdx < 0 && t >= turns[0].start) {
-      activeIdx = turns.length - 1;
     }
 
     if (activeIdx !== reviewActiveTurnIdx) {
@@ -2766,7 +2801,7 @@
     const out = [];
     rawLines.forEach((ln) => {
       const trimmed = String(ln || '').trim();
-      if (!trimmed) return;
+      if (!trimmed || /^[-—–=_*•.\s]{3,}$/.test(trimmed)) return;
       const hasSpk = /^([A-Z][a-zA-Z0-9 .'-]{1,22}:)\s*/.test(trimmed);
       if (hasSpk || trimmed.length <= 520) {
         out.push(trimmed);
@@ -2803,7 +2838,7 @@
     }
 
     const rawLines = String(transcript).split('\n').filter((x) => x.trim());
-    const lines = hasRealSync ? rawLines : splitLongMonologueLines(rawLines);
+    const lines = splitLongMonologueLines(rawLines);
     const matchedQSet = new Set();
     const lineSpans = lines.map(() => []);
 
@@ -3188,13 +3223,26 @@
     const partBadCount = partRows.length - partOkCount;
     const rightTab = rev.rightTab === 'summary' ? 'summary' : 'paper';
 
-    const hasRealSync = Array.isArray(activePart?.syncCues) && activePart.syncCues.length > 0;
+    const rawSyncCues = activePart?.syncCues || getRealSyncCuesForPart(activePart?.id);
+    const hasRealSync = Array.isArray(rawSyncCues) && rawSyncCues.length > 0;
     const trBuilt = buildTranscriptEvidenceHtml(activePart?.transcript || '', partRows, rev.transcriptQuery || '', hasRealSync);
+    // Verify turn count matches before enabling real sync
+    const syncValid = hasRealSync && rawSyncCues.length === trBuilt.turnMeta.length;
     rev._matchedQSet = trBuilt.matchedQSet;
     rev._turnMeta = trBuilt.turnMeta;
-    rev._syncCues = hasRealSync ? activePart.syncCues : null;
+    rev._syncCues = syncValid ? rawSyncCues : null;
     reviewActiveTurnIdx = -1;
-    reviewTimeline = hasRealSync ? buildReviewTimelineFromSyncCues(activePart.syncCues) : null;
+    reviewTimeline = syncValid ? buildReviewTimelineFromSyncCues(rawSyncCues) : null;
+
+    if (!syncValid && activePart?.id && /^lcam_(1[5-9]|20)_/i.test(activePart.id) && !window.__LISTENING_SYNC__?.[activePart.id]) {
+      const targetPid = activePart.id;
+      ensureListeningSyncPackLoaded(targetPid).then((loaded) => {
+        if (loaded && state.view === 'review' && state.lastReview === rev) {
+          const curP = (state.lastReview.partIds || []).map((id) => (DATA().PARTS || {})[id])[state.lastReview.activePartIdx || 0];
+          if (curP?.id === targetPid) renderReviewView();
+        }
+      });
+    }
 
     const bandTone = rev.band >= 7.0 ? 'is-high' : (rev.band >= 5.5 ? 'is-mid' : 'is-low');
 
@@ -3261,8 +3309,8 @@
               </span>
               <div class="ins-hdr-meta">
                 <div class="ins-hdr-title">${esc(rev.title)}</div>
-                <div class="lp-yrev-sub">${hasRealSync
-                  ? 'Xem lại bài làm · Nhấn từng lượt thoại để nghe &amp; theo dõi chữ chạy'
+                <div class="lp-yrev-sub">${syncValid
+                  ? 'Xem lại bài làm · Nhấn từng lượt thoại để nghe &amp; theo dõi chữ chạy khớp 100% Audio'
                   : 'Xem lại bài làm · Đối chiếu Audio Script &amp; Đáp án · Dùng thanh Audio −5s / +5s để tua nghe lại'}</div>
               </div>
             </div>
@@ -3292,6 +3340,7 @@
               <div class="lp-yrev-pane-head">
                 <div class="lp-yrev-pane-title">
                   <h3>Audio Script · Part ${activePart?.partNum || 1}</h3>
+                  ${syncValid ? '<span class="lp-yrev-ev-chip" title="Đã căn khớp chính xác từng từ trực tiếp từ file MP3 thật">✓ Khớp Audio</span>' : ''}
                   ${trBuilt.matchedQSet.size > 0
                     ? `<span class="lp-yrev-ev-chip tabular">${trBuilt.matchedQSet.size}/${partRows.length} dẫn chứng</span>`
                     : ''}
@@ -3698,17 +3747,19 @@
       ? state.lastReview.rows.filter((r) => r.partId === activePart?.id)
       : state.lastReview.rows;
     if (box) {
-      const hasRealSync = Array.isArray(activePart?.syncCues) && activePart.syncCues.length > 0;
+      const rawSyncCues = activePart?.syncCues || getRealSyncCuesForPart(activePart?.id);
+      const hasRealSync = Array.isArray(rawSyncCues) && rawSyncCues.length > 0;
       const built = buildTranscriptEvidenceHtml(activePart?.transcript || '', partRows, state.lastReview.transcriptQuery, hasRealSync);
+      const syncValid = hasRealSync && rawSyncCues.length === built.turnMeta.length;
       state.lastReview._matchedQSet = built.matchedQSet;
       state.lastReview._turnMeta = built.turnMeta;
-      state.lastReview._syncCues = hasRealSync ? activePart.syncCues : null;
+      state.lastReview._syncCues = syncValid ? rawSyncCues : null;
       reviewActiveTurnIdx = -1;
       const audio = document.getElementById('lp-ex-audio');
-      reviewTimeline = hasRealSync ? buildReviewTimelineFromSyncCues(activePart.syncCues) : null;
+      reviewTimeline = syncValid ? buildReviewTimelineFromSyncCues(rawSyncCues) : null;
       box.innerHTML = built.html;
       updateTurnTimeLabels();
-      if (hasRealSync && audio && audio.currentTime > 0) {
+      if (syncValid && audio && audio.currentTime > 0) {
         syncReviewKaraokeAtTime(audio.currentTime, false);
       }
     }
