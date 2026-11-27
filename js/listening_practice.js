@@ -1174,7 +1174,19 @@
     }
   }
 
+  let reviewKaraokeRaf = null;
+  let reviewTimeline = null;
+  let reviewActiveTurnIdx = -1;
+
+  function stopReviewKaraoke() {
+    if (reviewKaraokeRaf) {
+      cancelAnimationFrame(reviewKaraokeRaf);
+      reviewKaraokeRaf = null;
+    }
+  }
+
   function stopActiveAudio() {
+    stopReviewKaraoke();
     const a = document.getElementById('lp-ex-audio');
     if (a) {
       try { a.pause(); a.removeAttribute('src'); a.load(); } catch (_) {}
@@ -1788,11 +1800,19 @@
     audio.addEventListener('play', () => {
       updatePlayIcon();
       if (statusEl) statusEl.textContent = '';
+      if (isReview) startReviewKaraokeLoop(audio);
     });
-    audio.addEventListener('pause', updatePlayIcon);
+    audio.addEventListener('pause', () => {
+      updatePlayIcon();
+      if (isReview) {
+        stopReviewKaraoke();
+        syncReviewKaraokeAtTime(audio.currentTime || 0, false);
+      }
+    });
     audio.addEventListener('loadedmetadata', () => {
       if (durEl) durEl.textContent = formatMMSS(audio.duration);
       if (seek) seek.max = String(Math.floor(audio.duration || 100));
+      if (isReview) rebuildReviewTimelineForDuration(audio.duration || 0);
     });
     audio.addEventListener('timeupdate', () => {
       if (curEl) curEl.textContent = formatMMSS(audio.currentTime);
@@ -1800,6 +1820,12 @@
         seek.max = String(Math.floor(audio.duration));
         seek.value = String(Math.floor(audio.currentTime));
       }
+      if (isReview && audio.paused) {
+        syncReviewKaraokeAtTime(audio.currentTime || 0, false);
+      }
+    });
+    audio.addEventListener('seeked', () => {
+      if (isReview) syncReviewKaraokeAtTime(audio.currentTime || 0, true);
     });
     audio.addEventListener('error', () => {
       updatePlayIcon();
@@ -1807,6 +1833,10 @@
     });
     audio.addEventListener('ended', () => {
       updatePlayIcon();
+      if (isReview) {
+        stopReviewKaraoke();
+        clearReviewKaraokeHighlight();
+      }
       if (!isReview && state.session?.isFull && state.session.activePartIdx < state.session.partIds.length - 1) {
         toast(`Đã phát xong Part ${state.session.activePartIdx + 1}. Chuyển sang Part ${state.session.activePartIdx + 2}…`);
         setTimeout(() => {
@@ -1820,6 +1850,7 @@
     if (seek && !isExamLocked) {
       seek.addEventListener('input', () => {
         audio.currentTime = Number(seek.value) || 0;
+        if (isReview) syncReviewKaraokeAtTime(audio.currentTime, true);
       });
     }
 
@@ -2346,17 +2377,183 @@
     return out.sort((a, b) => b.length - a.length);
   }
 
+  function computeWordSpeechWeight(word) {
+    const clean = String(word || '').replace(/[^a-zA-Z0-9]/g, '');
+    let w = Math.max(2.1, clean.length * 0.85 + 1.4);
+    if (/[.!?]["')\]]*$/.test(word)) w += 3.6;
+    else if (/[,;:—–-]["')\]]*$/.test(word)) w += 1.7;
+    return w;
+  }
+
+  function buildReviewTimelineFromMeta(turnMetaList, durationSec) {
+    if (!Array.isArray(turnMetaList) || !turnMetaList.length) return null;
+    const totalWeight = turnMetaList.reduce((acc, tm) => acc + tm.totalWeight + 2.4, 0);
+    if (totalWeight <= 0) return null;
+
+    const dur = Number(durationSec) > 4 ? Number(durationSec) : Math.max(45, totalWeight * 0.14);
+    const leadIn = dur > 90 ? Math.min(16, dur * 0.038) : (dur > 30 ? 2.0 : 0.4);
+    const leadOut = dur > 90 ? Math.min(8, dur * 0.018) : 0.3;
+    const usable = Math.max(5, dur - leadIn - leadOut);
+
+    let cursorW = 0;
+    const turns = turnMetaList.map((tm) => {
+      const tStart = leadIn + (cursorW / totalWeight) * usable;
+      const words = tm.wordWeights.map((ww) => {
+        const wStart = leadIn + (cursorW / totalWeight) * usable;
+        cursorW += ww;
+        const wEnd = leadIn + (cursorW / totalWeight) * usable;
+        return { start: wStart, end: wEnd };
+      });
+      const tEnd = leadIn + (cursorW / totalWeight) * usable;
+      cursorW += 2.4; // Natural inter-speaker breath pause
+      return { idx: tm.idx, start: tStart, end: tEnd, words };
+    });
+
+    return { duration: dur, turns };
+  }
+
+  function updateTurnTimeLabels() {
+    if (!reviewTimeline || !reviewTimeline.turns) return;
+    reviewTimeline.turns.forEach((t) => {
+      const el = document.querySelector(`.lp-yrev-turn[data-turn-idx="${t.idx}"] .lp-yrev-tmark`);
+      if (el) el.textContent = formatMMSS(t.start);
+    });
+  }
+
+  function rebuildReviewTimelineForDuration(durationSec) {
+    const rev = state.lastReview;
+    if (!rev || !rev._turnMeta) return;
+    reviewTimeline = buildReviewTimelineFromMeta(rev._turnMeta, durationSec);
+    updateTurnTimeLabels();
+  }
+
+  function clearReviewKaraokeHighlight() {
+    if (reviewActiveTurnIdx >= 0) {
+      const prev = document.getElementById(`lp-yrev-turn-${reviewActiveTurnIdx}`);
+      if (prev) {
+        prev.classList.remove('is-speaking');
+        prev.querySelectorAll('.lp-kw.is-spoken, .lp-kw.is-now').forEach((sp) => {
+          sp.classList.remove('is-spoken', 'is-now');
+        });
+      }
+      reviewActiveTurnIdx = -1;
+    }
+  }
+
+  function syncReviewKaraokeAtTime(currentSec, allowAutoScroll = true) {
+    if (!reviewTimeline || !reviewTimeline.turns.length) return;
+    const t = Math.max(0, Number(currentSec) || 0);
+    const turns = reviewTimeline.turns;
+
+    // Find active turn
+    let activeIdx = -1;
+    for (let i = 0; i < turns.length; i++) {
+      const nextStart = i + 1 < turns.length ? turns[i + 1].start : turns[i].end + 4;
+      if (t >= turns[i].start - 0.15 && t < nextStart - 0.05) {
+        activeIdx = i;
+        break;
+      }
+    }
+    if (activeIdx < 0 && t >= turns[0].start) {
+      activeIdx = turns.length - 1;
+    }
+
+    if (activeIdx !== reviewActiveTurnIdx) {
+      if (reviewActiveTurnIdx >= 0) {
+        const prevEl = document.getElementById(`lp-yrev-turn-${reviewActiveTurnIdx}`);
+        if (prevEl) {
+          prevEl.classList.remove('is-speaking');
+          prevEl.querySelectorAll('.lp-kw.is-spoken, .lp-kw.is-now').forEach((sp) => {
+            sp.classList.remove('is-spoken', 'is-now');
+          });
+        }
+      }
+      reviewActiveTurnIdx = activeIdx;
+      if (activeIdx >= 0) {
+        const curEl = document.getElementById(`lp-yrev-turn-${activeIdx}`);
+        if (curEl) {
+          curEl.classList.add('is-speaking');
+          if (allowAutoScroll) {
+            curEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      }
+    }
+
+    if (activeIdx < 0) return;
+    const turnObj = turns[activeIdx];
+    const turnEl = document.getElementById(`lp-yrev-turn-${activeIdx}`);
+    if (!turnEl) return;
+
+    const kwNodes = turnEl.querySelectorAll('.lp-kw');
+    const words = turnObj.words;
+    for (let i = 0; i < kwNodes.length && i < words.length; i++) {
+      const w = words[i];
+      const node = kwNodes[i];
+      const isNow = t >= w.start && t < w.end;
+      const isSpoken = t >= w.end;
+      node.classList.toggle('is-now', isNow);
+      node.classList.toggle('is-spoken', isSpoken);
+    }
+  }
+
+  function startReviewKaraokeLoop(audio) {
+    stopReviewKaraoke();
+    if (!audio) return;
+    if (!reviewTimeline && state.lastReview?._turnMeta) {
+      rebuildReviewTimelineForDuration(audio.duration || 0);
+    }
+    const tick = () => {
+      if (state.view !== 'review' || !audio || audio.paused || audio.ended) {
+        reviewKaraokeRaf = null;
+        return;
+      }
+      syncReviewKaraokeAtTime(audio.currentTime || 0, true);
+      reviewKaraokeRaf = requestAnimationFrame(tick);
+    };
+    reviewKaraokeRaf = requestAnimationFrame(tick);
+  }
+
+  function seekReviewTurn(turnIdx, autoPlay = true) {
+    const rev = state.lastReview;
+    if (!rev) return;
+    const idx = Number(turnIdx);
+    const audio = document.getElementById('lp-ex-audio');
+    if (!reviewTimeline && rev._turnMeta) {
+      rebuildReviewTimelineForDuration(audio?.duration || 0);
+    }
+    const turn = reviewTimeline?.turns?.[idx];
+    if (!turn) return;
+
+    const targetTime = Math.max(0, turn.start + 0.04);
+    if (audio && audio.readyState >= 1 && Number.isFinite(audio.duration)) {
+      audio.currentTime = Math.min(Math.max(0, audio.duration - 0.1), targetTime);
+      syncReviewKaraokeAtTime(audio.currentTime, true);
+      if (autoPlay && audio.paused) {
+        const p = audio.play();
+        if (p && p.catch) p.catch(() => {});
+      }
+    } else {
+      // Visual preview even before audio finishes buffering / offline
+      syncReviewKaraokeAtTime(targetTime + Math.min(1.6, (turn.end - turn.start) * 0.35), true);
+      if (audio && autoPlay && audio.paused) {
+        const p = audio.play();
+        if (p && p.catch) p.catch(() => {});
+      }
+    }
+  }
+
   function buildTranscriptEvidenceHtml(transcript, partRows, query) {
     if (!transcript) {
       return {
         html: '<div class="lp-yrev-empty-tr"><strong>Chưa có Transcript cho bài nghe này</strong><p>Bạn vẫn có thể nghe lại từng đoạn bằng thanh Audio phía trên và đối chiếu trực tiếp đáp án ở khung bên phải.</p></div>',
-        matchedQSet: new Set()
+        matchedQSet: new Set(),
+        turnMeta: []
       };
     }
 
     const lines = String(transcript).split('\n').filter((x) => x.trim());
     const matchedQSet = new Set();
-    // Map each line index -> list of evidence spans { start, end, num, ok, official }
     const lineSpans = lines.map(() => []);
 
     const sortedRows = (partRows || []).slice().sort((a, b) => Number(a.num) - Number(b.num));
@@ -2369,7 +2566,6 @@
       const findInRange = (startIdx, endIdx) => {
         for (let li = startIdx; li < endIdx; li++) {
           const ln = lines[li];
-          // Skip matching inside speaker prefix (e.g. "WOMAN:")
           const spkM = ln.match(/^([A-Z][a-zA-Z0-9 .'-]{1,22}:)\s*/);
           const bodyStart = spkM ? spkM[0].length : 0;
           const bodyTxt = ln.slice(bodyStart);
@@ -2410,47 +2606,73 @@
 
     const q = String(query || '').trim();
     const qRe = q.length >= 2 ? new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi') : null;
-
     const applyQueryMark = (rawStr) => {
       const safe = esc(rawStr);
       return qRe ? safe.replace(qRe, '<mark class="lp-tr-mark">$1</mark>') : safe;
     };
+
+    const turnMeta = [];
 
     const html = lines.map((ln, li) => {
       const spkM = ln.match(/^([A-Z][a-zA-Z0-9 .'-]{1,22}:)\s*/);
       const spkLabel = spkM ? spkM[1].replace(/:$/, '').trim() : '';
       const bodyStart = spkM ? spkM[0].length : 0;
 
+      const wordWeights = [];
+      let wiCounter = 0;
+
+      const wrapWords = (rawSlice) => {
+        // Split keeping whitespace intact so layout & copy-paste stay natural
+        return rawSlice.split(/(\s+)/).map((tok) => {
+          if (!tok || /^\s+$/.test(tok)) return tok;
+          const wi = wiCounter++;
+          wordWeights.push(computeWordSpeechWeight(tok));
+          return `<span class="lp-kw" data-wi="${wi}">${applyQueryMark(tok)}</span>`;
+        }).join('');
+      };
+
       const spans = lineSpans[li].slice().sort((a, b) => a.start - b.start);
       let cursor = bodyStart;
       let bodyHtml = '';
       spans.forEach((sp) => {
         if (sp.start > cursor) {
-          bodyHtml += applyQueryMark(ln.slice(cursor, sp.start));
+          bodyHtml += wrapWords(ln.slice(cursor, sp.start));
         }
-        const sliceTxt = applyQueryMark(ln.slice(sp.start, sp.end));
-        bodyHtml += `<mark class="lp-tr-ev ${sp.ok ? 'is-ok' : 'is-bad'}" id="lp-rev-ev-${sp.num}" data-ev-q="${sp.num}" onclick="ListeningPracticeApp.jumpReviewQuestion(${sp.num})" title="Dẫn chứng Câu ${sp.num} · Đáp án: ${esc(sp.official)}"><span class="lp-tr-ev-tag">Q${sp.num}</span>${sliceTxt}</mark>`;
+        const sliceHtml = wrapWords(ln.slice(sp.start, sp.end));
+        bodyHtml += `<mark class="lp-tr-ev ${sp.ok ? 'is-ok' : 'is-bad'}" id="lp-rev-ev-${sp.num}" data-ev-q="${sp.num}" onclick="event.stopPropagation(); ListeningPracticeApp.jumpReviewQuestion(${sp.num})" title="Dẫn chứng Câu ${sp.num} · Đáp án: ${esc(sp.official)}"><span class="lp-tr-ev-tag">Q${sp.num}</span>${sliceHtml}</mark>`;
         cursor = sp.end;
       });
       if (cursor < ln.length) {
-        bodyHtml += applyQueryMark(ln.slice(cursor));
+        bodyHtml += wrapWords(ln.slice(cursor));
       }
+
+      const totalWeight = wordWeights.reduce((a, b) => a + b, 0);
+      turnMeta.push({ idx: li, wordWeights, totalWeight });
 
       const hasEv = spans.length > 0;
       const evNumsAttr = hasEv ? ` data-line-qs="${spans.map((s) => s.num).join(',')}"` : '';
-      if (spkLabel) {
-        const spkTone = /^(MAN|MALE|TOM|JOHN|DAVID|MARK|ALEX|BEN|TUTOR|LECTURER|INTERVIEWER)/i.test(spkLabel) ? 'is-spk-b' : 'is-spk-a';
-        return `
-          <div class="lp-yrev-turn ${hasEv ? 'has-ev' : ''}"${evNumsAttr}>
-            <span class="lp-yrev-spk ${spkTone}">${esc(spkLabel)}</span>
-            <p class="lp-yrev-txt">${bodyHtml}</p>
+      const spkTone = spkLabel
+        ? (/^(MAN|MALE|TOM|JOHN|DAVID|MARK|ALEX|BEN|TUTOR|LECTURER|INTERVIEWER)/i.test(spkLabel) ? 'is-spk-b' : 'is-spk-a')
+        : 'is-spk-a';
+
+      return `
+        <div class="lp-yrev-turn ${spkLabel ? '' : 'is-narration'} ${hasEv ? 'has-ev' : ''}"
+          id="lp-yrev-turn-${li}" data-turn-idx="${li}"${evNumsAttr}
+          onclick="ListeningPracticeApp.seekReviewTurn(${li})"
+          title="Nhấn để nghe từ lượt thoại này">
+          <div class="lp-yrev-turn-head">
+            <div class="lp-yrev-turn-id">
+              ${spkLabel ? `<span class="lp-yrev-spk ${spkTone}">${esc(spkLabel)}</span>` : '<span class="lp-yrev-spk is-spk-a">SPEAKER</span>'}
+              <span class="lp-yrev-eq" aria-hidden="true"><i></i><i></i><i></i></span>
+            </div>
+            <span class="lp-yrev-tmark tabular"></span>
           </div>
-        `;
-      }
-      return `<div class="lp-yrev-turn is-narration ${hasEv ? 'has-ev' : ''}"${evNumsAttr}><p class="lp-yrev-txt">${bodyHtml}</p></div>`;
+          <p class="lp-yrev-txt">${bodyHtml}</p>
+        </div>
+      `;
     }).join('');
 
-    return { html, matchedQSet };
+    return { html, matchedQSet, turnMeta };
   }
 
   function decorateReviewPaper(paper, partRows, matchedQSet) {
@@ -2681,6 +2903,9 @@
 
     const trBuilt = buildTranscriptEvidenceHtml(activePart?.transcript || '', partRows, rev.transcriptQuery || '');
     rev._matchedQSet = trBuilt.matchedQSet;
+    rev._turnMeta = trBuilt.turnMeta;
+    reviewActiveTurnIdx = -1;
+    reviewTimeline = buildReviewTimelineFromMeta(trBuilt.turnMeta, 0);
 
     const bandTone = rev.band >= 7.0 ? 'is-high' : (rev.band >= 5.5 ? 'is-mid' : 'is-low');
 
@@ -2716,19 +2941,20 @@
       `;
     }).join('');
 
-    const pinIcoSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
     const clockIcoSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>';
     const docIcoSvg = '<svg width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>';
     const listIcoSvg = '<svg width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="10" x2="9" y2="20"/></svg>';
+    const retryIcoSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>';
+    const searchIcoSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>';
 
     root.innerHTML = `
-      <div class="ins-shell lp-ins-shell lp-yrev-shell is-washi-rev ins-contrast-cd ins-size-regular">
+      <div class="ins-shell lp-ins-shell ins-mode-practice lp-yrev-shell is-washi-rev ins-contrast-totoro ins-size-regular">
         <div class="ins-main-col">
           <!-- Warm Totoro Washi Review Header -->
           <header class="ins-header lp-yrev-header">
             <div class="ins-hdr-left">
-              <button type="button" class="lp-yrev-back" onclick="ListeningPracticeApp.backToSourceFromReview()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              <button type="button" class="prac-back-btn" onclick="ListeningPracticeApp.backToSourceFromReview()" title="Quay về kho đề">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                 <span>Kho đề</span>
               </button>
               <span class="prac-totoro-ico" aria-hidden="true">
@@ -2746,7 +2972,7 @@
               </span>
               <div class="ins-hdr-meta">
                 <div class="ins-hdr-title">${esc(rev.title)}</div>
-                <div class="lp-yrev-sub">Xem lại · Đối chiếu Transcript &amp; Đáp án trực tiếp trên đề</div>
+                <div class="lp-yrev-sub">Xem lại bài làm · Nhấn từng lượt thoại để nghe &amp; theo dõi chữ chạy</div>
               </div>
             </div>
 
@@ -2761,25 +2987,28 @@
                 <span class="lp-yrev-kpi is-time tabular">${clockIcoSvg}<span>${formatMMSS(rev.elapsedSec)}</span></span>
               </div>
               <button type="button" class="lp-yrev-retry-btn" onclick="ListeningPracticeApp.startItem('${esc(rev.itemId)}', ${rev.isFull ? 'true' : 'false'}, '${esc(rev.mode)}')">
-                ↻ Làm lại
+                ${retryIcoSvg}<span>Làm lại</span>
               </button>
             </div>
           </header>
 
-          <!-- Full-width Audio Player Bar -->
+          <!-- Full-width Washi Forest Audio Player Bar -->
           ${activePart ? renderAudioBarHtml(activePart, true) : ''}
 
-          <!-- Full-Viewport 2-Column Split Workbench: LEFT = Transcript | RIGHT = Graded Question Paper / Answer Table -->
+          <!-- Full-Viewport 2-Column Split Workbench: LEFT = Karaoke Script | RIGHT = Graded Question Paper -->
           <div class="lp-yrev-split">
             <section class="lp-yrev-pane is-transcript">
               <div class="lp-yrev-pane-head">
                 <div class="lp-yrev-pane-title">
                   <h3>Audio Script · Part ${activePart?.partNum || 1}</h3>
                   ${trBuilt.matchedQSet.size > 0
-                    ? `<span class="lp-yrev-ev-chip tabular">${pinIcoSvg}<span>${trBuilt.matchedQSet.size}/${partRows.length} dẫn chứng</span></span>`
+                    ? `<span class="lp-yrev-ev-chip tabular">${trBuilt.matchedQSet.size}/${partRows.length} dẫn chứng</span>`
                     : ''}
                 </div>
-                <input type="search" class="lp-tr-search" value="${esc(rev.transcriptQuery || '')}" placeholder="Tìm từ trong transcript..." oninput="ListeningPracticeApp.onTranscriptSearch(this.value)" autocomplete="off">
+                <div class="lp-yrev-search-wrap">
+                  ${searchIcoSvg}
+                  <input type="search" class="lp-tr-search" value="${esc(rev.transcriptQuery || '')}" placeholder="Tìm trong transcript..." oninput="ListeningPracticeApp.onTranscriptSearch(this.value)" autocomplete="off">
+                </div>
               </div>
               <div class="lp-yrev-pane-body lp-yrev-tr-body" id="lp-rev-transcript">
                 ${trBuilt.html}
@@ -2827,6 +3056,7 @@
       decorateReviewPaper(revPaper, partRows, trBuilt.matchedQSet);
     }
     bindAudioPlayer(true);
+    updateTurnTimeLabels();
   }
 
   function switchReviewRightTab(tab) {
@@ -3179,7 +3409,15 @@
     if (box) {
       const built = buildTranscriptEvidenceHtml(activePart?.transcript || '', partRows, state.lastReview.transcriptQuery);
       state.lastReview._matchedQSet = built.matchedQSet;
+      state.lastReview._turnMeta = built.turnMeta;
+      reviewActiveTurnIdx = -1;
+      const audio = document.getElementById('lp-ex-audio');
+      reviewTimeline = buildReviewTimelineFromMeta(built.turnMeta, audio?.duration || 0);
       box.innerHTML = built.html;
+      updateTurnTimeLabels();
+      if (audio && audio.currentTime > 0) {
+        syncReviewKaraokeAtTime(audio.currentTime, false);
+      }
     }
   }
 
@@ -3261,6 +3499,8 @@
     switchReviewPart,
     switchReviewRightTab,
     jumpReviewQuestion,
+    seekReviewTurn,
+    syncReviewKaraokeAtTime,
     onTranscriptSearch,
     backToSourceFromReview,
     renderTotoroBookSvg,
