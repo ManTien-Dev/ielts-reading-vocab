@@ -973,7 +973,7 @@
              ${state.ytActivated
                ? `<div id="dict-yt-iframe-host" style="width:100%;height:100%;"></div>`
                : `<button type="button" class="dict-yt-facade" onclick="window.DictationStudio.playCurrentSegment(0)">
-                    <img src="https://i.ytimg.com/vi/${esc(lesson.videoId)}/hqdefault.jpg" alt="" decoding="async">
+                    <img src="https://i.ytimg.com/vi/${esc(lesson.videoId)}/hqdefault.jpg" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">
                     <span class="dict-yt-play-circle" aria-hidden="true">▶</span>
                     <span class="dict-yt-facade-lbl">Bấm để tải &amp; phát đoạn ${state.segIdx + 1} (${Number(seg.start).toFixed(1)}s – ${Number(seg.end).toFixed(1)}s)</span>
                   </button>`

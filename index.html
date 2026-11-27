@@ -42,11 +42,11 @@
   <link rel="stylesheet" href="css/style.css?v=20261127b">
   <link rel="stylesheet" href="css/motion.css?v=20261127b">
   <link rel="stylesheet" href="css/enhancements.css?v=20261127a">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261127b">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261127c">
   <link rel="stylesheet" href="css/writing.css?v=20261127b">
   <link rel="stylesheet" href="css/speaking.css?v=20261127c">
   <link rel="stylesheet" href="css/dictation.css?v=20261127b">
-  <link rel="stylesheet" href="css/teacher_studio.css?v=20261127b">
+  <link rel="stylesheet" href="css/teacher_studio.css?v=20261127c">
 </head>
 <body>
 
@@ -1563,179 +1563,214 @@
     </section>
 
     <!-- Màn hình Làm Task theo Link Giáo viên giao -->
-    <!-- Màn hình Dành Riêng Cho Giáo Viên: 4-Skill Command Center (Reading · Listening · Writing · Speaking) -->
-    <section class="screen" id="screen-teacher" aria-label="Bảng quản lý giáo viên" style="display:none;">
-      <!-- Cảnh báo nhanh khi có học viên bị khóa (tự ẩn khi 0 khóa) -->
+    <!-- Màn hình Dành Riêng Cho Giáo Viên: Streamlined 3-Tab Command Center -->
+    <section class="screen ts-v2-shell" id="screen-teacher" aria-label="Bảng quản lý giáo viên" style="display:none;">
+      <!-- THANH ĐIỀU HƯỚNG TẬP TRUNG (1 DÒNG GỌN) -->
+      <header class="ts-cmd-bar">
+        <div class="ts-cmd-brand">
+          <div class="ts-cmd-avatar" aria-hidden="true">
+            <img src="assets/images/totoro_professor.webp" alt="" loading="lazy" decoding="async">
+          </div>
+          <div class="ts-cmd-titles">
+            <h2 class="ts-cmd-title">Quản Lý Lớp Học</h2>
+            <div class="ts-cmd-sub">
+              <span class="ts-sync-dot" aria-hidden="true"></span>
+              <span id="teacher-sync-status">Đang đồng bộ dữ liệu lớp...</span>
+            </div>
+          </div>
+        </div>
+
+        <nav class="ts-ws-nav" id="ts-ws-nav" role="tablist" aria-label="Khu vực làm việc giáo viên">
+          <button type="button" class="ts-ws-tab active" data-ts-tab="students" role="tab" aria-selected="true" onclick="TeacherStudio.setWorkspaceTab('students')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Học viên</span>
+            <span class="ts-ws-badge tabular" id="ts-badge-students">0</span>
+          </button>
+          <button type="button" class="ts-ws-tab" data-ts-tab="monitor" role="tab" aria-selected="false" onclick="TeacherStudio.setWorkspaceTab('monitor')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12l2.3 2.3 4.8-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Bài đang giao</span>
+            <span class="ts-ws-badge tabular" id="ts-badge-monitor">0</span>
+          </button>
+          <button type="button" class="ts-ws-tab" data-ts-tab="assign" role="tab" aria-selected="false" onclick="TeacherStudio.setWorkspaceTab('assign')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+            <span>Giao bài</span>
+            <span class="ts-ws-badge is-sel tabular" id="ts-badge-assign" style="display:none;">0</span>
+          </button>
+        </nav>
+
+        <div class="ts-cmd-actions">
+          <button type="button" class="btn btn-primary ts-cmd-primary" id="btn-teacher-weekly-report" onclick="TeacherStudio.openWeeklyReportModal()">
+            <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M8 2v4M16 2v4M3 9h18M8 14l2.2 2.2L16 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Báo cáo tuần</span>
+          </button>
+          <div class="ts-tools-wrap" id="ts-tools-wrap">
+            <button type="button" class="btn-subtle ts-tools-trigger" id="ts-tools-trigger" aria-haspopup="true" aria-expanded="false" onclick="TeacherStudio.toggleToolsMenu()">
+              <span>Công cụ</span>
+              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="ts-tools-pop" id="ts-tools-pop" role="menu">
+              <button type="button" class="ts-tools-item" id="btn-teacher-copy-report" role="menuitem" onclick="TeacherStudio.toggleToolsMenu(false); copyFullClassReport()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/></svg>
+                <span>Sao chép báo cáo nhanh</span>
+              </button>
+              <button type="button" class="ts-tools-item" id="btn-teacher-task-stats" role="menuitem" onclick="TeacherStudio.toggleToolsMenu(false); TasksModule.openTaskSummaryModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19V11" stroke-linecap="round"/></svg>
+                <span>Thống kê Task</span>
+              </button>
+              <button type="button" class="ts-tools-item" id="btn-teacher-export-csv" role="menuitem" onclick="TeacherStudio.toggleToolsMenu(false); TasksModule.exportClassReportCsv()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Xuất file CSV</span>
+              </button>
+              <div class="ts-tools-sep"></div>
+              <div class="ts-tools-key-box">
+                <label class="ts-tools-key-lbl" for="teacher-dash-gemini-key">Gemini API Key dự phòng</label>
+                <div class="ts-tools-key-row">
+                  <input type="text" class="task-link-input teacher-secret-input" id="teacher-dash-gemini-key" aria-label="Google AI Studio Key dự phòng" name="gemini_api_key_local" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Dán key Google AI Studio...">
+                  <button type="button" class="btn-subtle" onclick="TasksModule.saveLocalGeminiKey()">Lưu</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- CẢNH BÁO KHÓA BÀI TRỰC TIẾP (LUÔN HIỆN Ở MỌI TAB KHI CÓ ≥1 KHÓA) -->
       <div class="ts-lock-banner" id="ts-lock-alert-banner" style="display:none;"></div>
 
-      <!-- KHỐI 1: THEO DÕI HỌC SINH & MA TRẬN 4 KỸ NĂNG HÔM NAY -->
-      <div class="teacher-panel">
-        <div class="teacher-panel-head">
-          <div class="teacher-panel-brand">
-            <div class="teacher-mascot-pedestal" aria-hidden="true">
-              <img src="assets/images/totoro_professor.webp" alt="" loading="lazy" decoding="async" class="teacher-totoro-badge">
+      <!-- TAB 1: HỌC VIÊN -->
+      <div class="ts-tab-pane is-active" id="ts-tab-students" data-ts-pane="students" role="tabpanel">
+        <div class="teacher-kpi-strip ts-kpi-clean" id="teacher-kpi-strip"></div>
+        <div class="ts-surface-card">
+          <div class="ts-roster-toolbar">
+            <div class="ts-roster-left">
+              <div class="teacher-search-wrap">
+                <svg class="tot-ico-sm teacher-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/></svg>
+                <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" aria-label="Tìm học viên theo tên hoặc mã ID" name="teacher_filter_query" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Tìm học viên theo tên hoặc mã ID..." oninput="TeacherStudio.renderDashboard()">
+              </div>
+              <div class="ts-quick-filters" id="ts-quick-filters"></div>
             </div>
-            <div>
-              <h2 class="teacher-panel-title">Theo Dõi Học Sinh</h2>
-              <div class="teacher-panel-sub" id="teacher-sync-status">Đang đồng bộ dữ liệu lớp...</div>
+            <div class="teacher-view-tabs" id="teacher-view-tabs" role="tablist" aria-label="Chế độ xem danh sách học viên">
+              <button type="button" class="teacher-view-tab active" data-view="today" role="tab" aria-selected="true" onclick="TeacherStudio.setTableView('today')">Hôm nay</button>
+              <button type="button" class="teacher-view-tab" data-view="month" role="tab" aria-selected="false" onclick="TeacherStudio.setTableView('month')">Tháng này</button>
+              <button type="button" class="teacher-view-tab" data-view="full" role="tab" aria-selected="false" onclick="TeacherStudio.setTableView('full')">Full</button>
             </div>
           </div>
-          <div class="teacher-head-actions">
-            <button type="button" class="btn-subtle" id="btn-teacher-weekly-report" onclick="TeacherStudio.openWeeklyReportModal()">
-              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M8 2v4M16 2v4M3 9h18M8 14l2.2 2.2L16 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <span>Báo cáo tuần</span>
-            </button>
-            <button type="button" class="btn-subtle" id="btn-teacher-task-stats" onclick="TasksModule.openTaskSummaryModal()">
-              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 19V9M10 19V5M16 19v-7M22 19V11" stroke-linecap="round"/></svg>
-              <span>Thống kê Task</span>
-            </button>
-            <button type="button" class="btn-subtle" id="btn-teacher-export-csv" onclick="TasksModule.exportClassReportCsv()">
-              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <span>Xuất CSV</span>
-            </button>
-            <button type="button" class="btn btn-primary" id="btn-teacher-copy-report" onclick="copyFullClassReport()">
-              <svg class="tot-ico-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/></svg>
-              <span>Sao chép báo cáo</span>
-            </button>
+          <div class="class-report-table-wrap">
+            <table class="class-report-table">
+              <thead id="teacher-dashboard-thead"></thead>
+              <tbody id="teacher-dashboard-tbody"></tbody>
+            </table>
           </div>
-        </div>
-        <div class="teacher-kpi-strip" id="teacher-kpi-strip"></div>
-        <div class="ts-roster-toolbar">
-          <div class="ts-roster-left">
-            <div class="teacher-search-wrap">
-              <svg class="tot-ico-sm teacher-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/></svg>
-              <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" aria-label="Tìm học viên theo tên hoặc mã ID" name="teacher_filter_query" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Tìm học viên theo tên hoặc mã ID..." oninput="TeacherStudio.renderDashboard()">
-            </div>
-            <div class="ts-quick-filters" id="ts-quick-filters"></div>
-          </div>
-          <div class="teacher-view-tabs" id="teacher-view-tabs" role="tablist" aria-label="Chế độ xem danh sách học viên">
-            <button type="button" class="teacher-view-tab active" data-view="today" role="tab" aria-selected="true" onclick="TeacherStudio.setTableView('today')">Hôm nay</button>
-            <button type="button" class="teacher-view-tab" data-view="month" role="tab" aria-selected="false" onclick="TeacherStudio.setTableView('month')">Tháng này</button>
-            <button type="button" class="teacher-view-tab" data-view="full" role="tab" aria-selected="false" onclick="TeacherStudio.setTableView('full')">Full</button>
-          </div>
-        </div>
-        <div class="class-report-table-wrap">
-          <table class="class-report-table">
-            <thead id="teacher-dashboard-thead"></thead>
-            <tbody id="teacher-dashboard-tbody"></tbody>
-          </table>
         </div>
       </div>
 
-      <!-- KHỐI 2: THEO DÕI BÀI TẬP ĐANG GIAO & HẾT HẠN (4 KỸ NĂNG) -->
-      <div class="teacher-panel" id="ts-panel-monitor" style="display:none;">
-        <div class="teacher-panel-head" style="margin-bottom:12px;">
-          <div class="teacher-panel-brand">
-            <span class="tot-icon-tile teacher-ledger-tile" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12l2.3 2.3 4.8-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            <div>
-              <h2 class="teacher-panel-title">Theo Dõi Bài Tập Đang Giao</h2>
-              <div class="teacher-panel-sub">Tiến độ nộp bài, cảnh báo khóa và nhắc Zalo theo từng kỹ năng.</div>
-            </div>
-          </div>
+      <!-- TAB 2: BÀI ĐANG GIAO -->
+      <div class="ts-tab-pane" id="ts-tab-monitor" data-ts-pane="monitor" role="tabpanel">
+        <div class="ts-surface-card" id="ts-panel-monitor">
+          <div id="ts-monitor-body"></div>
         </div>
-        <div id="ts-monitor-body"></div>
       </div>
 
-      <!-- KHỐI 3: GIAO TASK THEO LINK (4 KỸ NĂNG · THẺ CHỌN SIÊU GỌN) -->
-      <div class="teacher-panel">
-        <div class="teacher-panel-head">
-          <div class="teacher-panel-brand">
-            <span class="tot-icon-tile warm teacher-ledger-tile" aria-hidden="true">
-              <svg viewBox="3 5 26 24" fill="none"><path d="M10.2 13.8L8.8 7.2L13.2 10.6C15 10 17 10 18.8 10.6L23.2 7.2L21.8 13.8C23.4 15.2 24 17.2 24 18.8H8C8 17.2 8.6 15.2 10.2 13.8Z" fill="#595651"/><path d="M14.2 10C15.8 7.5 19.2 7.4 20.6 9.5C18.5 11 15.8 11.2 14.2 10Z" fill="#4E9460"/><circle cx="13" cy="14.2" r="1.8" fill="#FFFFFF"/><circle cx="13.2" cy="14.2" r="0.9" fill="#181A1F"/><circle cx="19" cy="14.2" r="1.8" fill="#FFFFFF"/><circle cx="18.8" cy="14.2" r="0.9" fill="#181A1F"/><path d="M4.5 18.8H27.5L26 26.5H6L4.5 18.8Z" fill="#EFE4CE" stroke="#8C5926" stroke-width="1.6" stroke-linejoin="round"/><path d="M16 19.2V26.2" stroke="#8C5926" stroke-width="1.5"/></svg>
-            </span>
-            <div>
-              <h2 class="teacher-panel-title">Giao Task theo Link · 4 Kỹ Năng</h2>
-              <div class="teacher-panel-sub">Tick bài Nghe · Nói · Đọc · Viết · Từ vựng → tự tạo mẫu Zalo kèm link để học viên tự làm.</div>
+      <!-- TAB 3: GIAO BÀI (2 CỘT THÔNG MINH: TRÁI CHỌN BÀI · PHẢI SOẠN & GỬI ZALO) -->
+      <div class="ts-tab-pane" id="ts-tab-assign" data-ts-pane="assign" role="tabpanel">
+        <div class="ts-assign-split">
+          <!-- Cột trái: Kho bài 4 kỹ năng -->
+          <div class="ts-surface-card ts-assign-catalog">
+            <div class="ts-catalog-top">
+              <div class="ts-skill-tabs ts-skill-strip" id="ts-skill-tabs"></div>
             </div>
+            <div class="ts-picker-bar ts-picker-bar-v2">
+              <div class="task-suite-tabs" id="teacher-task-suite-tabs"></div>
+              <div class="ts-picker-tools">
+                <input type="search" class="task-link-input ts-picker-search" id="ts-picker-search" aria-label="Tìm nhanh mã bài hoặc chủ đề" autocomplete="off" placeholder="Tìm mã bài / chủ đề..." oninput="TeacherStudio.onPickerSearch(this.value)">
+                <button type="button" class="btn-subtle ts-hide-done-btn" id="btn-teacher-filter-pending" onclick="TeacherStudio.toggleHideAllDone()">Ẩn bài xong</button>
+              </div>
+            </div>
+            <div class="ts-picker-grid ts-picker-grid-v2" id="teacher-dash-task-grid"></div>
           </div>
-          <div class="teacher-sel-actions">
-            <button type="button" class="btn-subtle" id="btn-teacher-filter-pending" onclick="TeacherStudio.toggleHideAllDone()">Ẩn bài đã xong hết</button>
-            <button type="button" class="btn-subtle" onclick="TeacherStudio.clearSelection()">Bỏ chọn hết</button>
-            <span id="teacher-dash-sel-count" class="teacher-sel-pill">Đã chọn: 0 bài</span>
-          </div>
-        </div>
 
-        <!-- Unified Daily & Weekly 5-Section Homework Zalo Composer -->
-        <div class="teacher-composer-card">
-          <div class="ts-composer-mode-bar">
-            <div class="ts-mode-seg" role="tablist" aria-label="Chọn mẫu tin nhắn Zalo">
-              <button type="button" class="ts-mode-btn active" data-ts-tpl="weekly" onclick="TeacherStudio.setComposerTemplate('weekly')">Bài tập tuần (5 mục)</button>
-              <button type="button" class="ts-mode-btn" data-ts-tpl="daily" onclick="TeacherStudio.setComposerTemplate('daily')">Bài tập ngày (gọn)</button>
+          <!-- Cột phải: Soạn & gửi Zalo (dính cố định khi cuộn) -->
+          <aside class="ts-surface-card ts-assign-composer" aria-label="Soạn tin nhắn giao bài Zalo">
+            <div class="ts-comp-head">
+              <div class="ts-mode-seg" role="tablist" aria-label="Chọn mẫu tin nhắn Zalo">
+                <button type="button" class="ts-mode-btn active" data-ts-tpl="weekly" onclick="TeacherStudio.setComposerTemplate('weekly')">Tuần (5 mục)</button>
+                <button type="button" class="ts-mode-btn" data-ts-tpl="daily" onclick="TeacherStudio.setComposerTemplate('daily')">Ngày (gọn)</button>
+              </div>
+              <div class="ts-comp-head-right">
+                <span id="teacher-dash-sel-count" class="teacher-sel-pill">Đã chọn: 0 bài</span>
+                <button type="button" class="ts-link-clear" onclick="TeacherStudio.clearSelection()" title="Bỏ chọn toàn bộ bài đang tick">Bỏ chọn</button>
+              </div>
             </div>
-            <label class="ts-empty-sec-toggle" id="ts-show-empty-wrap" title="Hiện đủ cả 5 mục 1–5 kể cả mục chưa tick bài">
-              <input type="checkbox" id="ts-show-empty-sections" onchange="TeacherStudio.toggleShowEmptySections(this.checked)">
-              <span>Hiện cả mục trống</span>
-            </label>
-          </div>
-          <div class="ts-weekly-meta-row" id="ts-weekly-meta-row">
-            <div class="ts-meta-field is-title">
-              <label for="ts-weekly-title">Tiêu đề tuần</label>
-              <input type="text" class="task-link-input" id="ts-weekly-title" placeholder="VD: THÁNG 11 TUẦN 4" oninput="TeacherStudio.onWeeklyMetaChange('title')">
-            </div>
-            <div class="ts-meta-field">
-              <label for="ts-weekly-issued-date">Ngày giao</label>
-              <input type="date" class="task-link-input" id="ts-weekly-issued-date" onchange="TeacherStudio.onWeeklyMetaChange('issued')">
-            </div>
-            <div class="ts-meta-field ts-autopick-group">
-              <select class="scope-select ts-autopick-src" id="ts-weekly-auto-src" onchange="TeacherStudio.setWeeklyAutoSource(this.value)" title="Nguồn đề Reading Passage & Listening Section">
-                <option value="cambridge" selected>Cambridge</option>
-                <option value="volume">Volume</option>
-                <option value="actual">Actual</option>
-              </select>
-              <button type="button" class="btn-subtle ts-autopick-btn" id="ts-btn-auto-weekly" onclick="TeacherStudio.autoPickWeeklyBundle()" title="Tự chọn 1 Section Nghe + 1 Cue Card Nói + 1 Passage Đọc + 1 Đề Viết + 1 Task Từ vựng (không lấy Full Test)">
-                ✨ Chọn nhanh gói tuần
-              </button>
-            </div>
-          </div>
-          <div class="ts-basket-bar" id="ts-selected-basket"></div>
-          <div class="ts-composer-stack">
-            <div class="ts-composer-top-row">
-              <div class="teacher-deadline-group">
-                <label for="teacher-task-deadline-preset" class="teacher-deadline-label">Hạn nộp</label>
-                <select class="scope-select" id="teacher-task-deadline-preset" onchange="TeacherStudio.onDeadlinePresetChange()">
-                  <option value="tonight_24" selected>Trước 12h tối nay</option>
-                  <option value="tomorrow_24">Trước 12h tối mai</option>
-                  <option value="0">Không giới hạn</option>
-                  <option value="30">30 phút</option>
-                  <option value="60">1 giờ</option>
-                  <option value="120">2 giờ</option>
-                  <option value="360">6 giờ</option>
-                  <option value="720">12 giờ</option>
-                  <option value="1440">24 giờ (1 ngày)</option>
-                  <option value="2880">48 giờ (2 ngày)</option>
-                  <option value="4320">72 giờ (3 ngày)</option>
-                  <option value="10080">7 ngày (1 tuần)</option>
-                  <option value="custom">Ngày giờ cụ thể...</option>
+
+            <!-- Khối chọn nhanh gói tuần & thông tin tuần -->
+            <div class="ts-weekly-meta-v2" id="ts-weekly-meta-row">
+              <div class="ts-autopick-bar">
+                <select class="scope-select ts-autopick-src" id="ts-weekly-auto-src" onchange="TeacherStudio.setWeeklyAutoSource(this.value)" title="Nguồn đề Reading Passage & Listening Section">
+                  <option value="cambridge" selected>Cambridge</option>
+                  <option value="volume">Volume</option>
+                  <option value="actual">Actual</option>
                 </select>
-                <input type="datetime-local" class="task-link-input teacher-deadline-custom" id="teacher-task-deadline-custom" aria-label="Chọn ngày giờ hạn nộp cụ thể" style="display:none;" onchange="TeacherStudio.onDeadlinePresetChange()">
+                <button type="button" class="btn-subtle ts-autopick-btn" id="ts-btn-auto-weekly" onclick="TeacherStudio.autoPickWeeklyBundle()" title="Tự chọn 1 Section Nghe + 1 Cue Card Nói + 1 Passage Đọc + 1 Đề Viết + 1 Task Từ vựng (không lấy Full Test)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" stroke-linejoin="round"/></svg>
+                  <span>Chọn nhanh gói tuần</span>
+                </button>
               </div>
-              <div class="ts-composer-actions">
-                <button type="button" class="btn btn-primary" onclick="TeacherStudio.copySelectedLink()">Copy mẫu Zalo</button>
+              <div class="ts-meta-2col">
+                <div class="ts-meta-field">
+                  <label for="ts-weekly-title">Tiêu đề tuần</label>
+                  <input type="text" class="task-link-input" id="ts-weekly-title" placeholder="THÁNG 11 TUẦN 4" oninput="TeacherStudio.onWeeklyMetaChange('title')">
+                </div>
+                <div class="ts-meta-field">
+                  <label for="ts-weekly-issued-date">Ngày giao</label>
+                  <input type="date" class="task-link-input" id="ts-weekly-issued-date" onchange="TeacherStudio.onWeeklyMetaChange('issued')">
+                </div>
+              </div>
+              <label class="ts-empty-sec-toggle" id="ts-show-empty-wrap" title="Hiện đủ cả 5 mục 1–5 kể cả mục chưa tick bài">
+                <input type="checkbox" id="ts-show-empty-sections" onchange="TeacherStudio.toggleShowEmptySections(this.checked)">
+                <span>Hiện đủ 5 mục kể cả mục trống</span>
+              </label>
+            </div>
+
+            <!-- Giỏ bài đã chọn -->
+            <div class="ts-basket-bar" id="ts-selected-basket"></div>
+
+            <!-- Hạn nộp -->
+            <div class="ts-deadline-row-v2">
+              <label for="teacher-task-deadline-preset" class="teacher-deadline-label">Hạn nộp</label>
+              <select class="scope-select" id="teacher-task-deadline-preset" onchange="TeacherStudio.onDeadlinePresetChange()">
+                <option value="tonight_24" selected>Trước 12h tối nay</option>
+                <option value="tomorrow_24">Trước 12h tối mai</option>
+                <option value="0">Không giới hạn</option>
+                <option value="30">30 phút</option>
+                <option value="60">1 giờ</option>
+                <option value="120">2 giờ</option>
+                <option value="360">6 giờ</option>
+                <option value="720">12 giờ</option>
+                <option value="1440">24 giờ (1 ngày)</option>
+                <option value="2880">48 giờ (2 ngày)</option>
+                <option value="4320">72 giờ (3 ngày)</option>
+                <option value="10080">7 ngày (1 tuần)</option>
+                <option value="custom">Ngày giờ cụ thể...</option>
+              </select>
+              <input type="datetime-local" class="task-link-input teacher-deadline-custom" id="teacher-task-deadline-custom" aria-label="Chọn ngày giờ hạn nộp cụ thể" style="display:none;" onchange="TeacherStudio.onDeadlinePresetChange()">
+            </div>
+
+            <!-- Xem trước & chỉnh tay nội dung Zalo -->
+            <textarea class="task-link-input ts-zalo-preview" id="teacher-dash-link-preview" rows="6" placeholder="Tick ít nhất 1 bài ở cột bên trái (hoặc bấm Chọn nhanh gói tuần) để tạo mẫu Zalo..."></textarea>
+
+            <!-- Nút hành động chính + phụ gọn gàng -->
+            <div class="ts-comp-footer">
+              <button type="button" class="btn btn-primary ts-copy-zalo-cta" onclick="TeacherStudio.copySelectedLink()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round"/></svg>
+                <span>Copy mẫu Zalo</span>
+              </button>
+              <div class="ts-comp-sub-actions">
                 <button type="button" class="btn-subtle" id="btn-teacher-apply-deadline" onclick="TeacherStudio.applyLiveDeadline()" title="Áp dụng hạn nộp đang chọn cho các bài đã tick">Cập nhật hạn</button>
-                <button type="button" class="btn-subtle" id="btn-teacher-end-task-now" style="color:#b91c1c; border-color:rgba(220,38,38,0.3);" onclick="TeacherStudio.endTasksNow()" title="Đóng thời hạn ngay lập tức cho các bài đã tick">Kết thúc ngay</button>
+                <button type="button" class="btn-subtle ts-btn-danger-ghost" id="btn-teacher-end-task-now" onclick="TeacherStudio.endTasksNow()" title="Đóng thời hạn ngay lập tức cho các bài đã tick">Kết thúc ngay</button>
               </div>
             </div>
-            <textarea class="task-link-input ts-zalo-preview" id="teacher-dash-link-preview" rows="4" placeholder="Tick ít nhất 1 bài bên dưới để tự tạo mẫu tin nhắn gửi Zalo (có thể chỉnh tay trước khi copy)..."></textarea>
-          </div>
+          </aside>
         </div>
-
-        <!-- 4-Skill Picker Switcher + Sub-suite & Search -->
-        <div class="ts-skill-tabs" id="ts-skill-tabs"></div>
-        <div class="ts-picker-bar">
-          <div class="task-suite-tabs" id="teacher-task-suite-tabs"></div>
-          <input type="search" class="task-link-input ts-picker-search" id="ts-picker-search" aria-label="Tìm nhanh mã bài hoặc chủ đề" autocomplete="off" placeholder="Tìm nhanh mã bài / chủ đề..." oninput="TeacherStudio.onPickerSearch(this.value)">
-        </div>
-        <div class="ts-picker-grid" id="teacher-dash-task-grid"></div>
-
-        <details class="teacher-ai-key-details">
-          <summary>Cấu hình Google AI Studio Key dự phòng trên trình duyệt này</summary>
-          <div class="teacher-ai-key-row">
-            <input type="text" class="task-link-input teacher-secret-input" id="teacher-dash-gemini-key" aria-label="Google AI Studio Key dự phòng" name="gemini_api_key_local" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Dán key Google AI Studio nếu chưa cấu hình GEMINI_API_KEY trong Google Apps Script...">
-            <button type="button" class="btn-subtle" onclick="TasksModule.saveLocalGeminiKey()">Lưu key</button>
-          </div>
-        </details>
       </div>
     </section>
   </main>
@@ -2301,7 +2336,7 @@
   <script src="js/writing_studio.js?v=20261127b"></script>
   <script src="data/speaking_data.js?v=20261126b"></script>
   <script src="js/speaking_studio.js?v=20261127c"></script>
-  <script src="js/teacher_studio.js?v=20261127b"></script>
+  <script src="js/teacher_studio.js?v=20261127c"></script>
   <script src="js/totoro_ui.js?v=20261127b"></script>
 </body>
 </html>

@@ -102,4 +102,26 @@
   }
 
   window.CoreLazyDataLoader = LazyDataLoader;
+
+  const appLazyData = new LazyDataLoader('20261127b');
+  appLazyData.ensureReadingExamData = function ensureReadingExamData(taskId) {
+    const id = String(taskId || '');
+    const suiteFile = id.startsWith('fnd_')
+      ? 'data/v2_foundation.js?v=20261122e'
+      : (id.startsWith('acd_')
+        ? 'data/v2_academic.js?v=20261122e'
+        : (id.startsWith('adv_')
+          ? 'data/v2_advanced.js?v=20261122e'
+          : 'data/v2_paraphrase.js?v=20261122e'));
+    const jobs = [];
+    if (!window.APP_READING_TASKS_EXAM_DATA) {
+      jobs.push(appLazyData.loadScript('data/reading_tasks_exam_data.js?v=20261121c', 'reading_tasks_exam_data'));
+    }
+    if (!window.APP_TASK_EXAM_V2_DATA?.[id]) {
+      jobs.push(appLazyData.loadScript(suiteFile, suiteFile));
+    }
+    if (!jobs.length) return Promise.resolve(true);
+    return Promise.all(jobs).then(() => true);
+  };
+  window.AppLazyData = appLazyData;
 })();

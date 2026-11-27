@@ -4034,13 +4034,22 @@
 
     if (!bestSpan && isWordOpts) {
       const lwIdx = lines.findIndex((l) => /^list of words$/i.test(l));
-      if (lwIdx >= 0 && lwIdx + 1 < lines.length) {
+      if (lwIdx >= 0) {
         const chipWords = [];
-        for (let k = lwIdx + 1; k < lines.length; k++) {
-          for (const w of lines[k].split(/\s+/)) {
-            if (w && !chipWords.includes(w)) chipWords.push(w);
+        const seenLower = new Set();
+        const pushWord = (raw) => {
+          const w = String(raw || '').trim();
+          if (!w) return;
+          const low = w.toLowerCase();
+          if (!seenLower.has(low)) {
+            seenLower.add(low);
+            chipWords.push(w);
           }
+        };
+        for (let k = lwIdx + 1; k < lines.length; k++) {
+          for (const w of lines[k].split(/\s+/)) pushWord(w);
         }
+        for (const opt of qOpts) pushWord(opt);
         if (chipWords.length >= 3) {
           return {
             proseBefore: lines.slice(0, lwIdx),
@@ -4738,23 +4747,48 @@
     } else if (q.type === 'select') {
       const opts = Array.isArray(q.options) && q.options.length ? q.options : ['A', 'B', 'C', 'D', 'E'];
       const ansArr = Array.isArray(q.answer) ? q.answer.map((a) => String(a).toUpperCase()) : [String(q.answer || '').toUpperCase()];
-      optionsHtml = `
-        <div class="ins-select-chips" role="radiogroup" aria-label="Question ${q.num}">
-          ${opts.map((opt) => {
-            const val = String(opt).trim();
-            const active = userVal.toUpperCase() === val.toUpperCase();
-            let cls = `ins-sel-chip${active ? ' is-selected' : ''}`;
-            if (isReview && ansArr.includes(val.toUpperCase())) cls += ' is-key';
-            if (isLockedOk && active) cls += ' is-key';
-            if ((isReview || (isWrongRetry && wrongState !== 'edited')) && active && !ok) cls += ' is-wrong-pick';
-            return `
-              <button type="button" class="${cls}" ${isReadOnly ? 'disabled' : ''}
-                aria-pressed="${active ? 'true' : 'false'}"
-                onclick="ReadingPracticeApp.setAnswer('${esc(qid)}', '${esc(val)}')">${esc(val)}</button>
-            `;
-          }).join('')}
-        </div>
-      `;
+      const isLargeWordBank = opts.length > 12 && opts.some((o) => String(o).trim().length > 3);
+      if (isLargeWordBank) {
+        let selCls = 'ins-inline-select';
+        if (userVal) selCls += ' is-filled';
+        if (isReview || isLockedOk) {
+          selCls += ok ? ' is-ok' : ' is-bad';
+        } else if (isWrongRetry && wrongState !== 'edited') {
+          selCls += ' is-bad';
+        }
+        optionsHtml = `
+          <div class="ins-select-dd-wrap" style="margin-top:6px;">
+            <select class="${selCls}" aria-label="Question ${q.num}" ${isReadOnly ? 'disabled' : ''}
+              style="min-width:190px;max-width:100%;"
+              onchange="ReadingPracticeApp.setAnswer('${esc(qid)}', this.value)">
+              <option value="">-- Chọn từ (${opts.length} lựa chọn) --</option>
+              ${opts.map((opt) => {
+                const val = String(opt).trim();
+                const selected = userVal.toUpperCase() === val.toUpperCase();
+                return `<option value="${esc(val)}" ${selected ? 'selected' : ''}>${esc(val)}</option>`;
+              }).join('')}
+            </select>
+          </div>
+        `;
+      } else {
+        optionsHtml = `
+          <div class="ins-select-chips" role="radiogroup" aria-label="Question ${q.num}">
+            ${opts.map((opt) => {
+              const val = String(opt).trim();
+              const active = userVal.toUpperCase() === val.toUpperCase();
+              let cls = `ins-sel-chip${active ? ' is-selected' : ''}`;
+              if (isReview && ansArr.includes(val.toUpperCase())) cls += ' is-key';
+              if (isLockedOk && active) cls += ' is-key';
+              if ((isReview || (isWrongRetry && wrongState !== 'edited')) && active && !ok) cls += ' is-wrong-pick';
+              return `
+                <button type="button" class="${cls}" ${isReadOnly ? 'disabled' : ''}
+                  aria-pressed="${active ? 'true' : 'false'}"
+                  onclick="ReadingPracticeApp.setAnswer('${esc(qid)}', '${esc(val)}')">${esc(val)}</button>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
     }
 
     const correctDisplay = Array.isArray(q.answer) ? q.answer.join(' / ') : q.answer;

@@ -53,12 +53,21 @@
     { key: 'academic',   label: 'Học thuật (20)' },
     { key: 'paraphrase', label: 'Paraphrase (30)' },
     { key: 'advanced',   label: 'Chuyên sâu (30)' },
-    { key: 'rp_cambridge', label: '📖 Đề Cambridge' },
-    { key: 'rp_volume',    label: '📖 Đề Volume' },
-    { key: 'rp_actual',    label: '📖 Đề Actual' },
+    { key: 'rp_cambridge', label: 'Đề Cambridge' },
+    { key: 'rp_volume',    label: 'Đề Volume' },
+    { key: 'rp_actual',    label: 'Đề Actual' },
   ];
 
+  const WORKSPACE_TAB_KEY = 'ielts_teacher_workspace_tab_v1';
+
   const state = {
+    activeTab: (() => {
+      try {
+        const saved = localStorage.getItem(WORKSPACE_TAB_KEY);
+        return ['students', 'monitor', 'assign'].includes(saved) ? saved : 'students';
+      } catch (_) { return 'students'; }
+    })(),
+    toolsMenuOpen: false,
     tableView: 'today',       // 'today' | 'month' | 'full'
     rosterFilter: 'all',      // 'all' | 'locked' | 'pending'
     monitorTab: 'active',     // 'active' | 'expired'
@@ -599,9 +608,9 @@
       const suites = window.APP_LISTENING_TASKS?.suites || [];
       return [
         ...suites.map((s) => ({ key: s.key, label: s.label })),
-        { key: 'lp_cambridge', label: '🎧 Đề Cambridge' },
-        { key: 'lp_volume',    label: '🎧 Đề Volume' },
-        { key: 'lp_actual',    label: '🎧 Đề Actual' },
+        { key: 'lp_cambridge', label: 'Đề Cambridge' },
+        { key: 'lp_volume',    label: 'Đề Volume' },
+        { key: 'lp_actual',    label: 'Đề Actual' },
       ];
     }
     if (skillKey === 'writing') {
@@ -610,7 +619,7 @@
       const wpCount = (window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).length;
       return [
         { key: 'all', label: `Tất cả (${mods.length})` },
-        { key: 'wp_practice', label: `✍️ Đề Practice (${wpCount})` },
+        { key: 'wp_practice', label: `Đề Practice (${wpCount})` },
         ...subs.map((st) => {
           const c = mods.filter((m) => m.subtopic === st.key).length;
           return { key: st.key, label: `${st.shortTitle || st.title} (${c})` };
@@ -621,7 +630,7 @@
       const spCues = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []).length;
       return [
         { key: 'all', label: `Story Task (${getSpeakingCatalog().length})` },
-        ...(spCues ? [{ key: 'sp_practice', label: `🎙 Đề Cue Card (${spCues})` }] : []),
+        ...(spCues ? [{ key: 'sp_practice', label: `Đề Cue Card (${spCues})` }] : []),
       ];
     }
     return [];
@@ -1328,17 +1337,17 @@
           <div class="teacher-kpi-val tabular">${activeStu}/${totalStu}</div>
           <div class="ts-kpi-sub tabular">Tổng ${totalPeriodMins.toLocaleString('vi-VN')} phút học</div>
         </div>
-        <div class="teacher-kpi-card is-teal">
+        <div class="teacher-kpi-card is-interactive" onclick="TeacherStudio.setWorkspaceTab('monitor')" title="Bấm để xem chi tiết các bài đang giao">
           <div class="teacher-kpi-label">Bài đang giao (4 kỹ năng)</div>
           <div class="teacher-kpi-val tabular">${activeList.length} <span class="teacher-kpi-unit">bài</span></div>
           <div class="ts-kpi-sub">${activeSkillPills || 'Chưa giao bài nào'}</div>
         </div>
-        <div class="teacher-kpi-card is-gold">
+        <div class="teacher-kpi-card is-interactive" onclick="TeacherStudio.setWorkspaceTab('monitor')" title="Bấm để xem tiến độ theo từng bài">
           <div class="teacher-kpi-label">Tiến độ bài đang giao</div>
           <div class="teacher-kpi-val tabular">${totalSlots ? `${hwPct}%` : '—'}</div>
-          <div class="ts-kpi-sub tabular">${totalSlots ? `${doneSlots}/${totalSlots} lượt nộp` : 'Chọn bài bên dưới để giao'}</div>
+          <div class="ts-kpi-sub tabular">${totalSlots ? `${doneSlots}/${totalSlots} lượt nộp` : 'Mở tab Giao bài để tạo mới'}</div>
         </div>
-        <div class="teacher-kpi-card ${totalLocks > 0 ? 'is-danger' : 'is-coral'}" onclick="TeacherStudio.setRosterFilter('${state.rosterFilter === 'locked' ? 'all' : 'locked'}')" title="Bấm để lọc nhanh học viên đang bị khóa">
+        <div class="teacher-kpi-card is-interactive ${totalLocks > 0 ? 'is-danger' : ''}" onclick="TeacherStudio.setRosterFilter('${state.rosterFilter === 'locked' ? 'all' : 'locked'}')" title="Bấm để lọc nhanh học viên đang bị khóa">
           <div class="teacher-kpi-label">Trạng thái khóa bài</div>
           <div class="teacher-kpi-val tabular" style="${totalLocks > 0 ? 'color:var(--ts-danger)!important;' : ''}">${totalLocks > 0 ? `${lockedStuCount} HS` : '0 khóa'}</div>
           <div class="ts-kpi-sub">${totalLocks > 0 ? `${totalLocks} bài đang khóa · Bấm để lọc` : 'Cả lớp bình thường'}</div>
@@ -1446,11 +1455,17 @@
     if (!box || !panel) return;
 
     const { activeList, expiredList } = buckets;
+    panel.style.display = '';
     if (!activeList.length && !expiredList.length) {
-      panel.style.display = 'none';
+      box.innerHTML = `
+        <div class="ts-empty-state">
+          <div class="ts-empty-title">Chưa có bài tập nào đang giao</div>
+          <div class="ts-empty-sub">Chuyển sang tab Giao bài để tick nhanh bài Nghe · Nói · Đọc · Viết hoặc bấm Chọn nhanh gói tuần.</div>
+          <button type="button" class="btn btn-primary" onclick="TeacherStudio.setWorkspaceTab('assign')">Giao bài ngay</button>
+        </div>
+      `;
       return;
     }
-    panel.style.display = '';
 
     if (state.monitorTab === 'active' && !activeList.length && expiredList.length) state.monitorTab = 'expired';
     else if (state.monitorTab === 'expired' && !expiredList.length && activeList.length) state.monitorTab = 'active';
@@ -1490,13 +1505,13 @@
         const rem = deadlineAt - nowMs;
         const closeStr = formatDeadlineTs(deadlineAt);
         dlHtml = rem > 0
-          ? `<span class="ts-hw-dl is-live" data-ts-dl-task="${esc(task.id)}" title="Đóng lúc ${esc(closeStr)}">⏱ Còn ${esc(formatDeadlineRemaining(rem))}</span>`
+          ? `<span class="ts-hw-dl is-live" data-ts-dl-task="${esc(task.id)}" title="Đóng lúc ${esc(closeStr)}">Còn ${esc(formatDeadlineRemaining(rem))}</span>`
           : `<span class="ts-hw-dl is-ended" data-ts-dl-task="${esc(task.id)}">Đã đóng · ${esc(closeStr)}</span>`;
       }
 
       const lockStripHtml = lockRows.length
         ? `<div class="ts-hw-lock-strip">
-            <strong>🔒 Bị khóa (${lockRows.length}):</strong>
+            <strong>Bị khóa (${lockRows.length}):</strong>
             ${lockRows.map((r) => `
               <span>${esc(shortName(r.student.name))} (<span class="ts-lock-time" data-ts-lock-until="${r.lock.until}">${formatMmSs(r.lock.remainingMs)}</span>)</span>
               <button type="button" class="ts-btn-unlock-one" onclick="TeacherStudio.unlockStudentTask('${esc(r.student.id)}', '${esc(r.lock.lockKey)}')">Mở</button>
@@ -1577,7 +1592,10 @@
             <span class="tam-dot is-ended"></span>Đã hết hạn <strong class="tabular">${expiredList.length}</strong>
           </button>
         </div>
-        <div class="ts-monitor-skill-filters">${skillFiltersHtml}</div>
+        <div class="ts-monitor-right">
+          <div class="ts-monitor-skill-filters">${skillFiltersHtml}</div>
+          <button type="button" class="btn-subtle ts-monitor-add-btn" onclick="TeacherStudio.setWorkspaceTab('assign')">+ Giao thêm</button>
+        </div>
       </div>
       ${cardsHtml ? `<div class="ts-monitor-grid">${cardsHtml}</div>` : `<div class="ts-monitor-empty">Không có bài tập nào trong mục lọc này.</div>`}
     `;
@@ -1612,6 +1630,14 @@
           </button>
         `;
       }).join('');
+    }
+
+    // Keep Assign tab badge in sync whenever selection changes
+    const asgBadge = document.getElementById('ts-badge-assign');
+    if (asgBadge) {
+      const sel = state.selectedIds.size;
+      asgBadge.textContent = String(sel);
+      asgBadge.style.display = sel > 0 ? '' : 'none';
     }
 
     // 2. Selected Basket Strip inside Composer
@@ -1718,7 +1744,7 @@
 
       let tagHtml = '';
       if (isLive) {
-        tagHtml = `<span class="ts-pick-tag is-live" data-ts-dl-task="${esc(t.id)}">⏱ ${esc(formatDeadlineRemaining(dlAt - nowMs))}</span>`;
+        tagHtml = `<span class="ts-pick-tag is-live" data-ts-dl-task="${esc(t.id)}">Còn ${esc(formatDeadlineRemaining(dlAt - nowMs))}</span>`;
       } else if (allDone) {
         tagHtml = '<span class="ts-pick-tag is-done">✓ Xong hết</span>';
       } else if (isEnded) {
@@ -2080,7 +2106,10 @@
       state.weeklyAutoLoading = false;
       if (btn) {
         btn.disabled = false;
-        btn.textContent = state.weeklyAutoOffset > 0 ? '↻ Đổi gói tuần khác' : '✨ Chọn nhanh gói tuần';
+        const lblSpan = btn.querySelector('span');
+        const nextText = state.weeklyAutoOffset > 0 ? 'Đổi gói tuần khác' : 'Chọn nhanh gói tuần';
+        if (lblSpan) lblSpan.textContent = nextText;
+        else btn.textContent = nextText;
       }
     }
   }
@@ -2770,7 +2799,7 @@
         const rem = dlAt - now;
         if (rem > 0) {
           el.classList.remove('is-ended');
-          el.textContent = el.classList.contains('ts-hw-dl') ? `⏱ Còn ${formatDeadlineRemaining(rem)}` : `⏱ ${formatDeadlineRemaining(rem)}`;
+          el.textContent = el.classList.contains('ts-hw-dl') ? `Còn ${formatDeadlineRemaining(rem)}` : `Còn ${formatDeadlineRemaining(rem)}`;
         } else {
           el.classList.add('is-ended');
           el.textContent = el.classList.contains('ts-hw-dl') ? `Đã đóng · ${formatDeadlineTs(dlAt)}` : 'Hết hạn';
@@ -2787,6 +2816,61 @@
   /* =========================================================
      11. MASTER RENDER + PREVIEW + MULTI-SKILL STUDENT URL HANDLER
      ========================================================= */
+  function syncWorkspaceTabsUi(buckets, nowMs) {
+    const activeTab = ['students', 'monitor', 'assign'].includes(state.activeTab) ? state.activeTab : 'students';
+    document.querySelectorAll('#ts-ws-nav .ts-ws-tab').forEach((btn) => {
+      const isAct = btn.getAttribute('data-ts-tab') === activeTab;
+      btn.classList.toggle('active', isAct);
+      btn.setAttribute('aria-selected', isAct ? 'true' : 'false');
+    });
+    document.querySelectorAll('#screen-teacher .ts-tab-pane').forEach((pane) => {
+      const isAct = pane.getAttribute('data-ts-pane') === activeTab;
+      pane.classList.toggle('is-active', isAct);
+    });
+
+    // Live badge updates
+    const students = B()?.getStudentAccounts?.() || [];
+    const lockedCount = students.filter((st) => readStudentAllLocks(st.id, nowMs).length > 0).length;
+    const stuBadge = document.getElementById('ts-badge-students');
+    if (stuBadge) {
+      stuBadge.textContent = lockedCount > 0 ? `${lockedCount} khóa` : String(students.length);
+      stuBadge.classList.toggle('is-danger', lockedCount > 0);
+    }
+    const monBadge = document.getElementById('ts-badge-monitor');
+    if (monBadge && buckets) {
+      monBadge.textContent = String((buckets.activeList || []).length);
+    }
+    const asgBadge = document.getElementById('ts-badge-assign');
+    if (asgBadge) {
+      const sel = state.selectedIds.size;
+      asgBadge.textContent = String(sel);
+      asgBadge.style.display = sel > 0 ? '' : 'none';
+    }
+  }
+
+  function setWorkspaceTab(tab) {
+    const next = ['students', 'monitor', 'assign'].includes(tab) ? tab : 'students';
+    state.activeTab = next;
+    try { localStorage.setItem(WORKSPACE_TAB_KEY, next); } catch (_) {}
+    toggleToolsMenu(false);
+    syncWorkspaceTabsUi(getMonitorBuckets(Date.now()), Date.now());
+  }
+
+  function toggleToolsMenu(force) {
+    const next = typeof force === 'boolean' ? force : !state.toolsMenuOpen;
+    state.toolsMenuOpen = next;
+    const pop = document.getElementById('ts-tools-pop');
+    const trig = document.getElementById('ts-tools-trigger');
+    if (pop) pop.classList.toggle('open', next);
+    if (trig) trig.setAttribute('aria-expanded', next ? 'true' : 'false');
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!state.toolsMenuOpen) return;
+    const wrap = document.getElementById('ts-tools-wrap');
+    if (wrap && !wrap.contains(e.target)) toggleToolsMenu(false);
+  });
+
   function renderDashboard() {
     if (!B()?.isTeacherUser?.()) return;
     const nowMs = Date.now();
@@ -2794,6 +2878,7 @@
     renderRosterSection(nowMs, buckets.activeList);
     renderMonitorSection(nowMs, buckets);
     renderPickerSection(nowMs);
+    syncWorkspaceTabsUi(buckets, nowMs);
     ensureTicker();
   }
 
@@ -2925,16 +3010,50 @@
     const ctx = state.quickAssignCtx;
     if (!ctx) return;
     const mode = document.querySelector('#modal-practice-assign [data-qa-mode].active')?.getAttribute('data-qa-mode') || 'practice';
-    const preset = document.getElementById('qa-dl-preset')?.value || 'tonight_24';
+    const isLiveMode = mode === 'live' && ctx.skill === 'reading';
+    const dlRow = document.getElementById('qa-dl-row');
+    if (dlRow) dlRow.style.display = isLiveMode ? 'none' : '';
+    const preset = isLiveMode ? '0' : (document.getElementById('qa-dl-preset')?.value || '0');
     const customEl = document.getElementById('qa-dl-custom');
-    if (customEl) customEl.style.display = preset === 'custom' ? 'block' : 'none';
+    if (customEl) customEl.style.display = (!isLiveMode && preset === 'custom') ? 'block' : 'none';
+
     const nowTs = Date.now();
-    const dlMs = computeQuickAssignDeadlineMs(preset, customEl?.value || '', nowTs);
-    const taskId = buildPracticeTaskId(ctx.skill, ctx.itemId, ctx.isFull, mode);
-    const msg = buildDailyHomeworkMessage([taskId], dlMs, nowTs, nowTs);
+    const dlMs = isLiveMode ? 0 : computeQuickAssignDeadlineMs(preset, customEl?.value || '', nowTs);
+    const taskId = isLiveMode ? '' : buildPracticeTaskId(ctx.skill, ctx.itemId, ctx.isFull, mode);
+
+    let msg = '';
+    if (isLiveMode) {
+      if (!ctx.liveRoomId) {
+        ctx.liveRoomId = window.LiveReadingRoom?.generateRoomId?.() || ('rp' + Date.now().toString(36).slice(-6));
+      }
+      msg = window.LiveReadingRoom?.buildShareUrl
+        ? window.LiveReadingRoom.buildShareUrl(ctx.liveRoomId, ctx.itemId, ctx.isFull)
+        : `${buildBaseUrl()}?live=${encodeURIComponent(ctx.liveRoomId)}&p=${encodeURIComponent(ctx.itemId)}${ctx.isFull ? '&full=1' : ''}`;
+    } else if (dlMs <= 0) {
+      // Clean direct link only — no deadline, no DAILY HOMEWORK wrapper!
+      msg = `${buildBaseUrl()}?task=${encodeURIComponent(taskId)}`;
+    } else {
+      msg = buildDailyHomeworkMessage([taskId], dlMs, nowTs, nowTs);
+    }
+
+    const prevLbl = document.getElementById('qa-preview-lbl');
+    if (prevLbl) {
+      prevLbl.textContent = isLiveMode
+        ? 'Link phòng làm chung Live (giống Google Docs)'
+        : (dlMs <= 0 ? 'Link trực tiếp (không đặt hạn)' : 'Mẫu gửi Zalo có hạn nộp (tự tạo)');
+    }
+    const copyBtn = document.getElementById('qa-copy-btn');
+    if (copyBtn) {
+      copyBtn.textContent = isLiveMode
+        ? '🔗 Copy link & Vào phòng Live'
+        : (dlMs <= 0 ? '🔗 Copy link ngay' : '🔗 Copy link giao bài');
+    }
+    const basketBtn = document.getElementById('qa-basket-btn');
+    if (basketBtn) basketBtn.style.display = isLiveMode ? 'none' : '';
+
     const prevEl = document.getElementById('qa-preview-box');
     if (prevEl) prevEl.value = msg;
-    return { taskId, dlMs, issuedAt: nowTs, msg, mode };
+    return { taskId, dlMs, issuedAt: nowTs, msg, mode, isLiveMode, liveRoomId: ctx.liveRoomId || '' };
   }
 
   function openPracticeAssignModal(opts = {}) {
@@ -2945,9 +3064,11 @@
       isFull: Boolean(opts.isFull),
       title: String(opts.title || opts.itemId),
       subtitle: String(opts.subtitle || ''),
+      liveRoomId: ''
     };
     document.getElementById('modal-practice-assign')?.remove();
     const sm = skillMeta(state.quickAssignCtx.skill);
+    const isReading = state.quickAssignCtx.skill === 'reading';
     const ov = document.createElement('div');
     ov.id = 'modal-practice-assign';
     ov.className = 'modal-overlay open';
@@ -2961,36 +3082,37 @@
               <span class="ts-skill-pill is-${esc(sm.key)}">${esc(sm.label.toUpperCase())} PRACTICE</span>
               ${state.quickAssignCtx.subtitle ? `<span style="font-size:12px;color:var(--ink-3);font-weight:700;">${esc(state.quickAssignCtx.subtitle)}</span>` : ''}
             </div>
-            <div class="modal-title" style="font-size:16px;">Giao bài theo link · ${esc(state.quickAssignCtx.title)}</div>
+            <div class="modal-title" style="font-size:16px;">Lấy link bài · ${esc(state.quickAssignCtx.title)}</div>
           </div>
           <button type="button" class="btn-icon-glass" style="width:32px;height:32px;" onclick="document.getElementById('modal-practice-assign')?.remove()" aria-label="Đóng">✕</button>
         </div>
         <div class="modal-body ts-qa-body">
           <div class="ts-qa-row">
-            <label class="ts-qa-lbl">Chế độ học sinh làm bài</label>
-            <div class="ts-qa-seg">
-              <button type="button" class="ts-qa-seg-btn active" data-qa-mode="practice" onclick="TeacherStudio.setQuickAssignMode('practice')">Luyện tập (Totoro Washi)</button>
-              <button type="button" class="ts-qa-seg-btn" data-qa-mode="exam" onclick="TeacherStudio.setQuickAssignMode('exam')">Thi thật (CD-IELTS)</button>
+            <label class="ts-qa-lbl">Chế độ mở bài</label>
+            <div class="ts-qa-seg" ${isReading ? 'style="grid-template-columns:repeat(3,minmax(0,1fr));"' : ''}>
+              <button type="button" class="ts-qa-seg-btn active" data-qa-mode="practice" onclick="TeacherStudio.setQuickAssignMode('practice')">Luyện tập</button>
+              <button type="button" class="ts-qa-seg-btn" data-qa-mode="exam" onclick="TeacherStudio.setQuickAssignMode('exam')">Thi thật</button>
+              ${isReading ? `<button type="button" class="ts-qa-seg-btn" data-qa-mode="live" onclick="TeacherStudio.setQuickAssignMode('live')">Làm chung Live</button>` : ''}
             </div>
           </div>
-          <div class="ts-qa-row">
-            <label class="ts-qa-lbl" for="qa-dl-preset">Hạn nộp bài</label>
+          <div class="ts-qa-row" id="qa-dl-row">
+            <label class="ts-qa-lbl" for="qa-dl-preset">Hạn nộp bài (tùy chọn)</label>
             <select id="qa-dl-preset" class="ts-qa-select" onchange="TeacherStudio.updateQuickAssignPreview()">
-              <option value="0">Không giới hạn thời gian</option>
+              <option value="0" selected>Không đặt hạn (chỉ copy link trực tiếp)</option>
               <option value="120">2 giờ tới</option>
-              <option value="tonight_24" selected>Cuối ngày hôm nay (23:59)</option>
+              <option value="tonight_24">Cuối ngày hôm nay (23:59)</option>
               <option value="tomorrow_24">Cuối ngày mai (23:59)</option>
               <option value="custom">Tự chọn ngày giờ...</option>
             </select>
             <input type="datetime-local" id="qa-dl-custom" class="ts-qa-select" style="display:none;margin-top:6px;" onchange="TeacherStudio.updateQuickAssignPreview()">
           </div>
           <div class="ts-qa-row">
-            <label class="ts-qa-lbl" for="qa-preview-box">Mẫu gửi Zalo (tự tạo)</label>
-            <textarea id="qa-preview-box" class="ts-qa-preview" rows="3" readonly></textarea>
+            <label class="ts-qa-lbl" id="qa-preview-lbl" for="qa-preview-box">Link trực tiếp (không đặt hạn)</label>
+            <textarea id="qa-preview-box" class="ts-qa-preview" rows="2" readonly onclick="this.select()"></textarea>
           </div>
           <div class="ts-qa-acts">
-            <button type="button" class="tot-demo-btn" onclick="TeacherStudio.addQuickAssignToBasket()">+ Thêm vào Giỏ combo</button>
-            <button type="button" class="btn btn-primary tot-demo-btn" onclick="TeacherStudio.copyQuickAssignLink()">🔗 Copy link Zalo ngay</button>
+            <button type="button" class="tot-demo-btn" id="qa-basket-btn" onclick="TeacherStudio.addQuickAssignToBasket()">+ Thêm vào Giỏ combo</button>
+            <button type="button" class="btn btn-primary tot-demo-btn" id="qa-copy-btn" onclick="TeacherStudio.copyQuickAssignLink()">🔗 Copy link ngay</button>
           </div>
         </div>
       </div>
@@ -3009,10 +3131,21 @@
   function copyQuickAssignLink() {
     const info = updateQuickAssignPreview();
     if (!info || !info.msg) return;
-    updateLiveDeadlines([info.taskId], info.dlMs);
-    saveSentTasks([info.taskId]);
+    if (info.isLiveMode) {
+      const ctx = state.quickAssignCtx;
+      copySafe(info.msg, () => {
+        document.getElementById('modal-practice-assign')?.remove();
+        window.ReadingPracticeApp?.openLiveRoom?.(info.liveRoomId, ctx.itemId, !!ctx.isFull, '');
+        B()?.showToast?.('Đã copy link phòng Live — gửi cho học sinh để cùng vào ngay!');
+      });
+      return;
+    }
+    if (info.dlMs > 0) {
+      updateLiveDeadlines([info.taskId], info.dlMs);
+      saveSentTasks([info.taskId]);
+    }
     copySafe(info.msg, () => {
-      B()?.showToast?.('Đã copy link giao bài Zalo & lưu vào danh sách Đang giao!');
+      B()?.showToast?.(info.dlMs > 0 ? 'Đã copy link giao bài Zalo & lưu vào danh sách Đang giao!' : 'Đã copy link bài làm trực tiếp!');
       document.getElementById('modal-practice-assign')?.remove();
     });
   }
@@ -3174,6 +3307,8 @@
      ========================================================= */
   window.TeacherStudio = {
     renderDashboard,
+    setWorkspaceTab,
+    toggleToolsMenu,
     setTableView: (v) => { state.tableView = ['today', 'month', 'full'].includes(v) ? v : 'today'; renderDashboard(); },
     setRosterFilter: (f) => { state.rosterFilter = ['all', 'locked', 'pending'].includes(f) ? f : 'all'; renderDashboard(); },
     setMonitorTab: (t) => { state.monitorTab = t === 'expired' ? 'expired' : 'active'; renderDashboard(); },

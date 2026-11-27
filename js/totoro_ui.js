@@ -485,12 +485,22 @@
     }
   }
 
+  function closeOrphanModalsOnNav() {
+    document.querySelectorAll('.modal-overlay.open').forEach((m) => {
+      if (m.id === 'modal-multitab-block' || m.id === 'modal-cheat-warn') return;
+      m.classList.remove('open');
+    });
+    document.getElementById('modal-student-all-hw')?.remove();
+    document.getElementById('modal-practice-assign')?.remove();
+  }
+
   // --- 3. 4-TAB NAVIGATION (HOME | FLASHCARD | TASK | PRACTICE) ---
   function switchView(viewName, opts = {}) {
     const B = window.__VOCAB_BRIDGE__;
     const teacherScreen = document.getElementById('screen-teacher');
     const teacherActive = teacherScreen && teacherScreen.style.display !== 'none' && getComputedStyle(teacherScreen).display !== 'none';
     if (teacherActive && B?.isTeacherUser?.()) return;
+    if (opts.fromUser) closeOrphanModalsOnNav();
 
     const prevView = activeView;
     activeView = VALID_VIEWS.includes(viewName) ? viewName : 'home';
@@ -922,11 +932,13 @@
     const readPracPct = Math.min(100, Math.round((rpStats.completedUnique / 30) * 100));
     const listenPct = Math.min(100, Math.round(((listenVocabDone / Math.max(1, listenVocabTotal)) * 0.5 + (listenTasksDone / Math.max(1, listenTasksTotal)) * 0.5) * 100));
     const wsStats = window.WritingStudio?.getOverallStats?.() || { masteredCards: 0, totalCards: 0, cardPct: 0, tasksDone: 0, tasksTotal: 44, taskPct: 0 };
-    const writePct = Math.min(100, Math.round((wsStats.cardPct * 0.5) + (wsStats.taskPct * 0.5)));
-    const overallPct = Math.min(100, Math.round((snap.masteryPct + readTaskPct + readPracPct + listenPct + writePct) / 5));
+    const writePct = Math.min(100, Math.round(((Number(wsStats.cardPct) || 0) * 0.5) + ((Number(wsStats.taskPct) || 0) * 0.5)));
+    const spStats = window.SpeakingStudio?.getOverallStats?.() || { masteredCards: 0, totalCards: 0, cardPct: 0, tasksDone: 0, tasksTotal: 20, taskPct: 0 };
+    const speakPct = Math.min(100, Math.round(((Number(spStats.cardPct) || 0) * 0.5) + ((Number(spStats.taskPct) || 0) * 0.5)));
+    const overallPct = Math.min(100, Math.round((snap.masteryPct + readTaskPct + readPracPct + listenPct + writePct + speakPct) / 6));
 
     setTxt('home-monitor-overall-pct', `${overallPct}%`);
-    setTxt('home-monitor-summary', `${snap.mastered.toLocaleString('vi-VN')} từ Reading · ${listenVocabDone.toLocaleString('vi-VN')} từ Listening · ${wsStats.tasksDone}/${wsStats.tasksTotal} Writing`);
+    setTxt('home-monitor-summary', `${snap.mastered.toLocaleString('vi-VN')} từ Reading · ${listenVocabDone.toLocaleString('vi-VN')} từ Listening · ${wsStats.tasksDone}/${wsStats.tasksTotal} Writing · ${spStats.tasksDone}/${spStats.tasksTotal} Speaking`);
 
     const barsEl = document.getElementById('home-monitor-bars');
     if (barsEl) {
@@ -936,6 +948,7 @@
         { label: 'Luyện đề Reading', val: rpStats.avgBand ? `${rpStats.completedUnique} bài · Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} bài đã nộp`, pct: readPracPct, cls: 'is-emerald', action: "window.TotoroUI?.enterSkillMode('Reading', 'practice')" },
         { label: 'Listening & Dictation', val: `${listenVocabDone.toLocaleString('vi-VN')} từ · ${listenTasksDone}/${listenTasksTotal} Task`, pct: listenPct, cls: 'is-indigo', action: "window.TotoroUI?.enterSkillMode('Listening', 'home')" },
         { label: 'Writing & Flow Ideas', val: `${wsStats.masteredCards} thẻ · ${wsStats.tasksDone}/${wsStats.tasksTotal} Task`, pct: writePct, cls: 'is-sage', action: "window.TotoroUI?.enterSkillMode('Writing', 'home')" },
+        { label: 'Speaking & Mindmap', val: `${spStats.masteredCards} cụm · ${spStats.tasksDone}/${spStats.tasksTotal} Task`, pct: speakPct, cls: 'is-warm', action: "window.TotoroUI?.enterSkillMode('Speaking', 'home')" },
       ];
       barsEl.innerHTML = meters.map((m) => `
         <button type="button" class="tot-mon-meter tot-mon-meter-btn" onclick="${m.action}">

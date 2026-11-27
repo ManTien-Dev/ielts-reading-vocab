@@ -35,10 +35,14 @@ select:focus-visible,
 [tabindex]:focus-visible { outline: 3px solid #81b65b; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    animation-duration: 0s !important;
+    animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0s !important;
+    transition-property: opacity, background-color, border-color, color !important;
+    transition-duration: 120ms !important;
     scroll-behavior: auto !important;
+  }
+  .btn:hover, .btn:active, .btn-assess:hover, .btn-assess:active, .btn-deck-tool:hover, .btn-deck-tool:active {
+    transform: none !important;
   }
   .motion-ripple { display: none; }
 }

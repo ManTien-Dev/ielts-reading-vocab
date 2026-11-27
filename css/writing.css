@@ -309,7 +309,7 @@ html[data-theme="dark"] #ws-widget-timer .timer-digits.chrono-digits { color: #F
 #ws-widget-timer .btn-timer-ctrl.primary {
   flex: 1 !important;
   background: var(--accent) !important;
-  color: #fff !important;
+  color: var(--accent-ink, #ffffff) !important;
   border-color: var(--accent) !important;
 }
 #ws-widget-timer .timer-footer-stat {
@@ -586,7 +586,7 @@ html[data-theme="dark"] .ws-sf-node.is-outcome {
   height: 20px;
   border-radius: 6px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -642,7 +642,7 @@ html[data-theme="dark"] .ws-sf-node.is-outcome {
 }
 #writing-flashcard-root .btn-reading-tip.is-active {
   background: var(--accent) !important;
-  color: #ffffff !important;
+  color: var(--accent-ink, #ffffff) !important;
   border-color: var(--accent) !important;
 }
 
@@ -1117,7 +1117,7 @@ html[data-theme="dark"] .ws-t1-tag.tone-teal { background: rgba(167, 146, 232, 0
   height: 19px;
   border-radius: 50%;
   background: var(--ok, var(--accent));
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1296,7 +1296,7 @@ html[data-theme="dark"] .ws-t1-tag.tone-teal { background: rgba(167, 146, 232, 0
 }
 .ws-t1-kb-btn.is-primary:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
 }
 .ws-t1-kb-btn kbd {
   font-family: var(--font-mono);
@@ -3072,8 +3072,13 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
   flex-direction: column;
   gap: 10px;
 }
-.ws-ins-plan-body.is-collapsed {
-  display: none;
+.ws-ins-plan-body.is-collapsed,
+.ws-plan-single-body.is-collapsed {
+  display: none !important;
+}
+.ws-plan-single-card:has(.is-collapsed) {
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
 }
 .ws-ins-plan-2col {
   display: grid;
@@ -3703,7 +3708,7 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
 }
 .ws-step-pill.is-v2.active {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
 }
 .ws-step-pill.is-v2.active .ws-step-dot {
   background: rgba(255, 255, 255, 0.22);
@@ -3872,7 +3877,7 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
 .ws-t1-cell.is-done .ws-t1-step-num,
 .ws-t1-cell.is-ok .ws-t1-step-num {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
 }
 .ws-t1-cell.is-focused .ws-t1-step-role,
 .ws-t1-cell.is-done .ws-t1-step-role,

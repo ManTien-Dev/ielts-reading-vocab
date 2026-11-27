@@ -18,7 +18,7 @@
   --surface-item: #EFE6D8;
   --ink: #24221F;
   --ink-2: #524D45;
-  --ink-3: #7E776C;
+  --ink-3: #615B52;
   --border: rgba(36, 34, 31, 0.115);
   --border-strong: rgba(36, 34, 31, 0.2);
   --accent: #4E724D;
@@ -26,13 +26,13 @@
   --accent-hover: #3E5E3D;
   --accent-soft: #E4EDE0;
   --accent-ink: #FDFBF6;
-  --streak: #9C6931;
+  --streak: #7D4E1D;
   --streak-soft: #ECDBC4;
-  --danger: #B86557;
+  --danger: #9E3E31;
   --danger-soft: #F5E5E0;
   --ok: #4E724D;
   --ok-soft: #E6EFE3;
-  --info: #73688F;
+  --info: #5E547A;
   --info-soft: #ECE9F4;
 
   --font-ui: Verdana, Geneva, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -83,7 +83,7 @@ html[data-mode="calm"][data-theme="dark"] {
   --surface-muted: #1D1B17 !important;
   --ink: #F5F1E9 !important;
   --ink-2: #C2BAAC !important;
-  --ink-3: #8F877A !important;
+  --ink-3: #A69D8F !important;
   --text: #F5F1E9 !important;
   --text-bright: #F5F1E9 !important;
   --text-muted: #C2BAAC !important;
@@ -128,7 +128,7 @@ html[data-mode="vibrant"][data-theme="light"] {
   --surface-muted: #E6EDF3;
   --ink: #162230;
   --ink-2: #4A5B6E;
-  --ink-3: #76879A;
+  --ink-3: #536477;
   --text: #162230;
   --text-bright: #162230;
   --text-muted: #4A5B6E;
@@ -141,16 +141,16 @@ html[data-mode="vibrant"][data-theme="light"] {
   --accent-soft: #DFEEF0;
   --accent-subtle: #DFEEF0;
   --accent-ink: #F8FAFC;
-  --streak: #BD6B32;
+  --streak: #8D4B1B;
   --streak-soft: #F3E8DE;
-  --danger: #C84B52;
+  --danger: #A62F38;
   --danger-soft: #F7E8E9;
   --ok: #257D63;
   --ok-soft: #E0F0EA;
   --info: #3669A8;
   --info-soft: #E3ECF7;
-  --font-ui: 'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-display: 'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-ui: Verdana, Geneva, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: Verdana, Geneva, -apple-system, BlinkMacSystemFont, sans-serif;
   --lip-card: #CBD4DF;
   --lip-btn: #CFD8E2;
   --lip-primary: rgba(18, 72, 79, 0.34);
@@ -175,7 +175,7 @@ html[data-mode="vibrant"][data-theme="dark"] {
   --surface-muted: #18202E !important;
   --ink: #F2F6FA !important;
   --ink-2: #A8B6CA !important;
-  --ink-3: #76869E !important;
+  --ink-3: #98A8BF !important;
   --text: #F2F6FA !important;
   --text-bright: #F2F6FA !important;
   --text-muted: #A8B6CA !important;
@@ -196,8 +196,8 @@ html[data-mode="vibrant"][data-theme="dark"] {
   --ok-soft: rgba(54, 188, 116, 0.17) !important;
   --info: #5BA3EE !important;
   --info-soft: rgba(91, 163, 238, 0.18) !important;
-  --font-ui: 'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
-  --font-display: Georgia, 'Times New Roman', serif !important;
+  --font-ui: Verdana, Geneva, -apple-system, BlinkMacSystemFont, sans-serif !important;
+  --font-display: Verdana, Geneva, -apple-system, BlinkMacSystemFont, sans-serif !important;
   --lip-card: #06080C !important;
   --lip-btn: #080B10 !important;
   --lip-primary: rgba(0, 0, 0, 0.65) !important;
@@ -275,7 +275,7 @@ html[data-palette="ink"][data-theme="dark"] {
   --streak: #E59462 !important; --streak-soft: rgba(229,148,98,0.17) !important;
 }
 html[data-mode="vibrant"][data-palette="ink"][data-theme="dark"] {
-  --accent: #FFFFFF !important; --accent-2: #DCE3EE !important; --streak: #FF7847 !important; --streak-soft: rgba(255,120,71,0.2) !important;
+  --accent: #FFFFFF !important; --accent-2: #DCE3EE !important; --accent-ink: #0E1014 !important; --streak: #FF7847 !important; --streak-soft: rgba(255,120,71,0.2) !important;
 }
 
 html[data-mode="vibrant"][data-palette="sage"][data-theme="light"] {
@@ -2887,7 +2887,14 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   .brand-name-txt { display: none; }
   .tot-hdr-btn span.hdr-lbl-hide-sm { display: none; }
   #hdr-streak-pill { display: none !important; }
-  #btn-open-student-tasks { display: none !important; }
+  /* Keep Assigned Homework Center accessible on iPad & Mobile as a compact icon button */
+  #btn-open-student-tasks {
+    display: inline-flex !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+  }
   .tot-nav-tab { padding: 0 11px; font-size: 13px; height: 36px; gap: 5px; }
   .tot-nav-tab .tot-ico { width: 17px; height: 17px; }
   .tot-account-trigger #header-user-id { max-width: 82px; overflow: hidden; text-overflow: ellipsis; }
@@ -2913,7 +2920,7 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
   .tot-nav-tabs { display: none !important; }
   .mobile-bottom-nav { display: grid; }
   #app-shell { padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
-  .toast-notice { bottom: calc(82px + env(safe-area-inset-bottom, 0px)) !important; }
+  .toast-notice { top: calc(58px + env(safe-area-inset-top, 0px)) !important; bottom: auto !important; }
   header.app-header { padding: 7px 12px !important; min-height: 52px !important; gap: 8px !important; }
   .header-left { gap: 8px !important; }
   .header-actions { gap: 6px !important; }
@@ -4384,7 +4391,7 @@ html[data-theme="dark"] .anki-due-reminder {
 .t3-rq-opt-btn.is-selected {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
 }
 .t3-rq-review-list {
   margin-top: 14px;
@@ -4943,11 +4950,11 @@ html[data-theme="dark"] .anki-due-reminder {
     font-size: 10.5px !important;
   }
 
-  /* 2. Mobile Toast: sit cleanly ABOVE Bottom Nav Bar */
+  /* 2. Mobile Toast: anchor cleanly BELOW Top Header so it never blocks Anki Reminder or Exam Steppers */
   .toast-notice,
   #app-toast.toast-notice {
-    top: auto !important;
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    top: calc(58px + env(safe-area-inset-top, 0px)) !important;
+    bottom: auto !important;
     max-width: calc(100vw - 24px) !important;
     width: max-content !important;
     font-size: 12.5px !important;
@@ -4955,11 +4962,12 @@ html[data-theme="dark"] .anki-due-reminder {
     padding: 9px 14px !important;
     border-radius: 13px !important;
     gap: 8px !important;
+    z-index: 9800 !important;
   }
   body:has(#auth-gate:not([style*="none"])) #app-toast.toast-notice,
   body:has(#screen-task.active) #app-toast.toast-notice {
-    top: auto !important;
-    bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+    top: calc(18px + env(safe-area-inset-top, 0px)) !important;
+    bottom: auto !important;
   }
 
   /* 3. Native-App Bottom Navigation Bar */
@@ -5629,7 +5637,7 @@ html[data-theme="dark"] .totoro-fc-soot {
 .tam-tab.active .tam-cnt {
   background: var(--accent);
   border-color: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
 }
 .tam-hint {
   font-size: 12px;
@@ -5746,7 +5754,7 @@ html[data-theme="dark"] .teacher-task-missing.is-prog {
   padding: 2.5px 8.5px;
   border-radius: 999px;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
   font-size: 10.5px;
   font-weight: 850;
   letter-spacing: 0.04em;
@@ -5836,7 +5844,7 @@ html[data-theme="dark"] .thw-dl-pill.is-ended { color: #f87171; }
 .thw-act-btn.is-accent:hover {
   background: var(--accent) !important;
   border-color: var(--accent) !important;
-  color: #ffffff !important;
+  color: var(--accent-ink, #ffffff) !important;
 }
 .thw-act-btn.is-danger {
   color: #b91c1c !important;
@@ -5874,7 +5882,7 @@ html[data-theme="dark"] .thw-act-btn.is-danger {
 .thw-filter-chip.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
 }
 
 /* Per-Student Homework Matrix Table (inside #modal-teacher-task-detail) */
@@ -6041,7 +6049,7 @@ html[data-theme="dark"] .thw-overall-score {
 .thw-remind-btn:hover {
   background: var(--accent) !important;
   border-color: var(--accent) !important;
-  color: #ffffff !important;
+  color: var(--accent-ink, #ffffff) !important;
 }
 html[data-theme="dark"] .thw-remind-btn:hover {
   color: #0e1c12 !important;
@@ -6533,7 +6541,7 @@ html[data-theme="dark"] .thw-remind-btn.is-copied {
 .rp-part-pill.active {
   background: var(--accent, #3b7d53);
   border-color: var(--accent, #3b7d53);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
 }
 .rp-part-pill.is-full:not(.active) {
   border-color: rgba(196, 123, 52, 0.45);
@@ -6775,7 +6783,7 @@ html[data-theme="dark"] .thw-remind-btn.is-copied {
 }
 .rp-exam-ptab.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
 }
 .rp-timer-pill {
   display: inline-flex;
@@ -6818,7 +6826,7 @@ html[data-theme="dark"] .thw-remind-btn.is-copied {
 }
 .rp-theme-btn.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
 }
 .rp-font-btns {
   display: inline-flex;
@@ -6886,7 +6894,7 @@ html[data-theme="dark"] .thw-remind-btn.is-copied {
 .rp-btn-sm.is-on {
   background: var(--accent) !important;
   border-color: var(--accent) !important;
-  color: #fff !important;
+  color: var(--accent-ink, #ffffff) !important;
 }
 
 .rp-mobile-pane-bar {
@@ -7147,7 +7155,7 @@ mark.rp-hl-mark.hl-purple {
   height: 26px;
   border-radius: 8px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
   font-size: 12px;
   font-weight: 850;
   flex-shrink: 0;
@@ -7195,7 +7203,7 @@ mark.rp-hl-mark.hl-purple {
 .rp-choice-pill.selected {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
 }
 .rp-choice-pill.is-key {
   background: #1f8a4c !important;
@@ -7383,7 +7391,7 @@ mark.rp-hl-mark.hl-purple {
   font-weight: 800;
   cursor: pointer;
 }
-.rp-nav-dot.is-answered { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rp-nav-dot.is-answered { background: var(--accent); border-color: var(--accent); color: var(--accent-ink, #ffffff); }
 .rp-nav-dot.is-flagged { box-shadow: 0 0 0 2px #d97706; }
 .rp-nav-dot.is-correct { background: #1f8a4c; border-color: #1f8a4c; color: #fff; }
 .rp-nav-dot.is-wrong   { background: #c83e3e; border-color: #c83e3e; color: #fff; }
@@ -7621,7 +7629,7 @@ mark.rp-hl-mark.hl-purple {
 .rp-ps-cell.is-ans {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
 }
 .rp-ps-cell.is-flg {
   box-shadow: 0 0 0 2px #d97706;
@@ -8002,8 +8010,12 @@ mark.rp-hl-mark.hl-purple {
   border-color: var(--accent);
   color: var(--accent);
 }
-/* Sleek 1-Row Header Navigation (Silky crossfade between Home chung & Reading/Listening!) */
-body.is-global-home .tot-skill-wrap,
+/* Sleek 1-Row Header Navigation (Keep .tot-skill-wrap visible on Mobile Global Home <= 767px!) */
+@media (min-width: 768px) {
+  body.is-global-home .tot-skill-wrap {
+    display: none !important;
+  }
+}
 body.is-teacher-mode .tot-skill-wrap {
   display: none !important;
 }
@@ -8979,7 +8991,7 @@ body:not(.is-global-home):not(.is-teacher-mode) .tot-skill-wrap {
 .rp-tool-btn.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
 }
 
 .rp-cd-part-banner {
@@ -9079,7 +9091,7 @@ body:not(.is-global-home):not(.is-teacher-mode) .tot-skill-wrap {
 .rp-cd-parts .rp-exam-ptab.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
 }
 .rp-cd-parts .rp-exam-ptab small {
   opacity: 0.78;
@@ -13292,7 +13304,7 @@ mark.rp-hl-preview {
 }
 .rp-actual-tab.active {
   background: var(--accent, #436846);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(45, 76, 48, 0.22);
 }
@@ -16717,4 +16729,97 @@ html[data-skill="listening"] #screen-tasks-hub .tot-task-card:active {
 @media (max-width: 640px) {
   .rp-live-perm-grid { grid-template-columns: 1fr; }
   .rp-live-link-row { flex-direction: column; }
+
+  /* Compact single-line Reading Exam/Practice header on mobile (prevents 4-line title/timer clipping) */
+  .ins-shell .ins-header {
+    padding: 6px 10px !important;
+    gap: 6px !important;
+    min-height: 50px !important;
+  }
+  .ins-shell .ins-hdr-left {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 6px !important;
+  }
+  .ins-shell .ins-hdr-meta {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+  .ins-shell .ins-hdr-title {
+    font-size: 13px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+  }
+  .ins-shell .ins-hdr-timer {
+    white-space: nowrap !important;
+    font-size: 11.5px !important;
+    padding: 0 7px !important;
+    height: 26px !important;
+  }
+  .ins-shell .ins-hdr-right {
+    flex: 0 0 auto;
+    gap: 5px !important;
+  }
+  .ins-shell .ins-hdr-exit {
+    padding: 0 9px !important;
+    height: 30px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* Teacher Mobile Header & Roster Table Horizontal Scroll (prevents overlap & 6-line column wrapping) */
+@media (max-width: 767px) {
+  body:has(#screen-teacher.active) header.app-header,
+  body.is-teacher-mode header.app-header {
+    flex-wrap: nowrap !important;
+    gap: 5px !important;
+    padding: 6px 8px !important;
+  }
+  body:has(#screen-teacher.active) header.app-header .header-actions,
+  body.is-teacher-mode header.app-header .header-actions {
+    width: auto !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    min-width: 0;
+  }
+  body:has(#screen-teacher.active) #btn-open-student-tasks {
+    display: none !important;
+  }
+  #btn-teacher-preview {
+    height: 34px !important;
+    padding: 0 9px !important;
+    font-size: 11.5px !important;
+    white-space: nowrap !important;
+  }
+  #btn-teacher-refresh {
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  #btn-teacher-refresh span {
+    display: none !important;
+  }
+  #screen-teacher .class-report-table-wrap,
+  #screen-teacher .ts-table-wrap,
+  #screen-teacher .ts-roster-scroll,
+  #screen-teacher .table-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  #screen-teacher table {
+    min-width: 640px;
+  }
+  #screen-teacher table th {
+    white-space: nowrap !important;
+  }
+}
+
+/* Readable measure for long exam instructions & floor >= 11px for functional micro-labels */
+.ins-group-inst {
+  max-width: 72ch;
 }

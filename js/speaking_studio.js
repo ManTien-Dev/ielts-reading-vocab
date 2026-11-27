@@ -494,11 +494,15 @@
   /* ================= TAB 2: FLASHCARD WORKSPACE (SMOOTH FULL STORY B1 → B5) ================= */
   function getVisibleCards() {
     const story = getStory();
-    const base = buildStoryCards(story);
-    if (!state.unmasteredOnly) return base;
+    let list = buildStoryCards(story);
+    if (state.chunksOnly) {
+      const onlyChunks = list.filter((c) => c.kind === 'chunk');
+      if (onlyChunks.length) list = onlyChunks;
+    }
+    if (!state.unmasteredOnly) return list;
     const mmap = getMasteryMap();
-    const unm = base.filter((c) => !c.untested && mmap[c.id]?.level !== 3);
-    return unm.length ? unm : base;
+    const unm = list.filter((c) => !c.untested && mmap[c.id]?.level !== 3);
+    return unm.length ? unm : list;
   }
 
   function getCooldownSec(cardId) {
@@ -542,6 +546,7 @@
 
   function jumpToPart(groupKey) {
     state.unmasteredOnly = false;
+    if (groupKey === 'MAP') state.chunksOnly = false;
     const cards = getVisibleCards();
     const idx = cards.findIndex((c) => c.group === groupKey);
     if (idx >= 0) {
@@ -573,7 +578,8 @@
     const wordSizeCls = card.en.length <= 20 ? 'sp-word-sm' : (card.en.length <= 36 ? 'sp-word-md' : 'sp-word-lg');
     const metaTag = card.kind === 'chunk' ? `Phần ${card.sectionCode}` : '';
 
-    // Smooth compact story part ribbon (B1–B2 -> B3 -> B4 -> B5)
+    // Smooth compact story part ribbon (B1–B2 -> B3 -> B4 -> B5) with per-part mastery progress
+    const allBaseCards = buildStoryCards(story);
     const partTabs = [
       { key: 'MAP', label: 'Sơ đồ' },
       { key: 'B1-B2', label: 'Mở bài' },
@@ -583,10 +589,17 @@
     ];
     const partRibbonHtml = `
       <div class="sp-part-ribbon" role="navigation" aria-label="Mạch Story 01">
-        ${partTabs.map((pt, i) => `
-          <button type="button" class="sp-part-pill ${card.group === pt.key ? 'active' : ''}" onclick="SpeakingStudio.jumpToPart('${pt.key}')">${pt.label}</button>
-          ${i < partTabs.length - 1 ? '<span class="sp-part-sep" aria-hidden="true">→</span>' : ''}
-        `).join('')}
+        ${partTabs.map((pt, i) => {
+          const partChunks = pt.key === 'MAP' ? [] : allBaseCards.filter((c) => c.kind === 'chunk' && c.group === pt.key);
+          const partDone = partChunks.filter((c) => mmap[c.id]?.level === 3).length;
+          const cntHtml = partChunks.length
+            ? `<span class="sp-part-cnt ${partDone === partChunks.length ? 'is-done' : ''}">${partDone === partChunks.length ? '✓' : `${partDone}/${partChunks.length}`}</span>`
+            : '';
+          return `
+            <button type="button" class="sp-part-pill ${card.group === pt.key ? 'active' : ''}" onclick="SpeakingStudio.jumpToPart('${pt.key}')"><span>${pt.label}</span>${cntHtml}</button>
+            ${i < partTabs.length - 1 ? '<span class="sp-part-sep" aria-hidden="true">→</span>' : ''}
+          `;
+        }).join('')}
       </div>
     `;
 
@@ -668,9 +681,19 @@
         ${showEn ? `<div class="sp-stage-en-reveal" onclick="event.stopPropagation()">${esc(card.textEn)}</div>` : ''}
       `;
     } else {
+      const exTxt = String(card.example || '').trim();
       backBodyHtml = `
         <div class="fc-back-meaning">${esc(card.vi)}</div>
-        <div class="fc-sentence-box">${highlightInExample(card.example, card.en)}</div>
+        <div class="fc-sentence-box">
+          <div>${highlightInExample(exTxt, card.en)}</div>
+          ${exTxt ? `
+            <div class="sp-ex-audio-bar" onclick="event.stopPropagation()">
+              <span class="sp-ex-audio-lbl">Nghe cả câu:</span>
+              <button type="button" class="btn-voice-speak sp-ex-audio-btn" onclick="SpeakingStudio.speakRaw('${esc(exTxt).replace(/'/g, "\\'")}', 'en-GB', event)" title="Nghe cả câu giọng Anh - Anh (UK)"><span>UK</span></button>
+              <button type="button" class="btn-voice-speak sp-ex-audio-btn" onclick="SpeakingStudio.speakRaw('${esc(exTxt).replace(/'/g, "\\'")}', 'en-US', event)" title="Nghe cả câu giọng Anh - Mỹ (US)"><span>US</span></button>
+            </div>
+          ` : ''}
+        </div>
       `;
     }
 
@@ -722,6 +745,10 @@
           <button type="button" class="btn-deck-tool tot-tool-quiet" onclick="SpeakingStudio.openPictureBook(0)" title="Xem Sách Tranh 26 phân cảnh">
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m21 15-5-5L5 20"/></svg>
             <span>Sách Tranh</span>
+          </button>
+          <button type="button" class="btn-deck-tool tot-tool-quiet ${state.chunksOnly ? 'active' : ''}" onclick="SpeakingStudio.toggleChunksOnly()" title="Bỏ thẻ dẫn mạch, chỉ ôn nhanh 30 Spoken Chunks">
+            <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h16M4 12h12M4 17h8" stroke-linecap="round"/></svg>
+            <span>Chỉ Chunks</span>
           </button>
           <button type="button" class="btn-deck-tool tot-tool-quiet ${state.unmasteredOnly ? 'active' : ''}" onclick="SpeakingStudio.toggleUnmastered()" title="Chỉ xem các thẻ chưa thuộc">
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
@@ -895,7 +922,7 @@
                   </svg>
 
                   <div class="fc-flip-prompt">
-                    <span>Chạm thẻ để lật · Phím <strong>Space</strong> · <strong>R</strong> nghe lại</span>
+                    <span>${card.kind === 'story_flow' ? 'Chạm thẻ để lật · Phím <strong>Space</strong>' : 'Chạm thẻ để lật · Phím <strong>Space</strong> · <strong>R</strong> nghe lại'}</span>
                   </div>
                 </div>
 
@@ -1062,7 +1089,12 @@
   function speakCurrent(accent, e) {
     if (e) e.stopPropagation();
     const card = getVisibleCards()[state.cardIdx];
-    if (card) speakText(card.en, accent || 'en-US');
+    if (!card || card.kind === 'story_flow') return;
+    if (card.kind === 'section_flow') {
+      if (card.textEn) speakText(card.textEn, accent || 'en-GB');
+      return;
+    }
+    speakText(card.en, accent || 'en-US');
   }
   function speakSectionEn(sectionId, accent, e) {
     if (e) e.stopPropagation();
@@ -1072,6 +1104,12 @@
   function speakRaw(text, accent, e) {
     if (e) e.stopPropagation();
     speakText(text, accent || 'en-GB');
+  }
+  function toggleChunksOnly() {
+    state.chunksOnly = !state.chunksOnly;
+    state.cardIdx = 0;
+    state.flipped = false;
+    renderFlashcardWorkspace();
   }
   function toggleUnmastered() {
     state.unmasteredOnly = !state.unmasteredOnly;
@@ -1908,6 +1946,7 @@
       t2ActiveStation: 1,
       t2Results: {},
       t2TypeMode: {},
+      t2ShowHints: {},
       t2RecordingStation: null,
       t2ProcessingStation: null,
       // Test 3: Guided Steering Mindmap (5-block Miro canvas with Writing-style ghost text)
@@ -1948,6 +1987,13 @@
       }
       const ringTimeEl = document.getElementById('sp-t4-ring-time');
       if (ringTimeEl) ringTimeEl.textContent = fmtMmSs(examState.secsLeft);
+      const ringArcEl = document.getElementById('sp-t4-ring-arc');
+      if (ringArcEl && examState.stage === 4) {
+        const totalSec = examState.t4Phase === 'prep' ? 60 : 120;
+        const dialCirc = 314.16;
+        const dialOff = (dialCirc * (1 - Math.max(0, Math.min(1, examState.secsLeft / totalSec)))).toFixed(1);
+        ringArcEl.setAttribute('stroke-dashoffset', dialOff);
+      }
       if (examState.secsLeft <= 0) {
         clearInterval(examState.timerId);
         if (examState.stage === 4 && examState.t4Phase === 'prep') {
@@ -1993,6 +2039,27 @@
   function teacherJumpExam(stageNum) {
     if (!examState || !isTeacherBypass()) return;
     advanceExamStage(stageNum);
+  }
+
+  function jumpExamStage(stageNum) {
+    if (!examState) return;
+    const target = Math.max(1, Math.min(4, Number(stageNum) || 1));
+    if (target === examState.stage) return;
+    const prevDone = getTaskDoneMap()[examState.story?.id]?.maxStage || 0;
+    const maxUnlocked = Math.max(examState.stage, prevDone + 1);
+    if (!isTeacherBypass() && target > maxUnlocked) {
+      toast(`Hãy hoàn thành Bước ${maxUnlocked} trước để mở khóa Bước ${target}!`);
+      return;
+    }
+    STT()?.abort?.();
+    examState.stage = target;
+    if (target === 4) {
+      examState.t4Phase = 'prep';
+      examState.t4Finalized = false;
+    }
+    examState.secsLeft = getStageLimitSec(target, examState.t4Phase);
+    startExamTimer();
+    renderExamModal();
   }
 
   /* --- Test 1 & Test 3 Helpers: Shared Ghost-Text Inline Typing (100% Writing Parity!) --- */
@@ -2387,6 +2454,13 @@
       }
     });
   }
+  function toggleT2Hint(stationNum) {
+    if (!examState) return;
+    examState.t2ShowHints = examState.t2ShowHints || {};
+    examState.t2ShowHints[stationNum] = !examState.t2ShowHints[stationNum];
+    renderExamModal();
+  }
+
   function gradeT2Station(stationNum, text, audioUrl) {
     const stations = examState.story.speakStations || [];
     const st = stations.find((s) => s.station === stationNum);
@@ -2394,7 +2468,9 @@
     const ev = evaluateKeywords(text, st.keywords);
     const pass = ev.words >= 10 && (ev.hits.length >= 2 || ev.ratio >= 0.25);
     examState.t2Results[stationNum] = { text, audioUrl, hits: ev.hits, misses: ev.misses, words: ev.words, pass };
-    if (pass && stationNum < stations.length) examState.t2ActiveStation = stationNum + 1;
+    if (pass) {
+      toast(`Đạt Trạm ${stationNum}/${stations.length} (${ev.hits.length}/${st.keywords.length} từ khóa)!`);
+    }
     renderExamModal();
   }
   function checkTaskTest2() {
@@ -2446,6 +2522,9 @@
       toast('Một số nút Bẻ Lái chưa đủ ý hoặc còn lỗi chính tả — hãy kiểm tra lại nhé!');
     }
     renderExamModal();
+    requestAnimationFrame(() => {
+      document.getElementById('sp-t3-model-box')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   }
   function checkTaskTest3() {
     if (!examState) return;
@@ -2753,6 +2832,18 @@
             </div>
             <div class="sp-studio-stage-title">${esc(st.titleVi)}</div>
             <div class="sp-studio-stage-vi">${esc(st.textVi)}</div>
+            ${st.keywords?.length ? `
+              <div class="sp-t2-hint-wrap">
+                <button type="button" class="btn-reading-tip ${examState.t2ShowHints?.[st.station] ? 'is-active' : ''}" onclick="SpeakingStudio.toggleT2Hint(${st.station})">
+                  ${examState.t2ShowHints?.[st.station] ? 'Ẩn gợi ý từ khóa' : 'Gợi ý Spoken Chunks'}
+                </button>
+                ${examState.t2ShowHints?.[st.station] ? `
+                  <div class="sp-kw-row" style="margin-top:8px;">
+                    ${st.keywords.map((kw) => `<span class="sp-kw-chip">${esc(kw)}</span>`).join('')}
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
             <div class="sp-studio-nav-row">
               <button type="button" class="btn" ${st.station <= 1 ? 'disabled' : ''} onclick="SpeakingStudio.selectT2Station(${st.station - 1})">← Trạm trước</button>
               <button type="button" class="btn" ${st.station >= stations.length ? 'disabled' : ''} onclick="SpeakingStudio.selectT2Station(${st.station + 1})">Trạm tiếp →</button>
@@ -2792,6 +2883,13 @@
                 <div class="sp-kw-row" style="margin-top:8px;">
                   ${st.keywords.map((kw) => `<span class="sp-kw-chip ${res.hits.includes(kw) ? 'hit' : ''}">${res.hits.includes(kw) ? '✓ ' : ''}${esc(kw)}</span>`).join('')}
                 </div>
+                ${res.pass ? `
+                  <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+                    ${st.station < stations.length
+                      ? `<button type="button" class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="SpeakingStudio.selectT2Station(${st.station + 1})">Sang trạm ${st.station + 1} →</button>`
+                      : `<button type="button" class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="SpeakingStudio.checkTaskTest2()">Hoàn tất · Sang Test 3 →</button>`}
+                  </div>
+                ` : ''}
               </div>
             ` : ''}
           </div>
@@ -2902,14 +3000,14 @@
           </div>
 
           ${audit ? `
-            <div class="ws-recall-model-box" style="border-left-color:${audit.pass ? 'var(--ok)' : 'var(--accent)'};">
+            <div class="ws-recall-model-box" id="sp-t3-model-box" style="border-left-color:${audit.pass ? 'var(--ok)' : 'var(--accent)'};">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
                 <strong style="font-size:12.5px;color:var(--accent);text-transform:uppercase;">Mẫu Mindmap Bẻ Lái Band 8.5 · ${esc(cur.tag)}</strong>
-                <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc([ndB12?.refEn, ndB3?.refEn, ndB5?.refEn].filter(Boolean).join(' ')).replace(/'/g, "\\'")}', 'en-GB')"><span>UK</span></button>
+                <button type="button" class="btn-voice-speak" style="width:auto;padding:0 10px;" onclick="SpeakingStudio.speakRaw('${esc([ndB12?.refEn, ndB3?.refEn, ndB5?.refEn].filter(Boolean).join(' ')).replace(/'/g, "\\'")}', 'en-GB')"><span>Nghe cả 3</span></button>
               </div>
-              <div style="font-size:13.5px;"><strong>Mở bài:</strong> ${esc(ndB12?.refEn || '')}</div>
-              <div style="font-size:13.5px;"><strong>Dẫn chuyện:</strong> ${esc(ndB3?.refEn || '')}</div>
-              <div style="font-size:13.5px;"><strong>Kết bài:</strong> ${esc(ndB5?.refEn || '')}</div>
+              <div class="sp-t3-ref-row"><div><strong>Mở bài:</strong> ${esc(ndB12?.refEn || '')}</div><button type="button" class="btn-voice-speak sp-ex-audio-btn" onclick="SpeakingStudio.speakRaw('${esc(ndB12?.refEn || '').replace(/'/g, "\\'")}', 'en-GB')" title="Nghe Mở bài (UK)"><span>UK</span></button></div>
+              <div class="sp-t3-ref-row"><div><strong>Dẫn chuyện:</strong> ${esc(ndB3?.refEn || '')}</div><button type="button" class="btn-voice-speak sp-ex-audio-btn" onclick="SpeakingStudio.speakRaw('${esc(ndB3?.refEn || '').replace(/'/g, "\\'")}', 'en-GB')" title="Nghe Dẫn chuyện (UK)"><span>UK</span></button></div>
+              <div class="sp-t3-ref-row"><div><strong>Kết bài:</strong> ${esc(ndB5?.refEn || '')}</div><button type="button" class="btn-voice-speak sp-ex-audio-btn" onclick="SpeakingStudio.speakRaw('${esc(ndB5?.refEn || '').replace(/'/g, "\\'")}', 'en-GB')" title="Nghe Kết bài (UK)"><span>UK</span></button></div>
             </div>
           ` : ''}
         ` : ''}
@@ -2974,7 +3072,7 @@
                 <div class="sp-t4-ring-wrap" style="width:108px;height:108px;">
                   <svg viewBox="0 0 120 120" class="sp-t4-ring-svg" aria-hidden="true">
                     <circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg-subtle)" stroke-width="8"/>
-                    <circle cx="60" cy="60" r="50" fill="none" stroke="${examState.t4Recording ? 'var(--danger)' : 'var(--accent)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dialCirc}" stroke-dashoffset="${dialOff}"/>
+                    <circle id="sp-t4-ring-arc" class="sp-ring-arc" cx="60" cy="60" r="50" fill="none" stroke="${examState.t4Recording ? 'var(--danger)' : 'var(--accent)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${dialCirc}" stroke-dashoffset="${dialOff}"/>
                   </svg>
                   <div class="sp-t4-ring-center">
                     <div class="sp-t4-ring-time tabular" id="sp-t4-ring-time" style="font-size:22px;">${fmtMmSs(examState.secsLeft)}</div>
@@ -3076,15 +3174,23 @@
           <div class="sp-modal-title">Story 01 · Task 4 Bước</div>
         </div>
         <div class="sp-step-track" role="tablist" aria-label="Tiến trình 4 bước Speaking Task">
-          ${examSteps.map((s, idx) => `
-            ${idx > 0 ? '<span class="sp-step-conn" aria-hidden="true"></span>' : ''}
-            <button type="button" role="tab" aria-selected="${stage === s.n ? 'true' : 'false'}"
-              class="sp-step-btn ${stage === s.n ? 'active' : (stage > s.n ? 'done' : '')}"
-              onclick="SpeakingStudio.startTaskExam(${s.n})">
-              <span class="sp-step-dot">${stage > s.n ? '✓' : s.n}</span>
-              <span>${s.label}</span>
-            </button>
-          `).join('')}
+          ${(() => {
+            const maxUnlocked = Math.max(stage, (getTaskDoneMap()[story?.id]?.maxStage || 0) + 1);
+            const teacher = isTeacherBypass();
+            return examSteps.map((s, idx) => {
+              const locked = !teacher && s.n > maxUnlocked;
+              return `
+                ${idx > 0 ? '<span class="sp-step-conn" aria-hidden="true"></span>' : ''}
+                <button type="button" role="tab" aria-selected="${stage === s.n ? 'true' : 'false'}"
+                  aria-disabled="${locked ? 'true' : 'false'}"
+                  class="sp-step-btn ${stage === s.n ? 'active' : (stage > s.n ? 'done' : '')} ${locked ? 'is-locked' : ''}"
+                  onclick="SpeakingStudio.jumpExamStage(${s.n})">
+                  <span class="sp-step-dot">${stage > s.n ? '✓' : s.n}</span>
+                  <span>${s.label}</span>
+                </button>
+              `;
+            }).join('');
+          })()}
         </div>
         <div class="sp-task-hdr-right">
           <span class="rp-ac-shield" title="Chống gian lận đang bật trong bài kiểm tra">
@@ -3148,6 +3254,7 @@
             <p class="tot-shell-sub">Ngân hàng ${allCues.length} Cue Card thi thật áp dụng trọn mạch <strong>Story 01 (B1 → B5)</strong> · 1 phút chuẩn bị + 2 phút nói.</p>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openRandomCueCard('practice')" title="Bốc ngẫu nhiên 1 Cue Card chưa luyện giống thi thật">🎲 Bốc đề ngẫu nhiên</button>
             <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openMindmapModal('master')">Mindmap</button>
             <span class="ws-pill tabular">${Object.keys(lastByCue).length} / ${allCues.length} đề đã luyện</span>
           </div>
@@ -3178,7 +3285,9 @@
                 <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
                   <div class="ws-prac-head">
                     <span class="ws-type-pill ${catPillCls[cue.category] || 'is-cause'}">${catLabel[cue.category] || cue.category}</span>
-                    ${prev ? `<span class="ws-pill ok tabular">${fmtMmSs(prev.durationSec)} · ${prev.wpm} WPM</span>` : `<span class="ws-prac-sub-tag">${esc(cue.source || 'Actual Test')}</span>`}
+                    ${prev
+                      ? `<span class="ws-pill ok tabular">${prev.band ? `Band ${Number(prev.band).toFixed(1)} · ` : ''}${fmtMmSs(prev.durationSec)} · ${prev.wpm} WPM</span>`
+                      : `<span class="ws-prac-sub-tag">${esc(cue.source || 'Actual Test')}</span>`}
                   </div>
                   <p class="ws-prac-prompt">${esc(cue.title)}</p>
                   <ul class="sp-cue-bullets">
@@ -3190,6 +3299,7 @@
                   <div class="ws-prac-btns">
                     <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'practice')">Luyện tập</button>
                     <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'exam')">Thi thật →</button>
+                    ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'speaking', itemId: '${esc(cue.id)}', isFull: false, title: '${esc(String(cue.title || '').slice(0, 80)).replace(/'/g, "\\'")}', subtitle: '${esc(catLabel[cue.category] || 'Speaking Part 2').replace(/'/g, "\\'")}' })" title="Tạo link giao Cue Card này cho học sinh">🔗 Giao link đề này</button>` : ''}
                   </div>
                 </div>
               </article>
@@ -3212,6 +3322,16 @@
         if (typeof selStart === 'number') inp.setSelectionRange(selStart, selStart);
       }
     }
+  }
+
+  function openRandomCueCard(mode) {
+    const cues = getStory()?.cueCards || [];
+    if (!cues.length) return;
+    const doneIds = new Set(getPracHistory().map((h) => h.cueId));
+    const pool = cues.filter((c) => !doneIds.has(c.id));
+    const list = pool.length ? pool : cues;
+    const picked = list[Math.floor(Math.random() * list.length)];
+    if (picked) openPracticeRoom(picked.id, mode || 'practice');
   }
 
   /* --- Speaking Part 2 Room (1-Min Prep -> 2-Min Speaking -> Review & Pivot Model) --- */
@@ -3251,6 +3371,7 @@
       audioUrl: '',
       metrics: null,
       showFullB4: false,
+      showPrepHint: false,
       strikes: 0,
       contrast: initContrast,
       textSize: 'regular'
@@ -3316,6 +3437,13 @@
       }
       const ringEl = document.getElementById('sp-room-ring-time');
       if (ringEl) ringEl.textContent = fmtMmSs(roomState.secsLeft);
+      const ringArc = document.getElementById('sp-room-ring-arc');
+      if (ringArc) {
+        const totalSec = roomState.phase === 'prep' ? 60 : 120;
+        const dialCirc = 314.16;
+        const dialOff = (dialCirc * (1 - Math.max(0, Math.min(1, roomState.secsLeft / totalSec)))).toFixed(1);
+        ringArc.setAttribute('stroke-dashoffset', dialOff);
+      }
       if (roomState.secsLeft <= 0) {
         if (roomState.phase === 'prep') {
           beginRoomSpeaking(roomState.mode === 'exam');
@@ -3482,6 +3610,12 @@
     renderPracticeRoom();
   }
 
+  function toggleRoomPrepHint() {
+    if (!roomState || roomState.mode === 'exam') return;
+    roomState.showPrepHint = !roomState.showPrepHint;
+    renderPracticeRoom();
+  }
+
   function renderPracticeRoom() {
     if (!roomState) return;
     const { cue, mode, phase, secsLeft, notes, recording, processing, typeMode, transcript, audioUrl, metrics } = roomState;
@@ -3576,7 +3710,7 @@
               <div class="sp-t4-ring-wrap" style="width:132px;height:132px;">
                 <svg viewBox="0 0 120 120" class="sp-t4-ring-svg" aria-hidden="true">
                   <circle cx="60" cy="60" r="50" fill="none" stroke="var(--bg-subtle)" stroke-width="7"/>
-                  <circle cx="60" cy="60" r="50" fill="none" stroke="${recording ? 'var(--danger)' : 'var(--accent)'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${dialCirc}" stroke-dashoffset="${dialOff}"/>
+                  <circle id="sp-room-ring-arc" class="sp-ring-arc" cx="60" cy="60" r="50" fill="none" stroke="${recording ? 'var(--danger)' : 'var(--accent)'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${dialCirc}" stroke-dashoffset="${dialOff}"/>
                 </svg>
                 <div class="sp-t4-ring-center">
                   <div class="sp-t4-ring-time tabular" id="sp-room-ring-time">${fmtMmSs(secsLeft)}</div>
@@ -3723,6 +3857,19 @@
 
             ${phase === 'prep' ? `
               <p class="ws-ins-inst">You will have to talk about the topic for 1 to 2 minutes. You have 1 minute to think about what you are going to say. You can make some notes to help you if you wish.</p>
+              ${!isExam ? `
+                <div class="sp-prep-hint-card">
+                  <button type="button" class="btn-reading-tip ${roomState.showPrepHint ? 'is-active' : ''}" onclick="SpeakingStudio.toggleRoomPrepHint()">
+                    ${roomState.showPrepHint ? 'Ẩn gợi ý bẻ lái' : 'Gợi ý khung bẻ lái (B1–B3 & B5)'}
+                  </button>
+                  ${roomState.showPrepHint ? `
+                    <div class="sp-prep-hint-body">
+                      <div><strong>Mở bài bẻ lái (B1–B3):</strong> ${esc(cue.b13En || '')}</div>
+                      <div><strong>Chốt đề (B5):</strong> ${esc(cue.b5En || '')}</div>
+                    </div>
+                  ` : ''}
+                </div>
+              ` : ''}
             ` : ''}
 
             ${phase === 'speak' && noteText ? `
@@ -3759,11 +3906,11 @@
         <footer class="ins-footer">
           <div class="ins-footer-parts">
             <div class="sp-foot-steps">
-              <span class="sp-foot-step ${phase === 'prep' ? 'is-active' : 'is-done'}">1. Chuẩn bị (1p)</span>
+              <span class="sp-foot-step ${phase === 'prep' ? 'is-active' : 'is-done'}"><span class="sp-foot-full">1. Chuẩn bị (1p)</span><span class="sp-foot-short">1. Chuẩn bị</span></span>
               <span class="sp-foot-sep">→</span>
-              <span class="sp-foot-step ${phase === 'speak' ? 'is-active' : (phase === 'review' ? 'is-done' : '')}">2. Trình bày (2p)</span>
+              <span class="sp-foot-step ${phase === 'speak' ? 'is-active' : (phase === 'review' ? 'is-done' : '')}"><span class="sp-foot-full">2. Trình bày (2p)</span><span class="sp-foot-short">2. Nói</span></span>
               <span class="sp-foot-sep">→</span>
-              <span class="sp-foot-step ${phase === 'review' ? 'is-active' : ''}">3. Đối chiếu</span>
+              <span class="sp-foot-step ${phase === 'review' ? 'is-active' : ''}"><span class="sp-foot-full">3. Đối chiếu</span><span class="sp-foot-short">3. Chấm</span></span>
             </div>
           </div>
           <button type="button" class="sp-foot-action-btn" onclick="${phase === 'prep' ? 'SpeakingStudio.beginRoomSpeaking(false)' : (phase === 'review' ? 'SpeakingStudio.closePracticeRoom()' : (typeMode ? 'SpeakingStudio.submitRoomTyped()' : 'SpeakingStudio.toggleRoomMic()'))}">${phase === 'prep' ? 'Bắt đầu nói →' : (phase === 'review' ? 'Về kho đề ✓' : (typeMode ? 'Nộp bài →' : (recording ? 'Dừng & Nộp' : 'Bắt đầu thu âm')))}</button>
@@ -3837,6 +3984,7 @@
     speakCurrent,
     speakSectionEn,
     speakRaw,
+    toggleChunksOnly,
     toggleUnmastered,
     toggleFlowMask,
     revealFlowNode,
@@ -3865,10 +4013,12 @@
     fitMindmapToScreen,
     // Task 4-step
     startTaskExam,
+    jumpExamStage,
     closeTaskExamModal,
     teacherJumpExam,
     checkTaskTest1,
     selectT2Station,
+    toggleT2Hint,
     toggleT2TypeMode,
     toggleT2Mic,
     submitT2Typed,
@@ -3888,6 +4038,7 @@
     setPracticeCat,
     setPracticeQuery,
     resetPracticeFilters,
+    openRandomCueCard,
     openPracticeRoom,
     closePracticeRoom,
     saveRoomNote,
@@ -3897,6 +4048,7 @@
     toggleRoomMic,
     submitRoomTyped,
     toggleRoomFullB4,
+    toggleRoomPrepHint,
     toggleRoomOptions,
     setRoomContrast,
     setRoomTextSize

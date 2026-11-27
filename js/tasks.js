@@ -329,6 +329,24 @@
     return out;
   }
 
+  function hydrateTaskExamOverlay(task) {
+    if (!task || !task.id) return task;
+    const examMap = window.APP_READING_TASKS_EXAM_DATA || {};
+    const extra = examMap[task.id];
+    if (extra) {
+      if (Array.isArray(extra.test2WordBoxBoards) && extra.test2WordBoxBoards.length) {
+        task.test2WordBoxBoards = extra.test2WordBoxBoards;
+      }
+      if (extra.passage && !task.test3V2) {
+        task.passage = extra.passage;
+      }
+      if (Array.isArray(extra.test3ReadingQuestions) && extra.test3ReadingQuestions.length) {
+        task.test3ReadingQuestions = extra.test3ReadingQuestions;
+      }
+    }
+    return applyTaskV2Overlay(task);
+  }
+
   function applyTaskV2Overlay(task) {
     if (!task || !task.id) return task;
     const v2Map = window.APP_TASK_EXAM_V2_DATA || {};
@@ -2957,6 +2975,22 @@
     }
     activeTask = task;
     closeTaskExamReadyModal();
+    const needsLazy = window.AppLazyData?.ensureReadingExamData
+      && (!window.APP_READING_TASKS_EXAM_DATA || !window.APP_TASK_EXAM_V2_DATA?.[task.id]);
+    if (needsLazy) {
+      B()?.showToast?.('Đang tải dữ liệu bài Test Task...');
+      window.AppLazyData.ensureReadingExamData(task.id)
+        .then(() => {
+          hydrateTaskExamOverlay(task);
+          startTest1();
+        })
+        .catch(() => {
+          hydrateTaskExamOverlay(task);
+          startTest1();
+        });
+      return;
+    }
+    hydrateTaskExamOverlay(task);
     startTest1();
   }
 
@@ -7030,7 +7064,7 @@
       <div class="task-summary-highlight">
         <div class="task-sum-hero-row">
           <div class="task-sum-panda-ring">
-            <img src="assets/images/totoro_professor.png" alt="" class="task-summary-panda">
+            <img src="assets/images/totoro_professor.webp" alt="" class="task-summary-panda">
           </div>
           <div class="task-sum-hero-main">
             <div class="task-sum-badges">

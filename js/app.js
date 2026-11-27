@@ -3137,12 +3137,14 @@
     const backSent = document.getElementById('fc-back-sentence');
     const backDisplaySent = sentence || item.qa_example?.question || '';
     const backHighlightTerm = sentence ? item.lemma : (item.qa_example?.q_term || item.lemma);
-    if (backDisplaySent) {
-      backSent.innerHTML = formatSentenceHighlight(backDisplaySent, backHighlightTerm);
-      backSent.style.display = 'block';
-    } else {
-      backSent.style.display = 'none';
-      backSent.innerHTML = '';
+    if (backSent) {
+      if (backDisplaySent) {
+        backSent.innerHTML = formatSentenceHighlight(backDisplaySent, backHighlightTerm);
+        backSent.style.display = 'block';
+      } else {
+        backSent.style.display = 'none';
+        backSent.innerHTML = '';
+      }
     }
 
     const lvl = assessments[item.id];

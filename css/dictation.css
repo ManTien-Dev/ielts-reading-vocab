@@ -104,7 +104,7 @@
 .dict-chip.active {
   background: var(--accent, #3B593F);
   border-color: var(--accent, #3B593F);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
 }
 .dict-search {
   margin-left: auto;
@@ -536,7 +536,7 @@
 .dict-spd-btn.active {
   background: var(--accent, #3B593F);
   border-color: var(--accent, #3B593F);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
 }
 .dict-kbd-bar {
   display: flex;
@@ -789,7 +789,7 @@
 }
 .dict-save-word:hover {
   background: var(--accent, #3B593F);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
 }
 
 /* --- IMPORTER MODAL --- */

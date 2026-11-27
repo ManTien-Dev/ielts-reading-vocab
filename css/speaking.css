@@ -301,7 +301,7 @@ html[data-theme="dark"] #sp-widget-timer .timer-digits.chrono-digits { color: #F
   cursor: pointer;
 }
 #sp-widget-timer .btn-timer-ctrl.primary {
-  flex: 1 !important; background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important;
+  flex: 1 !important; background: var(--accent) !important; color: var(--accent-ink, #ffffff) !important; border-color: var(--accent) !important;
 }
 #sp-widget-timer .timer-footer-stat {
   display: flex !important; align-items: center !important; justify-content: space-between !important;
@@ -1058,24 +1058,193 @@ html[data-theme="dark"] .sp-pivot-chip {
 .sp-part-ribbon {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
+  gap: 1px;
+  padding: 2px 4px;
   border-radius: 999px;
   background: var(--surface-panel);
   border: 1px solid var(--border);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.sp-part-ribbon::-webkit-scrollbar { display: none; }
 .sp-part-pill {
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
   border-radius: 999px;
   border: none;
   background: transparent;
   color: var(--ink-2);
   font-family: var(--font-ui);
-  font-size: 11.5px;
+  font-size: 10.5px;
   font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition: background-color 150ms ease, color 150ms ease, transform 140ms var(--sp-ease-out);
+}
+#speaking-flashcard-root .study-top-bar {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+#speaking-flashcard-root .study-top-actions {
+  flex-wrap: nowrap;
+  gap: 4px;
+  flex-shrink: 0;
+}
+#speaking-flashcard-root .study-top-actions .btn-deck-tool {
+  padding: 4px 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  #speaking-flashcard-root .study-top-bar {
+    flex-wrap: wrap;
+  }
+}
+.sp-part-cnt {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  opacity: 0.72;
+}
+.sp-part-cnt.is-done {
+  color: var(--ok);
+  opacity: 1;
+}
+.sp-part-pill.active .sp-part-cnt,
+.sp-part-pill.active .sp-part-cnt.is-done {
+  color: inherit;
+  opacity: 0.9;
+}
+.sp-ex-audio-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.sp-ex-audio-lbl {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.sp-ex-audio-btn {
+  height: 26px !important;
+  min-width: 34px !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+}
+.sp-t3-ref-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.sp-t2-hint-wrap {
+  padding-top: 2px;
+}
+.sp-prep-hint-card {
+  margin-top: 6px;
+}
+.sp-prep-hint-body {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sp-step-btn.is-locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.sp-ring-arc {
+  transition: stroke-dashoffset 0.85s linear;
+}
+.sp-foot-short { display: none; }
+@media (max-width: 767px) {
+  .sp-part-ribbon {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    max-width: 100% !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .sp-part-ribbon::-webkit-scrollbar { display: none; }
+  .sp-foot-full { display: none; }
+  .sp-foot-short { display: inline; }
+  .sp-foot-steps {
+    font-size: 11.5px;
+    gap: 5px;
+    padding: 0 4px;
+    white-space: nowrap;
+  }
+  .sp-task-card .ws-t1-stage-head,
+  #sp-task-exam-modal .ws-t1-stage-head {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    gap: 10px !important;
+  }
+  #sp-task-exam-modal .ws-t1-stage-head > div {
+    flex: 0 0 auto !important;
+  }
+  #sp-task-exam-modal .ws-t1-telemetry {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+  }
+  #sp-task-exam-modal .ws-t1-telemetry .btn-primary {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  #sp-task-exam-modal .sp-t1-miro-stage {
+    min-height: 0 !important;
+    padding: 10px !important;
+    overflow-x: hidden !important;
+  }
+  #sp-task-exam-modal .sp-t1-linear-flow {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  #sp-task-exam-modal .sp-t1-lin-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+  }
+  #sp-task-exam-modal .sp-t1-lin-card .sp-t1-input-wrap {
+    min-height: 110px !important;
+  }
+  #sp-task-exam-modal .sp-t1-lin-arrow {
+    flex-direction: row !important;
+    justify-content: center !important;
+    padding: 2px 0 !important;
+    width: auto !important;
+  }
+  #sp-task-exam-modal .sp-t1-lin-arrow svg {
+    transform: rotate(90deg);
+  }
 }
 .sp-part-pill:hover { color: var(--ink); }
 .sp-part-pill.active {
@@ -2715,7 +2884,7 @@ html[data-skill="speaking"] #screen-tasks-hub .tot-section-shell.has-stamp::afte
 .sp-story-step-item.is-s2 .sp-story-step-num { background: #f8eedb; color: #8c5a18; border: 1px solid rgba(180, 125, 36, 0.26); }
 .sp-story-step-item.is-s3 .sp-story-step-num { background: #e8f1f8; color: #26547c; border: 1px solid rgba(45, 105, 155, 0.24); }
 .sp-story-step-item.is-s4 .sp-story-step-num { background: #efeaf8; color: #5b3e8c; border: 1px solid rgba(105, 72, 165, 0.24); }
-.sp-story-step-item.is-done .sp-story-step-num { background: var(--accent) !important; color: #ffffff !important; border-color: transparent !important; }
+.sp-story-step-item.is-done .sp-story-step-num { background: var(--accent) !important; color: var(--accent-ink, #ffffff) !important; border-color: transparent !important; }
 
 /* 3. Speaking Task 4-Step Modal: Connected Pill Stepper + Refined Studio Header */
 .sp-task-hdr.is-pro {
@@ -2783,7 +2952,7 @@ html[data-skill="speaking"] #screen-tasks-hub .tot-section-shell.has-stamp::afte
 }
 .sp-step-btn.active {
   background: var(--accent, #3f6e4a);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
   box-shadow: 0 2px 6px rgba(47, 93, 63, 0.22);
 }
 .sp-step-btn.active .sp-step-dot {
@@ -2951,7 +3120,7 @@ html[data-skill="speaking"] #screen-tasks-hub .tot-section-shell.has-stamp::afte
   border-radius: 9px;
   border: 1px solid transparent;
   background: var(--accent, #3f6e4a);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
   font-size: 12.5px;
   font-weight: 750;
   cursor: pointer;

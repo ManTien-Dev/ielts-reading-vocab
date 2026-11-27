@@ -1301,7 +1301,7 @@
 
     body.innerHTML = `
       <div class="recog-intro-card" style="text-align:center;">
-        <img src="assets/images/totoro_sitting_branch.png" alt="" class="celebrate-panda-img celebrate-totoro-img" style="width:94px; height:86px; margin-bottom:10px;">
+        <img src="assets/images/totoro_sitting_branch.webp" alt="" class="celebrate-panda-img celebrate-totoro-img" style="width:94px; height:86px; margin-bottom:10px;">
         <div class="recog-intro-title" style="color:var(--success);">
           ${session.mode === 'task_final'
             ? `✓ Hoàn thành xuất sắc ${esc(session.taskLabel)}!`

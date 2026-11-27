@@ -579,7 +579,7 @@
 .ts-hw-btn.is-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-ink, #ffffff);
 }
 .ts-hw-btn.is-primary:hover { opacity: 0.92; color: #fff; }
 .ts-hw-btn.is-danger {
@@ -695,7 +695,7 @@
 }
 .ts-mode-btn.active {
   background: var(--accent, #4B7A57);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
   box-shadow: 0 2px 6px rgba(45, 92, 58, .18);
 }
 .ts-empty-sec-toggle {
@@ -775,7 +775,7 @@
 }
 .ts-autopick-btn:hover {
   background: var(--accent, #4B7A57) !important;
-  color: #ffffff !important;
+  color: var(--accent-ink, #ffffff) !important;
   border-color: var(--accent, #4B7A57) !important;
 }
 .ts-autopick-btn:disabled {
@@ -990,7 +990,7 @@
 }
 .ts-btn-force-unlock:hover:not(:disabled) {
   background: var(--accent, #4B7A57);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
   border-color: var(--accent, #4B7A57);
 }
 .ts-btn-force-unlock:disabled {
@@ -1278,7 +1278,7 @@
 }
 .rp-btn-assign:hover {
   background: var(--accent, #3B593F);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
 }
 html[data-theme="dark"] .rp-btn-assign {
   background: rgba(140, 201, 151, 0.14);
@@ -1512,7 +1512,7 @@ html[data-theme="dark"] .rp-btn-assign:hover {
 .shw-skill-tab.active {
   background: var(--accent, #3f6e4a);
   border-color: var(--accent, #3f6e4a);
-  color: #ffffff;
+  color: var(--accent-ink, #ffffff);
 }
 .shw-tab-cnt {
   font-size: 10.8px;
@@ -1689,5 +1689,753 @@ html[data-theme="dark"] .rp-btn-assign:hover {
   .shw-item:hover {
     border-color: rgba(63, 110, 74, 0.36);
     box-shadow: 0 8px 18px rgba(27, 42, 34, 0.06);
+  }
+}
+
+
+/* ==========================================================================
+   TEACHER STUDIO V2 — STREAMLINED 3-TAB COMMAND CENTER (IMPECCABLE + EMIL MOTION)
+   ========================================================================== */
+:root {
+  --ts-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.ts-v2-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- 1. UNIFIED TOP COMMAND BAR ---------- */
+.ts-cmd-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.ts-cmd-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.ts-cmd-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #efe6d8);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ts-cmd-avatar img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.ts-cmd-titles {
+  min-width: 0;
+}
+.ts-cmd-title {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.ts-cmd-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.8px;
+  color: var(--ink-3);
+  margin-top: 2px;
+}
+.ts-sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ts-r);
+  flex-shrink: 0;
+}
+
+/* 3-Tab Segmented Workspace Switcher */
+.ts-ws-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #efe6d8);
+  border: 1px solid var(--border);
+}
+.ts-ws-tab {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  transition: transform 140ms var(--ts-ease-out), background-color 150ms var(--ts-ease-out), color 150ms var(--ts-ease-out), border-color 150ms var(--ts-ease-out);
+}
+.ts-ws-tab svg {
+  width: 15px;
+  height: 15px;
+  opacity: 0.78;
+  flex-shrink: 0;
+}
+.ts-ws-tab:active {
+  transform: scale(0.97);
+}
+.ts-ws-tab.active {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--border);
+  box-shadow: 0 1px 3px rgba(27, 42, 34, 0.08);
+}
+.ts-ws-tab.active svg {
+  color: var(--accent);
+  opacity: 1;
+}
+.ts-ws-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 19px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(44, 52, 46, 0.08);
+  color: var(--ink-2);
+}
+.ts-ws-tab.active .ts-ws-badge {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ts-ws-badge.is-danger {
+  background: var(--ts-danger) !important;
+  color: #ffffff !important;
+}
+.ts-ws-badge.is-sel {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+/* Command Bar Right Actions & Tools Dropdown */
+.ts-cmd-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ts-cmd-primary {
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 14px !important;
+  font-size: 13px !important;
+  border-radius: 10px !important;
+  gap: 6px;
+}
+.ts-cmd-primary:active,
+.ts-tools-trigger:active {
+  transform: scale(0.97);
+}
+
+.ts-tools-wrap {
+  position: relative;
+}
+.ts-tools-trigger {
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 12px !important;
+  font-size: 13px !important;
+  border-radius: 10px !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 140ms var(--ts-ease-out), border-color 150ms var(--ts-ease-out);
+}
+.ts-tools-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 278px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 14px 32px rgba(20, 32, 24, 0.14);
+  z-index: 60;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform-origin: top right;
+  transform: translateY(-4px) scale(0.96);
+  transition: opacity 150ms var(--ts-ease-out), transform 170ms var(--ts-ease-out), visibility 150ms linear;
+}
+.ts-tools-pop.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+.ts-tools-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 120ms var(--ts-ease-out);
+}
+.ts-tools-item svg {
+  width: 15px;
+  height: 15px;
+  color: var(--ink-2);
+  flex-shrink: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ts-tools-item:hover {
+    background: var(--bg-subtle, #f2ede3);
+  }
+}
+.ts-tools-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 4px;
+}
+.ts-tools-key-box {
+  padding: 6px 8px 6px;
+}
+.ts-tools-key-lbl {
+  display: block;
+  font-size: 11px;
+  font-weight: 750;
+  color: var(--ink-3);
+  margin-bottom: 5px;
+}
+.ts-tools-key-row {
+  display: flex;
+  gap: 6px;
+}
+.ts-tools-key-row .teacher-secret-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  font-size: 12px;
+  padding: 0 9px;
+}
+.ts-tools-key-row .btn-subtle {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 10px !important;
+  font-size: 12px !important;
+}
+
+/* ---------- 2. TAB PANES & FLAT SINGLE-ELEVATION SURFACES ---------- */
+.ts-tab-pane {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+.ts-tab-pane.is-active {
+  display: flex;
+  animation: tsPaneFade 160ms var(--ts-ease-out);
+}
+@keyframes tsPaneFade {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ts-surface-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+
+/* Quiet KPI Strip (Zero rainbow top bars, zero ghost shadows) */
+#screen-teacher.ts-v2-shell .ts-kpi-clean {
+  margin-bottom: 0 !important;
+  gap: 10px !important;
+}
+#screen-teacher.ts-v2-shell .ts-kpi-clean .teacher-kpi-card {
+  border: 1px solid var(--border) !important;
+  border-top: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+  border-radius: 14px !important;
+  padding: 13px 16px !important;
+  transition: transform 150ms var(--ts-ease-out), border-color 150ms var(--ts-ease-out);
+}
+#screen-teacher.ts-v2-shell .ts-kpi-clean .teacher-kpi-card.is-interactive {
+  cursor: pointer;
+}
+#screen-teacher.ts-v2-shell .ts-kpi-clean .teacher-kpi-card.is-danger {
+  border-color: var(--ts-danger-bd) !important;
+  background: var(--ts-danger-bg) !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  #screen-teacher.ts-v2-shell .ts-kpi-clean .teacher-kpi-card.is-interactive:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border)) !important;
+    transform: translateY(-1px);
+  }
+}
+
+/* Quieter Roster Matrix Slots (Less border noise, status stands out immediately) */
+.ts-v2-shell .ts-slot.is-missing {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--border) 75%, transparent);
+  background: transparent;
+  opacity: 0.72;
+}
+.ts-v2-shell .ts-slot.is-missing:hover {
+  opacity: 1;
+}
+.ts-v2-shell .class-report-table-wrap {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+.ts-v2-shell .class-report-table th {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 10px 12px;
+}
+.ts-v2-shell .class-report-table td {
+  padding: 10px 12px;
+}
+
+/* ---------- 3. TAB 2: STREAMLINED MONITOR CARDS (NO ONE-SIDED BARS) ---------- */
+.ts-monitor-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ts-monitor-add-btn {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 11px !important;
+  font-size: 12px !important;
+  border-radius: 9px !important;
+}
+.ts-v2-shell .ts-hw-card {
+  border: 1px solid var(--border) !important;
+  border-left: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  background: var(--surface) !important;
+  box-shadow: none !important;
+  padding: 14px 15px !important;
+  gap: 10px !important;
+  transition: border-color 150ms var(--ts-ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ts-v2-shell .ts-hw-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--border)) !important;
+  }
+}
+.ts-v2-shell .ts-hw-rollcall > div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ts-v2-shell .ts-hw-actions {
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.ts-v2-shell .ts-hw-btn {
+  transition: transform 130ms var(--ts-ease-out), background-color 140ms var(--ts-ease-out), border-color 140ms var(--ts-ease-out);
+}
+.ts-v2-shell .ts-hw-btn:active {
+  transform: scale(0.97);
+}
+.ts-empty-state {
+  text-align: center;
+  padding: 44px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.ts-empty-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.ts-empty-sub {
+  font-size: 13px;
+  color: var(--ink-2);
+  max-width: 420px;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+/* ---------- 4. TAB 3: SMART 2-COLUMN SPLIT ASSIGN STUDIO ---------- */
+.ts-assign-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.52fr) minmax(350px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.ts-assign-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  min-width: 0;
+}
+
+/* Compact 4-Skill Tab Strip inside Left Catalog */
+.ts-v2-shell .ts-skill-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+}
+.ts-v2-shell .ts-skill-strip .ts-skill-tab {
+  padding: 8px 10px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle, #f6f2e8);
+  box-shadow: none;
+  transition: transform 130ms var(--ts-ease-out), border-color 150ms var(--ts-ease-out), background-color 150ms var(--ts-ease-out);
+}
+.ts-v2-shell .ts-skill-strip .ts-skill-tab:active {
+  transform: scale(0.97);
+}
+.ts-v2-shell .ts-skill-strip .ts-skill-tab.active {
+  background: var(--surface);
+  box-shadow: 0 1px 4px rgba(27, 42, 34, 0.08);
+}
+.ts-v2-shell .ts-skill-strip .ts-skill-tab-name {
+  font-size: 13px;
+}
+.ts-v2-shell .ts-skill-strip .ts-skill-tab-sub {
+  font-size: 11px;
+}
+
+.ts-v2-shell .ts-picker-bar.ts-picker-bar-v2 {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 9px !important;
+  margin: 0 !important;
+}
+.ts-v2-shell .ts-picker-bar-v2 .task-suite-tabs {
+  flex: 0 0 auto !important;
+  width: 100%;
+  height: auto !important;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 11px;
+  background: var(--bg-subtle, #efe6d8);
+  border: 1px solid var(--border);
+}
+.ts-v2-shell .ts-picker-bar-v2 .task-suite-tab {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.ts-picker-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.ts-picker-tools .ts-picker-search {
+  flex: 1 1 auto !important;
+  max-width: none !important;
+  width: auto !important;
+  min-width: 0;
+  height: 35px;
+}
+.ts-hide-done-btn {
+  height: 35px !important;
+  min-height: 35px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  border-radius: 9px !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Scrollable 2-Col Picker Grid inside Left Pane */
+.ts-v2-shell .ts-picker-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+  max-height: calc(100vh - 305px);
+  min-height: 410px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--accent) 32%, transparent) transparent;
+}
+.ts-v2-shell .ts-picker-grid .ts-pick-card {
+  box-shadow: none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  transition: transform 130ms var(--ts-ease-out), border-color 140ms var(--ts-ease-out), background-color 140ms var(--ts-ease-out);
+}
+.ts-v2-shell .ts-picker-grid .ts-pick-card:active {
+  transform: scale(0.985);
+}
+
+/* Right Sticky Zalo Composer */
+.ts-assign-composer {
+  position: sticky;
+  top: 76px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.ts-comp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ts-comp-head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ts-link-clear {
+  background: none;
+  border: 0;
+  padding: 3px 5px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 130ms var(--ts-ease-out), background-color 130ms var(--ts-ease-out);
+}
+.ts-link-clear:hover {
+  color: var(--ts-danger);
+  background: var(--ts-danger-bg);
+}
+
+.ts-weekly-meta-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #f6f2e8);
+  border: 1px solid var(--border);
+}
+.ts-autopick-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.ts-autopick-bar .ts-autopick-src {
+  height: 34px;
+  flex: 0 0 112px;
+  font-size: 12.5px;
+}
+.ts-autopick-bar .ts-autopick-btn {
+  flex: 1 1 auto;
+  height: 34px !important;
+  min-height: 34px !important;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12.5px !important;
+  font-weight: 750 !important;
+  border-radius: 9px !important;
+  background: var(--surface) !important;
+}
+.ts-meta-2col {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 8px;
+}
+.ts-weekly-meta-v2 .ts-meta-field {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 3px !important;
+  min-width: 0;
+}
+.ts-weekly-meta-v2 .ts-meta-field label {
+  font-size: 11px;
+  font-weight: 750;
+  color: var(--ink-3);
+  display: block;
+  margin: 0;
+}
+.ts-weekly-meta-v2 .ts-meta-field input {
+  width: 100%;
+  height: 33px;
+  font-size: 12.5px;
+  padding: 0 9px;
+}
+.ts-weekly-meta-v2 .ts-empty-sec-toggle {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.ts-deadline-row-v2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ts-deadline-row-v2 .scope-select {
+  flex: 1 1 160px;
+  height: 34px;
+  font-size: 12.5px;
+}
+.ts-deadline-row-v2 .teacher-deadline-custom {
+  flex: 1 1 100%;
+  height: 34px;
+  font-size: 12.5px;
+}
+
+.ts-assign-composer .ts-zalo-preview {
+  min-height: 132px;
+  font-size: 12.6px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.ts-comp-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.ts-copy-zalo-cta {
+  width: 100%;
+  height: 40px !important;
+  min-height: 40px !important;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  border-radius: 11px !important;
+}
+.ts-copy-zalo-cta:active {
+  transform: scale(0.98);
+}
+.ts-comp-sub-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.ts-comp-sub-actions .btn-subtle {
+  height: 34px !important;
+  min-height: 34px !important;
+  font-size: 12.5px !important;
+  justify-content: center;
+  border-radius: 9px !important;
+}
+.ts-btn-danger-ghost {
+  color: var(--ts-danger) !important;
+  border-color: var(--ts-danger-bd) !important;
+}
+
+/* ---------- 5. DARK MODE & RESPONSIVE ---------- */
+[data-theme="dark"] .ts-cmd-bar,
+[data-theme="dark"] .ts-surface-card,
+[data-theme="dark"] .ts-tools-pop {
+  background: var(--surface);
+  border-color: var(--border);
+}
+[data-theme="dark"] .ts-ws-nav,
+[data-theme="dark"] .ts-weekly-meta-v2 {
+  background: rgba(255, 255, 255, 0.04);
+}
+[data-theme="dark"] .ts-ws-tab.active {
+  background: rgba(255, 255, 255, 0.1);
+}
+[data-theme="dark"] .ts-tools-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+@media (max-width: 1080px) {
+  .ts-assign-split {
+    grid-template-columns: 1fr;
+  }
+  .ts-assign-composer {
+    position: static;
+  }
+  .ts-v2-shell .ts-picker-grid {
+    max-height: 460px;
+  }
+}
+
+@media (max-width: 760px) {
+  .ts-cmd-bar {
+    padding: 12px;
+  }
+  .ts-ws-nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .ts-ws-tab {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 12.2px;
+  }
+  .ts-cmd-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .ts-v2-shell .ts-skill-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ts-v2-shell .ts-picker-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-ws-tab,
+  .ts-tools-pop,
+  .ts-tab-pane.is-active,
+  .ts-v2-shell .ts-pick-card,
+  .ts-v2-shell .ts-hw-btn,
+  .ts-cmd-primary,
+  .ts-copy-zalo-cta {
+    animation: none !important;
+    transition: opacity 120ms linear !important;
+    transform: none !important;
   }
 }
