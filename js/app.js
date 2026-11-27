@@ -1377,6 +1377,8 @@
               if (fallbackTid === 'rp_prac_lock') {
                 try { window.dispatchEvent(new CustomEvent('reading-practice-updated')); } catch (_) {}
                 window.ReadingPracticeApp?.render?.();
+              } else if (fallbackTid === 'w_task_lock' || fallbackTid === 'w_prac_lock') {
+                window.WritingStudio?.closeAcModal?.();
               }
             }
           }
@@ -1901,15 +1903,34 @@
         updateCloudSyncBadge();
         const serverUnlock = Number(res.teacherUnlockedAt || 0);
         const localUnlock = Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${pushedUid}`) || 0);
-        if (serverUnlock > localUnlock) {
+        const serverLocks = (res.taskLocks && typeof res.taskLocks === 'object') ? res.taskLocks : {};
+        const serverPerUnlocks = (res.teacherTaskUnlocks && typeof res.teacherTaskUnlocks === 'object')
+          ? { ...res.teacherTaskUnlocks }
+          : {};
+        // CRITICAL: If student pushed an active lock (e.g. w_st01_m02 / rp_prac_lock) and server returned taskLocks WITHOUT it,
+        // Teacher ALREADY unlocked that specific task! Synthesize per-task unlock so student unlocks immediately without F5.
+        const nowCheck = Date.now();
+        let hasNewServerUnlock = serverUnlock > localUnlock || Object.keys(serverPerUnlocks).length > 0;
+        Object.entries(outSyncData.taskLocks || {}).forEach(([tid, untilMs]) => {
+          if (Number(untilMs || 0) > nowCheck && !serverLocks[tid]) {
+            serverPerUnlocks[tid] = Math.max(Number(serverPerUnlocks[tid] || 0), nowCheck + 60000);
+            hasNewServerUnlock = true;
+          }
+        });
+        if (hasNewServerUnlock) {
           if (cloudClassCache[pushedUid]?.syncData) {
-            cloudClassCache[pushedUid].syncData.teacherUnlockedAt = serverUnlock;
-            cloudClassCache[pushedUid].syncData.taskLocks = res.taskLocks || {};
+            if (serverUnlock > 0) cloudClassCache[pushedUid].syncData.teacherUnlockedAt = Math.max(Number(cloudClassCache[pushedUid].syncData.teacherUnlockedAt || 0), serverUnlock);
+            cloudClassCache[pushedUid].syncData.teacherTaskUnlocks = {
+              ...(cloudClassCache[pushedUid].syncData.teacherTaskUnlocks || {}),
+              ...serverPerUnlocks,
+            };
+            cloudClassCache[pushedUid].syncData.taskLocks = serverLocks;
           }
           mergeCloudEntryIntoLocal(currentUser.id, {
             syncData: {
               teacherUnlockedAt: serverUnlock,
-              taskLocks: (res.taskLocks && typeof res.taskLocks === 'object') ? res.taskLocks : {},
+              teacherTaskUnlocks: serverPerUnlocks,
+              taskLocks: serverLocks,
             },
           });
         }

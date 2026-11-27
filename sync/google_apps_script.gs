@@ -828,6 +828,7 @@ function doPost(e) {
       mastered: finalMastered,
       streak: finalStreak,
       teacherUnlockedAt: incomingSync ? Number(incomingSync.teacherUnlockedAt || 0) : 0,
+      teacherTaskUnlocks: (incomingSync && incomingSync.teacherTaskUnlocks) ? incomingSync.teacherTaskUnlocks : {},
       taskLocks: (incomingSync && incomingSync.taskLocks) ? incomingSync.taskLocks : {}
     });
   } catch (err) {

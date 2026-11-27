@@ -45,7 +45,7 @@
   <link rel="stylesheet" href="css/totoro_theme.css?v=20261127c">
   <link rel="stylesheet" href="css/writing.css?v=20261127b">
   <link rel="stylesheet" href="css/speaking.css?v=20261127c">
-  <link rel="stylesheet" href="css/dictation.css?v=20261127b">
+  <link rel="stylesheet" href="css/dictation.css?v=20261127e">
   <link rel="stylesheet" href="css/teacher_studio.css?v=20261127c">
 </head>
 <body>
@@ -1693,8 +1693,8 @@
           <aside class="ts-surface-card ts-assign-composer" aria-label="Soạn tin nhắn giao bài Zalo">
             <div class="ts-comp-head">
               <div class="ts-mode-seg" role="tablist" aria-label="Chọn mẫu tin nhắn Zalo">
-                <button type="button" class="ts-mode-btn active" data-ts-tpl="weekly" onclick="TeacherStudio.setComposerTemplate('weekly')">Tuần (5 mục)</button>
-                <button type="button" class="ts-mode-btn" data-ts-tpl="daily" onclick="TeacherStudio.setComposerTemplate('daily')">Ngày (gọn)</button>
+                <button type="button" class="ts-mode-btn active" data-ts-tpl="weekly" onclick="TeacherStudio.setComposerTemplate('weekly')">Tuần (Practice)</button>
+                <button type="button" class="ts-mode-btn" data-ts-tpl="daily" onclick="TeacherStudio.setComposerTemplate('daily')">Ngày (Task &amp; Đề)</button>
               </div>
               <div class="ts-comp-head-right">
                 <span id="teacher-dash-sel-count" class="teacher-sel-pill">Đã chọn: 0 bài</span>
@@ -1729,6 +1729,15 @@
                 <input type="checkbox" id="ts-show-empty-sections" onchange="TeacherStudio.toggleShowEmptySections(this.checked)">
                 <span>Hiện đủ 5 mục kể cả mục trống</span>
               </label>
+            </div>
+
+            <!-- Khối chọn nhanh gói ngày (chỉ hiện ở chế độ Ngày · tự lấy Task kế tiếp theo thứ tự list) -->
+            <div class="ts-daily-meta-v2" id="ts-daily-meta-row" style="display:none;">
+              <button type="button" class="btn-subtle ts-autopick-btn ts-daily-pick-btn" id="ts-btn-auto-daily" onclick="TeacherStudio.autoPickDailyBundle()" title="Tự chọn Task kế tiếp theo thứ tự list (VD: hôm nay Task 1 → mai Task 2, hết bộ từ tự sang bộ tiếp theo)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Chọn nhanh gói ngày (Task kế tiếp)</span>
+              </button>
+              <div class="ts-daily-hint" id="ts-daily-auto-hint">Tự lấy Task tiếp theo theo đúng thứ tự giáo trình; hết list tự động chuyển sang list kế tiếp.</div>
             </div>
 
             <!-- Giỏ bài đã chọn -->
@@ -2319,24 +2328,26 @@
   <script src="js/recognition_test.js?v=20261127b"></script>
   <script src="js/speech_stt.js?v=20261123e"></script>
   <script src="js/voice_lab.js?v=20261123c"></script>
-  <script src="js/app.js?v=20261127b"></script>
+  <script src="js/app.js?v=20261127c"></script>
   <script src="data/reading_practice_data.js?v=20261124j"></script>
   <script src="data/reading_photo_map.js?v=20261125d"></script>
   <script src="js/live_room.js?v=20261127a"></script>
   <script src="js/reading_practice.js?v=20261127b"></script>
   <script src="js/tasks.js?v=20261127b"></script>
-  <script src="data/listening_practice_data.js?v=20261125h"></script>
+  <script src="data/listening_practice_data.js?v=20261127e"></script>
   <script src="data/listening_photo_map.js?v=20261125h"></script>
-  <script src="js/listening_practice.js?v=20261127a"></script>
+  <script src="js/listening_practice.js?v=20261127e"></script>
   <script src="js/listening_tasks.js?v=20261126m"></script>
-  <script src="data/dictation_data.js?v=20261125a"></script>
-  <script src="js/dictation_studio.js?v=20261127b"></script>
+  <script src="data/dictation_data.js?v=20261127e"></script>
+  <script src="js/dictation_studio.js?v=20261127e"></script>
   <script src="js/ielts_grader.js?v=20261127a"></script>
   <script src="data/writing_data.js?v=20261126a"></script>
-  <script src="js/writing_studio.js?v=20261127b"></script>
+  <script src="js/writing_studio.js?v=20261127c"></script>
   <script src="data/speaking_data.js?v=20261126b"></script>
   <script src="js/speaking_studio.js?v=20261127c"></script>
   <script src="js/teacher_studio.js?v=20261127c"></script>
-  <script src="js/totoro_ui.js?v=20261127b"></script>
+  <script src="js/totoro_ui.js?v=20261127d"></script>
 </body>
+</html>
+
 </html>

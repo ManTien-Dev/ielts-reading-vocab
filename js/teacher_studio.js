@@ -105,6 +105,7 @@
     weeklyAutoSource: 'cambridge',
     weeklyAutoOffset: 0,
     weeklyAutoLoading: false,
+    dailyAutoOffset: 0,
     showEmptySections: false,
     sectionOverrides: {},
     reportBatchKey: '',
@@ -603,20 +604,32 @@
   }
 
   function getSuitesForSkill(skillKey) {
-    if (skillKey === 'reading') return READING_SUITES;
+    const weeklyOnly = state.composerTemplate === 'weekly';
+    if (skillKey === 'reading') {
+      return weeklyOnly
+        ? READING_SUITES.filter((s) => s.key.startsWith('rp_'))
+        : READING_SUITES;
+    }
     if (skillKey === 'listening') {
-      const suites = window.APP_LISTENING_TASKS?.suites || [];
-      return [
-        ...suites.map((s) => ({ key: s.key, label: s.label })),
+      const pracSuites = [
         { key: 'lp_cambridge', label: 'Đề Cambridge' },
         { key: 'lp_volume',    label: 'Đề Volume' },
         { key: 'lp_actual',    label: 'Đề Actual' },
       ];
+      if (weeklyOnly) return pracSuites;
+      const suites = window.APP_LISTENING_TASKS?.suites || [];
+      return [
+        ...suites.map((s) => ({ key: s.key, label: s.label })),
+        ...pracSuites,
+      ];
     }
     if (skillKey === 'writing') {
+      const wpCount = (window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).length;
+      if (weeklyOnly) {
+        return [{ key: 'wp_practice', label: `Đề Practice (${wpCount})` }];
+      }
       const subs = window.WRITING_STUDIO_DATA?.SUBTOPICS || [];
       const mods = window.WRITING_STUDIO_DATA?.MODULES || [];
-      const wpCount = (window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).length;
       return [
         { key: 'all', label: `Tất cả (${mods.length})` },
         { key: 'wp_practice', label: `Đề Practice (${wpCount})` },
@@ -628,12 +641,43 @@
     }
     if (skillKey === 'speaking') {
       const spCues = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []).length;
+      if (weeklyOnly) {
+        return [{ key: 'sp_practice', label: `Đề Cue Card (${spCues})` }];
+      }
       return [
         { key: 'all', label: `Story Task (${getSpeakingCatalog().length})` },
         ...(spCues ? [{ key: 'sp_practice', label: `Đề Cue Card (${spCues})` }] : []),
       ];
     }
     return [];
+  }
+
+  function ensurePracticeBankLoadedForSuite(suiteKey) {
+    const rpMatch = String(suiteKey || '').match(/^rp_(cambridge|volume|actual)$/);
+    const lpMatch = String(suiteKey || '').match(/^lp_(cambridge|volume|actual)$/);
+    if (rpMatch && window.ReadingPracticeApp?.ensureSourceBankLoaded) {
+      const existing = getReadingPracticeCatalog(rpMatch[1]);
+      if (!existing.length && !state.pickerLoadingBank) {
+        state.pickerLoadingBank = true;
+        window.ReadingPracticeApp.ensureSourceBankLoaded(rpMatch[1]).finally(() => {
+          state.pickerLoadingBank = false;
+          renderPickerSection(Date.now());
+        });
+        return true;
+      }
+    }
+    if (lpMatch && window.ListeningPracticeApp?.ensureSourceBankLoaded) {
+      const existing = getListeningPracticeCatalog(lpMatch[1]);
+      if (!existing.length && !state.pickerLoadingBank) {
+        state.pickerLoadingBank = true;
+        window.ListeningPracticeApp.ensureSourceBankLoaded(lpMatch[1]).finally(() => {
+          state.pickerLoadingBank = false;
+          renderPickerSection(Date.now());
+        });
+        return true;
+      }
+    }
+    return false;
   }
 
   /* =========================================================
@@ -1147,7 +1191,7 @@
 
   function renderStatusUnlockCell(student, locks, nowMs) {
     if (!locks.length) {
-      return '<span class="ts-status-ok">Bình thường</span>';
+      return `<button type="button" class="ts-status-ok ts-status-ok-btn" onclick="TeacherStudio.forceUnlockStudent('${esc(student.id)}', '${esc(student.name)}')" title="Bấm nếu học viên báo đang bị khóa nhưng chưa đồng bộ — gửi lệnh mở khóa cưỡng bức ngay">Bình thường</button>`;
     }
     if (locks.length === 1) {
       const lk = locks[0];
@@ -1606,16 +1650,37 @@
         (STRICT: NO "chưa làm / đang học / chưa ai làm" on cards!)
      ========================================================= */
   function renderPickerSection(nowMs) {
+    const isWeeklyMode = state.composerTemplate === 'weekly';
+    // Ensure active suite is valid for current mode (Weekly = Practice ONLY, no Tasks!)
+    const activeSuitesInit = getSuitesForSkill(state.pickerSkill);
+    const curActiveSuite = state.pickerSuite[state.pickerSkill];
+    if (activeSuitesInit.length && !activeSuitesInit.some((s) => s.key === curActiveSuite)) {
+      state.pickerSuite[state.pickerSkill] = activeSuitesInit[0].key;
+    }
+    ensurePracticeBankLoadedForSuite(state.pickerSuite[state.pickerSkill]);
+
     // 1. 4-Skill Tabs
     const tabsEl = document.getElementById('ts-skill-tabs');
     if (tabsEl) {
       tabsEl.innerHTML = SKILLS.map((sk) => {
-        const list = getCatalogBySkill(sk.key);
         const selCnt = [...state.selectedIds].filter((tid) => detectSkillByTaskId(tid) === sk.key).length;
-        let countText = list.length ? `${list.length} bài` : 'Sắp mở';
-        if (sk.key === 'speaking') {
-          const totalSp = getSpeakingCatalog().length + getSpeakingPracticeCatalog().length;
-          countText = totalSp ? `${totalSp} bài` : 'Sắp mở';
+        let countText = '';
+        if (isWeeklyMode) {
+          if (sk.key === 'writing') {
+            countText = `${(window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).length} đề Practice`;
+          } else if (sk.key === 'speaking') {
+            const spCnt = getSpeakingPracticeCatalog().length;
+            countText = spCnt ? `${spCnt} Cue Card` : 'Đề Practice';
+          } else {
+            countText = 'Đề Practice';
+          }
+        } else {
+          const list = getCatalogBySkill(sk.key);
+          countText = list.length ? `${list.length} bài` : 'Sắp mở';
+          if (sk.key === 'speaking') {
+            const totalSp = getSpeakingCatalog().length + getSpeakingPracticeCatalog().length;
+            countText = totalSp ? `${totalSp} bài` : 'Sắp mở';
+          }
         }
         return `
           <button type="button" class="ts-skill-tab is-${sk.key} ${state.pickerSkill === sk.key ? 'active' : ''}" onclick="TeacherStudio.setPickerSkill('${sk.key}')">
@@ -1647,8 +1712,8 @@
       const isWeekly = state.composerTemplate === 'weekly';
       if (!selArr.length) {
         basketEl.innerHTML = isWeekly
-          ? '<span class="ts-basket-empty">Tick các bài Nghe / Nói / Đọc / Viết / Từ vựng bên dưới — hệ thống tự phân đúng 5 mục và gắn link cho học viên tự làm.</span>'
-          : '<span class="ts-basket-empty">Tick 1–4 bài ở bất kỳ kỹ năng nào bên dưới để gom vào cùng 1 mẫu giao bài trong ngày.</span>';
+          ? '<span class="ts-basket-empty">Tick các đề Practice Nghe / Nói / Đọc / Viết bên trái — bài tập tuần chỉ gồm đề Practice (không lẫn Task).</span>'
+          : '<span class="ts-basket-empty">Tick 1–4 bài ở bất kỳ kỹ năng nào bên trái để gom vào cùng 1 mẫu giao bài trong ngày.</span>';
       } else {
         basketEl.innerHTML = selArr.map((tid) => {
           const t = getTaskById(tid);
@@ -1705,7 +1770,7 @@
       return;
     }
 
-    if (state.pickerSkill === 'speaking' && !getSpeakingCatalog().length) {
+    if (state.pickerSkill === 'speaking' && !isWeeklyMode && !getSpeakingCatalog().length) {
       gridEl.className = 'ts-picker-grid';
       gridEl.innerHTML = `
         <div class="ts-speaking-soon">
@@ -1720,6 +1785,7 @@
     const q = state.pickerQuery.trim().toLowerCase();
     const liveMap = loadLiveDeadlines();
     const catalog = getCatalogBySkill(state.pickerSkill).filter((t) => {
+      if (isWeeklyMode && !t.isPractice) return false;
       if (curSuite !== 'all' && t.suite !== curSuite) return false;
       if (state.pickerHideFull && t.practiceMeta?.isFull) return false;
       if (q && !t.code.toLowerCase().includes(q) && !t.theme.toLowerCase().includes(q) && !t.id.toLowerCase().includes(q)) return false;
@@ -1921,6 +1987,8 @@
     });
     const metaRow = document.getElementById('ts-weekly-meta-row');
     if (metaRow) metaRow.style.display = isWeekly ? '' : 'none';
+    const dailyRow = document.getElementById('ts-daily-meta-row');
+    if (dailyRow) dailyRow.style.display = isWeekly ? 'none' : '';
     const emptyWrap = document.getElementById('ts-show-empty-wrap');
     if (emptyWrap) emptyWrap.style.display = isWeekly ? '' : 'none';
     const emptyChk = document.getElementById('ts-show-empty-sections');
@@ -2007,6 +2075,129 @@
     return lines.join('\n');
   }
 
+  function getOrderedTasksBySkill(skillKey) {
+    if (skillKey === 'reading') {
+      const suiteOrder = { foundation: 0, academic: 1, paraphrase: 2, advanced: 3 };
+      return getReadingCatalog().slice().sort((a, b) => {
+        const sa = suiteOrder[a.suite] ?? 99;
+        const sb = suiteOrder[b.suite] ?? 99;
+        return (sa - sb) || (Number(a.num || 0) - Number(b.num || 0));
+      });
+    }
+    if (skillKey === 'listening') {
+      const suites = (window.APP_LISTENING_TASKS?.suites || []).map((s) => s.key);
+      const suiteOrder = {};
+      suites.forEach((k, idx) => { suiteOrder[k] = idx; });
+      return getListeningCatalog().slice().sort((a, b) => {
+        const sa = suiteOrder[a.suite] ?? 99;
+        const sb = suiteOrder[b.suite] ?? 99;
+        return (sa - sb) || (Number(a.num || 0) - Number(b.num || 0));
+      });
+    }
+    if (skillKey === 'writing') {
+      const subs = (window.WRITING_STUDIO_DATA?.SUBTOPICS || []).map((s) => s.key);
+      const subOrder = {};
+      subs.forEach((k, idx) => { subOrder[k] = idx; });
+      return getWritingCatalog().slice().sort((a, b) => {
+        const sa = subOrder[a.suite] ?? 99;
+        const sb = subOrder[b.suite] ?? 99;
+        return (sa - sb) || (Number(a.num || 0) - Number(b.num || 0));
+      });
+    }
+    return getSpeakingCatalog();
+  }
+
+  function pickSequentialNextTask(orderedList, offset, sentMap, liveMap, nowMs) {
+    if (!Array.isArray(orderedList) || !orderedList.length) return null;
+    // Anchor on the MOST RECENTLY assigned task (by timestamp) so:
+    // - Today Task 1 -> Tomorrow Task 2 -> ... -> Last task of list -> Automatically rolls over to Task 1 of next list!
+    // - Advanced classes that start mid-list (e.g. Học thuật Task 5) naturally continue to Task 6!
+    // - Old/stale test deadlines in another list never hijack the current progression.
+    let anchorIdx = -1;
+    let latestTs = 0;
+    for (let i = 0; i < orderedList.length; i++) {
+      const t = orderedList[i];
+      const sentTs = Number(sentMap[t.id] || 0);
+      const liveRec = liveMap[t.id];
+      const liveTs = liveRec ? Number(liveRec.issuedAt || liveRec.updatedAt || liveRec.deadlineAt || 0) : 0;
+      const ts = Math.max(sentTs, liveTs);
+      if (ts > latestTs || (ts > 0 && ts === latestTs && i > anchorIdx)) {
+        latestTs = ts;
+        anchorIdx = i;
+      }
+    }
+    // Fallback if nothing has a timestamp yet: check furthest 100%-done task
+    if (anchorIdx < 0) {
+      for (let i = 0; i < orderedList.length; i++) {
+        if (isTaskAllDone(orderedList[i], nowMs)) anchorIdx = i;
+      }
+    }
+    const total = orderedList.length;
+    let baseIdx = (anchorIdx + 1) % total;
+    // Never re-pick a task that is ALREADY live/sent/done when there is an unassigned task immediately ahead
+    for (let hop = 0; hop < total; hop++) {
+      const cand = orderedList[(baseIdx + hop) % total];
+      const candLive = liveMap[cand.id] && Number(liveMap[cand.id].deadlineAt || 0) > nowMs;
+      if (!candLive && !sentMap[cand.id] && !isTaskAllDone(cand, nowMs)) {
+        baseIdx = (baseIdx + hop) % total;
+        break;
+      }
+    }
+    const step = Number(offset) || 0;
+    const targetIdx = ((baseIdx + step) % total + total) % total;
+    return orderedList[targetIdx] || null;
+  }
+
+  function autoPickDailyBundle() {
+    const nowMs = Date.now();
+    const sentMap = loadSentMap();
+    const liveMap = loadLiveDeadlines();
+    const offset = state.dailyAutoOffset;
+    state.dailyAutoOffset += 1;
+
+    const pickedRead = pickSequentialNextTask(getOrderedTasksBySkill('reading'), offset, sentMap, liveMap, nowMs);
+    const pickedListen = pickSequentialNextTask(getOrderedTasksBySkill('listening'), offset, sentMap, liveMap, nowMs);
+    const pickedWrite = pickSequentialNextTask(getOrderedTasksBySkill('writing'), offset, sentMap, liveMap, nowMs);
+    const pickedSpeak = pickSequentialNextTask(getOrderedTasksBySkill('speaking'), offset, sentMap, liveMap, nowMs);
+
+    state.composerTemplate = 'daily';
+    try { localStorage.setItem(COMPOSER_TPL_KEY, 'daily'); } catch (_) {}
+    state.selectedIds.clear();
+    state.sectionOverrides = {};
+
+    const picked = [pickedRead, pickedListen, pickedWrite, pickedSpeak].filter(Boolean);
+    picked.forEach((item) => state.selectedIds.add(item.id));
+
+    // Jump picker suite of currently viewed skill to the picked task's suite so teacher sees it checked immediately!
+    const curPicked = picked.find((it) => it.skill === state.pickerSkill);
+    if (curPicked && curPicked.suite) {
+      state.pickerSuite[state.pickerSkill] = curPicked.suite;
+    }
+
+    // Default deadline to tonight 12h if teacher hasn't customized or is coming from 7-day weekly preset
+    const dlSel = document.getElementById('teacher-task-deadline-preset');
+    if (dlSel && (!state.presetDirty || dlSel.value === '10080')) {
+      dlSel.value = 'tonight_24';
+      state.presetDirty = false;
+    }
+
+    renderPickerSection(nowMs);
+
+    const btn = document.getElementById('ts-btn-auto-daily');
+    if (btn) {
+      const span = btn.querySelector('span');
+      const txt = 'Đổi sang gói Task kế tiếp nữa';
+      if (span) span.textContent = txt;
+      else btn.textContent = txt;
+    }
+    const hintEl = document.getElementById('ts-daily-auto-hint');
+    const summary = picked.map((it) => `${skillMeta(it.skill).short}: ${it.code || it.shortCode}`).join(' · ');
+    if (hintEl && summary) {
+      hintEl.textContent = `Đã chọn nối tiếp: ${summary}`;
+    }
+    B()?.showToast?.(`Đã chọn gói Task ngày kế tiếp (${picked.length} kỹ năng): ${summary}`);
+  }
+
   function pickNextCandidate(items, offset, sentMap, liveMap, nowMs) {
     if (!Array.isArray(items) || !items.length) return null;
     // Prefer items not previously sent/live and not already 100% finished by the whole class
@@ -2042,17 +2233,16 @@
       const offset = state.weeklyAutoOffset;
       state.weeklyAutoOffset += 1;
 
-      // 1. Listening Section/Part ONLY (NEVER Full Test!)
+      // Weekly bundle = PRACTICE ONLY across 4 skills (ZERO Tasks, NEVER Full Tests!)
+      // 1. Listening Practice Section/Part ONLY
       const listenParts = getListeningPracticeCatalog(src).filter((it) => !it.practiceMeta?.isFull);
-      const pickedListen = pickNextCandidate(listenParts, offset, sentMap, liveMap, nowMs)
-        || pickNextCandidate(getListeningCatalog(), offset, sentMap, liveMap, nowMs);
+      const pickedListen = pickNextCandidate(listenParts, offset, sentMap, liveMap, nowMs);
 
-      // 2. Speaking Cue Card (or Story Task fallback)
+      // 2. Speaking Practice Cue Card ONLY
       const spCues = getSpeakingPracticeCatalog();
-      const pickedSpeak = pickNextCandidate(spCues, offset, sentMap, liveMap, nowMs)
-        || pickNextCandidate(getSpeakingCatalog(), offset, sentMap, liveMap, nowMs);
+      const pickedSpeak = pickNextCandidate(spCues, offset, sentMap, liveMap, nowMs);
 
-      // 3. Reading Passage ONLY (NEVER Full Test!) — newest Cambridge book first (Cam 20 -> 19 -> 18...)
+      // 3. Reading Practice Passage ONLY — newest Cambridge book first (Cam 20 -> 19 -> 18...)
       const readPassages = getReadingPracticeCatalog(src)
         .filter((it) => !it.practiceMeta?.isFull)
         .sort((a, b) => {
@@ -2065,14 +2255,9 @@
         });
       const pickedRead = pickNextCandidate(readPassages, offset, sentMap, liveMap, nowMs);
 
-      // 4. Writing Task 2 Practice Prompt (or Flow Task fallback)
+      // 4. Writing Task 2 Practice Prompt ONLY
       const writePrompts = getWritingPracticeCatalog();
-      const pickedWrite = pickNextCandidate(writePrompts, offset, sentMap, liveMap, nowMs)
-        || pickNextCandidate(getWritingCatalog(), offset, sentMap, liveMap, nowMs);
-
-      // 5. Vocab / Grammar Task (Reading Vocab Suite)
-      const vocabTasks = getReadingCatalog();
-      const pickedVocab = pickNextCandidate(vocabTasks, offset, sentMap, liveMap, nowMs);
+      const pickedWrite = pickNextCandidate(writePrompts, offset, sentMap, liveMap, nowMs);
 
       state.composerTemplate = 'weekly';
       try { localStorage.setItem(COMPOSER_TPL_KEY, 'weekly'); } catch (_) {}
@@ -2084,7 +2269,6 @@
         { item: pickedSpeak,  sec: 'speaking' },
         { item: pickedRead,   sec: 'reading' },
         { item: pickedWrite,  sec: 'writing' },
-        { item: pickedVocab,  sec: 'vocab' },
       ].filter((x) => x.item);
 
       picked.forEach(({ item, sec }) => {
@@ -2101,7 +2285,7 @@
 
       renderPickerSection(Date.now());
       const names = picked.map((x) => x.item.shortCode || x.item.code).join(' · ');
-      B()?.showToast?.(`Đã chọn sẵn gói tuần (${picked.length} bài lẻ Passage/Section): ${names}`);
+      B()?.showToast?.(`Đã chọn sẵn gói tuần (${picked.length} đề Practice): ${names}`);
     } finally {
       state.weeklyAutoLoading = false;
       if (btn) {
@@ -2248,6 +2432,9 @@
       }
       saveSentTasks(ids);
       recordWeeklyBatch(ids, state.weeklyTitle, state.weeklyIssuedDate, resolved.deadlineMs);
+      state.dailyAutoOffset = 0;
+      const dailyBtnSpan = document.querySelector('#ts-btn-auto-daily span');
+      if (dailyBtnSpan) dailyBtnSpan.textContent = 'Chọn nhanh gói ngày (Task kế tiếp)';
     }
     state.presetDirty = false;
     state.monitorTab = 'active';
@@ -3351,6 +3538,7 @@
       state.weeklyAutoOffset = 0;
     },
     autoPickWeeklyBundle,
+    autoPickDailyBundle,
     openPracticeAssignModal,
     setQuickAssignMode,
     updateQuickAssignPreview,
@@ -3374,6 +3562,15 @@
     setComposerTemplate: (tpl) => {
       state.composerTemplate = tpl === 'daily' ? 'daily' : 'weekly';
       try { localStorage.setItem(COMPOSER_TPL_KEY, state.composerTemplate); } catch (_) {}
+      if (state.composerTemplate === 'weekly') {
+        // Weekly mode is Practice-only: drop any non-Practice Task selections automatically
+        for (const id of [...state.selectedIds]) {
+          if (!parsePracticeTaskId(id)) {
+            state.selectedIds.delete(id);
+            delete state.sectionOverrides[id];
+          }
+        }
+      }
       renderPickerSection(Date.now());
     },
     toggleShowEmptySections: (checked) => {
@@ -3425,6 +3622,11 @@
     endTasksNow,
     dismissMonitorTask,
     unlockStudentTask,
+    forceUnlockStudent: (studentId, studentName) => {
+      const nm = studentName || studentId;
+      if (!confirm(`Gửi lệnh mở khóa toàn bộ bài (cưỡng bức) cho học viên ${nm} ngay bây giờ?`)) return;
+      unlockStudentTask(studentId, '');
+    },
     openTaskDetailModal,
     openWeeklyReportModal,
     setWeeklyReportBatch: (weekKey) => {

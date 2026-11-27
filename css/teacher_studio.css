@@ -2251,7 +2251,8 @@ html[data-theme="dark"] .rp-btn-assign:hover {
   background: var(--ts-danger-bg);
 }
 
-.ts-weekly-meta-v2 {
+.ts-weekly-meta-v2,
+.ts-daily-meta-v2 {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2259,6 +2260,22 @@ html[data-theme="dark"] .rp-btn-assign:hover {
   border-radius: 12px;
   background: var(--bg-subtle, #f6f2e8);
   border: 1px solid var(--border);
+}
+.ts-daily-pick-btn {
+  width: 100%;
+  height: 36px !important;
+  min-height: 36px !important;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12.6px !important;
+  font-weight: 750 !important;
+  border-radius: 9px !important;
+  background: var(--surface) !important;
+}
+.ts-daily-hint {
+  font-size: 11.6px;
+  line-height: 1.45;
+  color: var(--ink-2);
 }
 .ts-autopick-bar {
   display: flex;
@@ -2424,6 +2441,16 @@ html[data-theme="dark"] .rp-btn-assign:hover {
   .ts-v2-shell .ts-picker-grid {
     grid-template-columns: 1fr !important;
   }
+}
+
+.ts-status-ok-btn {
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 130ms var(--ts-ease-out), border-color 140ms var(--ts-ease-out);
+}
+.ts-status-ok-btn:active { transform: scale(0.96); }
+@media (hover: hover) and (pointer: fine) {
+  .ts-status-ok-btn:hover { border-color: var(--ts-r); }
 }
 
 @media (prefers-reduced-motion: reduce) {

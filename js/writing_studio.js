@@ -3934,14 +3934,34 @@
         <div class="ws-modal-title" style="color:${isLock ? 'var(--danger)' : 'var(--streak)'};">${esc(title)}</div>
       </div>
       <p style="font-size:14px;line-height:1.6;color:var(--ink);text-align:left;">${esc(desc)}</p>
-      <div style="display:flex;justify-content:flex-end;gap:10px;">
+      <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
         ${onConfirmAction
           ? `<button type="button" class="btn" onclick="WritingStudio.closeAcModal()">Quay lại làm bài</button>
              <button type="button" class="btn btn-primary" style="background:var(--danger);border-color:var(--danger);" onclick="WritingStudio.confirmAcModal()">Xác nhận thoát</button>`
-          : `<button type="button" class="btn btn-primary" onclick="WritingStudio.closeAcModal()">Đã hiểu</button>`}
+          : `${isLock ? `<button type="button" class="btn" id="ws-ac-check-unlock-btn" onclick="WritingStudio.checkCloudUnlock()">Kiểm tra mở khóa</button>` : ''}
+             <button type="button" class="btn btn-primary" onclick="WritingStudio.closeAcModal()">Đã hiểu</button>`}
       </div>
     `;
     document.getElementById('ws-ac-modal').classList.add('open');
+  }
+  async function checkCloudUnlock() {
+    const btn = document.getElementById('ws-ac-check-unlock-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Đang kiểm tra...'; }
+    try {
+      await window.__VOCAB_BRIDGE__?.pullCloudClassData?.(true);
+      const tLock = getLockout(TASK_LOCK_KEY_BASE);
+      const pLock = getLockout(PRAC_LOCK_KEY_BASE);
+      if (!tLock && !pLock) {
+        closeAcModal();
+        toast('Đã mở khóa Writing! Bạn có thể vào làm bài ngay.');
+        return;
+      }
+      toast('Chưa thấy lệnh mở khóa từ giáo viên — vui lòng báo giáo viên mở rồi bấm lại nhé.');
+    } catch (_) {
+      toast('Không kiểm tra được kết nối — hãy tải lại trang để thử lại.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Kiểm tra mở khóa'; }
+    }
   }
   function closeAcModal() {
     window._wsAcConfirmCb = null;
@@ -4190,6 +4210,7 @@
     requestExitPractice,
     closeAcModal,
     confirmAcModal,
+    checkCloudUnlock,
     openSubtopicFromHome,
     openSummaryModal,
     toastMsg: toast,
