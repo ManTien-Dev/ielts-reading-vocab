@@ -24,6 +24,7 @@
   let activeHtmlAudio = null;
   let activeHtmlAudioTimer = null;
   let preReadTimer = null;
+  let t1GapTimer = null;
   let t1CountdownTimer = null;
   let t1DeadlineAt = 0;
 
@@ -253,6 +254,7 @@
   function stopAllAudio() {
     audioSeqId += 1;
     if (preReadTimer) { clearInterval(preReadTimer); preReadTimer = null; }
+    if (t1GapTimer) { clearTimeout(t1GapTimer); t1GapTimer = null; }
     if (t1CountdownTimer) { clearInterval(t1CountdownTimer); t1CountdownTimer = null; }
     if (activeHtmlAudioTimer) { clearTimeout(activeHtmlAudioTimer); activeHtmlAudioTimer = null; }
     if (activeHtmlAudio) {
@@ -436,6 +438,45 @@
     }
     speakUtteranceAsync(word, chosenAccent, 'Woman', EXAM_PLAYBACK_RATE, mySeq).then(() => {
       if (mySeq === audioSeqId) onDone?.();
+    });
+  }
+
+  function speakSingleWordTwoPass(word, accent, opts = {}) {
+    stopAllAudio();
+    const mySeq = audioSeqId;
+    const chosenAccent = accent || (Math.random() < 0.65 ? 'en-GB' : 'en-US');
+    const cleanWord = String(word || '').trim();
+    const estSpeakMs = Math.max(1250, Math.min(2600, cleanWord.length * 90 + 750));
+
+    const playOnce = (passNum, afterPass) => {
+      if (mySeq !== audioSeqId) return;
+      opts.onPassStart?.(passNum);
+      if (window.AppCore?.audio && !navigator.webdriver) {
+        window.AppCore.audio.speak(cleanWord, { accent: chosenAccent, rate: EXAM_PLAYBACK_RATE, engine: 'auto', respectCustom: false });
+        t1GapTimer = setTimeout(() => {
+          t1GapTimer = null;
+          if (mySeq === audioSeqId) afterPass();
+        }, estSpeakMs);
+        return;
+      }
+      speakUtteranceAsync(cleanWord, chosenAccent, 'Woman', EXAM_PLAYBACK_RATE, mySeq).then(() => {
+        if (mySeq !== audioSeqId) return;
+        t1GapTimer = setTimeout(() => {
+          t1GapTimer = null;
+          if (mySeq === audioSeqId) afterPass();
+        }, 700);
+      });
+    };
+
+    playOnce(1, () => {
+      if (mySeq !== audioSeqId) return;
+      // Short breath pause before Pass 2
+      t1GapTimer = setTimeout(() => {
+        t1GapTimer = null;
+        playOnce(2, () => {
+          if (mySeq === audioSeqId) opts.onDone?.();
+        });
+      }, 450);
     });
   }
 
@@ -651,10 +692,10 @@
         : `<strong>Test 1</strong> Dictation · ${totalW} từ.`;
 
       const deadlineLine = dlInfo.hasDeadline
-        ? `<div style="margin-top:6px;font-weight:700;color:${dlInfo.expired ? '#dc2626' : 'var(--accent)'};">${
+        ? `<div style="margin-top:6px;font-weight:700;color:${dlInfo.expired ? '#b45309' : 'var(--accent)'};">${
             dlInfo.expired
-              ? `Đã hết hạn lúc ${esc(dlInfo.formattedAt)}${isCompleted ? ' (Bạn đã hoàn thành Task này).' : ' — không thể vào làm mới.'}`
-              : `⏱ Thời hạn: còn ${esc(dlInfo.remainingText)} (đóng lúc ${esc(dlInfo.formattedAt)})`
+              ? `Hết hạn nộp lúc ${esc(dlInfo.formattedAt)}${isCompleted ? ' (Bạn đã hoàn thành Task này).' : ' — không phải bị khóa, hãy nhắn giáo viên bấm gia hạn (+1h) nếu cần làm bù.'}`
+              : `Thời hạn: còn ${esc(dlInfo.remainingText)} (đóng lúc ${esc(dlInfo.formattedAt)})`
           }</div>`
         : '';
 
@@ -1068,7 +1109,7 @@
           <div class="lt-row-right">
             <div class="lt-oneshot-strip is-playing" id="lt-t1-audio-strip">
               <span class="lt-wave-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-              <span id="lt-t1-audio-text">Đang phát…</span>
+              <span id="lt-t1-audio-text">Đang phát (1/2)…</span>
             </div>
             <span class="lt-timer-pill tabular" id="lt-t1-timer">15s</span>
           </div>
@@ -1122,32 +1163,39 @@
     const inp = document.getElementById('lt-t1-input');
     setTimeout(() => inp?.focus(), 40);
 
-    // Play word ONCE (no replay button!), rotating across authentic IELTS accents (UK / AU / US / NZ / CA)
+    // Play word TWICE (2 lượt tự động, đồng bộ với Test 2 & Test 3), rotating across authentic IELTS accents
     const ieltsAccentCycle = ['en-GB', 'en-AU', 'en-US', 'en-GB', 'en-AU', 'en-NZ', 'en-GB', 'en-CA'];
     const accent = ieltsAccentCycle[idx % ieltsAccentCycle.length];
-    speakSingleWordOneShot(item.lemma, accent, () => {
-      if (!examState || examState.stage !== 1 || examState.t1Idx !== idx) return;
-      const strip = document.getElementById('lt-t1-audio-strip');
-      const hero = document.getElementById('lt-t1-hero');
-      const txt = document.getElementById('lt-t1-audio-text');
-      if (strip) {
-        strip.classList.remove('is-playing');
-        strip.classList.add('is-done');
-      }
-      if (hero) hero.classList.remove('is-playing');
-      if (txt) txt.innerHTML = `${DIRECTOR_SVG.check}<span>Đã phát xong</span>`;
-      t1DeadlineAt = Date.now() + 15000;
-      t1CountdownTimer = setInterval(() => {
-        const rem = Math.max(0, Math.ceil((t1DeadlineAt - Date.now()) / 1000));
-        const el = document.getElementById('lt-t1-timer');
-        if (el) {
-          el.textContent = `${rem}s`;
-          el.classList.toggle('is-urgent', rem <= 4);
+    speakSingleWordTwoPass(item.lemma, accent, {
+      onPassStart: (passNum) => {
+        if (!examState || examState.stage !== 1 || examState.t1Idx !== idx) return;
+        const txt = document.getElementById('lt-t1-audio-text');
+        if (txt) txt.textContent = `Đang phát (${passNum}/2)…`;
+      },
+      onDone: () => {
+        if (!examState || examState.stage !== 1 || examState.t1Idx !== idx) return;
+        const strip = document.getElementById('lt-t1-audio-strip');
+        const hero = document.getElementById('lt-t1-hero');
+        const txt = document.getElementById('lt-t1-audio-text');
+        if (strip) {
+          strip.classList.remove('is-playing');
+          strip.classList.add('is-done');
         }
-        if (rem <= 0) {
-          submitT1Word(null, true);
-        }
-      }, 200);
+        if (hero) hero.classList.remove('is-playing');
+        if (txt) txt.innerHTML = `${DIRECTOR_SVG.check}<span>Đã phát 2 lượt</span>`;
+        t1DeadlineAt = Date.now() + 15000;
+        t1CountdownTimer = setInterval(() => {
+          const rem = Math.max(0, Math.ceil((t1DeadlineAt - Date.now()) / 1000));
+          const el = document.getElementById('lt-t1-timer');
+          if (el) {
+            el.textContent = `${rem}s`;
+            el.classList.toggle('is-urgent', rem <= 4);
+          }
+          if (rem <= 0) {
+            submitT1Word(null, true);
+          }
+        }, 200);
+      },
     });
   }
 
@@ -1486,7 +1534,6 @@
     return `
       <div class="lt-map-frame">
         <div class="lt-map-head">
-          <div class="lt-note-title">${esc(ml.title || 'Site Map')}</div>
           <div class="lt-note-limit">${esc(ml.instruction || 'Choose the correct letter, A–H')}</div>
         </div>
         <svg class="lt-map-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(ml.title || 'IELTS Listening Map')}">
