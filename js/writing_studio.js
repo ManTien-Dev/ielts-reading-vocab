@@ -422,6 +422,7 @@
   /* ================= STATE ================= */
   const state = {
     selectedModId: null,
+    chunksOnly: false,
     unmasteredOnly: false,
     cardIdx: 0,
     flipped: false,
@@ -565,9 +566,13 @@
       ? state.shuffledOrder.map((id) => base.find((c) => c.id === id)).filter(Boolean)
       : base;
     if (list.length !== base.length) list = base;
+    if (state.chunksOnly) {
+      const onlyChunks = list.filter((c) => !c.untested);
+      if (onlyChunks.length) list = onlyChunks;
+    }
     if (!state.unmasteredOnly) return list;
     const mmap = getMasteryMap();
-    const unm = list.filter((c) => mmap[c.id]?.level !== 3);
+    const unm = list.filter((c) => !c.untested && mmap[c.id]?.level !== 3);
     return unm.length ? unm : list;
   }
 
@@ -1098,6 +1103,10 @@
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg>
             <span>Từ vựng</span>
           </button>
+          <button type="button" class="btn-deck-tool tot-tool-quiet ${state.chunksOnly ? 'active' : ''}" onclick="WritingStudio.toggleChunksOnly()" title="Bỏ thẻ sơ đồ Flow, chỉ ôn nhanh các thẻ từ vựng &amp; cụm từ">
+            <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h16M4 12h12M4 17h8" stroke-linecap="round"/></svg>
+            <span>Chỉ Chunks</span>
+          </button>
           <button type="button" class="btn-deck-tool tot-tool-quiet ${state.unmasteredOnly ? 'active' : ''}" onclick="WritingStudio.toggleUnmastered()" title="Chỉ xem các thẻ chưa thuộc">
             <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             <span>Chưa thuộc</span>
@@ -1601,6 +1610,14 @@
 
   function selectModule(modId) {
     state.selectedModId = modId;
+    state.cardIdx = 0;
+    state.flipped = false;
+    renderFlashcardWorkspace();
+    const mod = getActiveMod();
+    autoSpeakFrontCard(getVisibleCards(mod)[state.cardIdx]);
+  }
+  function toggleChunksOnly() {
+    state.chunksOnly = !state.chunksOnly;
     state.cardIdx = 0;
     state.flipped = false;
     renderFlashcardWorkspace();
@@ -5321,6 +5338,7 @@
     shuffleDeck,
     openCardListModal,
     syncLiveWidgets,
+    toggleChunksOnly,
     toggleUnmastered,
     flipCard,
     stepCard,

@@ -1754,9 +1754,9 @@
             <span class="sp-mm-badge-cnt">${topics.length} ${isEn ? 'topics' : 'đề thi'}</span>
           </div>
           <div class="sp-mm-topics-grid ${topics.length === 1 ? 'is-single' : ''}">
-            ${topics.map((t) => `
+            ${topics.map((t, tIdx) => `
               <div class="sp-mm-topic-card">
-                <div class="sp-mm-topic-code">${isEn ? 'TOPIC' : 'ĐỀ'} ${esc(t.code)}</div>
+                <div class="sp-mm-topic-code">${isEn ? 'CUE CARD' : 'ĐỀ'} ${tIdx + 1}</div>
                 <div class="sp-mm-topic-title">${esc(isEn ? t.titleEn : t.titleVi)}</div>
                 <ul class="sp-mm-topic-bullets">
                   ${(isEn ? t.bulletsEn : t.bulletsVi).map((b) => `<li>${esc(b)}</li>`).join('')}
@@ -1802,7 +1802,7 @@
 
         <div class="sp-mm-node-box is-b5">
           <div class="sp-mm-node-head">
-            <span>${isEn ? `TOPIC CLOSURE (${(grp.topicCodes || []).join(', ')})` : `ĐỀ ${(grp.topicCodes || []).join(', ')} · KẾT BÀI CHỐT ĐÚNG ĐỀ`}</span>
+            <span>${isEn ? 'TOPIC CLOSURE' : 'KẾT BÀI CHỐT ĐÚNG ĐỀ'}</span>
             <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(grp.b5En).replace(/'/g, "\\'")}', 'en-GB', event)"><span>UK</span></button>
           </div>
           <div class="sp-mm-node-text is-quote">“${esc(isEn ? grp.b5En : grp.b5Vi)}”</div>
@@ -1814,7 +1814,7 @@
       <div class="sp-mm-float-left">
         <div class="sp-mm-seg">
           <button type="button" class="sp-mm-seg-btn ${mmState.mode === 'master' ? 'active' : ''}" onclick="SpeakingStudio.setMindmapMode('master')">Sơ đồ Story 01</button>
-          <button type="button" class="sp-mm-seg-btn ${mmState.mode === 'group' ? 'active' : ''}" onclick="SpeakingStudio.setMindmapMode('group')">Mindmap Bẻ Lái (14 cụm)</button>
+          <button type="button" class="sp-mm-seg-btn ${mmState.mode === 'group' ? 'active' : ''}" onclick="SpeakingStudio.setMindmapMode('group')">Mindmap Bẻ Lái</button>
         </div>
         <div class="sp-mm-seg">
           <button type="button" class="sp-mm-seg-btn ${mmState.lang === 'vi' ? 'active' : ''}" onclick="SpeakingStudio.setMindmapLang('vi')">Tiếng Việt</button>
@@ -1822,7 +1822,7 @@
         </div>
         ${mmState.mode === 'group' ? `
           <select class="sp-mm-select" aria-label="Chọn cụm đề bẻ lái" onchange="SpeakingStudio.selectMindmapGroup(this.value)">
-            ${groups.map((g) => `<option value="${esc(g.id)}" ${g.id === mmState.groupId ? 'selected' : ''}>${esc(g.label)} (${esc((g.topicCodes || []).join(', '))})</option>`).join('')}
+            ${groups.map((g) => `<option value="${esc(g.id)}" ${g.id === mmState.groupId ? 'selected' : ''}>${esc(g.label)}</option>`).join('')}
           </select>
         ` : ''}
       </div>
