@@ -576,10 +576,10 @@
       },
       tasks: {
         bg: 'linear-gradient(135deg, #21361C 0%, #34522B 52%, #182914 100%)',
-        eyebrow: '139 TOPICS',
-        t1: 'Dictation &',
-        t2: 'Spelling',
-        sub: '3,864 Core Listening Words',
+        eyebrow: 'YOUTUBE · 4 CHẾ ĐỘ',
+        t1: 'Dictation',
+        t2: 'Studio',
+        sub: 'Dictation · Shadowing · Quiz · Subtitles',
         books: ['lcam_1', 'lcam_16', 'lcam_12'],
         shelf: true
       }
@@ -669,6 +669,12 @@
         secondaryHtml = `<button type="button" class="rp-portal-link" onclick="event.stopPropagation(); ListeningTasksModule.openExam('${esc(firstNoteId)}', 3, { fromPractice: true })">Làm Part 1</button>`;
         primaryLabel = 'Chọn bài nghe →';
         primaryAct = `ListeningTasksModule.openPracticePicker('note')`;
+      } else if (c.kind === 'dictation_studio') {
+        badge = 'YouTube · 4 Chế độ';
+        cardOnClick = `window.TotoroUI?.openDictationStudio?.()`;
+        secondaryHtml = `<button type="button" class="rp-portal-link" onclick="event.stopPropagation(); window.TotoroUI?.openDictationStudio?.(); setTimeout(() => window.DictationStudio?.toggleImporter?.(true), 60)">+ Nhập YouTube / SRT</button>`;
+        primaryLabel = 'Mở Studio →';
+        primaryAct = `window.TotoroUI?.openDictationStudio?.()`;
       } else {
         badge = `${tasks.length || 139} Tasks`;
         cardOnClick = `window.TotoroUI?.switchView?.('task', { fromUser: true })`;
@@ -701,7 +707,7 @@
             </span>
             <div>
               <h2 class="tot-shell-title">Kho đề Listening</h2>
-              <p class="tot-shell-sub">Chọn bộ đề thi chuẩn phòng thi hoặc luyện bổ trợ Map Labelling, Note Completion &amp; 139 Tasks.</p>
+              <p class="tot-shell-sub">Chọn bộ đề thi chuẩn phòng thi hoặc luyện bổ trợ Map Labelling, Note Completion &amp; Dictation Studio.</p>
             </div>
           </div>
         </div>
@@ -1344,6 +1350,41 @@
       el.checked = checked;
       el.closest('label, .lp-ex-opt, .lp-ex-opt-row')?.classList.toggle('is-selected', checked);
     });
+
+    // Sync CD-IELTS Drag-and-Drop Matching zones & used option chips
+    paper.querySelectorAll('.lp-dd-split').forEach((split) => {
+      const optMap = {};
+      split.querySelectorAll('.lp-dd-opt[data-dd-letter]').forEach((opt) => {
+        const lt = String(opt.getAttribute('data-dd-letter') || '').trim().toUpperCase();
+        optMap[lt] = opt.getAttribute('data-dd-text') || '';
+      });
+      const usedLetters = new Set();
+      split.querySelectorAll('.lp-dd-zone[data-q]').forEach((zone) => {
+        const q = zone.getAttribute('data-q');
+        const val = String(answers[q] ?? '').trim().toUpperCase();
+        if (val) {
+          usedLetters.add(val);
+          const txt = optMap[val] || '';
+          zone.classList.add('is-filled');
+          zone.setAttribute('draggable', 'true');
+          zone.innerHTML = `
+            <span class="lp-dd-val-key">${esc(val)}</span>
+            <span class="lp-dd-val-txt">${esc(txt)}</span>
+            <button type="button" class="lp-dd-clear" data-dd-clear="${esc(q)}" title="Bỏ chọn câu ${esc(q)}" aria-label="Xóa đáp án câu ${esc(q)}">×</button>
+          `;
+        } else {
+          zone.classList.remove('is-filled');
+          zone.removeAttribute('draggable');
+          zone.innerHTML = `<span class="lp-dd-qnum">${esc(q)}</span><span class="lp-dd-ph">Drop answer here</span>`;
+        }
+      });
+      split.querySelectorAll('.lp-dd-opt[data-dd-letter]').forEach((opt) => {
+        const lt = String(opt.getAttribute('data-dd-letter') || '').trim().toUpperCase();
+        opt.classList.toggle('is-used', usedLetters.has(lt));
+      });
+    });
+
+    refreshBottomNavStates();
   }
 
   const LP_PASTEL_PENS = [
@@ -1539,6 +1580,86 @@
       lbl.classList.add('lp-cam-choice');
     });
 
+    // 2b. Upgrade scraped "Drop answer here" Matching blocks into authentic CD-IELTS Drag-and-Drop + Click-to-Assign!
+    const processedDdContainers = new Set();
+    paper.querySelectorAll('span.lp-ex-opt').forEach((sp) => {
+      if (!/Drop answer here/i.test(sp.textContent || '')) return;
+      const inlineRow = sp.closest('.lp-ex-q-inline');
+      const promptList = inlineRow?.parentElement;
+      const outerBox = promptList?.parentElement;
+      if (!outerBox || processedDdContainers.has(outerBox)) return;
+
+      // Locate sibling option bank box containing "A.", "B.", ...
+      const optBankSrc = Array.from(outerBox.children).find((ch) => ch !== promptList && /Drag (?:an option|and drop)/i.test(ch.textContent || ''));
+      const promptRows = Array.from(promptList.querySelectorAll('.lp-ex-q-inline')).filter((r) => /Drop answer here/i.test(r.textContent || ''));
+      if (!promptRows.length) return;
+      processedDdContainers.add(outerBox);
+
+      // Parse options (A..J)
+      const options = [];
+      if (optBankSrc) {
+        optBankSrc.querySelectorAll('div').forEach((d) => {
+          const kids = Array.from(d.children).filter((c) => c.tagName === 'SPAN');
+          if (kids.length >= 2) {
+            const ltM = (kids[0].textContent || '').trim().match(/^([A-J])\.?$/i);
+            const txt = kids.slice(1).map((k) => (k.textContent || '').trim()).join(' ').trim();
+            if (ltM && txt && !options.some((o) => o.letter === ltM[1].toUpperCase())) {
+              options.push({ letter: ltM[1].toUpperCase(), text: txt });
+            }
+          }
+        });
+      }
+
+      const split = document.createElement('div');
+      split.className = 'lp-dd-split';
+
+      const leftCol = document.createElement('div');
+      leftCol.className = 'lp-dd-prompts';
+
+      promptRows.forEach((row) => {
+        const dropSpan = Array.from(row.querySelectorAll('span.lp-ex-opt')).find((s) => /Drop answer here/i.test(s.textContent || ''));
+        const qNumTxt = (dropSpan?.querySelector('strong')?.textContent || '').trim();
+        const qNum = Number(qNumTxt);
+        if (!qNum) return;
+
+        // Extract prompt label text (everything before the drop zone, stripped of leading bullet "•")
+        const clone = row.cloneNode(true);
+        clone.querySelectorAll('span.lp-ex-opt').forEach((s) => {
+          if (/Drop answer here/i.test(s.textContent || '')) s.remove();
+        });
+        const labelText = (clone.textContent || '').replace(/^\s*[•·\-]\s*/, '').replace(/\s+/g, ' ').trim();
+
+        const ddRow = document.createElement('div');
+        ddRow.className = 'lp-dd-row';
+        ddRow.innerHTML = `
+          <div class="lp-dd-label"><span class="lp-dd-bullet" aria-hidden="true">•</span><span>${esc(labelText)}</span></div>
+          <div class="lp-dd-zone" data-q="${qNum}" data-dd-q="${qNum}" tabindex="0" role="button" aria-label="Question ${qNum} drop zone">
+            <span class="lp-dd-qnum">${qNum}</span>
+            <span class="lp-dd-ph">Drop answer here</span>
+          </div>
+        `;
+        leftCol.appendChild(ddRow);
+      });
+
+      const rightCol = document.createElement('div');
+      rightCol.className = 'lp-dd-bank';
+      rightCol.innerHTML = `
+        <div class="lp-dd-bank-hint">Kéo đáp án vào ô trống, hoặc bấm chọn phương án rồi bấm ô câu hỏi.</div>
+        <div class="lp-dd-opts">
+          ${options.map((o) => `
+            <div class="lp-dd-opt" draggable="true" data-dd-letter="${esc(o.letter)}" data-dd-text="${esc(o.text)}" tabindex="0" role="button">
+              <span class="lp-dd-opt-key">${esc(o.letter)}</span>
+              <span class="lp-dd-opt-txt">${esc(o.text)}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      split.appendChild(leftCol);
+      if (options.length) split.appendChild(rightCol);
+      outerBox.replaceWith(split);
+    });
+
     // 3. Split flat children into semantic Question Groups at every "Questions X-Y" heading
     const isGroupStart = (el) => {
       if (!el || el.nodeType !== 1) return false;
@@ -1568,12 +1689,10 @@
     if (groups.length) {
       const grid = document.createElement('div');
       const hasDiagram = !!paper.querySelector('img.lp-ex-diagram');
-      const hasWideTable = Array.from(paper.querySelectorAll('table')).some((t) => {
-        const firstRow = t.querySelector('tr');
-        return firstRow && firstRow.children.length >= 4;
-      });
-      const useTwoCol = groups.length >= 2 && !hasWideTable;
-      grid.className = `lp-cam-grid ${useTwoCol ? 'is-twocol' : 'is-singlecol'}${hasDiagram ? ' has-diagram' : ''}`;
+      // Official CD-IELTS (Inspera) Listening ALWAYS presents question groups in a SINGLE vertical column!
+      // Only Map/Diagram Labelling and Matching Drag-and-Drop split left/right internally.
+      const useTwoCol = false;
+      grid.className = `lp-cam-grid is-singlecol${hasDiagram ? ' has-diagram' : ''}`;
 
       groups.forEach((nodes) => {
         if (!nodes.length) return;
@@ -1743,6 +1862,129 @@
       const img = ev.target?.closest?.('img.lp-ex-diagram');
       if (!img) return;
       openDiagramLightbox(img.src, img.alt || 'Listening Diagram');
+    });
+
+    // Authentic CD-IELTS Drag-and-Drop + 2-Click Assignment for Matching blocks (.lp-dd-split)
+    let armedDdLetter = '';
+    let armedDdSplit = null;
+    let armedDdZoneQ = '';
+
+    const clearDdArmed = () => {
+      armedDdLetter = '';
+      armedDdSplit = null;
+      armedDdZoneQ = '';
+      paper.querySelectorAll('.lp-dd-opt.is-armed, .lp-dd-zone.is-armed').forEach((el) => el.classList.remove('is-armed'));
+    };
+
+    const assignDdAnswer = (qNum, letter) => {
+      if (!state.session || !qNum) return;
+      state.session.answers[String(qNum)] = String(letter || '').trim().toUpperCase();
+      state.session.activeQNum = Number(qNum);
+      clearDdArmed();
+      syncPaperFromState();
+    };
+
+    paper.addEventListener('dragstart', (ev) => {
+      const opt = ev.target?.closest?.('.lp-dd-opt[data-dd-letter]');
+      if (opt) {
+        const lt = opt.getAttribute('data-dd-letter') || '';
+        ev.dataTransfer?.setData('text/plain', lt);
+        ev.dataTransfer.effectAllowed = 'copyMove';
+        opt.classList.add('is-dragging');
+        return;
+      }
+      const zone = ev.target?.closest?.('.lp-dd-zone.is-filled[data-q]');
+      if (zone) {
+        const q = zone.getAttribute('data-q');
+        const lt = String(state.session?.answers?.[q] || '').trim().toUpperCase();
+        if (lt) {
+          ev.dataTransfer?.setData('text/plain', lt);
+          ev.dataTransfer?.setData('application/x-lp-from-q', q);
+          ev.dataTransfer.effectAllowed = 'move';
+        }
+      }
+    });
+
+    paper.addEventListener('dragend', () => {
+      paper.querySelectorAll('.lp-dd-opt.is-dragging, .lp-dd-zone.is-dragover').forEach((el) => {
+        el.classList.remove('is-dragging', 'is-dragover');
+      });
+    });
+
+    paper.addEventListener('dragover', (ev) => {
+      const zone = ev.target?.closest?.('.lp-dd-zone[data-q]');
+      if (!zone) return;
+      ev.preventDefault();
+      zone.classList.add('is-dragover');
+    });
+
+    paper.addEventListener('dragleave', (ev) => {
+      const zone = ev.target?.closest?.('.lp-dd-zone[data-q]');
+      if (zone) zone.classList.remove('is-dragover');
+    });
+
+    paper.addEventListener('drop', (ev) => {
+      const zone = ev.target?.closest?.('.lp-dd-zone[data-q]');
+      if (!zone) return;
+      ev.preventDefault();
+      zone.classList.remove('is-dragover');
+      const lt = String(ev.dataTransfer?.getData('text/plain') || '').trim().toUpperCase();
+      const fromQ = ev.dataTransfer?.getData('application/x-lp-from-q') || '';
+      const targetQ = zone.getAttribute('data-q');
+      if (!lt || !targetQ) return;
+      if (fromQ && fromQ !== targetQ && state.session) {
+        const prevTargetVal = state.session.answers[targetQ] || '';
+        state.session.answers[fromQ] = prevTargetVal;
+      }
+      assignDdAnswer(targetQ, lt);
+    });
+
+    paper.addEventListener('click', (ev) => {
+      const clearBtn = ev.target?.closest?.('.lp-dd-clear[data-dd-clear]');
+      if (clearBtn) {
+        ev.stopPropagation();
+        assignDdAnswer(clearBtn.getAttribute('data-dd-clear'), '');
+        return;
+      }
+
+      const opt = ev.target?.closest?.('.lp-dd-opt[data-dd-letter]');
+      if (opt) {
+        const split = opt.closest('.lp-dd-split');
+        const lt = opt.getAttribute('data-dd-letter') || '';
+        if (armedDdZoneQ && armedDdSplit === split) {
+          assignDdAnswer(armedDdZoneQ, lt);
+          return;
+        }
+        const wasArmed = opt.classList.contains('is-armed');
+        clearDdArmed();
+        if (!wasArmed) {
+          armedDdLetter = lt;
+          armedDdSplit = split;
+          opt.classList.add('is-armed');
+        }
+        return;
+      }
+
+      const zone = ev.target?.closest?.('.lp-dd-zone[data-q]');
+      if (zone) {
+        const split = zone.closest('.lp-dd-split');
+        const q = zone.getAttribute('data-q');
+        if (state.session && q) {
+          state.session.activeQNum = Number(q);
+          refreshBottomNavStates();
+        }
+        if (armedDdLetter && armedDdSplit === split) {
+          assignDdAnswer(q, armedDdLetter);
+          return;
+        }
+        const wasArmed = zone.classList.contains('is-armed');
+        clearDdArmed();
+        if (!wasArmed) {
+          armedDdZoneQ = q;
+          armedDdSplit = split;
+          zone.classList.add('is-armed');
+        }
+      }
     });
 
     syncPaperFromState();
@@ -2793,9 +3035,10 @@
       }
     });
 
-    // 4. Decorate Checkbox Multi-Select options (.lp-ex-check)
-    paper.querySelectorAll('input.lp-ex-check[data-qnums]').forEach((chk) => {
-      const qnums = String(chk.getAttribute('data-qnums') || '').split(',').map((n) => Number(n.trim())).filter(Boolean);
+    // 4. Decorate Checkbox Multi-Select options (.lp-ex-check — supports both data-multi and data-qnums!)
+    paper.querySelectorAll('input.lp-ex-check[data-multi], input.lp-ex-check[data-qnums]').forEach((chk) => {
+      const rawCsv = chk.getAttribute('data-multi') || chk.getAttribute('data-qnums') || '';
+      const qnums = String(rawCsv).split(',').map((n) => Number(n.trim())).filter(Boolean);
       const val = String(chk.value || '').trim().toUpperCase();
       chk.disabled = true;
       if (!qnums.length) return;
@@ -2833,6 +3076,41 @@
         }
         lbl.addEventListener('click', () => jumpReviewQuestion(firstQ, true));
       }
+    });
+
+    // 5. Decorate CD-IELTS Drag-and-Drop Matching zones (.lp-dd-zone[data-q]) in Review Mode
+    paper.querySelectorAll('.lp-dd-split').forEach((split) => {
+      const optMap = {};
+      split.querySelectorAll('.lp-dd-opt[data-dd-letter]').forEach((opt) => {
+        opt.setAttribute('draggable', 'false');
+        opt.classList.add('is-rev-static');
+        const lt = String(opt.getAttribute('data-dd-letter') || '').trim().toUpperCase();
+        optMap[lt] = opt.getAttribute('data-dd-text') || '';
+      });
+      split.querySelectorAll('.lp-dd-zone[data-q]').forEach((zone) => {
+        const qNum = Number(zone.getAttribute('data-q'));
+        const row = rowMap[qNum];
+        if (!row) return;
+        zone.id = `lp-rev-q-${qNum}`;
+        zone.classList.add(row.ok ? 'is-rev-ok' : 'is-rev-bad');
+        const uVal = String(row.user || '').trim().toUpperCase();
+        const offVal = String(row.official || '').trim().toUpperCase();
+        const uTxt = uVal ? (optMap[uVal] || '') : '';
+        const offTxt = optMap[offVal] || '';
+
+        if (row.ok) {
+          zone.innerHTML = `<span class="lp-dd-val-key">${esc(uVal)}</span><span class="lp-dd-val-txt">${esc(uTxt)}</span><span class="lp-rev-ans-chip is-ok">✓</span>`;
+        } else {
+          zone.innerHTML = uVal
+            ? `<span class="lp-dd-val-key is-bad">${esc(uVal)}</span><span class="lp-dd-val-txt is-bad">${esc(uTxt)}</span>`
+            : `<span class="lp-dd-qnum">${qNum}</span><span class="lp-dd-ph">Bỏ trống</span>`;
+          const ansChip = document.createElement('span');
+          ansChip.className = 'lp-rev-ans-chip is-ans';
+          ansChip.textContent = offTxt ? `✓ ${offVal}. ${offTxt}` : `✓ ${row.official}`;
+          zone.parentElement?.appendChild(ansChip);
+        }
+        zone.addEventListener('click', () => jumpReviewQuestion(qNum, true));
+      });
     });
 
     // Enable diagram lightbox click in review mode too

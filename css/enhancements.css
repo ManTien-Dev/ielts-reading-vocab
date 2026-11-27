@@ -12534,12 +12534,303 @@ body.lp-exam-fullscreen {
 .lp-cam-grid.is-singlecol {
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  max-width: 1060px;
+  gap: 28px;
+  max-width: 960px;
+}
+
+.lp-cam-grid.is-singlecol > .lp-cam-group + .lp-cam-group {
+  padding-top: 22px;
+  border-top: 1px solid var(--ins-border);
 }
 
 .lp-cam-grid.is-singlecol.has-diagram {
-  max-width: 1340px;
+  max-width: 1240px;
+}
+
+/* Official CD-IELTS Drag-and-Drop / Click-to-Assign Matching Workbench (.lp-dd-*) */
+.lp-dd-split {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.08fr) minmax(290px, 1fr);
+  gap: 24px 32px;
+  align-items: start;
+  margin-top: 14px;
+}
+
+.lp-dd-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lp-dd-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lp-dd-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--ins-ink);
+  line-height: 1.5;
+}
+
+.lp-dd-bullet {
+  color: var(--ins-ink);
+  opacity: 0.55;
+  font-weight: 800;
+}
+
+.lp-dd-zone {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1.5px dashed #6b7280;
+  background: var(--ins-input-bg, #ffffff);
+  color: var(--ins-ink);
+  cursor: pointer;
+  transition: border-color 130ms ease, background-color 130ms ease, box-shadow 130ms ease;
+}
+
+.ins-mode-practice .lp-dd-zone {
+  border-radius: 9px;
+  border-color: color-mix(in srgb, var(--prac-accent, #4E724D) 44%, transparent);
+  background: var(--prac-sheet-sub, #FAF7F0);
+}
+
+.lp-dd-zone:hover,
+.lp-dd-zone.is-dragover {
+  border-style: solid;
+  border-color: var(--ins-active-ring, #1d4ed8);
+  background: rgba(184, 216, 240, 0.28);
+}
+
+.ins-mode-practice .lp-dd-zone:hover,
+.ins-mode-practice .lp-dd-zone.is-dragover {
+  border-color: var(--prac-accent, #4E724D);
+  background: var(--prac-accent-soft, #E4EDE0);
+}
+
+.lp-dd-zone.is-armed {
+  border-style: solid;
+  border-color: var(--ins-active-ring, #1d4ed8);
+  box-shadow: 0 0 0 2.5px rgba(37, 99, 235, 0.22);
+}
+
+.ins-mode-practice .lp-dd-zone.is-armed {
+  border-color: var(--prac-accent, #4E724D);
+  box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--prac-accent, #4E724D) 24%, transparent);
+}
+
+.lp-dd-zone.is-filled {
+  border-style: solid;
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.ins-mode-practice .lp-dd-zone.is-filled {
+  border-color: var(--prac-accent, #4E724D);
+  background: var(--prac-accent-soft, #E4EDE0);
+}
+
+.lp-dd-qnum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.08);
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ins-ink);
+}
+
+.lp-dd-ph {
+  font-size: 13px;
+  color: var(--ins-ink);
+  opacity: 0.55;
+  font-style: italic;
+}
+
+.lp-dd-val-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 23px;
+  height: 23px;
+  border-radius: 5px;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.ins-mode-practice .lp-dd-val-key {
+  background: var(--prac-accent, #4E724D);
+}
+
+.lp-dd-val-txt {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.lp-dd-val-key.is-bad {
+  background: #b91c1c;
+}
+
+.lp-dd-val-txt.is-bad {
+  text-decoration: line-through;
+  color: #991b1b;
+}
+
+.lp-dd-clear {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(15, 23, 42, 0.1);
+  color: var(--ins-ink);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.lp-dd-clear:hover {
+  background: rgba(185, 28, 28, 0.16);
+  color: #b91c1c;
+}
+
+.lp-dd-bank {
+  padding: 14px 16px;
+  border-radius: 6px;
+  border: 1.5px solid var(--ins-border);
+  background: var(--ins-banner, #f8fafc);
+}
+
+.ins-mode-practice .lp-dd-bank {
+  border-radius: 12px;
+  border: 1px solid var(--prac-bd);
+  background: var(--prac-sheet-sub, #FAF7F0);
+}
+
+.lp-dd-bank-hint {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ins-ink);
+  opacity: 0.72;
+  margin-bottom: 10px;
+}
+
+.lp-dd-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.lp-dd-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 11px;
+  border-radius: 5px;
+  border: 1px solid var(--ins-border);
+  background: var(--ins-bg, #ffffff);
+  color: var(--ins-ink);
+  font-size: 13.5px;
+  line-height: 1.45;
+  cursor: grab;
+  user-select: none;
+  transition: border-color 120ms ease, background-color 120ms ease, transform 120ms ease, opacity 120ms ease;
+}
+
+.ins-mode-practice .lp-dd-opt {
+  border-radius: 9px;
+  border-color: var(--prac-bd);
+  background: var(--prac-sheet, #FDFBF6);
+}
+
+.lp-dd-opt:hover {
+  border-color: #2563eb;
+  background: #f0f7ff;
+}
+
+.ins-mode-practice .lp-dd-opt:hover {
+  border-color: var(--prac-accent, #4E724D);
+  background: var(--prac-accent-soft, #E4EDE0);
+}
+
+.lp-dd-opt.is-armed {
+  border-color: #2563eb;
+  background: #dbeafe;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+.ins-mode-practice .lp-dd-opt.is-armed {
+  border-color: var(--prac-accent, #4E724D);
+  background: var(--prac-accent-soft, #E4EDE0);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--prac-accent, #4E724D) 30%, transparent);
+}
+
+.lp-dd-opt.is-used {
+  opacity: 0.56;
+}
+
+.lp-dd-opt.is-dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.lp-dd-opt.is-rev-static {
+  cursor: default;
+}
+
+.lp-dd-opt-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.08);
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.lp-dd-opt-txt {
+  flex: 1;
+}
+
+/* Graded Drag-and-Drop Zones inside Review Mode */
+.lp-yrev-paper .lp-dd-zone.is-rev-ok {
+  border-style: solid;
+  border-color: var(--yrev-ok-bd);
+  background: var(--yrev-ok-bg);
+}
+
+.lp-yrev-paper .lp-dd-zone.is-rev-bad {
+  border-style: solid;
+  border-color: var(--yrev-bad-bd);
+  background: var(--yrev-bad-bg);
+}
+
+@media (max-width: 900px) {
+  .lp-dd-split {
+    grid-template-columns: 1fr;
+  }
 }
 
 .lp-cam-qrange {

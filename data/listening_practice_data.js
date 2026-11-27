@@ -75,12 +75,12 @@
     {
       id: 'dictation_tasks',
       row: 'drills',
-      label: 'LISTENING TASKS',
-      bookTitle: 'Dictation & Spelling Tasks',
-      badge: '139 Tasks',
-      desc: 'Lộ trình 139 bài Task theo chủ đề phủ kín 3.864 từ cốt lõi — nghe chính tả, hội thoại A/B/C và thực chiến.',
+      label: 'DICTATION STUDIO',
+      bookTitle: 'Dictation Studio · Chép chính tả',
+      badge: 'YouTube · 4 Chế độ',
+      desc: 'Luyện nghe video YouTube & IELTS Audio qua 4 chế độ chuẩn AIO: Dictation chép từng từ, Shadowing nói đuổi, Quiz hiểu bài & Phụ đề song ngữ tra từ.',
       scene: 'tasks',
-      kind: 'tasks_hub'
+      kind: 'dictation_studio'
     }
   ];
 
@@ -340,9 +340,9 @@
 
   /* ---------------------------------------------------------
      VERIFIED LISTENING EXAM BANKS (AUTO LAZY-LOADED)
-       - data/bank_listening_cambridge.js (20 Books · 80 Full Tests · 320 Parts)
-       - data/bank_listening_volume.js    (10 Volumes · 40 Full Tests · 160 Parts)
-       - data/bank_listening_actual.js    (13 Full Tests · 52 Parts)
+       - data/bank_listening_cambridge.js?v=20261127b (20 Books · 80 Full Tests · 320 Parts)
+       - data/bank_listening_volume.js?v=20261127b    (10 Volumes · 40 Full Tests · 160 Parts)
+       - data/bank_listening_actual.js?v=20261127b    (13 Full Tests · 52 Parts)
      --------------------------------------------------------- */
   const BANK_SUMMARY = {
     cambridge: { books: 20, fullTests: 80, parts: 320 },
@@ -351,9 +351,9 @@
   };
 
   window.__LISTENING_BANK_URLS__ = {
-    cambridge: 'data/bank_listening_cambridge.js',
-    volume: 'data/bank_listening_volume.js',
-    actual: 'data/bank_listening_actual.js'
+    cambridge: 'data/bank_listening_cambridge.js?v=20261127b',
+    volume: 'data/bank_listening_volume.js?v=20261127b',
+    actual: 'data/bank_listening_actual.js?v=20261127b'
   };
 
   const PARTS = {};
