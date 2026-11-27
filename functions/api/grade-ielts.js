@@ -85,6 +85,7 @@ CAMBRIDGE 11-19 CALIBRATION ANCHORS (USE AS REFERENCE SCALE):
 - BAND 8.0 ANCHOR: Thoroughly develops nuanced response; seamless invisible cohesion; wide natural academic lexis with rare unsystematic slips only; majority of sentences completely error-free with wide grammatical flexibility.
 
 MODE NOTE:
+- If mode === "task1", evaluate strictly as IELTS Academic Writing Task 1 (150+ words, 4 paragraphs: Introduction, Overview, Body 1, Body 2). Use criteria.tr for Task Achievement (TA): require a clear Overview summarizing main trends/differences WITHOUT minor statistics, accurate selection & comparison of key data/stages/map changes, and NEVER penalize for lacking a personal opinion or conclusion (Task 1 is objective reporting!). Set checklist.hasTask1Overview accurately.
 - If mode === "body", evaluate as ONE Body Paragraph of an IELTS Task 2 essay (85-150 words expected; 1 paragraph is normal, do NOT penalize lack of intro/conclusion; focus TR on depth of A -> B -> C explanation of the assigned focus, CC on internal sentence-to-sentence flow, LR on collocation/precision, GRA on complex sentence control).
 - If mode === "essay", evaluate as a FULL IELTS Task 2 essay (250+ words, 4-5 paragraphs expected).
 
@@ -101,6 +102,7 @@ Return ONLY valid JSON (no markdown fences) matching this exact schema:
     "offTopicSeverity": "none" | "partial" | "full",
     "answersAllPromptParts": true | false,
     "clearPositionThroughout": true | false,
+    "hasTask1Overview": true | false,
     "eachParagraphClearTopic": true | false,
     "logicGapsFound": true | false,
     "templateStuffingDetected": true | false,
@@ -192,9 +194,14 @@ Return ONLY valid JSON (no markdown fences) matching this exact schema:
 function buildUserMessage(payload) {
   const skill = payload.skill === 'speaking' ? 'speaking' : 'writing';
   if (skill === 'writing') {
+    const modeDesc = payload.mode === 'task1'
+      ? 'task1 (IELTS Academic Writing Task 1 — Visual/Chart/Process/Map Report, target 150+ words, requires clear Overview + accurate data comparisons; NO personal opinion)'
+      : (payload.mode === 'body'
+        ? 'body (Single Body Paragraph, target 85-150 words)'
+        : 'essay (Full IELTS Task 2 Essay, target 250+ words, 4-5 paragraphs)');
     return [
-      `MODE: ${payload.mode === 'body' ? 'body (Single Body Paragraph, target 85-150 words)' : 'essay (Full IELTS Task 2 Essay, target 250+ words, 4-5 paragraphs)'}`,
-      `ESSAY TYPE: ${payload.essayType || 'IELTS Writing Task 2'}`,
+      `MODE: ${modeDesc}`,
+      `ESSAY TYPE: ${payload.essayType || (payload.mode === 'task1' ? 'IELTS Academic Writing Task 1' : 'IELTS Writing Task 2')}`,
       payload.bodyFocusVi ? `ASSIGNED BODY FOCUS: ${payload.bodyFocusVi}` : '',
       `PROMPT:\n${String(payload.prompt || '').slice(0, 1200)}`,
       payload.curriculumContext ? `CURRICULUM TARGET FLOW / KEY CONCEPTS:\n${String(payload.curriculumContext).slice(0, 700)}` : '',

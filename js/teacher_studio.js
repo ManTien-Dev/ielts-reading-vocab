@@ -192,7 +192,7 @@
      ========================================================= */
   function parsePracticeTaskId(rawId) {
     const s = String(rawId || '').trim();
-    const m = s.match(/^(rp_full|rp|lp_full|lp|wp|sp):([^:\s]+)(?::(practice|exam))?$/i);
+    const m = s.match(/^(rp_full|rp|lp_full|lp|wp_full|wp|sp):([^:\s]+)(?::(practice|exam))?$/i);
     if (!m) return null;
     const prefix = m[1].toLowerCase();
     const itemId = m[2];
@@ -216,7 +216,7 @@
     if (skill === 'reading') return `${isFull ? 'rp_full' : 'rp'}:${itemId}:${cleanMode}`;
     if (skill === 'listening') return `${isFull ? 'lp_full' : 'lp'}:${itemId}:${cleanMode}`;
     if (skill === 'speaking') return `sp:${itemId}:${cleanMode}`;
-    return `wp:${itemId}:${cleanMode}`;
+    return `${isFull ? 'wp_full' : 'wp'}:${itemId}:${cleanMode}`;
   }
 
   function formatPracticeFallbackLabel(pm) {
@@ -270,12 +270,24 @@
         theme = `${item.title || item.id} (${modeTag})`;
       }
     } else if (pm.skill === 'writing') {
-      const p = (window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).find((x) => x.id === pm.itemId);
-      if (p) {
-        code = `Writing · ${p.type || 'Task 2'}`;
-        shortCode = p.id.toUpperCase();
-        const snippet = String(p.prompt || '').trim();
-        theme = `${snippet.length > 76 ? snippet.slice(0, 76) + '…' : snippet} (${modeTag})`;
+      const t1 = (window.WRITING_TASK1_DATA?.TASK1_PROMPTS || []).find((x) => x.id === pm.itemId);
+      const ft = (window.WRITING_TASK1_DATA?.FULL_TESTS || []).find((x) => x.id === pm.itemId);
+      if (ft) {
+        code = `Writing · Full 60p`;
+        shortCode = ft.id.toUpperCase();
+        theme = `${ft.title} (${modeTag})`;
+      } else if (t1) {
+        code = `Task 1 · ${t1.type || 'Chart'}`;
+        shortCode = t1.id.replace(/^wt1_/i, 'WT1-').slice(0, 10).toUpperCase();
+        theme = `${t1.title} (${modeTag})`;
+      } else {
+        const p = (window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).find((x) => x.id === pm.itemId);
+        if (p) {
+          code = `Writing · ${p.type || 'Task 2'}`;
+          shortCode = p.id.toUpperCase();
+          const snippet = String(p.prompt || '').trim();
+          theme = `${snippet.length > 76 ? snippet.slice(0, 76) + '…' : snippet} (${modeTag})`;
+        }
       }
     } else if (pm.skill === 'speaking') {
       const p13 = window.SPEAKING_PART13_DATA || {};
@@ -522,26 +534,62 @@
   }
 
   function getWritingPracticeCatalog() {
-    const prompts = window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || [];
+    const t1List = window.WRITING_TASK1_DATA?.TASK1_PROMPTS || [];
+    const fullList = window.WRITING_TASK1_DATA?.FULL_TESTS || [];
+    const t2List = window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || [];
     const mode = state.pickerPracticeMode === 'exam' ? 'exam' : 'practice';
     const modeTag = mode === 'exam' ? 'Thi thật' : 'Luyện tập';
-    return prompts.map((p, idx) => {
+    const out = [];
+    t1List.forEach((p, idx) => {
       const id = buildPracticeTaskId('writing', p.id, false, mode);
-      const snippet = String(p.prompt || '').trim();
-      return {
+      out.push({
         id,
         skill: 'writing',
         suite: 'wp_practice',
         num: idx + 1,
-        code: `Đề #${idx + 1} · ${p.type || 'Task 2'}`,
-        shortCode: `WP${idx + 1}`,
+        code: `Task 1 #${String(idx + 1).padStart(2, '0')} · ${p.type}`,
+        shortCode: `WT1-${idx + 1}`,
+        theme: `${p.title} (${modeTag})`,
+        wordTotal: 1,
+        isPractice: true,
+        practiceMeta: parsePracticeTaskId(id),
+        raw: p,
+      });
+    });
+    fullList.forEach((ft, idx) => {
+      const id = buildPracticeTaskId('writing', ft.id, true, mode);
+      out.push({
+        id,
+        skill: 'writing',
+        suite: 'wp_practice',
+        num: t1List.length + idx + 1,
+        code: `Full 60p #${String(idx + 1).padStart(2, '0')}`,
+        shortCode: `WF${idx + 1}`,
+        theme: `${ft.title} (${modeTag})`,
+        wordTotal: 2,
+        isPractice: true,
+        practiceMeta: parsePracticeTaskId(id),
+        raw: ft,
+      });
+    });
+    t2List.forEach((p, idx) => {
+      const id = buildPracticeTaskId('writing', p.id, false, mode);
+      const snippet = String(p.prompt || '').trim();
+      out.push({
+        id,
+        skill: 'writing',
+        suite: 'wp_practice',
+        num: t1List.length + fullList.length + idx + 1,
+        code: `Task 2 #${idx + 1} · ${p.type || 'Task 2'}`,
+        shortCode: `WT2-${idx + 1}`,
         theme: `${snippet.length > 88 ? snippet.slice(0, 88) + '…' : snippet} (${modeTag})`,
         wordTotal: 1,
         isPractice: true,
         practiceMeta: parsePracticeTaskId(id),
         raw: p,
-      };
+      });
     });
+    return out;
   }
 
   function getSpeakingPracticeCatalog() {
@@ -672,15 +720,17 @@
       ];
     }
     if (skillKey === 'writing') {
-      const wpCount = (window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).length;
+      const wpCount = (window.WRITING_TASK1_DATA?.TASK1_PROMPTS || []).length
+        + (window.WRITING_TASK1_DATA?.FULL_TESTS || []).length
+        + (window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).length;
       if (weeklyOnly) {
-        return [{ key: 'wp_practice', label: `Đề Practice (${wpCount})` }];
+        return [{ key: 'wp_practice', label: `Đề Writing T1·T2·Full (${wpCount})` }];
       }
       const subs = window.WRITING_STUDIO_DATA?.SUBTOPICS || [];
       const mods = window.WRITING_STUDIO_DATA?.MODULES || [];
       return [
         { key: 'all', label: `Tất cả (${mods.length})` },
-        { key: 'wp_practice', label: `Đề Practice (${wpCount})` },
+        { key: 'wp_practice', label: `Đề Writing T1·T2·Full (${wpCount})` },
         ...subs.map((st) => {
           const c = mods.filter((m) => m.subtopic === st.key).length;
           return { key: st.key, label: `${st.shortTitle || st.title} (${c})` };
@@ -3537,7 +3587,10 @@
         window.ListeningPracticeApp?.openAssignedItem?.(pm.itemId, pm.isFull, pm.mode);
       } else if (pm.skill === 'writing') {
         window.TotoroUI?.enterSkillMode?.('Writing', 'practice');
-        setTimeout(() => window.WritingStudio?.startPracticePrompt?.(pm.itemId, pm.mode), 160);
+        setTimeout(() => {
+          if (pm.isFull) window.WritingStudio?.startFullWritingTest?.(pm.itemId, pm.mode);
+          else window.WritingStudio?.startPracticePrompt?.(pm.itemId, pm.mode);
+        }, 160);
       } else if (pm.skill === 'speaking') {
         window.TotoroUI?.enterSkillMode?.('Speaking', 'practice');
         setTimeout(() => window.SpeakingStudio?.openPracticeRoom?.(pm.itemId, pm.mode), 160);

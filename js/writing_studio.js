@@ -3410,23 +3410,101 @@
     }
 
     if (p.chartType === 'map') {
+      const isCampus = d.theme === 'campus';
+      const topFill = isCampus ? '#DCEAD6' : '#DCEBF6';
+      const topTxtColor = isCampus ? '#3D613C' : '#4C6F8C';
+      const topLbl = d.topBackdropLabel || 'NORTH SEA';
       const drawMap = (zones, yr, road) => `
         <div class="wt1-map-box">
           <div class="wt1-map-yr">${esc(yr)} <span class="wt1-compass">N ↑ · S ↓ · W ← · E →</span></div>
           <svg viewBox="0 0 280 156" class="wt1-svg">
-            <rect x="0" y="0" width="280" height="66" fill="#DCEBF6"/>
-            <text x="140" y="15" text-anchor="middle" font-size="8.5" font-weight="700" fill="#4C6F8C" letter-spacing="1.2">NORTH SEA</text>
+            <rect x="0" y="0" width="280" height="66" fill="${topFill}"/>
+            <text x="140" y="15" text-anchor="middle" font-size="8.2" font-weight="700" fill="${topTxtColor}" letter-spacing="1.1">${esc(topLbl)}</text>
             <path d="M0,66 Q35,61 70,66 T140,66 T210,66 T280,66 L280,156 L0,156 Z" fill="#F4F1E8"/>
             <rect x="0" y="128" width="280" height="20" fill="#D5D2C8"/>
-            <text x="140" y="141" text-anchor="middle" font-size="8.5" font-weight="700" fill="#3D3A34">${esc(road)}</text>
+            <text x="140" y="141" text-anchor="middle" font-size="8.2" font-weight="700" fill="#3D3A34">${esc(road)}</text>
             ${(zones || []).map((z) => `
               <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="5" fill="${z.fill}" stroke="${z.stroke}" stroke-width="1.35"/>
-              <text x="${z.x + z.w / 2}" y="${z.y + z.h / 2 + 3}" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1F2420">${esc(z.label)}</text>
+              <text x="${z.x + z.w / 2}" y="${z.y + z.h / 2 + 2.8}" text-anchor="middle" font-size="7.7" font-weight="700" fill="#1F2420">${esc(z.label)}</text>
             `).join('')}
           </svg>
         </div>
       `;
       return `<div class="${cls} wt1-map-pair">${drawMap(d.beforeZones, d.beforeYear, d.roadBefore)}${drawMap(d.afterZones, d.afterYear, d.roadAfter)}</div>`;
+    }
+
+    if (p.chartType === 'mixed') {
+      // Left Panel: Grouped Bar Chart
+      const BW = 276, BH = 210, bPadL = 38, bPadR = 10, bPadT = 18, bPadB = 30;
+      const bPlotW = BW - bPadL - bPadR, bPlotH = BH - bPadT - bPadB;
+      const bYMax = d.leftYMax || 3500, bYStep = d.leftYStep || 700;
+      const cats = d.categories || [];
+      const bSeries = d.barSeries || [];
+      const bYAt = (v) => bPadT + bPlotH - (Math.max(0, Math.min(bYMax, v)) / bYMax) * bPlotH;
+      let bGrid = '';
+      for (let y = 0; y <= bYMax; y += bYStep) {
+        const py = bYAt(y).toFixed(1);
+        bGrid += `<line x1="${bPadL}" y1="${py}" x2="${BW - bPadR}" y2="${py}" class="wt1-grid-line"/>`;
+        bGrid += `<text x="${bPadL - 5}" y="${Number(py) + 3}" text-anchor="end" class="wt1-axis-txt">${y}</text>`;
+      }
+      bGrid += `<line x1="${bPadL}" y1="${bPadT}" x2="${bPadL}" y2="${bPadT + bPlotH}" class="wt1-axis-line"/>`;
+      bGrid += `<line x1="${bPadL}" y1="${bPadT + bPlotH}" x2="${BW - bPadR}" y2="${bPadT + bPlotH}" class="wt1-axis-line"/>`;
+      const grpW = bPlotW / Math.max(1, cats.length);
+      const barW = Math.min(13, (grpW - 10) / Math.max(1, bSeries.length));
+      const bBars = cats.map((cat, ci) => {
+        const center = bPadL + ci * grpW + grpW / 2;
+        const startX = center - (bSeries.length * barW + (bSeries.length - 1) * 2) / 2;
+        const rects = bSeries.map((s, si) => {
+          const val = s.values[ci] || 0;
+          const x = startX + si * (barW + 2);
+          const y = bYAt(val);
+          const h = Math.max(2, bPadT + bPlotH - y);
+          return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${s.color}"><title>${esc(`${cat} — ${s.name}: ${val}`)}</title></rect>`;
+        }).join('');
+        return `${rects}<text x="${center.toFixed(1)}" y="${BH - 10}" text-anchor="middle" class="wt1-axis-txt">${esc(cat)}</text>`;
+      }).join('');
+      const bLegend = `<div class="wt1-legend">${bSeries.map((s) => `<span class="wt1-leg-item"><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`;
+
+      // Right Panel: Trend Line Graph
+      const LW = 244, LH = 210, lPadL = 32, lPadR = 18, lPadT = 18, lPadB = 30;
+      const lPlotW = LW - lPadL - lPadR, lPlotH = LH - lPadT - lPadB;
+      const lYMax = d.rightYMax || 10, lYStep = d.rightYStep || 2;
+      const lbls = d.labels || cats;
+      const lXAt = (i) => lPadL + (lbls.length > 1 ? (i / (lbls.length - 1)) * lPlotW : lPlotW / 2);
+      const lYAt = (v) => lPadT + lPlotH - (Math.max(0, Math.min(lYMax, v)) / lYMax) * lPlotH;
+      let lGrid = '';
+      for (let y = 0; y <= lYMax; y += lYStep) {
+        const py = lYAt(y).toFixed(1);
+        lGrid += `<line x1="${lPadL}" y1="${py}" x2="${LW - lPadR}" y2="${py}" class="wt1-grid-line"/>`;
+        lGrid += `<text x="${lPadL - 5}" y="${Number(py) + 3}" text-anchor="end" class="wt1-axis-txt">${y}${esc(d.rightUnit || '')}</text>`;
+      }
+      lGrid += `<line x1="${lPadL}" y1="${lPadT}" x2="${lPadL}" y2="${lPadT + lPlotH}" class="wt1-axis-line"/>`;
+      lGrid += `<line x1="${lPadL}" y1="${lPadT + lPlotH}" x2="${LW - lPadR}" y2="${lPadT + lPlotH}" class="wt1-axis-line"/>`;
+      const lXLbls = lbls.map((lb, i) => `<text x="${lXAt(i).toFixed(1)}" y="${LH - 10}" text-anchor="middle" class="wt1-axis-txt">${esc(lb)}</text>`).join('');
+      const lLines = (d.lineSeries || []).map((s) => {
+        const pts = s.values.map((v, i) => `${lXAt(i).toFixed(1)},${lYAt(v).toFixed(1)}`).join(' ');
+        const dots = s.values.map((v, i) => {
+          const cx = lXAt(i).toFixed(1), cy = lYAt(v).toFixed(1);
+          return `<circle cx="${cx}" cy="${cy}" r="${isThumb ? 3 : 4}" fill="${s.color}" stroke="#ffffff" stroke-width="1.3"><title>${esc(`${s.name} (${lbls[i]}): ${v}${d.rightUnit || ''}`)}</title></circle>${!isThumb ? `<text x="${cx}" y="${Number(cy) - 7}" text-anchor="middle" class="wt1-val-txt" fill="${s.color}">${v}${esc(d.rightUnit || '')}</text>` : ''}`;
+        }).join('');
+        return `<polyline fill="none" stroke="${s.color}" stroke-width="${isThumb ? 2.4 : 2.8}" stroke-linecap="round" stroke-linejoin="round" points="${pts}"/>${dots}`;
+      }).join('');
+      const lLegend = `<div class="wt1-legend">${(d.lineSeries || []).map((s) => `<span class="wt1-leg-item"><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`;
+
+      return `
+        <div class="${cls} wt1-mixed-pair">
+          <div class="wt1-mixed-panel">
+            <div class="wt1-mixed-ttl">${esc(d.leftTitle || 'Chart 1')}</div>
+            <svg viewBox="0 0 ${BW} ${BH}" class="wt1-svg" role="img" aria-label="${esc(d.leftTitle || p.title)}">${bGrid}${bBars}</svg>
+            ${bLegend}
+          </div>
+          <div class="wt1-mixed-panel">
+            <div class="wt1-mixed-ttl">${esc(d.rightTitle || 'Chart 2')}</div>
+            <svg viewBox="0 0 ${LW} ${LH}" class="wt1-svg" role="img" aria-label="${esc(d.rightTitle || p.title)}">${lGrid}${lXLbls}${lLines}</svg>
+            ${lLegend}
+          </div>
+        </div>
+      `;
     }
     return '';
   }
@@ -3526,7 +3604,7 @@
           <div class="tot-shell-head">
             <div>
               <h2 class="tot-shell-title">Luyện Đề IELTS Writing · Academic</h2>
-              <p class="tot-shell-sub">Đầy đủ <strong>Task 1 Academic (6 dạng biểu đồ)</strong>, <strong>${t2Prompts.length} đề Task 2 thật</strong> &amp; <strong>Full Test 60 phút</strong> chấm 4 tiêu chí AI chuẩn giám khảo.</p>
+              <p class="tot-shell-sub">Đầy đủ <strong>Task 1 Academic (${t1Prompts.length} đề · đủ 7 dạng biểu đồ)</strong>, <strong>${t2Prompts.length} đề Task 2 thật</strong> &amp; <strong>${fullTests.length} Full Test 60 phút</strong> chấm 4 tiêu chí AI chuẩn giám khảo.</p>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <span class="ws-pill tabular">Band TB: ${avgBand}</span>
@@ -3554,11 +3632,11 @@
                     <rect x="142" y="31" width="11" height="27" rx="2" fill="#89B4D8"/>
                   </svg>
                 </div>
-                <div class="wp-cover-title">Writing Task 1<br><span>6 Dạng Biểu Đồ</span></div>
+                <div class="wp-cover-title">Writing Task 1<br><span>${t1Prompts.length} Đề · 7 Dạng Biểu Đồ</span></div>
               </div>
               <div class="wp-portal-body">
                 <h3>IELTS Academic Task 1</h3>
-                <p>Line Graph, Bar Chart, Pie Charts, Table, Process &amp; Map Comparison vẽ SVG sắc nét — luyện Overview &amp; số liệu chuẩn 150+ từ trong 20 phút.</p>
+                <p>Line, Bar, Pie, Table, Process (nhân tạo &amp; tự nhiên), Map (quá khứ &amp; tương lai) và Mixed Chart vẽ SVG sắc nét kèm bài mẫu Band 8.0+.</p>
                 <div class="wp-portal-foot">
                   <span class="wp-portal-meta">20 phút · 150+ từ · Chấm TA</span>
                   <span class="btn btn-primary wp-portal-cta">Mở Task 1 →</span>
@@ -3669,7 +3747,7 @@
       return;
     }
 
-    // ===== VIEW 2: WRITING TASK 1 ACADEMIC (6 CLASSIC CHART TYPES WITH LIVE SVG PREVIEW) =====
+    // ===== VIEW 2: WRITING TASK 1 ACADEMIC (12 CHARTS ACROSS ALL 7 OFFICIAL TYPES) =====
     if (view === 'task1') {
       const t1Types = [
         ['all', `Tất cả (${t1Prompts.length})`],
@@ -3678,7 +3756,8 @@
         ['pie', 'Pie Charts'],
         ['table', 'Table'],
         ['process', 'Process'],
-        ['map', 'Map']
+        ['map', 'Map'],
+        ['mixed', 'Mixed Chart']
       ];
       const t1Filtered = t1Prompts.filter((p) => state.pracT1Type === 'all' || p.chartType === state.pracT1Type);
       root.innerHTML = `
@@ -3686,9 +3765,12 @@
           <div class="tot-shell-head">
             <div>
               <h2 class="tot-shell-title">IELTS Writing Task 1 · Academic Charts</h2>
-              <p class="tot-shell-sub">6 dạng biểu đồ kinh điển vẽ SVG chuẩn số liệu — có khung dàn ý Overview &amp; chấm Task Achievement (TA) chuẩn 150+ từ.</p>
+              <p class="tot-shell-sub">${t1Prompts.length} đề chuẩn 7 dạng biểu đồ Cambridge vẽ SVG sắc nét — kèm Overview mẫu, bài mẫu Band 8.0+ &amp; chấm Task Achievement (TA) chuẩn 150+ từ.</p>
             </div>
-            <span class="ws-pill tabular">${t1Done} / ${t1Prompts.length} bài đã luyện</span>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="WritingStudio.openRandomWritingPrompt('task1')" title="Bốc ngẫu nhiên 1 đề Task 1 chưa luyện">🎲 Bốc đề ngẫu nhiên</button>
+              <span class="ws-pill tabular">${t1Done} / ${t1Prompts.length} bài đã luyện</span>
+            </div>
           </div>
 
           ${topNavHtml}
@@ -3724,11 +3806,12 @@
                   <div class="ws-prac-foot">
                     <div class="ws-prac-meta-row">
                       <span>Task 1 · 20 phút · 150+ từ</span>
-                      <span>${p.keyVocab?.length || 0} cụm mô tả chuẩn</span>
+                      <span>${p.modelEssay ? 'Có bài mẫu Band 8.0+' : `${p.keyVocab?.length || 0} cụm chuẩn`}</span>
                     </div>
                     <div class="ws-prac-btns">
                       <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="WritingStudio.startPracticePrompt('${esc(p.id)}', 'practice')">Luyện tập</button>
                       <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="WritingStudio.startPracticePrompt('${esc(p.id)}', 'exam')">Thi thật 20p</button>
+                      ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'writing', itemId: '${esc(p.id)}', isFull: false, title: '${esc(`Task 1 · ${p.title}`).replace(/'/g, "\\'")}', subtitle: '${esc(p.type || 'Academic Task 1').replace(/'/g, "\\'")}' })" title="Tạo link giao đề Task 1 này cho học sinh">🔗 Giao link đề này</button>` : ''}
                     </div>
                   </div>
                 </article>
@@ -3747,9 +3830,12 @@
           <div class="tot-shell-head">
             <div>
               <h2 class="tot-shell-title">Full IELTS Writing Test · 60 Phút</h2>
-              <p class="tot-shell-sub">Ghép trọn vẹn Part 1 (Task 1 · 150+ từ · 1/3 điểm) và Part 2 (Task 2 · 250+ từ · 2/3 điểm) trong một phiên thi máy chuẩn CD-IELTS.</p>
+              <p class="tot-shell-sub">${fullTests.length} đề thi đầy đủ ghép trọn vẹn Part 1 (Task 1 · 150+ từ · 1/3 điểm) và Part 2 (Task 2 · 250+ từ · 2/3 điểm) chuẩn phòng thi máy CD-IELTS.</p>
             </div>
-            <span class="ws-pill tabular">${fullDone} / ${fullTests.length} đề đã hoàn thành</span>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="WritingStudio.openRandomWritingPrompt('full')" title="Bốc ngẫu nhiên 1 đề Full Test 60 phút">🎲 Bốc đề ngẫu nhiên</button>
+              <span class="ws-pill tabular">${fullDone} / ${fullTests.length} đề đã hoàn thành</span>
+            </div>
           </div>
 
           ${topNavHtml}
@@ -3775,6 +3861,7 @@
                     <div class="ws-prac-btns">
                       <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="WritingStudio.startFullWritingTest('${esc(ft.id)}', 'practice')">Luyện 60p</button>
                       <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="WritingStudio.startFullWritingTest('${esc(ft.id)}', 'exam')">Thi thật 60p</button>
+                      ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'writing', itemId: '${esc(ft.id)}', isFull: true, title: '${esc(ft.title).replace(/'/g, "\\'")}', subtitle: 'Full Writing Test · 60 phút' })" title="Tạo link giao Full Writing Test này cho học sinh">🔗 Giao link Full Test này</button>` : ''}
                     </div>
                   </div>
                 </article>
@@ -3817,7 +3904,10 @@
             <h2 class="tot-shell-title">Luyện Đề IELTS Writing Task 2</h2>
             <p class="tot-shell-sub">Ngân hàng ${t2Prompts.length} đề thi thật giai đoạn 2020–2026 liên kết trực tiếp với ${(DATA().MODULES || []).length} Module Flow Idea.</p>
           </div>
-          <span class="ws-pill tabular">${t2Done} / ${t2Prompts.length} đề đã luyện</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="WritingStudio.openRandomWritingPrompt('task2')" title="Bốc ngẫu nhiên 1 đề Task 2 chưa luyện">🎲 Bốc đề ngẫu nhiên</button>
+            <span class="ws-pill tabular">${t2Done} / ${t2Prompts.length} đề đã luyện</span>
+          </div>
         </div>
 
         ${topNavHtml}
@@ -3914,6 +4004,24 @@
   function setPracQuery(v) { state.pracQuery = String(v || ''); renderPracticeHub(); }
   function resetPracFilters() { state.pracSubtopic = 'all'; state.pracType = 'all'; state.pracQuery = ''; renderPracticeHub(); }
 
+  function openRandomWritingPrompt(kind) {
+    const doneSet = new Set(getPracticeHist().map((h) => h.promptId));
+    const pick = (arr) => {
+      if (!arr.length) return null;
+      const pool = arr.filter((x) => !doneSet.has(x.id));
+      const list = pool.length ? pool : arr;
+      return list[Math.floor(Math.random() * list.length)];
+    };
+    if (kind === 'full') {
+      const ft = pick(DATA_T1().FULL_TESTS || []);
+      if (ft) startFullWritingTest(ft.id, 'practice');
+      return;
+    }
+    const items = kind === 'task1' ? (DATA_T1().TASK1_PROMPTS || []) : (DATA().PRACTICE_PROMPTS || []);
+    const p = pick(items);
+    if (p) startPracticePrompt(p.id, 'practice');
+  }
+
   function launchPracticeFromTask(promptId, mode) {
     if (!promptId) return;
     if (examState) closeTaskExamModal(true);
@@ -4002,7 +4110,7 @@
       promptHighlights: { 1: null, 2: null }
     };
     if (pracState.mode === 'practice') {
-      const saved = loadSavedPracDraft(fullObj.id);
+      const saved = loadSavedPracDraft(ft.id);
       if (saved && ((saved.drafts?.[1] || '').trim() || (saved.drafts?.[2] || '').trim())) {
         pracState.drafts = { 1: saved.drafts[1] || '', 2: saved.drafts[2] || '' };
         if (saved.plans) pracState.plans = { 1: saved.plans[1] || pracState.plans[1], 2: saved.plans[2] || pracState.plans[2] };
@@ -4014,6 +4122,10 @@
   }
 
   function startPracticePrompt(promptId, mode) {
+    if ((DATA_T1().FULL_TESTS || []).some((x) => x.id === promptId)) {
+      startFullWritingTest(promptId, mode);
+      return;
+    }
     ensureOverlays();
     const lock = getLockout(PRAC_LOCK_KEY_BASE);
     if (lock) {
@@ -4084,8 +4196,7 @@
   ];
 
   function getWsDraftStorageKey(id) {
-    const uid = window.AppCore?.getActiveUser?.()?.username || 'guest';
-    return `totoro_ws_draft_v1_${uid}_${id || 'default'}`;
+    return `totoro_ws_draft_v1_${getUid()}_${id || 'default'}`;
   }
 
   function loadSavedPracDraft(id) {
@@ -4850,11 +4961,24 @@
 
   function renderTask1GuideHtml(p) {
     if (!p) return '';
+    const me = p.modelEssay || null;
+    const modelEssayHtml = me ? `
+      <details class="wt1-model-essay-details">
+        <summary>📖 Xem Bài Mẫu Hoàn Chỉnh Band 8.0+ (4 đoạn: Intro · Overview · Body 1 · Body 2)</summary>
+        <div class="wt1-model-essay-body">
+          ${me.intro ? `<div class="wt1-model-para-row"><span class="wt1-model-tag">Intro</span><p>${esc(me.intro)}</p></div>` : ''}
+          ${me.overview ? `<div class="wt1-model-para-row is-ov"><span class="wt1-model-tag">Overview</span><p>${esc(me.overview)}</p></div>` : ''}
+          ${me.body1 ? `<div class="wt1-model-para-row"><span class="wt1-model-tag">Body 1</span><p>${esc(me.body1)}</p></div>` : ''}
+          ${me.body2 ? `<div class="wt1-model-para-row"><span class="wt1-model-tag">Body 2</span><p>${esc(me.body2)}</p></div>` : ''}
+        </div>
+      </details>
+    ` : '';
     return `
       <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
-        <div class="ws-ins-res-title" style="margin-bottom:6px;">Tham khảo Overview &amp; Từ vựng mô tả chuẩn Cambridge (${esc(p.type)})</div>
+        <div class="ws-ins-res-title" style="margin-bottom:6px;">Tham khảo Overview &amp; Bài mẫu Band 8.0+ (${esc(p.type)})</div>
         ${p.modelOverview ? `<div style="margin-bottom:8px;padding:9px 11px;border-radius:9px;background:var(--surface-panel);border:1px solid var(--border);"><strong>Overview mẫu:</strong> ${esc(p.modelOverview)}</div>` : ''}
-        ${p.overviewChecklist?.length ? `<div style="margin-bottom:8px;"><strong>Điểm bắt buộc nên nhắc tới:</strong><ul class="ws-exam-hint-list">${p.overviewChecklist.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>` : ''}
+        ${modelEssayHtml}
+        ${p.overviewChecklist?.length ? `<div style="margin-bottom:8px;margin-top:8px;"><strong>Điểm bắt buộc nên nhắc tới:</strong><ul class="ws-exam-hint-list">${p.overviewChecklist.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>` : ''}
         ${p.keyVocab?.length ? `<div><strong>Cụm từ ăn điểm:</strong> <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;">${p.keyVocab.map((v) => `<span class="ws-pill">${esc(v)}</span>`).join('')}</div></div>` : ''}
       </div>
     `;
@@ -5218,6 +5342,8 @@
       `;
     }).join('');
 
+    const t1Count = (DATA_T1().TASK1_PROMPTS || []).length;
+    const fullCount = (DATA_T1().FULL_TESTS || []).length;
     const histHtml = hist.length
       ? hist.slice(0, 4).map((h) => `
           <div class="rh-hist-item">
@@ -5225,15 +5351,43 @@
               <div class="rh-hist-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(h.prompt)}</div>
               <div class="rh-hist-meta">${esc(h.type)} · ${h.wordCount} words · ${h.mode === 'exam' ? 'Thi thật' : 'Luyện tập'}</div>
             </div>
-            <span class="tot-hist-badge tabular">${h.wordCount}w</span>
+            <span class="tot-hist-badge tabular">${h.band ? `B${Number(h.band).toFixed(1)}` : `${h.wordCount}w`}</span>
           </div>
         `).join('')
-      : '<div class="rh-empty">Chưa có bài Writing nào được nộp. Chọn một Subtopic bên dưới để bắt đầu học Flow &amp; làm Task.</div>';
+      : `<div class="tot-empty-illustrated is-compact">
+           <img class="tot-empty-mascot" src="assets/images/totoro_sitting_branch.webp" alt="" loading="lazy" decoding="async" draggable="false">
+           <div class="tot-empty-copy">
+             <strong>Chưa có bài Writing nào được nộp</strong>
+             <span>Bắt đầu từ ${t1Count} đề Task 1 biểu đồ, ${st.practiceTotal} đề Task 2 hoặc ${fullCount} Full Test 60p nhé.</span>
+           </div>
+         </div>`;
+
+    const wQuickTiles = [
+      { name: `Task 1 · ${t1Count} Biểu đồ`, meta: 'Line · Bar · Pie · Table · Process · Map · Mixed', tag: '20p · TA', tone: 'is-teal', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', act: "window.TotoroUI.enterSkillMode('Writing', 'practice'); window.WritingStudio?.setPracView?.('task1')" },
+      { name: `Task 2 · ${st.practiceTotal} Đề thật`, meta: '5 dạng đề chuẩn 2020–2026', tag: '40p · TR', tone: 'is-sage', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', act: "window.TotoroUI.enterSkillMode('Writing', 'practice'); window.WritingStudio?.setPracView?.('task2')" },
+      { name: `Full Writing Test (${fullCount})`, meta: 'Part 1 (1/3) + Part 2 (2/3) · 60p thi máy', tag: 'Thi thật', tone: 'is-warm', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>', act: "window.TotoroUI.enterSkillMode('Writing', 'practice'); window.WritingStudio?.setPracView?.('full')" },
+      { name: `${st.tasksTotal} Module Flow Idea`, meta: 'Flashcard ý tưởng & 3-Step Task', tag: 'Tư duy', tone: 'is-indigo', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.5 7.5 11 15.5M15.5 7.5 13 15.5"/></svg>', act: "window.TotoroUI.enterSkillMode('Writing', 'task')" }
+    ];
+    const wQuickHtml = wQuickTiles.map((q) => `
+      <button type="button" class="rh-quick-tile is-visual ${q.tone}" onclick="${q.act}">
+        <div class="rh-quick-head-row">
+          <span class="rh-quick-ico ${q.tone}" aria-hidden="true">${q.ico}</span>
+          <span class="rh-quick-tag">${esc(q.tag)}</span>
+        </div>
+        <div class="rh-quick-name">${esc(q.name)}</div>
+        <div class="rh-quick-meta-row">
+          <span class="rh-quick-meta">${esc(q.meta)}</span>
+          <span class="rh-quick-arr" aria-hidden="true">→</span>
+        </div>
+      </button>
+    `).join('');
+
+    const wRingOff = (176 * (1 - (st.cardPct || 0) / 100)).toFixed(1);
 
     el.innerHTML = `
       <div class="rh-layout">
         <div class="rh-top-asym">
-          <div class="tot-hero-card ink-brackets has-stamp rh-main-hero">
+          <div class="tot-hero-card ink-brackets has-stamp rh-main-hero has-mascot is-writing">
             <div class="rh-hero-copy">
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
                 <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
@@ -5246,10 +5400,13 @@
               </div>
               <div class="rh-decks-grid-4" style="grid-template-columns:repeat(3,minmax(0,1fr));">${barsHtml}</div>
               <div class="rh-hero-actions" style="margin-top:12px;">
-                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Writing', 'flashcard')">Học Flashcard →</button>
+                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Writing', 'practice')">Kho đề Task 1 &amp; 2 →</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Writing', 'flashcard')">Học Flashcard</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Writing', 'task')">${st.tasksTotal} Tasks</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Writing', 'practice')">Kho đề Task 2</button>
               </div>
+            </div>
+            <div class="rh-hero-mascot-stage" aria-hidden="true">
+              <img class="rh-hero-mascot-img" src="assets/images/totoro_professor.webp" alt="" decoding="async" draggable="false">
             </div>
           </div>
 
@@ -5259,7 +5416,13 @@
                 <div class="tot-panel-title">Tiến độ Writing</div>
                 <div class="tot-panel-sub tabular">${st.tasksDone} / ${st.tasksTotal} Module Idea hoàn thành</div>
               </div>
-              <span class="rh-band-big tabular">${st.cardPct}%</span>
+              <div class="rh-ring-wrap is-warm" aria-label="Tiến độ Writing">
+                <svg viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="var(--bg-subtle)" stroke-width="5.5"/>
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="var(--streak)" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="176" stroke-dashoffset="${wRingOff}" transform="rotate(-90 32 32)"/>
+                </svg>
+                <span class="rh-ring-val tabular">${st.cardPct}%</span>
+              </div>
             </div>
             <div class="ws-home-kpi-strip">
               <div class="ws-home-kpi"><span class="ws-home-kpi-val">${st.masteredCards}/${st.totalCards}</span><span class="ws-home-kpi-lbl">Thẻ thuộc</span></div>
@@ -5268,11 +5431,19 @@
             </div>
             <div class="rh-hist-list">${histHtml}</div>
             <div class="tot-panel-foot" style="margin-top:auto;">
-              <span class="tot-foot-meta">${st.practiceTotal} đề thi thật Task 2 (2020–2026)</span>
+              <span class="tot-foot-meta">${t1Count} đề Task 1 · ${st.practiceTotal} đề Task 2 · ${fullCount} Full Tests</span>
               <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Writing', 'practice')">Kho đề →</button>
             </div>
           </div>
         </div>
+
+        <section class="rh-quick-section" aria-label="Mở nhanh Writing Studio">
+          <div class="rh-quick-head">
+            <h3 class="rh-section-lbl">Mở nhanh Writing Studio</h3>
+            <button type="button" class="rh-text-link" onclick="window.TotoroUI.enterSkillMode('Writing', 'practice')">Xem tất cả kho đề →</button>
+          </div>
+          <div class="rh-quick-grid">${wQuickHtml}</div>
+        </section>
 
         <div class="tot-home-panel ink-brackets">
           <div class="tot-panel-head">
@@ -5378,6 +5549,7 @@
     setPracType,
     setPracQuery,
     resetPracFilters,
+    openRandomWritingPrompt,
     launchPracticeFromTask,
     startPracticePrompt,
     startFullWritingTest,
