@@ -1636,6 +1636,29 @@
   /* =========================================================
      6. RENDER: ACTIVE / EXPIRED 4-SKILL HOMEWORK MONITOR
      ========================================================= */
+  function renderExtendDeadlineSelectHtml(taskId, isMini = false, isExpired = false) {
+    const cls = isMini ? 'ts-pick-mini-btn ts-hw-ext-sel is-mini' : 'ts-hw-btn ts-hw-ext-sel';
+    const lbl = isExpired ? 'Mở lại ▾' : 'Gia hạn ▾';
+    return `
+      <select class="${cls}" aria-label="Gia hạn thời gian nộp bài" title="Chọn thời gian gia hạn hoặc đổi hạn nộp mới" onchange="TeacherStudio.onExtendTaskSelect('${esc(taskId)}', this)">
+        <option value="" selected hidden>${lbl}</option>
+        <option value="30">+30 phút</option>
+        <option value="60">+1 giờ</option>
+        <option value="120">+2 giờ</option>
+        <option value="360">+6 giờ</option>
+        <option value="720">+12 giờ</option>
+        <option value="1440">+24 giờ (1 ngày)</option>
+        <option value="2880">+48 giờ (2 ngày)</option>
+        <option value="4320">+72 giờ (3 ngày)</option>
+        <option value="10080">+7 ngày (1 tuần)</option>
+        <option value="tonight_24">Trước 12h tối nay</option>
+        <option value="tomorrow_24">Trước 12h tối mai</option>
+        <option value="0">Không giới hạn</option>
+        <option value="custom">Ngày giờ cụ thể...</option>
+      </select>
+    `;
+  }
+
   function renderMonitorSection(nowMs, buckets) {
     const box = document.getElementById('ts-monitor-body');
     const panel = document.getElementById('ts-panel-monitor');
@@ -1729,13 +1752,13 @@
         ? `
           <button type="button" class="ts-hw-btn is-primary" onclick="TeacherStudio.openTaskDetailModal('${esc(task.id)}', 'pending')">Nhắc từng bạn</button>
           <button type="button" class="ts-hw-btn" onclick="TeacherStudio.copyGroupReminder('${esc(task.id)}', true)">Copy DS nhóm</button>
-          <button type="button" class="ts-hw-btn" onclick="TeacherStudio.extendTaskDeadline('${esc(task.id)}', 60)">+1h</button>
+          ${renderExtendDeadlineSelectHtml(task.id, false, true)}
           <button type="button" class="ts-hw-btn" onclick="TeacherStudio.dismissMonitorTask('${esc(task.id)}')">Ẩn</button>
         `
         : `
           <button type="button" class="ts-hw-btn is-primary" onclick="TeacherStudio.openTaskDetailModal('${esc(task.id)}', 'pending')">Chi tiết &amp; Nhắc</button>
           <button type="button" class="ts-hw-btn" onclick="TeacherStudio.copyGroupReminder('${esc(task.id)}', false)">Copy nhóm</button>
-          <button type="button" class="ts-hw-btn" onclick="TeacherStudio.extendTaskDeadline('${esc(task.id)}', 60)">+1h</button>
+          ${renderExtendDeadlineSelectHtml(task.id, false, false)}
           <button type="button" class="ts-hw-btn is-danger" onclick="TeacherStudio.endTasksNow(['${esc(task.id)}'])">Đóng hạn</button>
         `;
 
@@ -1978,7 +2001,7 @@
       }
 
       const dlMiniBtns = isLive
-        ? `<button type="button" class="ts-pick-mini-btn" onclick="TeacherStudio.extendTaskDeadline('${esc(t.id)}', 60)">+1h</button>
+        ? `${renderExtendDeadlineSelectHtml(t.id, true, false)}
            <button type="button" class="ts-pick-mini-btn is-danger" onclick="TeacherStudio.endTasksNow(['${esc(t.id)}'])">Đóng</button>`
         : '';
 
@@ -2600,6 +2623,13 @@
     updateLiveDeadlines(ids, dlMs, dlMs > 0 ? `Đã cập nhật hạn nộp mới (${formatDeadlineTs(dlMs)})!` : 'Đã chuyển sang Không giới hạn thời gian.');
   }
 
+  function formatAddDurationLabel(addMinutes) {
+    if (addMinutes >= 10080 && addMinutes % 10080 === 0) return `${addMinutes / 10080} tuần`;
+    if (addMinutes >= 1440 && addMinutes % 1440 === 0) return `${addMinutes / 1440} ngày`;
+    if (addMinutes >= 60 && addMinutes % 60 === 0) return `${addMinutes / 60} giờ`;
+    return `${addMinutes} phút`;
+  }
+
   function extendTaskDeadline(taskId, addMinutes = 60) {
     const tid = normalizeAnyTaskId(taskId);
     if (!tid) return;
@@ -2607,7 +2637,98 @@
     const curDl = Number(liveMap[tid]?.deadlineAt || 0);
     const base = Math.max(Date.now(), curDl);
     const nextDl = base + addMinutes * 60 * 1000;
-    updateLiveDeadlines([tid], nextDl, `Đã gia hạn thêm ${addMinutes} phút (đóng ${formatDeadlineTs(nextDl)})!`);
+    updateLiveDeadlines([tid], nextDl, `Đã gia hạn thêm ${formatAddDurationLabel(addMinutes)} (đóng ${formatDeadlineTs(nextDl)})!`);
+  }
+
+  function openCustomDeadlineModal(taskId) {
+    const tid = normalizeAnyTaskId(taskId);
+    if (!tid) return;
+    const taskObj = getTaskById(tid);
+    const liveMap = loadLiveDeadlines();
+    const curDl = Number(liveMap[tid]?.deadlineAt || 0);
+    const seedMs = curDl > Date.now() ? curDl : (Date.now() + 2 * 60 * 60 * 1000);
+    const dt = new Date(seedMs);
+    const pad = (n) => String(n).padStart(2, '0');
+    const localVal = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+    let ov = document.getElementById('modal-teacher-custom-dl');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'modal-teacher-custom-dl';
+      ov.className = 'modal-overlay';
+      ov.style.zIndex = '2560';
+      ov.onclick = (e) => { if (e.target === ov) ov.classList.remove('open'); };
+      document.body.appendChild(ov);
+    }
+    ov.innerHTML = `
+      <div class="modal-card" style="max-width:420px; width:min(94vw,420px);" onclick="event.stopPropagation()">
+        <div class="modal-header" style="padding:14px 18px;">
+          <div class="modal-title" style="font-size:15.5px;">Đặt hạn nộp cụ thể</div>
+          <button type="button" class="btn-icon-glass" style="width:30px;height:30px;" onclick="document.getElementById('modal-teacher-custom-dl')?.classList.remove('open')" aria-label="Đóng">✕</button>
+        </div>
+        <div class="modal-body" style="padding:16px 18px 18px; display:flex; flex-direction:column; gap:12px;">
+          <div style="font-size:13px; color:var(--ink-2);">Bài: <strong>${esc(taskObj?.code || tid)}</strong>${taskObj?.theme ? ` · ${esc(taskObj.theme)}` : ''}</div>
+          <input type="datetime-local" id="ts-custom-dl-input" class="task-link-input" value="${localVal}" style="width:100%; height:38px; font-size:14px; font-weight:700;">
+          <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
+            <button type="button" class="btn-subtle" onclick="document.getElementById('modal-teacher-custom-dl')?.classList.remove('open')">Hủy</button>
+            <button type="button" class="btn btn-primary" onclick="TeacherStudio.confirmCustomTaskDeadline('${esc(tid)}')">Lưu hạn nộp</button>
+          </div>
+        </div>
+      </div>
+    `;
+    ov.classList.add('open');
+  }
+
+  function confirmCustomTaskDeadline(taskId) {
+    const tid = normalizeAnyTaskId(taskId);
+    const raw = document.getElementById('ts-custom-dl-input')?.value || '';
+    if (!tid || !raw) {
+      B()?.showToast?.('Vui lòng chọn ngày giờ hạn nộp hợp lệ.');
+      return;
+    }
+    const ts = new Date(raw).getTime();
+    if (!Number.isFinite(ts) || ts <= Date.now()) {
+      B()?.showToast?.('Thời điểm hạn nộp phải lớn hơn hiện tại.');
+      return;
+    }
+    document.getElementById('modal-teacher-custom-dl')?.classList.remove('open');
+    updateLiveDeadlines([tid], ts, `Đã cập nhật hạn nộp đến ${formatDeadlineTs(ts)}!`);
+  }
+
+  function onExtendTaskSelect(taskId, selectEl) {
+    const val = String(selectEl?.value || '');
+    if (selectEl) selectEl.value = '';
+    if (!val) return;
+    const tid = normalizeAnyTaskId(taskId);
+    if (!tid) return;
+    const nowTs = Date.now();
+    if (val === 'custom') {
+      openCustomDeadlineModal(tid);
+      return;
+    }
+    if (val === '0') {
+      updateLiveDeadlines([tid], 0, 'Đã chuyển bài sang Không giới hạn thời gian!');
+      return;
+    }
+    if (val === 'tonight_24') {
+      const d = new Date(nowTs);
+      d.setHours(23, 59, 59, 0);
+      const nextDl = d.getTime() > nowTs ? d.getTime() : (nowTs + 60 * 60 * 1000);
+      updateLiveDeadlines([tid], nextDl, `Đã đặt hạn nộp trước 12h tối nay (${formatDeadlineTs(nextDl)})!`);
+      return;
+    }
+    if (val === 'tomorrow_24') {
+      const d = new Date(nowTs);
+      d.setDate(d.getDate() + 1);
+      d.setHours(23, 59, 59, 0);
+      const nextDl = d.getTime();
+      updateLiveDeadlines([tid], nextDl, `Đã đặt hạn nộp trước 12h tối mai (${formatDeadlineTs(nextDl)})!`);
+      return;
+    }
+    const mins = Number(val);
+    if (Number.isFinite(mins) && mins > 0) {
+      extendTaskDeadline(tid, mins);
+    }
   }
 
   function endTasksNow(targetIds = null) {
@@ -3839,6 +3960,8 @@
     copySelectedLink,
     applyLiveDeadline,
     extendTaskDeadline,
+    onExtendTaskSelect,
+    confirmCustomTaskDeadline,
     endTasksNow,
     dismissMonitorTask,
     unlockStudentTask,

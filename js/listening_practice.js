@@ -2262,7 +2262,7 @@
             <div class="prac-pop-seg" style="margin-bottom:12px;">
               <button type="button" class="prac-seg-btn ${contrastKey === 'totoro' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('totoro')">Washi ấm</button>
               <button type="button" class="prac-seg-btn ${contrastKey === 'cd' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('cd')">Trắng sáng</button>
-              <button type="button" class="prac-seg-btn ${contrastKey === 'sepia' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('sepia')">Giấy kem</button>
+              <button type="button" class="prac-seg-btn ${contrastKey === 'sepia' ? 'active' : ''}" onclick="ListeningPracticeApp.setContrast('sepia')">Xanh sương</button>
             </div>
           </div>
           <div class="prac-pop-lbl">Cỡ chữ đề thi</div>

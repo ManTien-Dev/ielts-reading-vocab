@@ -2228,6 +2228,28 @@ html[data-theme="dark"] .rp-btn-assign:hover {
 .ts-v2-shell .ts-hw-btn:active {
   transform: scale(0.97);
 }
+.ts-hw-ext-sel {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: auto !important;
+  min-width: 0;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  text-align-last: center;
+  background-image: none !important;
+}
+.ts-hw-ext-sel.is-mini {
+  padding: 2px 7px !important;
+  font-size: 11px !important;
+}
+.ts-hw-ext-sel option {
+  text-align: left;
+  background: var(--surface, #ffffff);
+  color: var(--ink, #1f2937);
+  font-weight: 600;
+}
 .ts-empty-state {
   text-align: center;
   padding: 44px 20px;

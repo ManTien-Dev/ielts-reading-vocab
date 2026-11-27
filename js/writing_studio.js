@@ -3245,7 +3245,7 @@
     const cls = isThumb ? 'wt1-vis is-thumb' : 'wt1-vis is-full';
 
     if (p.chartType === 'line') {
-      const W = 520, H = 240, padL = 42, padR = 18, padT = 20, padB = 34;
+      const W = 520, H = 248, padL = 44, padR = 24, padT = 22, padB = 36;
       const plotW = W - padL - padR, plotH = H - padT - padB;
       const yMax = d.yMax || 100, yStep = d.yStep || 20;
       const labels = d.labels || [];
@@ -3253,17 +3253,21 @@
       const yAt = (v) => padT + plotH - (Math.max(0, Math.min(yMax, v)) / yMax) * plotH;
 
       let gridSvg = '';
-      for (let y = 0; y <= yMax; y += yStep) {
+      for (let y = 0; y <= yMax; y += yStep / 2) {
         const py = yAt(y).toFixed(1);
-        gridSvg += `<line x1="${padL}" y1="${py}" x2="${W - padR}" y2="${py}" class="wt1-grid-line"/>`;
-        gridSvg += `<text x="${padL - 7}" y="${Number(py) + 3.5}" text-anchor="end" class="wt1-axis-txt">${y}${esc(d.unit || '')}</text>`;
+        const isMajor = y % yStep === 0;
+        gridSvg += `<line x1="${padL}" y1="${py}" x2="${W - padR}" y2="${py}" class="${isMajor ? 'wt1-grid-line' : 'wt1-grid-minor'}"/>`;
+        if (isMajor) gridSvg += `<text x="${padL - 7}" y="${Number(py) + 3.5}" text-anchor="end" class="wt1-axis-txt">${y}${esc(d.unit || '')}</text>`;
       }
+      gridSvg += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" class="wt1-axis-line"/>`;
+      gridSvg += `<line x1="${padL}" y1="${padT + plotH}" x2="${W - padR}" y2="${padT + plotH}" class="wt1-axis-line"/>`;
       const xLabelsSvg = labels.map((lb, i) => `<text x="${xAt(i).toFixed(1)}" y="${H - 12}" text-anchor="middle" class="wt1-axis-txt">${esc(lb)}</text>`).join('');
       const linesSvg = (d.series || []).map((s) => {
         const pts = s.values.map((v, i) => `${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ');
         const dots = s.values.map((v, i) => {
           const cx = xAt(i).toFixed(1), cy = yAt(v).toFixed(1);
-          return `<circle cx="${cx}" cy="${cy}" r="${isThumb ? 3 : 4}" fill="${s.color}" stroke="#ffffff" stroke-width="1.4"/>${!isThumb && i === s.values.length - 1 ? `<text x="${cx}" y="${Number(cy) - 7}" text-anchor="middle" class="wt1-val-txt" fill="${s.color}">${v}%</text>` : ''}`;
+          const tip = `${s.name} (${labels[i]}): ${v}${d.unit || ''}`;
+          return `<circle cx="${cx}" cy="${cy}" r="${isThumb ? 3 : 4.2}" fill="${s.color}" stroke="#ffffff" stroke-width="1.4"><title>${esc(tip)}</title></circle>${!isThumb && i === s.values.length - 1 ? `<text x="${Number(cx) + 4}" y="${Number(cy) - 6}" text-anchor="middle" class="wt1-val-txt" fill="${s.color}">${v}%</text>` : ''}`;
         }).join('');
         return `<polyline fill="none" stroke="${s.color}" stroke-width="${isThumb ? 2.4 : 2.8}" stroke-linecap="round" stroke-linejoin="round" points="${pts}"/>${dots}`;
       }).join('');
@@ -3272,7 +3276,7 @@
     }
 
     if (p.chartType === 'bar') {
-      const W = 520, H = 240, padL = 40, padR = 16, padT = 20, padB = 34;
+      const W = 520, H = 248, padL = 42, padR = 16, padT = 22, padB = 36;
       const plotW = W - padL - padR, plotH = H - padT - padB;
       const yMax = d.yMax || 80, yStep = d.yStep || 20;
       const cats = d.categories || [];
@@ -3280,11 +3284,14 @@
       const yAt = (v) => padT + plotH - (Math.max(0, Math.min(yMax, v)) / yMax) * plotH;
 
       let gridSvg = '';
-      for (let y = 0; y <= yMax; y += yStep) {
+      for (let y = 0; y <= yMax; y += yStep / 2) {
         const py = yAt(y).toFixed(1);
-        gridSvg += `<line x1="${padL}" y1="${py}" x2="${W - padR}" y2="${py}" class="wt1-grid-line"/>`;
-        gridSvg += `<text x="${padL - 7}" y="${Number(py) + 3.5}" text-anchor="end" class="wt1-axis-txt">${y}%</text>`;
+        const isMajor = y % yStep === 0;
+        gridSvg += `<line x1="${padL}" y1="${py}" x2="${W - padR}" y2="${py}" class="${isMajor ? 'wt1-grid-line' : 'wt1-grid-minor'}"/>`;
+        if (isMajor) gridSvg += `<text x="${padL - 7}" y="${Number(py) + 3.5}" text-anchor="end" class="wt1-axis-txt">${y}%</text>`;
       }
+      gridSvg += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" class="wt1-axis-line"/>`;
+      gridSvg += `<line x1="${padL}" y1="${padT + plotH}" x2="${W - padR}" y2="${padT + plotH}" class="wt1-axis-line"/>`;
       const grpW = plotW / Math.max(1, cats.length);
       const barW = Math.min(22, (grpW - 18) / Math.max(1, series.length));
       const barsSvg = cats.map((cat, ci) => {
@@ -3295,7 +3302,8 @@
           const x = startX + si * (barW + 3);
           const y = yAt(val);
           const h = Math.max(2, padT + plotH - y);
-          return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${s.color}"/>${!isThumb ? `<text x="${(x + barW / 2).toFixed(1)}" y="${(y - 4).toFixed(1)}" text-anchor="middle" class="wt1-val-txt">${val}</text>` : ''}`;
+          const tip = `${cat} — ${s.name}: ${val}%`;
+          return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${s.color}"><title>${esc(tip)}</title></rect>${!isThumb ? `<text x="${(x + barW / 2).toFixed(1)}" y="${(y - 4).toFixed(1)}" text-anchor="middle" class="wt1-val-txt">${val}%</text>` : ''}`;
         }).join('');
         return `${rects}<text x="${grpCenter.toFixed(1)}" y="${H - 12}" text-anchor="middle" class="wt1-axis-txt">${esc(cat)}</text>`;
       }).join('');
@@ -3313,10 +3321,12 @@
           const x1 = cx + r * Math.cos(acc), y1 = cy + r * Math.sin(acc);
           const x2 = cx + r * Math.cos(acc + ang), y2 = cy + r * Math.sin(acc + ang);
           const mid = acc + ang / 2;
-          const lx = cx + (r * 0.65) * Math.cos(mid), ly = cy + (r * 0.65) * Math.sin(mid);
+          const radPos = sl.value >= 9 ? r * 0.68 : r * 0.78;
+          const lx = cx + radPos * Math.cos(mid), ly = cy + radPos * Math.sin(mid);
           const large = ang > Math.PI ? 1 : 0;
           acc += ang;
-          return `<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${sl.color}" stroke="#ffffff" stroke-width="1.5"/>${!isThumb && sl.value >= 9 ? `<text x="${lx.toFixed(1)}" y="${(ly + 3.5).toFixed(1)}" text-anchor="middle" fill="#ffffff" font-size="10.5" font-weight="800">${sl.value}%</text>` : ''}`;
+          const tip = `${pie.title} — ${sl.label}: ${sl.value}%`;
+          return `<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${sl.color}" stroke="#ffffff" stroke-width="1.5"><title>${esc(tip)}</title></path>${!isThumb ? `<text x="${lx.toFixed(1)}" y="${(ly + 3.5).toFixed(1)}" text-anchor="middle" fill="#ffffff" font-size="${sl.value >= 9 ? '10.5' : '9'}" font-weight="800">${sl.value}%</text>` : ''}`;
         }).join('');
         return `${paths}<circle cx="${cx}" cy="${cy}" r="${(r * 0.34).toFixed(1)}" class="wt1-pie-hole"/><text x="${cx}" y="${cy + 4}" text-anchor="middle" class="wt1-pie-yr">${esc(pie.title)}</text>`;
       };
@@ -3340,16 +3350,47 @@
 
     if (p.chartType === 'process') {
       const steps = d.steps || [];
+      const coords = [
+        { x: 16, y: 16 }, { x: 186, y: 16 }, { x: 356, y: 16 },
+        { x: 356, y: 112 }, { x: 186, y: 112 }, { x: 16, y: 112 }
+      ];
+      const boxesSvg = steps.slice(0, 6).map((st, idx) => {
+        const c = coords[idx];
+        const detailTxt = String(st.detail || '').trim();
+        const words = detailTxt ? detailTxt.split(/\s+/) : [];
+        let line1 = '';
+        let line2 = '';
+        const halfLen = detailTxt.length / 2;
+        words.forEach((w) => {
+          if (!line2 && (line1.length === 0 || (line1.length + w.length + 1) <= Math.min(25, Math.max(21, halfLen + 2)))) {
+            line1 = line1 ? `${line1} ${w}` : w;
+          } else {
+            line2 = line2 ? `${line2} ${w}` : w;
+          }
+        });
+        return `
+          <g>
+            <rect x="${c.x}" y="${c.y}" width="148" height="66" rx="10" class="wt1-proc-rect"/>
+            <circle cx="${c.x + 17}" cy="${c.y + 18}" r="10" fill="#2F663D"/>
+            <text x="${c.x + 17}" y="${c.y + 21.5}" text-anchor="middle" fill="#ffffff" font-size="10.5" font-weight="800">${st.num}</text>
+            <text x="${c.x + 33}" y="${c.y + 21.5}" class="wt1-proc-title-svg">${esc(st.title)}</text>
+            <text x="${c.x + 10}" y="${c.y + 41}" class="wt1-proc-sub-svg">${esc(line1)}</text>
+            <text x="${c.x + 10}" y="${c.y + 54}" class="wt1-proc-sub-svg">${esc(line2)}</text>
+          </g>
+        `;
+      }).join('');
+      const arrowsSvg = `
+        <defs><marker id="wt1Arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,1 L9,5 L0,9 Z" fill="#2F663D"/></marker></defs>
+        <line x1="166" y1="49" x2="183" y2="49" stroke="#2F663D" stroke-width="2" marker-end="url(#wt1Arr)"/>
+        <line x1="336" y1="49" x2="353" y2="49" stroke="#2F663D" stroke-width="2" marker-end="url(#wt1Arr)"/>
+        <line x1="430" y1="84" x2="430" y2="109" stroke="#2F663D" stroke-width="2" marker-end="url(#wt1Arr)"/>
+        <line x1="354" y1="145" x2="337" y2="145" stroke="#2F663D" stroke-width="2" marker-end="url(#wt1Arr)"/>
+        <line x1="184" y1="145" x2="167" y2="145" stroke="#2F663D" stroke-width="2" marker-end="url(#wt1Arr)"/>
+        <path d="M 90 110 L 90 86" stroke="#2F663D" stroke-width="1.8" stroke-dasharray="4 3" marker-end="url(#wt1Arr)"/>
+      `;
       return `
         <div class="${cls} wt1-proc-wrap">
-          <div class="wt1-proc-grid">
-            ${steps.map((st, idx) => `
-              <div class="wt1-proc-step">
-                <div class="wt1-proc-top"><span class="wt1-proc-num">${st.num}</span><strong>${esc(st.title)}</strong>${idx < steps.length - 1 ? '<span class="wt1-proc-arr">→</span>' : '<span class="wt1-proc-arr">↺</span>'}</div>
-                ${!isThumb ? `<div class="wt1-proc-desc">${esc(st.detail)}</div>` : ''}
-              </div>
-            `).join('')}
-          </div>
+          <svg viewBox="0 0 520 194" class="wt1-svg" role="img" aria-label="${esc(p.title)}">${arrowsSvg}${boxesSvg}</svg>
           ${!isThumb && d.cycleNote ? `<div class="wt1-proc-note">↻ ${esc(d.cycleNote)}</div>` : ''}
         </div>
       `;
@@ -3358,14 +3399,15 @@
     if (p.chartType === 'map') {
       const drawMap = (zones, yr, road) => `
         <div class="wt1-map-box">
-          <div class="wt1-map-yr">${esc(yr)} <span class="wt1-compass">N ↑</span></div>
-          <svg viewBox="0 0 240 138" class="wt1-svg">
-            <rect x="0" y="0" width="240" height="58" fill="#E3EFF7"/>
-            <rect x="0" y="58" width="240" height="80" fill="#F4F1E8"/>
-            <rect x="0" y="114" width="240" height="18" fill="#D5D2C8"/>
-            <text x="120" y="126" text-anchor="middle" font-size="8.5" font-weight="700" fill="#3D3A34">${esc(road)}</text>
+          <div class="wt1-map-yr">${esc(yr)} <span class="wt1-compass">N ↑ · S ↓ · W ← · E →</span></div>
+          <svg viewBox="0 0 280 156" class="wt1-svg">
+            <rect x="0" y="0" width="280" height="66" fill="#DCEBF6"/>
+            <text x="140" y="15" text-anchor="middle" font-size="8.5" font-weight="700" fill="#4C6F8C" letter-spacing="1.2">NORTH SEA</text>
+            <path d="M0,66 Q35,61 70,66 T140,66 T210,66 T280,66 L280,156 L0,156 Z" fill="#F4F1E8"/>
+            <rect x="0" y="128" width="280" height="20" fill="#D5D2C8"/>
+            <text x="140" y="141" text-anchor="middle" font-size="8.5" font-weight="700" fill="#3D3A34">${esc(road)}</text>
             ${(zones || []).map((z) => `
-              <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="5" fill="${z.fill}" stroke="${z.stroke}" stroke-width="1.3"/>
+              <rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="5" fill="${z.fill}" stroke="${z.stroke}" stroke-width="1.35"/>
               <text x="${z.x + z.w / 2}" y="${z.y + z.h / 2 + 3}" text-anchor="middle" font-size="8.5" font-weight="700" fill="#1F2420">${esc(z.label)}</text>
             `).join('')}
           </svg>
@@ -3937,10 +3979,23 @@
       contrast: mode === 'exam' ? 'cd' : 'totoro',
       textSize: 'regular',
       showExactSec: false,
+      paused: false,
+      showTimer: true,
+      activePen: 'yellow',
+      drawerTab: 'plan',
       optionsOpen: false,
-      planningOpen: typeof window !== 'undefined' ? window.innerWidth > 767 : true,
-      splitRatio: mode === 'exam' ? 46 : 42
+      planningOpen: false,
+      splitRatio: 46,
+      promptHighlights: { 1: null, 2: null }
     };
+    if (pracState.mode === 'practice') {
+      const saved = loadSavedPracDraft(fullObj.id);
+      if (saved && ((saved.drafts?.[1] || '').trim() || (saved.drafts?.[2] || '').trim())) {
+        pracState.drafts = { 1: saved.drafts[1] || '', 2: saved.drafts[2] || '' };
+        if (saved.plans) pracState.plans = { 1: saved.plans[1] || pracState.plans[1], 2: saved.plans[2] || pracState.plans[2] };
+        toast('Đã khôi phục bản nháp Full Test chưa nộp.');
+      }
+    }
     renderActivePracticeRoom();
     startPracRoomTimer();
   }
@@ -3985,27 +4040,191 @@
       contrast: mode === 'exam' ? 'cd' : 'totoro',
       textSize: 'regular',
       showExactSec: false,
+      paused: false,
+      showTimer: true,
+      activePen: 'yellow',
+      drawerTab: 'plan',
       optionsOpen: false,
-      planningOpen: typeof window !== 'undefined' ? window.innerWidth > 767 : true,
-      splitRatio: mode === 'exam' ? 46 : (isTask1 ? 43 : 37)
+      planningOpen: false,
+      splitRatio: 46,
+      promptHighlights: { 1: null, 2: null }
     };
+    if (pracState.mode === 'practice') {
+      const saved = loadSavedPracDraft(p.id);
+      const partKey = isTask1 ? 1 : 2;
+      if (saved && (saved.drafts?.[partKey] || '').trim()) {
+        pracState.drafts[partKey] = saved.drafts[partKey];
+        if (saved.plans?.[partKey]) pracState.plans[partKey] = saved.plans[partKey];
+        toast('Đã khôi phục bản nháp chưa nộp của bài này.');
+      }
+    }
     renderActivePracticeRoom();
     startPracRoomTimer();
+  }
+
+  const WS_PASTEL_PENS = [
+    { id: 'yellow',   name: 'Vàng nắng',  role: 'Từ khóa chính',       swatch: '#fde68a' },
+    { id: 'sage',     name: 'Xanh sage',  role: 'Yêu cầu đề bài',      swatch: '#bbf7d0' },
+    { id: 'peach',    name: 'Hồng đào',   role: 'Từ giới hạn / bẫy',   swatch: '#fecdd3' },
+    { id: 'sky',      name: 'Xanh trời',  role: 'Số liệu / Thời gian', swatch: '#bae6fd' },
+    { id: 'lavender', name: 'Tím nhạt',   role: 'Ý phụ / Đối tượng',   swatch: '#ddd6fe' }
+  ];
+
+  function getWsDraftStorageKey(id) {
+    const uid = window.AppCore?.getActiveUser?.()?.username || 'guest';
+    return `totoro_ws_draft_v1_${uid}_${id || 'default'}`;
+  }
+
+  function loadSavedPracDraft(id) {
+    try {
+      const raw = localStorage.getItem(getWsDraftStorageKey(id));
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+  }
+
+  function savePracDraftToStorage() {
+    if (!pracState || pracState.mode !== 'practice' || pracState.submitted) return;
+    const keyId = pracState.isFull ? pracState.fullMeta?.id : pracState.prompt?.id;
+    if (!keyId) return;
+    try {
+      localStorage.setItem(getWsDraftStorageKey(keyId), JSON.stringify({
+        drafts: pracState.drafts || { 1: '', 2: '' },
+        plans: pracState.plans || { 1: '', 2: '' },
+        updatedAt: Date.now()
+      }));
+      const el = document.getElementById('ws-prac-autosave');
+      if (el) {
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        el.textContent = `✓ Đã lưu nháp ${hh}:${mm}`;
+        el.classList.add('is-saved');
+      }
+    } catch (_) {}
+  }
+
+  function clearSavedPracDraft() {
+    if (!pracState) return;
+    const keyId = pracState.isFull ? pracState.fullMeta?.id : pracState.prompt?.id;
+    if (!keyId) return;
+    try { localStorage.removeItem(getWsDraftStorageKey(keyId)); } catch (_) {}
   }
 
   function startPracRoomTimer() {
     if (!pracState) return;
     if (pracState.timerId) clearInterval(pracState.timerId);
     pracState.timerId = setInterval(() => {
-      if (!pracState || pracState.submitted) return;
+      if (!pracState || pracState.submitted || pracState.paused) return;
       pracState.secsLeft--;
       updatePracTimerDisplay();
       if (pracState.secsLeft <= 0) submitPracticeEssay(true);
     }, 1000);
   }
 
+  function saveCurrentPromptHighlightHtml() {
+    if (!pracState) return;
+    const box = document.getElementById('ws-ins-prompt-text');
+    if (!box) return;
+    if (!pracState.promptHighlights) pracState.promptHighlights = { 1: null, 2: null };
+    const part = pracState.activePart || 2;
+    pracState.promptHighlights[part] = box.querySelector('mark.ws-cd-hl') ? box.innerHTML : null;
+  }
+
+  function syncPromptHighlightBadge() {
+    const box = document.getElementById('ws-ins-prompt-text');
+    const clr = document.getElementById('ws-hl-clear-btn');
+    const optClr = document.getElementById('ws-opt-hl-clear');
+    const cnt = box ? box.querySelectorAll('mark.ws-cd-hl').length : 0;
+    if (clr) {
+      clr.style.display = cnt > 0 ? 'inline-flex' : 'none';
+      clr.textContent = pracState?.mode === 'exam' ? 'Xoá highlight' : `Xóa ${cnt} màu`;
+    }
+    if (optClr) {
+      optClr.style.display = cnt > 0 ? 'block' : 'none';
+      optClr.textContent = `Xóa toàn bộ ${cnt} highlight`;
+    }
+  }
+
+  function hidePromptHighlightBar() {
+    const bar = document.getElementById('ws-hl-float-bar');
+    if (bar) bar.classList.remove('open');
+  }
+
+  function onPromptSelectionChange() {
+    const box = document.getElementById('ws-ins-prompt-text');
+    const bar = document.getElementById('ws-hl-float-bar');
+    if (!box || !bar) return;
+    const sel = window.getSelection?.();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) {
+      bar.classList.remove('open');
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!box.contains(range.commonAncestorContainer) || !sel.toString().trim()) {
+      bar.classList.remove('open');
+      return;
+    }
+    const rect = range.getBoundingClientRect();
+    const top = Math.max(12, rect.top - 46);
+    const barW = pracState?.mode === 'exam' ? 190 : 230;
+    const left = Math.max(12, Math.min(window.innerWidth - barW, rect.left + rect.width / 2 - barW / 2));
+    bar.style.top = `${top}px`;
+    bar.style.left = `${left}px`;
+    bar.classList.add('open');
+  }
+
+  function applyPromptHighlight(colorId) {
+    const box = document.getElementById('ws-ins-prompt-text');
+    const sel = window.getSelection?.();
+    if (!box || !sel || sel.isCollapsed || !sel.rangeCount) {
+      hidePromptHighlightBar();
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!box.contains(range.commonAncestorContainer)) {
+      hidePromptHighlightBar();
+      return;
+    }
+    const chosenColor = pracState?.mode === 'exam' ? 'yellow' : (colorId || pracState?.activePen || 'yellow');
+    if (pracState && colorId) pracState.activePen = colorId;
+    const mark = document.createElement('mark');
+    mark.className = 'ws-cd-hl';
+    mark.setAttribute('data-hl-color', chosenColor);
+    mark.title = 'Nhấn để gỡ highlight';
+    try {
+      const frag = range.extractContents();
+      mark.appendChild(frag);
+      range.insertNode(mark);
+    } catch (_) {
+      hidePromptHighlightBar();
+      return;
+    }
+    sel.removeAllRanges();
+    hidePromptHighlightBar();
+    saveCurrentPromptHighlightHtml();
+    syncPromptHighlightBadge();
+    document.querySelectorAll('#ws-hl-float-bar .prac-pop-dot, #ws-prac-opt-pop .prac-pop-dot').forEach((d) => {
+      d.classList.toggle('is-active', d.getAttribute('data-pen') === chosenColor);
+    });
+  }
+
+  function clearPromptHighlights() {
+    const box = document.getElementById('ws-ins-prompt-text');
+    if (!box) return;
+    box.querySelectorAll('mark.ws-cd-hl').forEach((m) => {
+      const parent = m.parentNode;
+      while (m.firstChild) parent.insertBefore(m.firstChild, m);
+      parent.removeChild(m);
+    });
+    box.normalize();
+    hidePromptHighlightBar();
+    saveCurrentPromptHighlightHtml();
+    syncPromptHighlightBadge();
+  }
+
   function switchFullPart(partNum) {
     if (!pracState || !pracState.isFull || pracState.activePart === partNum) return;
+    saveCurrentPromptHighlightHtml();
     const curEd = document.getElementById('ws-prac-editor');
     const curPlan = document.getElementById('ws-plan-notes');
     if (curEd) pracState.drafts[pracState.activePart] = curEd.value;
@@ -4015,9 +4234,79 @@
     renderActivePracticeRoom();
   }
 
+  function copyVocabChip(btn, text) {
+    if (!text) return;
+    try { navigator.clipboard?.writeText(text); } catch (_) {}
+    if (btn) {
+      btn.classList.add('is-copied');
+      setTimeout(() => btn.classList.remove('is-copied'), 900);
+    }
+    toast(`Đã sao chép cụm từ: "${text}"`);
+  }
+
+  function buildPracStudyGuideHtml(p, isTask1) {
+    if (!p) return '';
+    if (isTask1) {
+      return `
+        <div class="ws-stu-guide">
+          ${p.overviewChecklist?.length ? `
+            <div class="ws-stu-sec">
+              <div class="ws-stu-sec-lbl">Điểm cốt lõi cần có trong Overview</div>
+              <ul class="ws-stu-list">${p.overviewChecklist.map((g) => `<li>${esc(g)}</li>`).join('')}</ul>
+            </div>` : ''}
+          ${p.keyVocab?.length ? `
+            <div class="ws-stu-sec">
+              <div class="ws-stu-sec-lbl">Từ vựng mô tả ăn điểm (nhấn để sao chép)</div>
+              <div class="ws-stu-chips">${p.keyVocab.map((v) => `<button type="button" class="ws-stu-chip" onclick="WritingStudio.copyVocabChip(this, '${esc(v).replace(/'/g, "\\'")}')">${esc(v)}</button>`).join('')}</div>
+            </div>` : ''}
+        </div>
+      `;
+    }
+    const paras = cleanPromptParaphrases(p);
+    return `
+      <div class="ws-stu-guide">
+        ${p.review ? `<div class="ws-stu-sec"><div class="ws-stu-sec-lbl">Phân tích hướng đi đề bài</div><p class="ws-stu-p">${esc(p.review)}</p></div>` : ''}
+        ${p.bodyGuide?.length ? `
+          <div class="ws-stu-sec">
+            <div class="ws-stu-sec-lbl">Gợi ý triển khai 2 đoạn Body</div>
+            <ul class="ws-stu-list">${p.bodyGuide.map((g) => `<li>${esc(g)}</li>`).join('')}</ul>
+          </div>` : ''}
+        ${paras.length ? `
+          <div class="ws-stu-sec">
+            <div class="ws-stu-sec-lbl">Gợi ý Paraphrase đề thi</div>
+            <div class="ws-stu-chips">${paras.slice(0, 6).map((v) => `<button type="button" class="ws-stu-chip" onclick="WritingStudio.copyVocabChip(this, '${esc(v).replace(/'/g, "\\'")}')">${esc(v)}</button>`).join('')}</div>
+          </div>` : ''}
+      </div>
+    `;
+  }
+
+  function computePracLiveChecksHtml(rawText, isTask1) {
+    const v = String(rawText || '').trim();
+    const wc = v ? v.split(/\s+/).length : 0;
+    const paras = v ? v.split(/\n+/).map((x) => x.trim()).filter(Boolean) : [];
+    const sents = v ? v.split(/[.!?]+/).map((x) => x.trim()).filter(Boolean) : [];
+    const avgLen = sents.length ? Math.round(wc / sents.length) : 0;
+    const minW = isTask1 ? 150 : 250;
+    const hasLinkers = /\b(overall|however|furthermore|moreover|in contrast|whereas|meanwhile|consequently|therefore|nevertheless|in addition|on the other hand|while|although|specifically|for instance|for example)\b/i.test(v);
+    const checks = [
+      { ok: wc >= minW, lbl: `Độ dài chuẩn Cambridge (≥ ${minW} từ)`, val: `${wc}/${minW} từ` },
+      { ok: paras.length >= 4, lbl: isTask1 ? 'Bố cục 4 đoạn (Intro · Overview · Body 1 · Body 2)' : 'Bố cục 4 đoạn (Intro · Body 1 · Body 2 · Conclusion)', val: `${paras.length}/4 đoạn` },
+      { ok: sents.length >= 4 && avgLen >= 13 && avgLen <= 27, lbl: 'Độ dài câu cân đối (13–27 từ/câu)', val: sents.length ? `~${avgLen} từ/câu` : 'Chưa có câu' },
+      { ok: hasLinkers, lbl: isTask1 ? 'Có từ tín hiệu Overview & So sánh (overall, whereas...)' : 'Có từ nối học thuật (however, furthermore, consequently...)', val: hasLinkers ? 'Đã dùng' : 'Nên bổ sung' }
+    ];
+    return checks.map((c) => `
+      <div class="ws-stu-check-row ${c.ok ? 'is-pass' : ''}">
+        <span class="ws-stu-check-dot" aria-hidden="true">${c.ok ? '✓' : '○'}</span>
+        <span class="ws-stu-check-lbl">${c.lbl}</span>
+        <span class="ws-stu-check-val tabular">${c.val}</span>
+      </div>
+    `).join('');
+  }
+
   function renderActivePracticeRoom() {
     if (!pracState) return;
     const isExam = pracState.mode === 'exam';
+    const isPractice = !isExam;
     const isFull = Boolean(pracState.isFull);
     const activePart = pracState.activePart || 2;
     const isTask1 = activePart === 1;
@@ -4026,20 +4315,39 @@
     const initContrast = pracState.contrast;
     const currentDraft = pracState.drafts?.[activePart] || '';
     const currentPlan = pracState.plans?.[activePart] ?? getPlanTemplateForPart(isTask1);
+    const savedHighlightHtml = pracState.promptHighlights?.[activePart] || null;
+    const hlMatches = savedHighlightHtml ? (savedHighlightHtml.match(/ws-cd-hl/g) || []).length : 0;
+    const hasHighlights = hlMatches > 0;
+    const activeTab = pracState.drawerTab || 'plan';
 
-    const planningHtml = !isExam ? `
-      <div class="ws-ins-plan-card ws-plan-single-card" id="ws-ins-plan-card">
-        <div class="ws-ins-plan-head">
-          <div class="ws-ins-plan-title-wrap">
-            <span class="ws-ins-plan-title">Planning · Dàn ý ${isTask1 ? 'Task 1' : 'Task 2'}</span>
+    const wcOf = (s) => { const v = String(s || '').trim(); return v ? v.split(/\s+/).length : 0; };
+    const curWc = wcOf(currentDraft);
+    const progPct = Math.min(100, Math.round((curWc / minWords) * 100));
+
+    const studyDrawerHtml = isPractice ? `
+      <div class="ws-prac-studio-drawer" id="ws-ins-plan-card">
+        <div class="ws-stu-head">
+          <div class="ws-stu-tabs" role="tablist" aria-label="Công cụ trợ học Writing">
+            <button type="button" role="tab" class="ws-stu-tab ${activeTab === 'plan' && pracState.planningOpen ? 'active' : ''}" data-drawer-tab="plan" onclick="WritingStudio.setPracDrawerTab('plan')">📝 Dàn ý</button>
+            <button type="button" role="tab" class="ws-stu-tab ${activeTab === 'guide' && pracState.planningOpen ? 'active' : ''}" data-drawer-tab="guide" onclick="WritingStudio.setPracDrawerTab('guide')">💡 Gợi ý &amp; Từ vựng</button>
+            <button type="button" role="tab" class="ws-stu-tab ${activeTab === 'check' && pracState.planningOpen ? 'active' : ''}" data-drawer-tab="check" onclick="WritingStudio.setPracDrawerTab('check')">🎯 Tự kiểm tra</button>
           </div>
-          <div class="ws-ins-plan-actions">
-            <button type="button" class="ws-ins-plan-btn" onclick="WritingStudio.clearPracPlan()" title="Đặt lại khung dàn ý trống">Đặt lại</button>
-            <button type="button" class="ws-ins-plan-btn" id="ws-ins-plan-toggle" onclick="WritingStudio.togglePracPlan()">${pracState.planningOpen ? 'Thu gọn' : 'Mở Planning'}</button>
-          </div>
+          <button type="button" class="ws-stu-toggle" id="ws-ins-plan-toggle" onclick="WritingStudio.togglePracPlan()">${pracState.planningOpen ? 'Thu gọn ▴' : 'Mở trợ học ▾'}</button>
         </div>
-        <div class="ws-ins-plan-body ws-plan-single-body ${pracState.planningOpen ? '' : 'is-collapsed'}" id="ws-ins-plan-body">
-          <textarea class="ws-ins-plan-ta ws-plan-single-ta" id="ws-plan-notes" spellcheck="false" oninput="WritingStudio.savePracPlanDraft(this.value)">${esc(currentPlan)}</textarea>
+        <div class="ws-stu-body ${pracState.planningOpen ? '' : 'is-collapsed'}" id="ws-ins-plan-body">
+          <div class="ws-stu-pane ${activeTab === 'plan' ? 'active' : ''}" data-drawer-pane="plan">
+            <div class="ws-stu-plan-bar">
+              <span>Khung dàn ý nhanh (${isTask1 ? 'Task 1 · 150+ từ' : 'Task 2 · 250+ từ'})</span>
+              <button type="button" class="ws-ins-plan-btn" onclick="WritingStudio.clearPracPlan()">Đặt lại khung</button>
+            </div>
+            <textarea class="ws-ins-plan-ta ws-plan-single-ta" id="ws-plan-notes" spellcheck="false" oninput="WritingStudio.savePracPlanDraft(this.value)">${esc(currentPlan)}</textarea>
+          </div>
+          <div class="ws-stu-pane ${activeTab === 'guide' ? 'active' : ''}" data-drawer-pane="guide">
+            ${buildPracStudyGuideHtml(p, isTask1)}
+          </div>
+          <div class="ws-stu-pane ${activeTab === 'check' ? 'active' : ''}" data-drawer-pane="check">
+            <div class="ws-stu-checks" id="ws-prac-live-checks">${computePracLiveChecksHtml(currentDraft, isTask1)}</div>
+          </div>
         </div>
       </div>
     ` : '';
@@ -4056,15 +4364,25 @@
 
     const headerBrandHtml = isExam
       ? `<span class="ins-brand-mark">IELTS</span>`
-      : `<span class="ws-prac-brand-badge" aria-hidden="true">
-           <svg viewBox="2 2 24 24" width="22" height="22" fill="none">
-             <path d="M8.5 11.2L7 5.6L11.2 9C12.5 8.5 14 8.5 15.3 9L19.5 5.6L18 11.2C20.2 12.8 21.2 15.2 21 18.2C20.7 21.5 17.8 23.2 13.2 23.2C8.6 23.2 5.7 21.5 5.4 18.2C5.2 15.2 6.2 12.8 8.5 11.2Z" fill="#6F6B64" stroke="#484540" stroke-width="1.1"/>
-             <path d="M13.2 8.4C14.8 5.4 17.5 5 19.2 6.6C17.4 8.3 15 8.8 13.2 8.4Z" fill="#52A063" stroke="#2D6A3B" stroke-width="0.9"/>
-             <ellipse cx="13.2" cy="18.8" rx="5.2" ry="3.4" fill="#FBF6E8"/>
-             <circle cx="10.6" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="10.8" cy="13.5" r="0.75" fill="#181A1F"/>
-             <circle cx="15.8" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="15.6" cy="13.5" r="0.75" fill="#181A1F"/>
-           </svg>
-         </span>`;
+      : `
+        <button type="button" class="prac-back-btn" onclick="WritingStudio.requestExitPractice()" title="Quay về kho đề Writing" aria-label="Quay về kho đề">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <span>Kho đề</span>
+        </button>
+        <span class="prac-totoro-ico" aria-hidden="true">
+          <svg viewBox="0 0 36 36" fill="none">
+            <path d="M12.5 13L10 6.5C9.7 5.7 10.6 5.2 11.2 5.7L15.4 9.2" fill="#637067" stroke="#2F3B34" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M23.5 13L26 6.5C26.3 5.7 25.4 5.2 24.8 5.7L20.6 9.2" fill="#637067" stroke="#2F3B34" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M18 8.6C18 6.4 19.9 5.3 21.8 5.8C21.3 7.8 19.7 9 18 8.6Z" fill="#4E724D" stroke="#2F4D31" stroke-width="1" stroke-linejoin="round"/>
+            <path d="M9.5 23.5C9.5 15.2 13 10.2 18 10.2C23 10.2 26.5 15.2 26.5 23.5C26.5 28.4 23 30.8 18 30.8C13 30.8 9.5 28.4 9.5 23.5Z" fill="#6B756D" stroke="#2F3B34" stroke-width="1.4"/>
+            <ellipse cx="18" cy="24.5" rx="6.4" ry="4.6" fill="#EFE6D8"/>
+            <path d="M14.4 23.6L15.6 22.3L16.8 23.6M17.2 23.2L18.2 22L19.2 23.2M19.6 23.6L20.8 22.3L22 23.6" stroke="#5D645E" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="14.6" cy="16.2" r="1.65" fill="#FFFDF8"/><circle cx="14.8" cy="16.2" r="0.85" fill="#232B26"/>
+            <circle cx="21.4" cy="16.2" r="1.65" fill="#FFFDF8"/><circle cx="21.2" cy="16.2" r="0.85" fill="#232B26"/>
+            <ellipse cx="18" cy="17.1" rx="1.25" ry="0.65" fill="#232B26"/>
+          </svg>
+        </span>
+      `;
 
     const headerAcChipHtml = `
       <span class="rp-ac-shield" id="ws-prac-ac-pill" title="Chống gian lận đang bật: theo dõi rời tab (tối đa 2 lần) · Cho phép Copy/Paste chuẩn CD-IELTS">
@@ -4073,87 +4391,110 @@
       </span>
     `;
 
-    const optionsPopoverHtml = isExam
-      ? `
-        <div class="ws-ins-opt-group">
-          <div class="ws-ins-opt-lbl">Contrast</div>
-          <div class="ws-ins-opt-grid">
-            <button type="button" class="ws-ins-opt-choice ${initContrast === 'cd' ? 'active' : ''}" data-contrast="cd" onclick="WritingStudio.setPracContrast('cd')">Black on White</button>
-            <button type="button" class="ws-ins-opt-choice ${initContrast === 'totoro' ? 'active' : ''}" data-contrast="totoro" onclick="WritingStudio.setPracContrast('totoro')">Totoro Washi</button>
-            <button type="button" class="ws-ins-opt-choice ${initContrast === 'dark' ? 'active' : ''}" data-contrast="dark" onclick="WritingStudio.setPracContrast('dark')">White on Black</button>
-            <button type="button" class="ws-ins-opt-choice ${initContrast === 'yellow' ? 'active' : ''}" data-contrast="yellow" onclick="WritingStudio.setPracContrast('yellow')">Yellow on Black</button>
-          </div>
-        </div>
-        <div class="ws-ins-opt-group">
-          <div class="ws-ins-opt-lbl">Text size</div>
-          <div class="ws-ins-opt-row">
-            <button type="button" class="ws-ins-opt-choice ${pracState.textSize === 'regular' ? 'active' : ''}" data-size="regular" onclick="WritingStudio.setPracTextSize('regular')">Regular</button>
-            <button type="button" class="ws-ins-opt-choice ${pracState.textSize === 'large' ? 'active' : ''}" data-size="large" onclick="WritingStudio.setPracTextSize('large')">Large</button>
-            <button type="button" class="ws-ins-opt-choice ${pracState.textSize === 'xlarge' ? 'active' : ''}" data-size="xlarge" onclick="WritingStudio.setPracTextSize('xlarge')">Extra large</button>
-          </div>
-        </div>
-      `
-      : `
-        <div class="ws-ins-opt-group">
-          <div class="ws-ins-opt-lbl">Màu sắc</div>
-          <div class="ws-ins-opt-row">
-            <button type="button" class="ws-ins-opt-choice ${initContrast === 'totoro' ? 'active' : ''}" data-contrast="totoro" onclick="WritingStudio.setPracContrast('totoro')">Totoro Sáng</button>
-            <button type="button" class="ws-ins-opt-choice ${initContrast === 'dark' ? 'active' : ''}" data-contrast="dark" onclick="WritingStudio.setPracContrast('dark')">Chế độ Tối</button>
-          </div>
-        </div>
-        <div class="ws-ins-opt-group">
-          <div class="ws-ins-opt-lbl">Cỡ chữ viết</div>
-          <div class="ws-ins-opt-row">
-            <button type="button" class="ws-ins-opt-choice ${pracState.textSize === 'regular' ? 'active' : ''}" data-size="regular" onclick="WritingStudio.setPracTextSize('regular')">Vừa</button>
-            <button type="button" class="ws-ins-opt-choice ${pracState.textSize === 'large' ? 'active' : ''}" data-size="large" onclick="WritingStudio.setPracTextSize('large')">Lớn</button>
-          </div>
-        </div>
-      `;
+    const practiceTimerHtml = `
+      <div class="prac-timer-pill" id="ws-prac-timer-pill">
+        <span class="prac-live-dot ${pracState.paused ? 'is-paused' : ''}" id="ws-prac-live-dot" aria-hidden="true"></span>
+        ${pracState.showTimer !== false ? `
+          <button type="button" class="ins-hdr-timer" id="ws-prac-timer" onclick="event.stopPropagation(); WritingStudio.togglePracPause()" title="Bấm để tạm dừng / tiếp tục đồng hồ">
+            <span class="tabular">${fmtMmSs(pracState.secsLeft)}</span>
+            ${pracState.paused ? '<span class="ins-paused-tag">PAUSED</span>' : ''}
+          </button>
+        ` : `<span class="prac-timer-hidden-lbl" id="ws-prac-timer">Tự do</span>`}
+        <button type="button" class="prac-timer-eye" onclick="event.stopPropagation(); WritingStudio.togglePracTimerVisibility()" title="${pracState.showTimer !== false ? 'Ẩn đồng hồ (luyện tự do)' : 'Hiện đồng hồ đếm ngược'}" aria-label="Ẩn/Hiện đồng hồ">
+          ${pracState.showTimer !== false
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>'}
+        </button>
+      </div>
+      <div class="prac-prog-pill tabular" title="Mục tiêu độ dài chuẩn Cambridge">
+        <span><strong id="ws-prac-prog-num">${curWc}</strong>/${minWords} từ</span>
+        <span class="prac-prog-track" aria-hidden="true"><span class="prac-prog-fill" id="ws-prac-prog-fill" style="width:${progPct}%;"></span></span>
+      </div>
+    `;
 
-    const rightEditorHtml = isExam
-      ? `
-        <div class="ws-ins-editor-wrap">
-          <textarea class="ws-ins-editor" id="ws-prac-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
-            aria-label="IELTS Writing Task ${activePart} response"
-            ${pracState.submitted ? 'readonly' : ''}
-            oninput="WritingStudio.updatePracWC()">${esc(currentDraft)}</textarea>
-          <div class="ws-ins-wc-row">
-            <span class="ws-ins-wc-val" id="ws-prac-wc">Words: 0</span>
+    const practiceOptionsHtml = `
+      <div class="prac-pop-wrap" onclick="event.stopPropagation()">
+        <button type="button" class="prac-hdr-btn ${pracState.optionsOpen ? 'active' : ''}" id="ws-prac-opt-btn" onclick="WritingStudio.togglePracOptions()" title="Tùy chỉnh nền giấy, cỡ chữ &amp; màu Highlight Pastel" aria-label="Giao diện">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85.997 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Giao diện</span>
+        </button>
+        <div class="prac-popover ${pracState.optionsOpen ? 'open' : ''}" id="ws-prac-opt-pop" role="dialog" aria-label="Tùy chỉnh phòng luyện viết">
+          <div class="prac-pop-lbl">Nền giấy làm bài</div>
+          <div class="prac-pop-seg ws-pop-seg-4" style="margin-bottom:12px;">
+            <button type="button" class="prac-seg-btn ${initContrast === 'totoro' ? 'active' : ''}" data-contrast="totoro" onclick="WritingStudio.setPracContrast('totoro')">Washi</button>
+            <button type="button" class="prac-seg-btn ${initContrast === 'cd' ? 'active' : ''}" data-contrast="cd" onclick="WritingStudio.setPracContrast('cd')">Trắng</button>
+            <button type="button" class="prac-seg-btn ${initContrast === 'sepia' ? 'active' : ''}" data-contrast="sepia" onclick="WritingStudio.setPracContrast('sepia')">Sương</button>
+            <button type="button" class="prac-seg-btn ${initContrast === 'dark' ? 'active' : ''}" data-contrast="dark" onclick="WritingStudio.setPracContrast('dark')">Tối</button>
           </div>
+          <div class="prac-pop-lbl">Cỡ chữ viết bài</div>
+          <div class="prac-pop-seg" style="margin-bottom:12px;">
+            <button type="button" class="prac-seg-btn ${pracState.textSize === 'regular' ? 'active' : ''}" data-size="regular" onclick="WritingStudio.setPracTextSize('regular')">Vừa</button>
+            <button type="button" class="prac-seg-btn ${pracState.textSize === 'large' ? 'active' : ''}" data-size="large" onclick="WritingStudio.setPracTextSize('large')">Lớn</button>
+            <button type="button" class="prac-seg-btn ${pracState.textSize === 'xlarge' ? 'active' : ''}" data-size="xlarge" onclick="WritingStudio.setPracTextSize('xlarge')">Rất lớn</button>
+          </div>
+          <div class="prac-pop-lbl">Bút Highlight Pastel (bôi đen trên đề)</div>
+          <div class="ws-opt-pen-row">
+            ${WS_PASTEL_PENS.map((pen) => `
+              <button type="button" class="prac-pop-dot ${(pracState.activePen || 'yellow') === pen.id ? 'is-active' : ''}"
+                data-pen="${pen.id}" style="--swatch:${pen.swatch};" title="${esc(pen.name)} — ${esc(pen.role)}"
+                onclick="WritingStudio.applyPromptHighlight('${pen.id}')"></button>
+            `).join('')}
+          </div>
+          <button type="button" class="prac-pop-danger-btn" id="ws-opt-hl-clear" style="margin-top:10px;display:${hasHighlights ? 'block' : 'none'};"
+            onclick="WritingStudio.clearPromptHighlights(); WritingStudio.togglePracOptions(false);">Xóa toàn bộ ${hlMatches} highlight</button>
         </div>
-      `
-      : `
-        <div class="ws-prac-paper-card" id="ws-prac-paper-card">
-          <div class="ws-prac-paper-head">
-            <div class="ws-prac-paper-title-grp">
-              <span class="ws-prac-paper-ico" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-              </span>
-              <span class="ws-prac-paper-title">Bài viết Task ${activePart}${isTask1 ? ' (Academic Report)' : ' (Essay)'}</span>
-              <span class="ws-prac-para-pill tabular" id="ws-prac-paras">0 đoạn</span>
-            </div>
-            <div class="ws-prac-paper-badges">
-              <span class="ws-prac-wc-pill tabular" id="ws-prac-wc">0 / ${minWords} từ</span>
-            </div>
-          </div>
-          <div class="ws-prac-paper-meter" aria-hidden="true">
-            <span class="ws-prac-paper-meter-fill" id="ws-prac-wc-bar" style="width:0%"></span>
-          </div>
-          <textarea class="ws-ins-editor ws-prac-editor" id="ws-prac-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
-            aria-label="IELTS Writing Task ${activePart} response"
-            ${pracState.submitted ? 'readonly' : ''}
-            placeholder="${isTask1 ? 'Bắt đầu viết bài mô tả biểu đồ Task 1 (Intro → Overview → Body 1 → Body 2)...' : 'Bắt đầu viết bài Task 2 của bạn tại đây...'}"
-            oninput="WritingStudio.updatePracWC()">${esc(currentDraft)}</textarea>
-          <div class="ws-prac-paper-foot">
-            <div class="ws-prac-paper-foot-l">
-              <span class="ws-prac-wc-note" id="ws-prac-wc-note">Còn thiếu ${minWords} từ để đạt mốc chuẩn IELTS</span>
-            </div>
-            <button type="button" class="ws-prac-submit-pill" id="ws-prac-paper-submit" onclick="${pracState.submitted ? 'WritingStudio.closePracticeRoom()' : 'WritingStudio.submitPracticeEssay(false)'}">${pracState.submitted ? '← Về kho đề' : (isFull ? 'Nộp cả 2 Part →' : 'Nộp bài →')}</button>
-          </div>
-        </div>
-      `;
+      </div>
+    `;
 
-    const wcOf = (s) => { const v = String(s || '').trim(); return v ? v.split(/\s+/).length : 0; };
+    const examOptionsHtml = `
+      <div class="ws-ins-opt-wrap" onclick="event.stopPropagation()">
+        <button type="button" class="ins-hdr-ico" id="ws-prac-opt-btn" onclick="WritingStudio.togglePracOptions()" title="Màu sắc &amp; Cỡ chữ" aria-label="Options">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="ws-ins-opt-pop" id="ws-prac-opt-pop">
+          <div class="ws-ins-opt-group">
+            <div class="ws-ins-opt-lbl">Contrast</div>
+            <div class="ws-ins-opt-grid">
+              <button type="button" class="ws-ins-opt-choice ${initContrast === 'cd' ? 'active' : ''}" data-contrast="cd" onclick="WritingStudio.setPracContrast('cd')">Black on White</button>
+              <button type="button" class="ws-ins-opt-choice ${initContrast === 'totoro' ? 'active' : ''}" data-contrast="totoro" onclick="WritingStudio.setPracContrast('totoro')">Totoro Washi</button>
+              <button type="button" class="ws-ins-opt-choice ${initContrast === 'dark' ? 'active' : ''}" data-contrast="dark" onclick="WritingStudio.setPracContrast('dark')">White on Black</button>
+              <button type="button" class="ws-ins-opt-choice ${initContrast === 'yellow' ? 'active' : ''}" data-contrast="yellow" onclick="WritingStudio.setPracContrast('yellow')">Yellow on Black</button>
+            </div>
+          </div>
+          <div class="ws-ins-opt-group">
+            <div class="ws-ins-opt-lbl">Text size</div>
+            <div class="ws-ins-opt-row">
+              <button type="button" class="ws-ins-opt-choice ${pracState.textSize === 'regular' ? 'active' : ''}" data-size="regular" onclick="WritingStudio.setPracTextSize('regular')">Regular</button>
+              <button type="button" class="ws-ins-opt-choice ${pracState.textSize === 'large' ? 'active' : ''}" data-size="large" onclick="WritingStudio.setPracTextSize('large')">Large</button>
+              <button type="button" class="ws-ins-opt-choice ${pracState.textSize === 'xlarge' ? 'active' : ''}" data-size="xlarge" onclick="WritingStudio.setPracTextSize('xlarge')">Extra large</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="ins-hdr-exit" onclick="WritingStudio.requestExitPractice()">Thoát</button>
+    `;
+
+    const rightEditorHtml = `
+      <div class="ws-ins-editor-wrap">
+        <textarea class="ws-ins-editor" id="ws-prac-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"
+          aria-label="IELTS Writing Task ${activePart} response"
+          ${pracState.submitted ? 'readonly' : ''}
+          placeholder="${isExam ? '' : (isTask1 ? 'Bắt đầu viết bài mô tả biểu đồ Task 1 (Intro → Overview → Body 1 → Body 2)...' : 'Bắt đầu viết bài luận Task 2 tại đây...')}"
+          oninput="WritingStudio.updatePracWC()">${esc(currentDraft)}</textarea>
+        <div class="ws-ins-wc-row">
+          <div class="ws-wc-left-grp">
+            <span class="ws-ins-wc-val tabular" id="ws-prac-wc">${isExam ? 'Words: 0' : `Words: 0 / ${minWords}`}</span>
+            ${isPractice ? `<span class="ws-ins-wc-meta tabular" id="ws-prac-wc-meta">0 đoạn</span>` : ''}
+          </div>
+          ${isPractice ? `
+            <div class="ws-wc-right-grp">
+              <span class="ws-prac-autosave" id="ws-prac-autosave">Tự động lưu nháp</span>
+              <span class="ws-ins-wc-sub tabular" id="ws-prac-wc-note">Thiếu ${minWords} từ</span>
+            </div>` : ''}
+        </div>
+      </div>
+    `;
+
     const p1Wc = wcOf(pracState.drafts?.[1]);
     const p2Wc = wcOf(pracState.drafts?.[2]);
 
@@ -4174,7 +4515,7 @@
         <div class="ws-ins-part-tab is-active" id="ws-ins-part-tab">
           <span class="ws-ins-part-bar" id="ws-ins-part-bar"></span>
           <span class="ins-part-lbl">Part ${activePart}</span>
-          <span class="ws-ins-footer-wc" id="ws-prac-footer-wc">0 words</span>
+          <span class="ws-ins-footer-wc tabular" id="ws-prac-footer-wc">0 words</span>
         </div>
       `;
 
@@ -4182,9 +4523,67 @@
       ? (isExam ? `Test taker · Full Academic Writing (Part ${activePart})` : `Writing Studio · Full Test 60p (Part ${activePart})`)
       : (isExam ? `Test taker · Academic Writing Task ${activePart}` : `Writing Studio · Luyện tập Task ${activePart}`);
 
+    const leftInnerHtml = `
+      <div class="ws-ins-lead-row">
+        <p class="ws-ins-lead">${isTask1 ? 'Summarise the visual information below:' : 'Write about the following topic:'}</p>
+        <button type="button" class="${isPractice ? 'prac-eyebrow-clear' : 'ws-hl-clear-btn'}" id="ws-hl-clear-btn" style="display:${hasHighlights ? 'inline-flex' : 'none'};" onclick="WritingStudio.clearPromptHighlights()" title="Xoá toàn bộ vùng highlight trên đề">${isPractice ? `Xóa ${hlMatches} màu` : 'Xoá highlight'}</button>
+      </div>
+      <div class="ws-ins-prompt-text" id="ws-ins-prompt-text" title="Bôi đen từ khóa trên đề để Highlight như thi máy CD-IELTS" onmouseup="WritingStudio.onPromptSelectionChange()">${savedHighlightHtml || esc(p.prompt)}</div>
+      ${task1ChartBlockHtml}
+      <p class="ws-ins-inst">${esc(p.instruction || (isTask1 ? 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.' : 'Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.'))}</p>
+      ${studyDrawerHtml}
+    `;
+
+    const splitBodyHtml = isPractice
+      ? `
+        <div class="prac-sheet-shell" id="ws-ins-left" style="flex: 0 0 ${pracState.splitRatio}%;">
+          <section class="ins-pane ins-pane-left ws-ins-left">${leftInnerHtml}</section>
+        </div>
+        <div class="ins-resizer" id="ws-ins-resizer" title="Kéo để chia lại khung đề và khung viết" onmousedown="WritingStudio.startPracResize(event)">
+          <span class="ins-resizer-box" aria-hidden="true"></span>
+        </div>
+        <div class="prac-sheet-shell prac-sheet-right">
+          <section class="ins-pane ins-pane-right ws-ins-right">
+            ${rightEditorHtml}
+            <div id="ws-prac-result" class="ws-ins-result-card" style="${pracState.lastResultHtml ? 'display:block;' : ''}">${pracState.lastResultHtml || ''}</div>
+          </section>
+        </div>
+      `
+      : `
+        <section class="ins-pane ins-pane-left ws-ins-left" id="ws-ins-left" style="flex: 0 0 ${pracState.splitRatio}%;">${leftInnerHtml}</section>
+        <div class="ins-resizer" id="ws-ins-resizer" title="Kéo để chia lại khung đề và khung viết" onmousedown="WritingStudio.startPracResize(event)">
+          <span class="ins-resizer-box" aria-hidden="true">↔</span>
+        </div>
+        <section class="ins-pane ins-pane-right ws-ins-right">
+          ${rightEditorHtml}
+          <div id="ws-prac-result" class="ws-ins-result-card" style="${pracState.lastResultHtml ? 'display:block;' : ''}">${pracState.lastResultHtml || ''}</div>
+        </section>
+      `;
+
+    const hlFloatBarHtml = isPractice
+      ? `
+        <div class="ws-hl-float-bar ins-sel-popover is-practice" id="ws-hl-float-bar" role="toolbar" aria-label="Highlight màu pastel">
+          <div class="prac-pop-swatches">
+            ${WS_PASTEL_PENS.map((pen) => `
+              <button type="button" class="prac-pop-dot ${(pracState.activePen || 'yellow') === pen.id ? 'is-active' : ''}"
+                data-pen="${pen.id}" style="--swatch:${pen.swatch};" title="${esc(pen.name)} — ${esc(pen.role)}"
+                onmousedown="event.preventDefault()" onclick="WritingStudio.applyPromptHighlight('${pen.id}')"></button>
+            `).join('')}
+          </div>
+          <div class="prac-pop-divider" aria-hidden="true"></div>
+          <button type="button" class="prac-pop-clear" onmousedown="event.preventDefault()" onclick="WritingStudio.clearPromptHighlights()">Xóa</button>
+        </div>
+      `
+      : `
+        <div class="ws-hl-float-bar" id="ws-hl-float-bar" role="toolbar" aria-label="Prompt Highlight">
+          <button type="button" onmousedown="event.preventDefault()" onclick="WritingStudio.applyPromptHighlight('yellow')">🖍 Highlight</button>
+          <button type="button" onmousedown="event.preventDefault()" onclick="WritingStudio.clearPromptHighlights()">✕ Gỡ tất cả</button>
+        </div>
+      `;
+
     const room = document.getElementById('ws-practice-room');
     if (!room) return;
-    room.className = `ws-exam-room open ins-shell ins-contrast-${initContrast} ins-size-${pracState.textSize || 'regular'} ${isExam ? 'is-exam' : 'is-practice'}`;
+    room.className = `ws-exam-room open ins-shell ${isPractice ? 'ins-mode-practice is-practice' : 'is-exam'} ins-contrast-${initContrast} ins-size-${pracState.textSize || 'regular'}`;
     room.innerHTML = `
       <div class="ins-main-col" onclick="WritingStudio.togglePracOptions(false)">
         <header class="ins-header ${isExam ? '' : 'ws-prac-custom-hdr'}">
@@ -4192,57 +4591,49 @@
             ${headerBrandHtml}
             <div class="ins-hdr-meta">
               <div class="ins-hdr-title">${hdrTitle}</div>
-              <button type="button" class="ins-hdr-timer" id="ws-prac-timer" onclick="event.stopPropagation(); WritingStudio.togglePracTimerExact()" title="Nhấn để hiện / ẩn số giây">
-                <span>${Math.ceil(pracState.secsLeft / 60)} minutes remaining</span>
-              </button>
+              ${isExam ? `
+                <button type="button" class="ins-hdr-timer" id="ws-prac-timer" onclick="event.stopPropagation(); WritingStudio.togglePracTimerExact()" title="Nhấn để hiện / ẩn số giây">
+                  <span>${Math.ceil(pracState.secsLeft / 60)} minutes remaining</span>
+                </button>` : ''}
             </div>
           </div>
           <div class="ins-hdr-right">
+            ${isPractice ? practiceTimerHtml : ''}
             ${headerAcChipHtml}
             ${isTeacherBypass() && !pracState.submitted ? `<button type="button" class="ins-hdr-pill" id="ws-btn-teacher-model" onclick="WritingStudio.submitPracticeEssay(true)" title="Quyền Giáo viên: Xem ngay gợi ý bài mẫu">Xem bài mẫu</button>` : ''}
-            <div class="ws-ins-opt-wrap" onclick="event.stopPropagation()">
-              <button type="button" class="ins-hdr-ico" id="ws-prac-opt-btn" onclick="WritingStudio.togglePracOptions()" title="Màu sắc &amp; Cỡ chữ" aria-label="Options">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-              </button>
-              <div class="ws-ins-opt-pop" id="ws-prac-opt-pop">${optionsPopoverHtml}</div>
-            </div>
-            <button type="button" class="ins-hdr-exit" onclick="WritingStudio.requestExitPractice()">Thoát</button>
+            ${isPractice ? practiceOptionsHtml : examOptionsHtml}
           </div>
         </header>
 
-        ${isExam ? `
         <div class="ins-part-banner">
           <strong>Part ${activePart}</strong>
           <span>${isTask1 ? 'You should spend about 20 minutes on this task. Write at least 150 words.' : 'You should spend about 40 minutes on this task. Write at least 250 words.'}</span>
-        </div>` : ''}
-
-        <div class="ins-split-body" id="ws-ins-split">
-          <section class="ins-pane ins-pane-left ws-ins-left" id="ws-ins-left" style="flex: 0 0 ${pracState.splitRatio}%;">
-            ${isExam
-              ? `<p class="ws-ins-lead">${isTask1 ? 'Summarise the visual information below:' : 'Write about the following topic:'}</p>`
-              : `<div class="ws-prac-prompt-meta"><span class="ws-prac-part-badge">Task ${activePart}</span><span>${isTask1 ? '~20 phút · Tối thiểu 150 từ' : '~40 phút · Tối thiểu 250 từ'}</span></div>`}
-            <div class="ws-ins-prompt-text">${esc(p.prompt)}</div>
-            ${task1ChartBlockHtml}
-            <p class="ws-ins-inst">${esc(p.instruction || (isTask1 ? 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.' : 'Give reasons for your answer and include any relevant examples from your own knowledge or experience. Write at least 250 words.'))}</p>
-            ${planningHtml}
-          </section>
-
-          <div class="ins-resizer" id="ws-ins-resizer" title="Kéo để chia lại khung đề và khung viết" onmousedown="WritingStudio.startPracResize(event)">
-            <span class="ins-resizer-box" aria-hidden="true">↔</span>
-          </div>
-
-          <section class="ins-pane ins-pane-right ws-ins-right ${isExam ? '' : 'ws-prac-right-wide'}">
-            ${rightEditorHtml}
-            <div id="ws-prac-result" class="ws-ins-result-card" style="${pracState.lastResultHtml ? 'display:block;' : ''}">${pracState.lastResultHtml || ''}</div>
-          </section>
         </div>
+
+        <div class="ins-split-body" id="ws-ins-split">${splitBodyHtml}</div>
 
         <footer class="ins-footer">
           <div class="ins-footer-parts">${footerPartsHtml}</div>
-          ${isExam ? `<button type="button" class="ins-submit-check-btn" id="ws-prac-submit" onclick="${pracState.submitted ? 'WritingStudio.closePracticeRoom()' : 'WritingStudio.submitPracticeEssay(false)'}" title="${pracState.submitted ? 'Quay về kho đề' : 'Nộp bài / Submit'}" aria-label="Submit">${pracState.submitted ? '←' : '✓'}</button>` : ''}
+          <button type="button" class="ins-submit-check-btn ${isExam ? '' : 'is-totoro-submit prac-submit-pill'}" id="ws-prac-submit" onclick="${pracState.submitted ? 'WritingStudio.closePracticeRoom()' : 'WritingStudio.submitPracticeEssay(false)'}" title="${pracState.submitted ? 'Quay về kho đề' : 'Nộp bài / Submit'}" aria-label="Submit">${pracState.submitted ? (isExam ? '←' : '← Về kho đề') : (isExam ? '✓' : (isFull ? 'Nộp cả 2 Part →' : 'Nộp bài →'))}</button>
         </footer>
+
+        ${hlFloatBarHtml}
       </div>
     `;
+
+    const promptBoxEl = document.getElementById('ws-ins-prompt-text');
+    if (promptBoxEl) {
+      promptBoxEl.addEventListener('click', (ev) => {
+        const mk = ev.target.closest?.('mark.ws-cd-hl');
+        if (!mk) return;
+        const parent = mk.parentNode;
+        while (mk.firstChild) parent.insertBefore(mk.firstChild, mk);
+        parent.removeChild(mk);
+        promptBoxEl.normalize();
+        saveCurrentPromptHighlightHtml();
+        syncPromptHighlightBadge();
+      });
+    }
 
     document.body.classList.add('rp-exam-fullscreen');
     updatePracTimerDisplay();
@@ -4253,6 +4644,7 @@
   function savePracPlanDraft(val) {
     if (!pracState) return;
     pracState.plans[pracState.activePart || 2] = String(val || '');
+    savePracDraftToStorage();
   }
 
   function updatePracTimerDisplay() {
@@ -4260,6 +4652,17 @@
     const el = document.getElementById('ws-prac-timer');
     if (!el) return;
     const secs = Math.max(0, pracState.secsLeft);
+    if (pracState.mode === 'practice') {
+      if (pracState.showTimer === false) {
+        el.textContent = 'Tự do';
+      } else {
+        el.innerHTML = `<span class="tabular">${fmtMmSs(secs)}</span>${pracState.paused ? ' <span class="ins-paused-tag">PAUSED</span>' : ''}`;
+      }
+      document.getElementById('ws-prac-live-dot')?.classList.toggle('is-paused', Boolean(pracState.paused));
+      el.classList.toggle('is-warn', secs <= 600 && secs > 300);
+      el.classList.toggle('is-critical', secs <= 300);
+      return;
+    }
     const mins = Math.ceil(secs / 60);
     const mainTxt = mins === 1 ? '1 minute remaining' : `${mins} minutes remaining`;
     el.innerHTML = pracState.showExactSec
@@ -4275,6 +4678,18 @@
     updatePracTimerDisplay();
   }
 
+  function togglePracPause() {
+    if (!pracState || pracState.mode !== 'practice' || pracState.submitted) return;
+    pracState.paused = !pracState.paused;
+    updatePracTimerDisplay();
+  }
+
+  function togglePracTimerVisibility() {
+    if (!pracState || pracState.mode !== 'practice') return;
+    pracState.showTimer = pracState.showTimer === false ? true : false;
+    renderActivePracticeRoom();
+  }
+
   function togglePracOptions(forceVal) {
     if (!pracState) return;
     pracState.optionsOpen = typeof forceVal === 'boolean' ? forceVal : !pracState.optionsOpen;
@@ -4287,7 +4702,7 @@
     pracState.contrast = c;
     const room = document.getElementById('ws-practice-room');
     if (room) {
-      room.classList.remove('ins-contrast-cd', 'ins-contrast-totoro', 'ins-contrast-dark', 'ins-contrast-yellow');
+      room.classList.remove('ins-contrast-cd', 'ins-contrast-totoro', 'ins-contrast-sepia', 'ins-contrast-dark', 'ins-contrast-yellow');
       room.classList.add(`ins-contrast-${c}`);
     }
     document.querySelectorAll('#ws-prac-opt-pop [data-contrast]').forEach((b) => {
@@ -4308,13 +4723,36 @@
     });
   }
 
+  function syncPracDrawerDom() {
+    if (!pracState) return;
+    const body = document.getElementById('ws-ins-plan-body');
+    const btn = document.getElementById('ws-ins-plan-toggle');
+    const tab = pracState.drawerTab || 'plan';
+    if (body) body.classList.toggle('is-collapsed', !pracState.planningOpen);
+    if (btn) btn.textContent = pracState.planningOpen ? 'Thu gọn ▴' : 'Mở trợ học ▾';
+    document.querySelectorAll('#ws-ins-plan-card [data-drawer-tab]').forEach((t) => {
+      t.classList.toggle('active', Boolean(pracState.planningOpen && t.getAttribute('data-drawer-tab') === tab));
+    });
+    document.querySelectorAll('#ws-ins-plan-card [data-drawer-pane]').forEach((p) => {
+      p.classList.toggle('active', p.getAttribute('data-drawer-pane') === tab);
+    });
+  }
+
+  function setPracDrawerTab(tab) {
+    if (!pracState) return;
+    if (pracState.planningOpen && pracState.drawerTab === tab) {
+      pracState.planningOpen = false;
+    } else {
+      pracState.drawerTab = tab;
+      pracState.planningOpen = true;
+    }
+    syncPracDrawerDom();
+  }
+
   function togglePracPlan() {
     if (!pracState) return;
     pracState.planningOpen = !pracState.planningOpen;
-    const body = document.getElementById('ws-ins-plan-body');
-    const btn = document.getElementById('ws-ins-plan-toggle');
-    if (body) body.classList.toggle('is-collapsed', !pracState.planningOpen);
-    if (btn) btn.textContent = pracState.planningOpen ? 'Thu gọn' : 'Mở Planning';
+    syncPracDrawerDom();
   }
 
   function clearPracPlan() {
@@ -4322,7 +4760,10 @@
     const tpl = getPlanTemplateForPart(isTask1);
     const single = document.getElementById('ws-plan-notes');
     if (single) single.value = tpl;
-    if (pracState) pracState.plans[pracState.activePart || 2] = tpl;
+    if (pracState) {
+      pracState.plans[pracState.activePart || 2] = tpl;
+      savePracDraftToStorage();
+    }
   }
 
   function startPracResize(e) {
@@ -4355,35 +4796,43 @@
     const v = raw.trim();
     const wc = v ? v.split(/\s+/).length : 0;
     const paras = v ? v.split(/\n+/).map((x) => x.trim()).filter(Boolean).length : 0;
+    const sents = v ? v.split(/[.!?]+/).map((x) => x.trim()).filter(Boolean).length : 0;
+    const avgLen = sents ? Math.round(wc / sents) : 0;
     const pct = Math.min(100, Math.round((wc / minWords) * 100));
     const isExam = pracState?.mode === 'exam';
 
     const el = document.getElementById('ws-prac-wc');
-    const paraEl = document.getElementById('ws-prac-paras');
-    const meterEl = document.getElementById('ws-prac-wc-bar');
+    const metaEl = document.getElementById('ws-prac-wc-meta');
     const noteEl = document.getElementById('ws-prac-wc-note');
+    const progNumEl = document.getElementById('ws-prac-prog-num');
+    const progFillEl = document.getElementById('ws-prac-prog-fill');
+    const checksEl = document.getElementById('ws-prac-live-checks');
     const footEl = document.getElementById(pracState.isFull ? `ws-prac-footer-wc-${activePart}` : 'ws-prac-footer-wc');
     const barEl = document.getElementById(pracState.isFull ? `ws-ins-part-bar-${activePart}` : 'ws-ins-part-bar');
 
     if (el) {
-      el.textContent = isExam ? `Words: ${wc}` : `${wc} / ${minWords} từ`;
+      el.textContent = isExam ? `Words: ${wc}` : `Words: ${wc} / ${minWords}`;
       el.classList.toggle('is-ok', wc >= minWords);
       el.classList.toggle('is-mid', wc >= midWords && wc < minWords);
     }
-    if (paraEl) paraEl.textContent = `${paras} đoạn`;
-    if (meterEl) {
-      meterEl.style.width = `${pct}%`;
-      meterEl.classList.toggle('is-ok', wc >= minWords);
-      meterEl.classList.toggle('is-mid', wc >= midWords && wc < minWords);
+    if (metaEl) {
+      metaEl.textContent = sents ? `· ${paras} đoạn · ~${avgLen} từ/câu` : `· ${paras} đoạn`;
     }
     if (noteEl) {
       noteEl.textContent = wc >= minWords
-        ? `✓ Đạt chuẩn độ dài Task ${activePart} (+${wc - minWords} từ)`
-        : `Còn thiếu ${minWords - wc} từ để đạt mốc chuẩn IELTS Task ${activePart}`;
+        ? `✓ Đạt mốc chuẩn ${minWords}+ từ`
+        : `Thiếu ${minWords - wc} từ`;
       noteEl.classList.toggle('is-ok', wc >= minWords);
     }
+    if (progNumEl) progNumEl.textContent = String(wc);
+    if (progFillEl) {
+      progFillEl.style.width = `${pct}%`;
+      progFillEl.classList.toggle('is-done', wc >= minWords);
+    }
+    if (checksEl) checksEl.innerHTML = computePracLiveChecksHtml(raw, isTask1);
     if (footEl) footEl.textContent = pracState.isFull ? `${wc} / ${minWords}w` : `${wc} ${wc === 1 ? 'word' : 'words'}`;
     if (barEl) barEl.classList.toggle('is-ready', wc >= minWords);
+    if (!isExam && wc > 0) savePracDraftToStorage();
   }
 
   function renderTask1GuideHtml(p) {
@@ -4416,12 +4865,13 @@
       return;
     }
     pracState.submitted = true;
+    clearSavedPracDraft();
     clearInterval(pracState.timerId);
     if (curEd) curEd.readOnly = true;
 
     const submitBtn = document.getElementById('ws-prac-submit');
     if (submitBtn) {
-      submitBtn.textContent = '←';
+      submitBtn.textContent = pracState.mode === 'exam' ? '←' : '← Về kho đề';
       submitBtn.title = 'Quay về kho đề';
       submitBtn.onclick = () => closePracticeRoom();
     }
@@ -4921,12 +5371,19 @@
     savePracPlanDraft,
     openTask1ChartZoom,
     closeTask1ChartZoom,
+    onPromptSelectionChange,
+    applyPromptHighlight,
+    clearPromptHighlights,
     getPracticeHistory: getPracticeHist,
     closePracticeRoom,
     togglePracTimerExact,
+    togglePracPause,
+    togglePracTimerVisibility,
     togglePracOptions,
     setPracContrast,
     setPracTextSize,
+    setPracDrawerTab,
+    copyVocabChip,
     togglePracPlan,
     clearPracPlan,
     startPracResize,

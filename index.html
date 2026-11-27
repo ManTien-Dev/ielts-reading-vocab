@@ -42,11 +42,11 @@
   <link rel="stylesheet" href="css/style.css?v=20261127b">
   <link rel="stylesheet" href="css/motion.css?v=20261127b">
   <link rel="stylesheet" href="css/enhancements.css?v=20261127e">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261127f">
-  <link rel="stylesheet" href="css/writing.css?v=20261127f">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261127j">
+  <link rel="stylesheet" href="css/writing.css?v=20261127h">
   <link rel="stylesheet" href="css/speaking.css?v=20261127e">
   <link rel="stylesheet" href="css/dictation.css?v=20261127e">
-  <link rel="stylesheet" href="css/teacher_studio.css?v=20261127d">
+  <link rel="stylesheet" href="css/teacher_studio.css?v=20261127e">
 </head>
 <body>
 
@@ -211,12 +211,42 @@
           <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="tot-popover" id="skill-popover">
-          <button type="button" class="tot-skill-opt active" data-tot-skill="Overview"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">HOME</div><div class="tot-skill-opt-sub">Tổng quan · Mục tiêu · Kế hoạch</div></div><span class="tot-tag">Đang mở</span></button>
-          <div class="tot-pop-divider" style="margin:6px 0;"></div>
-          <button type="button" class="tot-skill-opt" data-tot-skill="Reading"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">READING</div><div class="tot-skill-opt-sub">4.489 họ từ · 110 Tasks · Practice</div></div><span class="tot-tag">Sẵn sàng</span></button>
-          <button type="button" class="tot-skill-opt" data-tot-skill="Listening"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">LISTENING</div><div class="tot-skill-opt-sub">Nghe → Nói lại từ · Shadowing</div></div><span class="tot-tag">Sẵn sàng</span></button>
-          <button type="button" class="tot-skill-opt" data-tot-skill="Writing"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">WRITING</div><div class="tot-skill-opt-sub">Flow Ideas · Grammar · Practice</div></div><span class="tot-tag">Sẵn sàng</span></button>
-          <button type="button" class="tot-skill-opt" data-tot-skill="Speaking"><div class="tot-skill-opt-copy"><div class="tot-skill-opt-title">SPEAKING</div><div class="tot-skill-opt-sub">Story 01 · Spoken Chunks · Part 2</div></div><span class="tot-tag">Sẵn sàng</span></button>
+          <button type="button" class="tot-skill-opt active" data-tot-skill="Overview">
+            <span class="tot-skill-opt-l">
+              <svg class="tot-skill-opt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5L12 4l7 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-3v6H6a1 1 0 0 1-1-1v-9.5z"/></svg>
+              <span class="tot-skill-opt-title">HOME</span>
+            </span>
+            <span class="tot-skill-check" aria-hidden="true">✓</span>
+          </button>
+          <div class="tot-pop-divider" style="margin:5px 0;"></div>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Reading">
+            <span class="tot-skill-opt-l">
+              <svg class="tot-skill-opt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+              <span class="tot-skill-opt-title">READING</span>
+            </span>
+            <span class="tot-skill-check" aria-hidden="true">✓</span>
+          </button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Listening">
+            <span class="tot-skill-opt-l">
+              <svg class="tot-skill-opt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>
+              <span class="tot-skill-opt-title">LISTENING</span>
+            </span>
+            <span class="tot-skill-check" aria-hidden="true">✓</span>
+          </button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Writing">
+            <span class="tot-skill-opt-l">
+              <svg class="tot-skill-opt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              <span class="tot-skill-opt-title">WRITING</span>
+            </span>
+            <span class="tot-skill-check" aria-hidden="true">✓</span>
+          </button>
+          <button type="button" class="tot-skill-opt" data-tot-skill="Speaking">
+            <span class="tot-skill-opt-l">
+              <svg class="tot-skill-opt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              <span class="tot-skill-opt-title">SPEAKING</span>
+            </span>
+            <span class="tot-skill-check" aria-hidden="true">✓</span>
+          </button>
         </div>
       </div>
     </div>
@@ -2339,22 +2369,22 @@
   <script src="data/reading_practice_data.js?v=20261124j"></script>
   <script src="data/reading_photo_map.js?v=20261125d"></script>
   <script src="js/live_room.js?v=20261127a"></script>
-  <script src="js/reading_practice.js?v=20261127b"></script>
+  <script src="js/reading_practice.js?v=20261127i"></script>
   <script src="js/tasks.js?v=20261127d"></script>
   <script src="data/listening_practice_data.js?v=20261127e"></script>
   <script src="data/listening_photo_map.js?v=20261125h"></script>
-  <script src="js/listening_practice.js?v=20261127b"></script>
+  <script src="js/listening_practice.js?v=20261127i"></script>
   <script src="js/listening_tasks.js?v=20261127c"></script>
   <script src="data/dictation_data.js?v=20261127e"></script>
   <script src="js/dictation_studio.js?v=20261127f"></script>
   <script src="js/ielts_grader.js?v=20261127f"></script>
-  <script src="data/writing_task1_data.js?v=20261127f"></script>
-  <script src="data/writing_data.js?v=20261126a"></script>
-  <script src="js/writing_studio.js?v=20261127f"></script>
+  <script src="data/writing_task1_data.js?v=20261127g"></script>
+  <script src="data/writing_data.js?v=20261127g"></script>
+  <script src="js/writing_studio.js?v=20261127i"></script>
   <script src="data/speaking_data.js?v=20261126b"></script>
   <script src="js/speaking_studio.js?v=20261127f"></script>
-  <script src="js/teacher_studio.js?v=20261127d"></script>
-  <script src="js/totoro_ui.js?v=20261127f"></script>
+  <script src="js/teacher_studio.js?v=20261127e"></script>
+  <script src="js/totoro_ui.js?v=20261127j"></script>
 </body>
 </html>
 

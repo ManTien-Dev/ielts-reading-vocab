@@ -40,11 +40,18 @@
     if (_catalogLookupCache) return _catalogLookupCache;
     const map = new Map();
     const d = (typeof APP_DATA !== 'undefined' ? APP_DATA : window.APP_DATA) || {};
-    const lists = [d.file1_paraphrase_1500 || [], d.file2_families_3500 || [], d.signal_words || []];
+    const lv = window.APP_LISTENING_VOCAB || {};
+    const lists = [
+      d.file1_paraphrase_1500 || [],
+      d.file2_families_3500 || [],
+      d.signal_words || [],
+      lv.target_all || [],
+      lv.foundation || []
+    ];
     lists.forEach((arr) => {
       arr.forEach((it) => {
-        if (!it || !it.lemma) return;
-        const k = String(it.lemma).trim().toLowerCase();
+        if (!it || !(it.lemma || it.word)) return;
+        const k = String(it.lemma || it.word).trim().toLowerCase();
         if (k && !map.has(k)) map.set(k, it);
       });
     });
@@ -52,16 +59,37 @@
     return map;
   }
 
+  function lookupStemEntry(lower) {
+    const map = buildCatalogLookup();
+    if (map.has(lower)) return map.get(lower);
+    const cands = [];
+    if (lower.endsWith('ies') && lower.length > 4) cands.push(lower.slice(0, -3) + 'y');
+    if (lower.endsWith('ied') && lower.length > 4) cands.push(lower.slice(0, -3) + 'y');
+    if (lower.endsWith('ing') && lower.length > 5) {
+      cands.push(lower.slice(0, -3), lower.slice(0, -3) + 'e');
+    }
+    if (lower.endsWith('ed') && lower.length > 4) {
+      cands.push(lower.slice(0, -2), lower.slice(0, -1));
+    }
+    if (lower.endsWith('es') && lower.length > 4) cands.push(lower.slice(0, -2));
+    if (lower.endsWith('s') && lower.length > 3) cands.push(lower.slice(0, -1));
+    for (const c of cands) {
+      if (map.has(c)) return map.get(c);
+    }
+    return null;
+  }
+
   function enrichWordFields(raw) {
     const lemma = String(raw?.lemma || raw?.word || '').trim();
     const lower = lemma.toLowerCase();
-    const cat = buildCatalogLookup().get(lower) || null;
+    const cat = lookupStemEntry(lower);
     const ipaDict = (typeof IPA_DICT !== 'undefined' ? IPA_DICT : window.IPA_DICT) || {};
-    const ipa = String(raw?.ipa || '').trim() || cat?.ipa || ipaDict[lower] || '';
-    const pos = String(raw?.pos || '').trim() || cat?.pos || 'word';
+    const ipa = String(raw?.ipa || '').trim() || cat?.ipa || ipaDict[lower] || (cat?.lemma ? ipaDict[String(cat.lemma).toLowerCase()] : '') || '';
+    const pos = String(raw?.pos || '').trim() || cat?.clean_pos || cat?.pos || 'word';
     const meaning = String(raw?.clean_meaning || raw?.meaning || raw?.vi || raw?.definition || '').trim()
       || cat?.clean_meaning
       || cat?.definition
+      || cat?.meaning
       || '';
     const context = String(raw?.reading_context || raw?.context || raw?.ctx || '').trim();
     const synonyms = Array.isArray(raw?.synonyms)
@@ -243,6 +271,11 @@
     },
 
     addWord(deckId, rawWord, uid) {
+      if (deckId && typeof deckId === 'object') {
+        uid = rawWord;
+        rawWord = deckId;
+        deckId = DEFAULT_DECK_ID;
+      }
       const info = enrichWordFields(rawWord);
       if (!info.lemma) return { ok: false, reason: 'empty' };
       const st = loadState(uid);

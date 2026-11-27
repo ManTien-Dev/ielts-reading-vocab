@@ -1107,18 +1107,24 @@ body.is-teacher-mode #hdr-streak-pill { display: none !important; }
 .tot-pal-chip.active { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 
 #skill-popover {
-  min-width: 292px;
-  width: 300px;
+  min-width: 192px;
+  width: 204px;
+  padding: 6px;
 }
 .tot-skill-opt {
   width: 100%; padding: 8px 10px; border-radius: 10px; border: none; background: none; color: var(--ink);
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
 }
-.tot-skill-opt-copy { min-width: 0; flex: 1 1 auto; }
-.tot-skill-opt-title { font-size: 13px; font-weight: 750; line-height: 1.25; }
-.tot-skill-opt-sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; line-height: 1.3; }
+.tot-skill-opt-l { display: inline-flex; align-items: center; gap: 9px; min-width: 0; }
+.tot-skill-opt-ico { width: 15px; height: 15px; flex-shrink: 0; color: var(--ink-3); }
+.tot-skill-opt-title { font-size: 12.5px; font-weight: 750; line-height: 1.2; letter-spacing: 0.02em; }
+.tot-skill-check { font-size: 13px; font-weight: 800; color: var(--accent); opacity: 0; transform: scale(0.8); transition: opacity 140ms ease, transform 140ms ease; }
 .tot-skill-opt:hover { background: var(--surface-muted); }
-.tot-skill-opt.active { background: var(--accent-soft); }
+.tot-skill-opt:hover .tot-skill-opt-ico { color: var(--ink); }
+.tot-skill-opt.active { background: var(--accent-soft); color: var(--accent); }
+.tot-skill-opt.active .tot-skill-opt-ico { color: var(--accent); }
+.tot-skill-opt.active .tot-skill-check { opacity: 1; transform: scale(1); }
 .tot-tag {
   font-size: 10.5px; font-weight: 750; padding: 3px 9px; border-radius: 999px;
   background: var(--ok-soft); color: var(--ok);
@@ -11546,26 +11552,26 @@ body.rp-exam-fullscreen {
   --prac-shadow-card: 0 3px 0 #dbe1e8, 0 12px 26px -14px rgba(15, 23, 42, 0.10);
 }
 .ins-mode-practice.ins-contrast-sepia {
-  --prac-canvas: #ebe2ce;
-  --prac-dot: rgba(82, 64, 38, 0.065);
-  --prac-sheet: #f8f1e1;
-  --prac-sheet-sub: #f2e8d2;
-  --prac-sand: #eadec4;
-  --prac-sand-deep: #dfd0b0;
-  --prac-ink: #2b241b;
-  --prac-ink-2: #5a4e3e;
-  --prac-ink-3: #837460;
-  --prac-bd: rgba(74, 56, 32, 0.14);
-  --prac-bd-strong: rgba(74, 56, 32, 0.25);
-  --prac-accent: #4c6f4a;
-  --prac-accent-soft: #e2ebd9;
-  --prac-accent-ink: #fdfbf6;
-  --prac-streak: #9a622a;
-  --prac-danger: #b55b4e;
-  --prac-danger-soft: #f3dfd8;
-  --prac-lip: #d6c8ac;
-  --prac-lip-card: #d0c0a2;
-  --prac-shadow-card: 0 2px 0 #d0c0a2, 0 10px 24px -14px rgba(60, 45, 24, 0.14);
+  --prac-canvas: #e5edf5;
+  --prac-dot: rgba(41, 68, 97, 0.06);
+  --prac-sheet: #f8fbfe;
+  --prac-sheet-sub: #eff5fb;
+  --prac-sand: #e3edf7;
+  --prac-sand-deep: #d3e1ef;
+  --prac-ink: #1b2736;
+  --prac-ink-2: #46586e;
+  --prac-ink-3: #6e8299;
+  --prac-bd: rgba(34, 62, 94, 0.12);
+  --prac-bd-strong: rgba(34, 62, 94, 0.22);
+  --prac-accent: #2e678c;
+  --prac-accent-soft: #deedf8;
+  --prac-accent-ink: #f8fbfe;
+  --prac-streak: #9a662b;
+  --prac-danger: #c05652;
+  --prac-danger-soft: #fae5e5;
+  --prac-lip: #cbd9e8;
+  --prac-lip-card: #c5d4e5;
+  --prac-shadow-card: 0 2px 0 #c5d4e5, 0 10px 24px -14px rgba(27, 45, 68, 0.12);
 }
 
 /* =========================================================
@@ -16823,3 +16829,46 @@ html[data-skill="listening"] #screen-tasks-hub .tot-task-card:active {
 .ins-group-inst {
   max-width: 72ch;
 }
+
+
+/* === HOME 4-SKILL HISTORY FILTER TABS & SKILL TAGS (NATIVE WASHI) === */
+.tot-hist-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.tot-hist-tab {
+  height: 25px;
+  padding: 0 9px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.tot-hist-tab:hover { background: var(--bg-subtle); color: var(--ink); }
+.tot-hist-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink, #ffffff);
+}
+.tot-hist-sk-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  margin-right: 4px;
+  vertical-align: middle;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.tot-hist-sk-tag.is-listening { background: var(--info-soft); color: var(--info); }
+.tot-hist-sk-tag.is-writing { background: var(--streak-soft); color: var(--streak); }
+.tot-hist-sk-tag.is-speaking { background: var(--ok-soft); color: var(--ok); }

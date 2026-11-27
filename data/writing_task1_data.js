@@ -248,23 +248,23 @@
         beforeYear: '2005',
         afterYear: 'Present',
         beforeZones: [
-          { x: 14, y: 18, w: 72, h: 36, label: 'Fishing Pier', fill: '#D5E1EB', stroke: '#5C7A94' },
-          { x: 96, y: 18, w: 68, h: 36, label: 'Cargo Dock', fill: '#E2DDD1', stroke: '#8A8170' },
-          { x: 174, y: 18, w: 50, h: 36, label: 'Lighthouse', fill: '#E8E3D0', stroke: '#6E6650' },
-          { x: 14, y: 66, w: 88, h: 42, label: 'Old Warehouses', fill: '#DFD4C4', stroke: '#877660' },
-          { x: 112, y: 66, w: 62, h: 42, label: 'Fish Market', fill: '#E5DCCB', stroke: '#8A7E6B' },
-          { x: 182, y: 66, w: 42, h: 42, label: 'Car Park', fill: '#D8DBD6', stroke: '#6E756B' }
+          { x: 14, y: 26, w: 82, h: 34, label: 'Fishing Pier', fill: '#D5E1EB', stroke: '#5C7A94' },
+          { x: 106, y: 26, w: 80, h: 34, label: 'Cargo Dock', fill: '#E2DDD1', stroke: '#8A8170' },
+          { x: 196, y: 26, w: 70, h: 34, label: 'Lighthouse', fill: '#EFE7CC', stroke: '#7A6C42' },
+          { x: 14, y: 74, w: 96, h: 42, label: 'Old Warehouses', fill: '#DFD4C4', stroke: '#877660' },
+          { x: 120, y: 74, w: 74, h: 42, label: 'Fish Market', fill: '#E5DCCB', stroke: '#8A7E6B' },
+          { x: 204, y: 74, w: 62, h: 42, label: 'Car Park', fill: '#D8DBD6', stroke: '#6E756B' }
         ],
         afterZones: [
-          { x: 14, y: 18, w: 94, h: 36, label: 'Yacht Marina', fill: '#CBE2F2', stroke: '#3B6D94' },
-          { x: 118, y: 18, w: 48, h: 36, label: 'Ferry Pier', fill: '#D6E8DB', stroke: '#3F6D4E' },
-          { x: 174, y: 18, w: 50, h: 36, label: 'Lighthouse', fill: '#E8E3D0', stroke: '#6E6650' },
-          { x: 14, y: 66, w: 76, h: 42, label: 'Seaside Hotel', fill: '#F0DEC9', stroke: '#A16835' },
-          { x: 98, y: 66, w: 76, h: 42, label: 'Café & Shops', fill: '#DCECE0', stroke: '#3E6B4B' },
-          { x: 182, y: 66, w: 42, h: 42, label: 'Green Park', fill: '#CEE5D2', stroke: '#376E42' }
+          { x: 14, y: 26, w: 96, h: 34, label: 'Yacht Marina', fill: '#CBE2F2', stroke: '#3B6D94' },
+          { x: 120, y: 26, w: 66, h: 34, label: 'Ferry Pier', fill: '#D6E8DB', stroke: '#3F6D4E' },
+          { x: 196, y: 26, w: 70, h: 34, label: 'Lighthouse', fill: '#EFE7CC', stroke: '#7A6C42' },
+          { x: 14, y: 74, w: 88, h: 42, label: 'Seaside Hotel', fill: '#F0DEC9', stroke: '#A16835' },
+          { x: 112, y: 74, w: 82, h: 42, label: 'Café & Shops', fill: '#DCECE0', stroke: '#3E6B4B' },
+          { x: 204, y: 74, w: 62, h: 42, label: 'Green Park', fill: '#CEE5D2', stroke: '#376E42' }
         ],
-        roadBefore: 'Coastal Traffic Road',
-        roadAfter: 'Pedestrian Promenade'
+        roadBefore: 'Coastal Traffic Road (East – West)',
+        roadAfter: 'Pedestrian Promenade (Car-Free)'
       }
     }
   ];

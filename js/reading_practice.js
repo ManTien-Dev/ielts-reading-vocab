@@ -3365,7 +3365,7 @@
             <div class="prac-pop-seg" style="margin-bottom:10px;">
               <button type="button" class="prac-seg-btn ${s.contrast === 'totoro' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('totoro')">Washi ấm</button>
               <button type="button" class="prac-seg-btn ${s.contrast === 'cd' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('cd')">Trắng sáng</button>
-              <button type="button" class="prac-seg-btn ${s.contrast === 'sepia' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('sepia')">Giấy kem</button>
+              <button type="button" class="prac-seg-btn ${s.contrast === 'sepia' ? 'active' : ''}" onclick="ReadingPracticeApp.setContrast('sepia')">Xanh sương</button>
             </div>
           </div>
           <div class="prac-pop-lbl">Cỡ chữ bài đọc</div>

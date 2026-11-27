@@ -411,7 +411,9 @@
     const raw = String(text || '').trim();
     const low = raw.toLowerCase();
     const words = tokenizeWords(raw);
-    const wordCount = words.length;
+    const wordCount = opts.mode === 'task1'
+      ? (raw ? raw.split(/\s+/).filter(Boolean).length : 0)
+      : words.length;
     const paragraphs = raw.split(/\n\s*\n+|\r?\n/).map((p) => p.trim()).filter((p) => tokenizeWords(p).length >= 5);
     const paragraphCount = Math.max(wordCount > 0 ? 1 : 0, paragraphs.length);
     const sentences = splitSentences(raw);
@@ -474,7 +476,7 @@
       : null;
 
     return {
-      mode: opts.mode === 'body' ? 'body' : 'essay',
+      mode: opts.mode === 'body' ? 'body' : (opts.mode === 'task1' ? 'task1' : 'essay'),
       wordCount,
       paragraphCount,
       sentenceCount,
@@ -665,7 +667,9 @@
      ========================================================================= */
 
   function applyWritingExaminerCaps(grade, tel, opts = {}) {
-    const isBody = (opts.mode || tel.mode) === 'body';
+    const modeVal = opts.mode || tel.mode || 'essay';
+    const isBody = modeVal === 'body';
+    const isTask1 = modeVal === 'task1';
     const c = grade.criteria;
     const ck = grade.checklist || {};
     let tr = clampIntBand(c.tr?.band);
@@ -686,28 +690,31 @@
     if (tel.isSpam) {
       tr = Math.min(tr, 2); cc = Math.min(cc, 2); lr = Math.min(lr, 2); gra = Math.min(gra, 2);
       caps.push(`Khóa trần ≤ 2.0: ${tel.spamReason}`);
-    } else if (tel.promptCopyRatio >= 0.42 && tel.wordCount < 140) {
-      tr = capCrit('TR', tr, 2, 'TR ≤ 2.0: Sao chép nguyên văn đề bài quá nhiều.', true);
+    } else if (tel.promptCopyRatio >= 0.42 && tel.wordCount < (isTask1 ? 95 : 140)) {
+      tr = capCrit('TR', tr, 2, `${isTask1 ? 'TA' : 'TR'} ≤ 2.0: Sao chép nguyên văn đề bài quá nhiều.`, true);
       lr = Math.min(lr, 3);
       gra = Math.min(gra, 3);
     }
 
-    // 2. Off-topic / Missing prompt parts (May 2023 TR ceiling rules)
+    // 2. Off-topic / Missing prompt parts (May 2023 TR/TA ceiling rules)
     if (ck.offTopicSeverity === 'full' || (tel.topicOverlapRatio < 0.08 && tel.wordCount >= 35 && ck.offTopicSeverity !== 'none')) {
-      tr = capCrit('TR', tr, 2, 'TR ≤ 2.0: Bài viết lạc đề hoàn toàn so với câu hỏi.', true);
+      tr = capCrit('TR', tr, 2, `${isTask1 ? 'TA' : 'TR'} ≤ 2.0: Bài viết lạc đề hoàn toàn so với đề bài.`, true);
       cc = Math.min(cc, 5);
     } else if (ck.offTopicSeverity === 'partial') {
-      tr = capCrit('TR', tr, 5, 'TR ≤ 5.0: Bài viết bị lệch trọng tâm hoặc mới chạm một phần đề.', true);
+      tr = capCrit('TR', tr, 5, `${isTask1 ? 'TA' : 'TR'} ≤ 5.0: Bài viết mới chạm một phần nội dung đề bài.`, true);
     }
 
-    if (!isBody && ck.answersAllPromptParts === false) {
+    if (!isBody && !isTask1 && ck.answersAllPromptParts === false) {
       tr = capCrit('TR', tr, 5, `TR ≤ 5.0: Chưa trả lời đủ mọi vế đề (${tel.promptSpec?.label || 'thiếu ý bắt buộc'}).`, true);
     }
-    if (!isBody && ck.clearPositionThroughout === false) {
+    if (!isBody && !isTask1 && ck.clearPositionThroughout === false) {
       tr = capCrit('TR', tr, 6, 'TR ≤ 6.0: Quan điểm (position) chưa rõ ràng xuyên suốt bài.');
     }
+    if (isTask1 && tel.wordCount >= 90 && ck.hasTask1Overview === false) {
+      tr = capCrit('TA', tr, 5, 'TA ≤ 5.0: Task 1 Academic bắt buộc có câu/đoạn Overview khái quát xu hướng nổi bật (ví dụ "Overall, ...").', true);
+    }
 
-    // 3. Length evidence ceilings (May 2023: insufficient evidence caps TR/LR/GRA)
+    // 3. Length evidence ceilings (May 2023: insufficient evidence caps TA/TR/LR/GRA)
     if (isBody) {
       if (tel.wordCount < 45) {
         tr = capCrit('TR', tr, 4, `TR ≤ 4.0: Đoạn Body quá ngắn (${tel.wordCount} từ, cần ≥ 85 từ).`, true);
@@ -717,6 +724,19 @@
         lr = Math.min(lr, 6); gra = Math.min(gra, 6);
       } else if (tel.wordCount < 85) {
         tr = capCrit('TR', tr, 6, `TR ≤ 6.0: Đoạn Body hơi ngắn (${tel.wordCount}/85+ từ).`, true);
+      }
+    } else if (isTask1) {
+      if (tel.wordCount < 60) {
+        tr = capCrit('TA', tr, 3, `TA ≤ 3.0: Bài Task 1 quá ngắn (${tel.wordCount}/150 từ) — không đủ dữ liệu mô tả.`, true);
+        cc = Math.min(cc, 4); lr = Math.min(lr, 4); gra = Math.min(gra, 4);
+      } else if (tel.wordCount < 105) {
+        tr = capCrit('TA', tr, 4, `TA ≤ 4.0: Thiếu độ dài nghiêm trọng (${tel.wordCount}/150 từ).`, true);
+        lr = Math.min(lr, 5); gra = Math.min(gra, 5);
+      } else if (tel.wordCount < 135) {
+        tr = capCrit('TA', tr, 5, `TA ≤ 5.0: Chưa đạt mốc 150 từ Task 1 (${tel.wordCount} từ).`, true);
+        lr = Math.min(lr, 6); gra = Math.min(gra, 6);
+      } else if (tel.wordCount < 148) {
+        tr = capCrit('TA', tr, 6, `TA ≤ 6.0: Hơi thiếu ngưỡng 150 từ (${tel.wordCount} từ).`, true);
       }
     } else {
       if (tel.wordCount < 80) {
@@ -733,11 +753,11 @@
       }
     }
 
-    // 4. Paragraphing & Cohesion ceilings (Full Essay)
-    if (!isBody && tel.wordCount >= 120 && tel.paragraphCount < 2) {
-      cc = capCrit('CC', cc, 5, 'CC ≤ 5.0: Viết thành 1 khối duy nhất, chưa chia đoạn (Intro / Body / Conclusion).', true);
-    } else if (!isBody && tel.wordCount >= 180 && tel.paragraphCount < 3) {
-      cc = capCrit('CC', cc, 6, `CC ≤ 6.0: Mới có ${tel.paragraphCount} đoạn — bài IELTS Task 2 chuẩn cần 4–5 đoạn rõ ràng.`, true);
+    // 4. Paragraphing & Cohesion ceilings (Full Essay / Task 1 Report)
+    if (!isBody && tel.wordCount >= (isTask1 ? 90 : 120) && tel.paragraphCount < 2) {
+      cc = capCrit('CC', cc, 5, `CC ≤ 5.0: Viết thành 1 khối duy nhất, chưa chia đoạn (${isTask1 ? 'Intro / Overview / Body' : 'Intro / Body / Conclusion'}).`, true);
+    } else if (!isBody && tel.wordCount >= (isTask1 ? 130 : 180) && tel.paragraphCount < 3) {
+      cc = capCrit('CC', cc, 6, `CC ≤ 6.0: Mới có ${tel.paragraphCount} đoạn — bài ${isTask1 ? 'Task 1 chuẩn nên chia 3–4 đoạn (Intro / Overview / Body 1–2)' : 'IELTS Task 2 chuẩn cần 4–5 đoạn rõ ràng'}.`, true);
     }
 
     if (ck.logicGapsFound === true && tr > 6) {
@@ -784,10 +804,10 @@
 
     return {
       skill: 'writing',
-      mode: isBody ? 'body' : 'essay',
+      mode: isBody ? 'body' : (isTask1 ? 'task1' : 'essay'),
       overall,
       criteria: {
-        tr: { label: 'Task Response', short: 'TR', band: tr, commentVi: c.tr?.commentVi || '' },
+        tr: { label: isTask1 ? 'Task Achievement' : 'Task Response', short: isTask1 ? 'TA' : 'TR', band: tr, commentVi: c.tr?.commentVi || '' },
         cc: { label: 'Coherence & Cohesion', short: 'CC', band: cc, commentVi: c.cc?.commentVi || '' },
         lr: { label: 'Lexical Resource', short: 'LR', band: lr, commentVi: c.lr?.commentVi || '' },
         gra: { label: 'Grammar Range & Accuracy', short: 'GRA', band: gra, commentVi: c.gra?.commentVi || '' },
@@ -931,8 +951,12 @@
 
   function gradeWritingLocal(payload, tel) {
     const isBody = tel.mode === 'body';
+    const isTask1 = tel.mode === 'task1';
+    const rawLower = String(payload?.text || '').toLowerCase();
+    const hasTask1Overview = /\b(overall|in general|generally speaking|in summary|to summarise|to summarize|it is clear that|it can be seen that|notably|broadly speaking)\b/.test(rawLower);
+    const hasDataFigures = /\d+(?:\.\d+)?\s*%|\$\s*\d|\b\d{4}\b|\b(?:two|three|four|five|six|third|quarter|half|double|triple)\b/.test(rawLower);
 
-    // Base Task Response
+    // Base Task Response / Task Achievement
     let tr = 6;
     if (tel.isSpam) tr = 2;
     else if (tel.topicOverlapRatio < 0.08) tr = 2;
@@ -941,6 +965,11 @@
       else if (tel.wordCount >= 85 && tel.topicOverlapRatio >= 0.2) tr = 6;
       else tr = 5;
       if (tel.vocabHits != null && tel.vocabHits >= 3 && tel.grammarHits >= 2 && tel.wordCount >= 100 && tel.detectedIssueCount === 0) tr = Math.min(8, tr + 1);
+    } else if (isTask1) {
+      if (tel.wordCount >= 150 && tel.paragraphCount >= 3 && hasTask1Overview && hasDataFigures && tel.topicOverlapRatio >= 0.28) tr = 7;
+      else if (tel.wordCount >= 135 && tel.paragraphCount >= 3 && hasTask1Overview) tr = 6;
+      else if (tel.wordCount >= 105) tr = 5;
+      else tr = 4;
     } else {
       if (tel.wordCount >= 250 && tel.paragraphCount >= 4 && tel.topicOverlapRatio >= 0.4 && tel.sentenceCount >= 10) tr = 7;
       else if (tel.wordCount >= 220 && tel.paragraphCount >= 3 && tel.topicOverlapRatio >= 0.25) tr = 6;
@@ -952,16 +981,16 @@
     let cc = 6;
     if (tel.isSpam) cc = 2;
     else if (!isBody && tel.paragraphCount < 2) cc = 5;
-    else if (tel.academicLinkerCount >= 3 && tel.mechanicalLinkerCount <= 2 && (isBody || tel.paragraphCount >= 4)) cc = 7;
+    else if (tel.academicLinkerCount >= 3 && tel.mechanicalLinkerCount <= 2 && (isBody || tel.paragraphCount >= (isTask1 ? 3 : 4))) cc = 7;
     else if (tel.academicLinkerCount >= 1 && (isBody || tel.paragraphCount >= 3)) cc = 6;
     else cc = 5;
 
     // Base Lexical Resource
     let lr = 6;
     if (tel.isSpam) lr = 2;
-    else if (tel.guiraud >= 9.0 && tel.uniqueLongWords >= (isBody ? 10 : 24) && tel.spellingTypos.length === 0 && tel.informalCount === 0 && tel.clicheHits.length === 0) lr = 8;
-    else if (tel.guiraud >= 7.6 && tel.uniqueLongWords >= (isBody ? 7 : 16) && tel.spellingTypos.length <= 1 && tel.informalCount === 0) lr = 7;
-    else if (tel.guiraud >= 6.2 && tel.uniqueLongWords >= (isBody ? 4 : 9)) lr = 6;
+    else if (tel.guiraud >= 9.0 && tel.uniqueLongWords >= (isBody ? 10 : (isTask1 ? 14 : 24)) && tel.spellingTypos.length === 0 && tel.informalCount === 0 && tel.clicheHits.length === 0) lr = 8;
+    else if (tel.guiraud >= 7.6 && tel.uniqueLongWords >= (isBody ? 7 : (isTask1 ? 10 : 16)) && tel.spellingTypos.length <= 1 && tel.informalCount === 0) lr = 7;
+    else if (tel.guiraud >= 6.2 && tel.uniqueLongWords >= (isBody ? 4 : 7)) lr = 6;
     else lr = 5;
 
     // Base Grammar Range & Accuracy
@@ -973,20 +1002,24 @@
     else gra = 5;
 
     const upgrades = [];
-    if (!isBody && tel.wordCount < 250) upgrades.push(`Mở rộng thêm ý giải thích nhân quả A → B → C để đạt tối thiểu 250 từ (hiện tại ${tel.wordCount} từ).`);
-    if (!isBody && tel.paragraphCount < 4) upgrades.push('Chia bố cục rõ 4 đoạn (Introduction – Body 1 – Body 2 – Conclusion), mỗi đoạn Body chỉ tập trung 1 luận điểm trung tâm.');
+    if (isTask1 && !hasTask1Overview) upgrades.push('Bổ sung đoạn Overview (bắt đầu bằng "Overall, ...") khái quát 2 xu hướng/đặc điểm nổi bật nhất mà không đưa số liệu chi tiết.');
+    if (isTask1 && tel.wordCount < 150) upgrades.push(`Bổ sung thêm câu so sánh số liệu nổi bật để đạt tối thiểu 150 từ Task 1 (hiện tại ${tel.wordCount} từ).`);
+    if (!isBody && !isTask1 && tel.wordCount < 250) upgrades.push(`Mở rộng thêm ý giải thích nhân quả A → B → C để đạt tối thiểu 250 từ (hiện tại ${tel.wordCount} từ).`);
+    if (!isBody && !isTask1 && tel.paragraphCount < 4) upgrades.push('Chia bố cục rõ 4 đoạn (Introduction – Body 1 – Body 2 – Conclusion), mỗi đoạn Body chỉ tập trung 1 luận điểm trung tâm.');
+    if (isTask1 && tel.paragraphCount < 3) upgrades.push('Chia bài Task 1 thành 4 đoạn chuẩn Cambridge: Introduction (paraphrase đề) – Overview – Body 1 – Body 2.');
     if (tel.detectedIssueCount > 0) upgrades.push(`Rà sửa ${tel.detectedIssueCount} lỗi ngữ pháp/chính tả đã đánh dấu phía dưới để tăng tỷ lệ câu không lỗi lên mức Band 7+.`);
-    if (tel.complexSentenceRatio < 0.35) upgrades.push('Tăng cường câu phức (mệnh đề quan hệ which/who, cụm phân từ V-ing/V-ed, câu điều kiện hoặc nhượng bộ While/Although).');
-    if (tel.clicheHits.length > 0) upgrades.push('Loại bỏ các cụm template sáo rỗng và thay bằng collocation gắn trực tiếp với chủ đề đề bài.');
-    if (upgrades.length < 2) upgrades.push('Kiểm tra lại độ sắc nét của collocation và bổ sung 1 câu phản biện nhẹ (concession) để đẩy TR & LR lên Band 7.5–8.0.');
+    if (tel.complexSentenceRatio < 0.35) upgrades.push('Tăng cường câu phức (mệnh đề quan hệ which/who, cụm phân từ V-ing/V-ed, câu so sánh whereas/while).');
+    if (tel.clicheHits.length > 0) upgrades.push('Loại bỏ các cụm template sáo rỗng và thay bằng cụm học thuật gắn trực tiếp với đề bài.');
+    if (upgrades.length < 2) upgrades.push(isTask1 ? 'Bổ sung các cấu trúc so sánh trực tiếp (whereas, in contrast, by a wide margin) để đẩy TA & LR lên Band 7.5–8.0.' : 'Kiểm tra lại độ sắc nét của collocation và bổ sung 1 câu phản biện nhẹ (concession) để đẩy TR & LR lên Band 7.5–8.0.');
 
     const rawGrade = {
       checklist: {
         offTopicSeverity: tel.topicOverlapRatio < 0.12 ? 'full' : (tel.topicOverlapRatio < 0.22 ? 'partial' : 'none'),
         answersAllPromptParts: tel.topicOverlapRatio >= 0.25 && (isBody || tel.paragraphCount >= 3),
-        clearPositionThroughout: tel.wordCount >= (isBody ? 70 : 180),
-        eachParagraphClearTopic: isBody || tel.paragraphCount >= 4,
-        logicGapsFound: tel.academicLinkerCount < 2 && tel.wordCount >= 100,
+        clearPositionThroughout: tel.wordCount >= (isBody ? 70 : (isTask1 ? 120 : 180)),
+        hasTask1Overview,
+        eachParagraphClearTopic: isBody || tel.paragraphCount >= (isTask1 ? 3 : 4),
+        logicGapsFound: !isTask1 && tel.academicLinkerCount < 2 && tel.wordCount >= 100,
         templateStuffingDetected: tel.clicheHits.length >= 2,
         mechanicalLinkersHeavy: tel.mechanicalLinkerCount >= 4,
         informalToneDetected: tel.informalCount >= 1,

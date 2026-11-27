@@ -3356,6 +3356,13 @@
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const initContrast = mode === 'exam' ? 'cd' : (isDark ? 'dark' : 'totoro');
 
+    window.TotoroUI?.recordLastSession?.({
+      skill: 'Speaking',
+      view: 'practice',
+      label: `Speaking · ${cue.title}`,
+      action: "window.TotoroUI?.enterSkillMode('Speaking', 'practice')"
+    });
+
     roomState = {
       cue,
       mode: mode === 'exam' ? 'exam' : 'practice',
@@ -3363,6 +3370,7 @@
       secsLeft: 60,
       timerId: null,
       notes: { sheet: mode === 'exam' ? '' : DEFAULT_SP_PLAN },
+      checkedBullets: {},
       recording: false,
       processing: false,
       typeMode: false,
@@ -3425,6 +3433,57 @@
     renderPracticeHub();
   }
 
+  function playRoomChime(kind) {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = kind === 'start' ? 660 : 520;
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (kind === 'start' ? 0.28 : 0.16));
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + (kind === 'start' ? 0.3 : 0.18));
+      setTimeout(() => ctx.close().catch(() => {}), 450);
+    } catch (_) {}
+  }
+
+  function toggleRoomBullet(idx) {
+    if (!roomState) return;
+    if (!roomState.checkedBullets) roomState.checkedBullets = {};
+    roomState.checkedBullets[idx] = !roomState.checkedBullets[idx];
+    renderPracticeRoom();
+  }
+
+  function buildAnnotatedTranscriptHtml(rawText, usedChunks, errors) {
+    let html = esc(String(rawText || ''));
+    if (!html) return '';
+    // 1. Highlight Spoken Chunks used (Green)
+    (usedChunks || []).slice(0, 12).forEach((ch) => {
+      const clean = String(ch || '').trim();
+      if (clean.length < 3) return;
+      const re = new RegExp(`(${esc(clean).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      html = html.replace(re, '<mark class="sp-tr-chunk" title="Spoken Chunk ăn điểm Band 7+">$1</mark>');
+    });
+    // 2. Highlight hesitation fillers (Amber)
+    html = html.replace(/\b(um+|uh+|er+|erm+|hmm+|you know|actually|basically|like)\b/gi, (m) => {
+      return `<mark class="sp-tr-filler" title="Từ đệm — nên tiết chế để giữ độ trôi chảy (FC)">${m}</mark>`;
+    });
+    // 3. Highlight grammar/lexis errors detected by IeltsGrader (Red underline + fix tooltip)
+    (errors || []).slice(0, 6).forEach((er) => {
+      const orig = String(er?.original || '').trim();
+      if (orig.length < 3) return;
+      const tip = esc(`${er.issueVi || 'Cần chỉnh lại'}${er.fix ? ' → Gợi ý: ' + er.fix : ''}`);
+      const re = new RegExp(`(${esc(orig).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'i');
+      html = html.replace(re, `<mark class="sp-tr-err" title="${tip}">$1</mark>`);
+    });
+    return html;
+  }
+
   function startRoomTimer() {
     clearInterval(roomState?.timerId);
     roomState.timerId = setInterval(() => {
@@ -3440,12 +3499,29 @@
       const ringArc = document.getElementById('sp-room-ring-arc');
       if (ringArc) {
         const totalSec = roomState.phase === 'prep' ? 60 : 120;
-        const dialCirc = 314.16;
+        const dialCirc = roomState.phase === 'prep' ? 163.36 : 314.16;
         const dialOff = (dialCirc * (1 - Math.max(0, Math.min(1, roomState.secsLeft / totalSec)))).toFixed(1);
         ringArc.setAttribute('stroke-dashoffset', dialOff);
+        if (roomState.phase === 'prep') {
+          ringArc.setAttribute('stroke', roomState.secsLeft <= 10 ? 'var(--danger)' : (roomState.secsLeft <= 20 ? '#c47a1b' : 'var(--accent)'));
+        }
+      }
+      if (roomState.phase === 'prep' && roomState.secsLeft === 10) playRoomChime('warn');
+      if (roomState.phase === 'speak') {
+        const elapsed = Math.max(0, 120 - roomState.secsLeft);
+        const zFill = document.getElementById('sp-zone-fill');
+        const zTxt = document.getElementById('sp-zone-status');
+        if (zFill) zFill.style.width = `${Math.min(100, Math.round((elapsed / 120) * 100))}%`;
+        if (zTxt) {
+          zTxt.textContent = elapsed >= 90
+            ? '✓ Vùng lý tưởng Band 7+ (1:30–2:00)'
+            : (elapsed >= 60 ? 'Đạt mức tối thiểu (1:00+) · Nói thêm để đạt 1:30' : `Đang nói ${fmtMmSs(elapsed)} · Mục tiêu ≥ 1:30`);
+          zTxt.classList.toggle('is-ideal', elapsed >= 90);
+        }
       }
       if (roomState.secsLeft <= 0) {
         if (roomState.phase === 'prep') {
+          playRoomChime('start');
           beginRoomSpeaking(roomState.mode === 'exam');
         } else if (roomState.phase === 'speak') {
           clearInterval(roomState.timerId);
@@ -3653,6 +3729,9 @@
 
     let rightPaperHtml = '';
     if (phase === 'prep') {
+      const prepCirc = 163.36;
+      const prepOff = (prepCirc * (1 - Math.max(0, Math.min(1, secsLeft / 60)))).toFixed(1);
+      const prepColor = secsLeft <= 10 ? 'var(--danger)' : (secsLeft <= 20 ? '#c47a1b' : 'var(--accent)');
       rightPaperHtml = `
         <div class="ws-prac-paper-card sp-studio-paper">
           <div class="ws-prac-paper-head">
@@ -3660,27 +3739,35 @@
               <span class="ws-prac-paper-ico" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
               </span>
-              <span class="ws-prac-paper-title">${isExam ? 'Giấy Nháp Thi Thật (60 giây)' : 'Planning · Dàn ý nhanh (60 giây)'}</span>
+              <span class="ws-prac-paper-title">${isExam ? 'Giấy Nháp Thi Thật (60 giây)' : 'Planning · Giấy nháp nhanh (60 giây)'}</span>
             </div>
             <div class="ws-prac-paper-badges">
               ${!isExam ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.resetRoomPlan()">Đặt lại</button>` : ''}
-              <span class="ws-prac-wc-pill tabular" id="sp-room-ring-time">${fmtMmSs(secsLeft)}</span>
+              <div class="sp-prep-mini-ring" title="Đồng hồ đếm ngược 1 phút chuẩn bị (đổi màu ở 20s &amp; 10s)">
+                <svg viewBox="0 0 60 60" width="38" height="38" aria-hidden="true">
+                  <circle cx="30" cy="30" r="26" fill="none" stroke="var(--bg-subtle)" stroke-width="5"/>
+                  <circle id="sp-room-ring-arc" cx="30" cy="30" r="26" fill="none" stroke="${prepColor}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${prepCirc}" stroke-dashoffset="${prepOff}" transform="rotate(-90 30 30)"/>
+                </svg>
+                <span class="tabular" id="sp-room-ring-time">${fmtMmSs(secsLeft)}</span>
+              </div>
             </div>
           </div>
           <div class="ws-prac-paper-meter" aria-hidden="true">
             <span class="ws-prac-paper-meter-fill" style="width:${meterPct}%"></span>
           </div>
           <textarea class="ws-ins-editor ws-prac-editor sp-room-sheet-ta" id="sp-room-plan-ta" spellcheck="false"
-            placeholder="Ghi nhanh các từ khóa dàn ý trước khi bắt đầu nói 2 phút..."
+            placeholder="Ghi nhanh các từ khóa dàn ý (Who · When · Story · Lesson) trước khi nói 2 phút..."
             oninput="SpeakingStudio.saveRoomNote('sheet', this.value)">${esc(notes.sheet || '')}</textarea>
           <div class="ws-prac-paper-foot">
             <div class="ws-prac-paper-foot-l">
-              <span class="ws-prac-wc-note">Ghi nhanh từ khóa cốt lõi · Hết 60 giây tự chuyển sang phần nói 2 phút</span>
+              <span class="ws-prac-wc-note">Đánh dấu từng ý ở Cue Card bên trái khi bạn chuẩn bị xong · Hết 60s tự chuyển phần nói</span>
             </div>
           </div>
         </div>
       `;
     } else if (phase === 'speak') {
+      const elapsedSec = Math.max(0, 120 - secsLeft);
+      const zonePct = Math.min(100, Math.round((elapsedSec / 120) * 100));
       rightPaperHtml = `
         <div class="ws-prac-paper-card sp-studio-paper">
           <div class="ws-prac-paper-head">
@@ -3689,7 +3776,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
               </span>
               <span class="ws-prac-paper-title">Phòng Thu Âm Part 2</span>
-              <span class="ws-prac-para-pill tabular">1:30 – 2:00</span>
+              <span class="ws-prac-para-pill tabular">Mục tiêu 1:30 – 2:00</span>
             </div>
             <div class="ws-prac-paper-badges">
               ${!isExam ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.toggleRoomTypeMode()">${typeMode ? 'Dùng Mic AI' : 'Gõ dự phòng'}</button>` : ''}
@@ -3718,13 +3805,21 @@
                 </div>
               </div>
               <div class="sp-wave-bars">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="room"></span>`).join('')}</div>
+              <div class="sp-zone-gauge">
+                <div class="sp-zone-track">
+                  <span class="sp-zone-ideal" title="Vùng thời lượng lý tưởng Band 7+ (1:30 – 2:00)"></span>
+                  <span class="sp-zone-fill" id="sp-zone-fill" style="width:${zonePct}%"></span>
+                </div>
+                <div class="sp-zone-marks tabular"><span>0:00</span><span>1:00 (Tối thiểu)</span><span>1:30–2:00 (Lý tưởng)</span></div>
+                <div class="sp-zone-status ${elapsedSec >= 90 ? 'is-ideal' : ''}" id="sp-zone-status">${elapsedSec >= 90 ? '✓ Vùng lý tưởng Band 7+ (1:30–2:00)' : `Đang nói ${fmtMmSs(elapsedSec)} · Mục tiêu ≥ 1:30`}</div>
+              </div>
               <button type="button" class="sp-mic-btn ${recording ? 'is-recording' : ''}" ${processing ? 'disabled' : ''} onclick="SpeakingStudio.toggleRoomMic()">
                 <span>${processing ? 'Đang chấm giọng nói...' : (recording ? 'Dừng & Nộp bài nói' : 'Bấm Mic bắt đầu nói 2 phút')}</span>
               </button>
-              <div style="font-size:13px;color:var(--ink-2);">Giữ nhịp nói tự nhiên 120–155 WPM · Nối mượt B1–B3 → B4 → B5.</div>
+              <div style="font-size:12.5px;color:var(--ink-2);">Giữ nhịp nói tự nhiên 120–155 WPM · Chạm dấu ✓ trên từng ý Cue Card khi nói xong.</div>
             </div>
             <div class="ws-prac-paper-foot">
-              <div class="ws-prac-paper-foot-l"><span class="ws-prac-wc-note">Ghi âm tự động chuyển sang bản chữ &amp; đối chiếu Spoken Chunks</span></div>
+              <div class="ws-prac-paper-foot-l"><span class="ws-prac-wc-note">Tự động phân tích Transcript tô màu Spoken Chunks · Từ đệm · Lỗi ngữ pháp</span></div>
               ${!isExam ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.toggleRoomTypeMode()">Gõ dự phòng</button>` : ''}
             </div>
           `}
@@ -3732,6 +3827,8 @@
       `;
     } else {
       const m = metrics;
+      const annotatedHtml = buildAnnotatedTranscriptHtml(transcript, m.usedChunks, roomState.report?.errors || []);
+      const prevAttempts = getPracHistory().filter((h) => h.cueId === cue.id).slice(0, 4);
       rightPaperHtml = `
         <div class="ws-prac-paper-card sp-studio-paper">
           <div class="ws-prac-paper-head">
@@ -3739,7 +3836,7 @@
               <span class="ws-prac-paper-ico" aria-hidden="true">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </span>
-              <span class="ws-prac-paper-title">Kết quả bài nói Part 2</span>
+              <span class="ws-prac-paper-title">Scorecard · Kết quả bài nói Part 2</span>
               <span class="ws-prac-para-pill tabular">${m.words} từ</span>
             </div>
             <div class="ws-prac-paper-badges">
@@ -3764,10 +3861,25 @@
             </div>
             ${audioUrl ? `<audio class="sp-audio-replay" style="max-width:100%;" controls src="${esc(audioUrl)}"></audio>` : ''}
             <div class="sp-transcript-box">
-              <div style="font-size:12.5px;font-weight:800;color:var(--ink-2);margin-bottom:6px;">Bản nói của bạn</div>
-              <div>${esc(transcript)}</div>
+              <div class="sp-tr-legend-head">
+                <strong>Bản nói đã phân tích màu (Transcript)</strong>
+                <div class="sp-tr-legend-chips">
+                  <span class="sp-tr-leg is-chunk">Spoken Chunk</span>
+                  <span class="sp-tr-leg is-filler">Từ đệm</span>
+                  <span class="sp-tr-leg is-err">Lỗi cần sửa</span>
+                </div>
+              </div>
+              <div class="sp-tr-annotated">${annotatedHtml}</div>
               ${m.usedChunks.length ? `<div class="sp-kw-row" style="margin-top:10px;">${m.usedChunks.map((c) => `<span class="sp-kw-chip hit">✓ ${esc(c)}</span>`).join('')}</div>` : ''}
             </div>
+            ${prevAttempts.length > 1 ? `
+              <div class="sp-trend-strip">
+                <strong>Tiến bộ các lần nói đề này:</strong>
+                <div class="sp-trend-pills">
+                  ${prevAttempts.slice().reverse().map((a, idx) => `<span class="sp-trend-pill tabular">Lần ${idx + 1}: ${a.band ? 'Band ' + Number(a.band).toFixed(1) : a.words + 'w'} · ${a.wpm || 0} WPM</span>`).join(' → ')}
+                </div>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -3848,10 +3960,16 @@
             </div>
 
             <div class="sp-ins-cue-card">
-              <div class="sp-ins-cue-title">${esc(cue.title)}</div>
-              <div class="sp-ins-cue-sub">You should say:</div>
-              <ul class="sp-ins-cue-list">
-                ${(cue.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('')}
+              <div class="sp-ins-cue-head-row">
+                <div class="sp-ins-cue-title">${esc(cue.title)}</div>
+                ${phase !== 'review' ? `<span class="sp-cue-cov-pill tabular">${Object.values(roomState.checkedBullets || {}).filter(Boolean).length}/${(cue.bullets || []).length} ý</span>` : ''}
+              </div>
+              <div class="sp-ins-cue-sub">You should say: ${phase !== 'review' ? '<small>(chạm từng ý để đánh dấu đã chuẩn bị/đã nói)</small>' : ''}</div>
+              <ul class="sp-ins-cue-list is-interactive">
+                ${(cue.bullets || []).map((b, bi) => {
+                  const chk = Boolean(roomState.checkedBullets?.[bi]);
+                  return `<li class="${chk ? 'is-checked' : ''}" onclick="SpeakingStudio.toggleRoomBullet(${bi})"><span class="sp-cue-chk" aria-hidden="true">${chk ? '✓' : ''}</span><span>${esc(b)}</span></li>`;
+                }).join('')}
               </ul>
             </div>
 
@@ -4049,6 +4167,7 @@
     submitRoomTyped,
     toggleRoomFullB4,
     toggleRoomPrepHint,
+    toggleRoomBullet,
     toggleRoomOptions,
     setRoomContrast,
     setRoomTextSize
