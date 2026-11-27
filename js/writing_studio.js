@@ -1108,10 +1108,6 @@
             </button>
             <button type="button" class="btn ws-topbar-exit-btn" onclick="WritingStudio.exitTaskStudyMode()">Thoát</button>
           ` : `
-            <button type="button" class="btn-deck-tool tot-tool-quiet" onclick="WritingStudio.shuffleDeck()" title="Trộn ngẫu nhiên thứ tự thẻ">
-              <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="16 3 21 3 21 8"/><line x1="4" x2="21" y1="20" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" x2="21" y1="15" y2="21"/></svg>
-              <span>Trộn</span>
-            </button>
             <button type="button" class="btn-deck-tool tot-tool-quiet btn-focus-toggle ${isFocusActive ? 'active' : ''}" onclick="typeof toggleFocusMode === 'function' && toggleFocusMode()" title="Thu gọn 2 cột bên để tập trung học Flashcard">
               <svg class="tot-ico-sm" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
               <span>Tập trung</span>
@@ -2410,8 +2406,8 @@
 
   function getTaskStageLimitSec(mod, stageNum) {
     if (stageNum === 1) return mod?.smartFlow?.mode === 'branches' ? 8 * 60 : 6 * 60;
-    if (stageNum === 2) return 12 * 60;
-    return 18 * 60;
+    if (stageNum === 2) return 20 * 60;
+    return 20 * 60;
   }
 
   function startTaskExam(modId) {
@@ -2487,11 +2483,11 @@
           const raw = String(examState.t3Body || '').trim();
           if (raw && raw.split(/\s+/).length >= 10) {
             examState.t3RetriesLeft = 0;
-            toast('Hết 18 phút — hệ thống tự động nộp và chấm đoạn Body hiện tại!');
+            toast('Hết 20 phút — hệ thống tự động nộp và chấm đoạn Body hiện tại!');
             submitTaskTest3();
           } else {
             closeTaskExamModal(true);
-            showAntiCheatModal('HẾT THỜI GIAN · TEST 3', 'Đã hết 18 phút viết đoạn Body nhưng chưa có nội dung. Hãy ôn kỹ bài và thử lại.', true);
+            showAntiCheatModal('HẾT THỜI GIAN · TEST 3', 'Đã hết 20 phút viết đoạn Body nhưng chưa có nội dung. Hãy ôn kỹ bài và thử lại.', true);
           }
         } else {
           const stNum = examState.stage;
