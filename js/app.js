@@ -2100,11 +2100,9 @@
     const cloudAssessCount = (cloudAssess && typeof cloudAssess === 'object')
       ? countUniqueMasteredWords(cloudAssess)
       : 0;
-    const cloudMastered = cloudAssessCount > 0
-      ? cloudAssessCount
-      : Number(cloudEntry?.mastered || 0);
+    const cloudMastered = Math.max(cloudAssessCount, Number(cloudEntry?.mastered || 0));
     if (currentUser && scoped === getScopedUid(currentUser.id)) {
-      return countUniqueMasteredWords(assessments);
+      return Math.max(countUniqueMasteredWords(assessments), cloudMastered);
     }
     let localMastered = 0;
     try {

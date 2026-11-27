@@ -42,11 +42,11 @@
   <link rel="stylesheet" href="css/style.css?v=20261127b">
   <link rel="stylesheet" href="css/motion.css?v=20261127b">
   <link rel="stylesheet" href="css/enhancements.css?v=20261127e">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261127c">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261127f">
   <link rel="stylesheet" href="css/writing.css?v=20261127e">
   <link rel="stylesheet" href="css/speaking.css?v=20261127e">
   <link rel="stylesheet" href="css/dictation.css?v=20261127e">
-  <link rel="stylesheet" href="css/teacher_studio.css?v=20261127c">
+  <link rel="stylesheet" href="css/teacher_studio.css?v=20261127d">
 </head>
 <body>
 
@@ -1242,8 +1242,8 @@
               <h1 class="tot-atelier-title" id="home-hero-greeting">Chào bạn, bắt đầu phiên học hôm nay nhé</h1>
               <p class="tot-atelier-sub" id="home-hero-sub">Đang đồng bộ dữ liệu học tập...</p>
               <div class="tot-atelier-actions">
-                <button type="button" class="btn btn-primary tot-demo-btn tot-atelier-cta" onclick="window.TotoroUI?.enterSkillMode(window.TotoroUI?.getActiveSkill?.() || 'Reading', 'flashcard')">
-                  <span>Tiếp tục học</span>
+                <button type="button" class="btn btn-primary tot-demo-btn tot-atelier-cta" id="home-hero-resume-btn" onclick="window.TotoroUI?.resumeLastSession?.()">
+                  <span id="home-hero-resume-label">Tiếp tục học</span>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
                 </button>
                 <button type="button" class="tot-demo-btn tot-btn-streak tot-atelier-sec" onclick="RecognitionTestModule.startListFinalExam()">Speed Quiz · 5s</button>
@@ -1484,6 +1484,13 @@
                     <p class="tot-ed-sub">Task bài tập &amp; Đề Practice</p>
                   </div>
                 </div>
+              </div>
+              <div class="tot-hist-tabs" id="home-history-tabs" role="tablist" aria-label="Lọc lịch sử theo kỹ năng">
+                <button type="button" class="tot-hist-tab active" data-hist-sk="all" onclick="window.TotoroUI?.setHomeHistoryFilter('all')">Tất cả</button>
+                <button type="button" class="tot-hist-tab" data-hist-sk="reading" onclick="window.TotoroUI?.setHomeHistoryFilter('reading')">Reading</button>
+                <button type="button" class="tot-hist-tab" data-hist-sk="listening" onclick="window.TotoroUI?.setHomeHistoryFilter('listening')">Listening</button>
+                <button type="button" class="tot-hist-tab" data-hist-sk="writing" onclick="window.TotoroUI?.setHomeHistoryFilter('writing')">Writing</button>
+                <button type="button" class="tot-hist-tab" data-hist-sk="speaking" onclick="window.TotoroUI?.setHomeHistoryFilter('speaking')">Speaking</button>
               </div>
               <div class="tot-list-stack tot-ed-feed" id="home-history-list"></div>
               <div class="tot-panel-foot tot-ed-foot">
@@ -2319,7 +2326,7 @@
   <script src="js/core/EventBus.js?v=20261119t"></script>
   <script src="js/core/LazyDataLoader.js?v=20261127b"></script>
   <script src="js/core/AudioEngine.js?v=20261125b"></script>
-  <script src="js/core/MyVocabStore.js?v=20261125a"></script>
+  <script src="js/core/MyVocabStore.js?v=20261127f"></script>
   <script src="js/core/AntiCheatGuard.js?v=20261124m"></script>
   <script src="js/core/BaseSkillMode.js?v=20261119t"></script>
   <script src="js/skills/reading/ReadingMode.js?v=20261119t"></script>
@@ -2328,7 +2335,7 @@
   <script src="js/recognition_test.js?v=20261127e"></script>
   <script src="js/speech_stt.js?v=20261123e"></script>
   <script src="js/voice_lab.js?v=20261123c"></script>
-  <script src="js/app.js?v=20261127c"></script>
+  <script src="js/app.js?v=20261127d"></script>
   <script src="data/reading_practice_data.js?v=20261124j"></script>
   <script src="data/reading_photo_map.js?v=20261125d"></script>
   <script src="js/live_room.js?v=20261127a"></script>
@@ -2339,14 +2346,15 @@
   <script src="js/listening_practice.js?v=20261127b"></script>
   <script src="js/listening_tasks.js?v=20261127c"></script>
   <script src="data/dictation_data.js?v=20261127e"></script>
-  <script src="js/dictation_studio.js?v=20261127e"></script>
-  <script src="js/ielts_grader.js?v=20261127a"></script>
+  <script src="js/dictation_studio.js?v=20261127f"></script>
+  <script src="js/ielts_grader.js?v=20261127f"></script>
+  <script src="data/writing_task1_data.js?v=20261127f"></script>
   <script src="data/writing_data.js?v=20261126a"></script>
   <script src="js/writing_studio.js?v=20261127d"></script>
   <script src="data/speaking_data.js?v=20261126b"></script>
-  <script src="js/speaking_studio.js?v=20261127c"></script>
-  <script src="js/teacher_studio.js?v=20261127c"></script>
-  <script src="js/totoro_ui.js?v=20261127d"></script>
+  <script src="js/speaking_studio.js?v=20261127f"></script>
+  <script src="js/teacher_studio.js?v=20261127d"></script>
+  <script src="js/totoro_ui.js?v=20261127f"></script>
 </body>
 </html>
 
