@@ -39,14 +39,14 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="css/style.css?v=20261121y">
-  <link rel="stylesheet" href="css/motion.css?v=20261120a">
-  <link rel="stylesheet" href="css/enhancements.css?v=20261126a">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261127a">
-  <link rel="stylesheet" href="css/writing.css?v=20261126d">
-  <link rel="stylesheet" href="css/speaking.css?v=20261126h">
-  <link rel="stylesheet" href="css/dictation.css?v=20261125a">
-  <link rel="stylesheet" href="css/teacher_studio.css?v=20261126s">
+  <link rel="stylesheet" href="css/style.css?v=20261127b">
+  <link rel="stylesheet" href="css/motion.css?v=20261127b">
+  <link rel="stylesheet" href="css/enhancements.css?v=20261127b">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261127b">
+  <link rel="stylesheet" href="css/writing.css?v=20261127b">
+  <link rel="stylesheet" href="css/speaking.css?v=20261127b">
+  <link rel="stylesheet" href="css/dictation.css?v=20261127b">
+  <link rel="stylesheet" href="css/teacher_studio.css?v=20261127b">
 </head>
 <body>
 
@@ -68,14 +68,16 @@
       <div class="auth-card-wrap">
         <img
           class="auth-flank-img auth-flank-left"
-          src="assets/images/totoro_vocab_atelier.png"
+          src="assets/images/totoro_vocab_atelier.webp"
           alt="Totoro ngồi bàn học từ vựng bên trái khung đăng nhập"
+          decoding="async"
           draggable="false"
         />
         <img
           class="auth-flank-img auth-flank-right"
-          src="assets/images/totoro_sitting_branch.png"
+          src="assets/images/totoro_sitting_branch.webp"
           alt="Totoro ngồi cành cây bên phải khung đăng nhập"
+          decoding="async"
           draggable="false"
         />
 
@@ -559,9 +561,6 @@
               <ellipse cx="26" cy="45" rx="7" ry="4.2" fill="#595753"/><ellipse cx="62" cy="45" rx="7" ry="4.2" fill="#595753"/>
             </svg>
             <div class="widget-header">
-              <div class="widget-panda-lockup">
-                <img src="assets/images/panda_timer.jpg" alt="" class="widget-panda-img">
-              </div>
               <span class="tot-icon-tile" aria-hidden="true">
                 <svg viewBox="2.5 1 19 21.5" fill="none">
                   <circle cx="12" cy="13.8" r="7.8" fill="#FFFFFF" stroke="var(--accent)" stroke-width="2"/>
@@ -735,9 +734,6 @@
           <!-- Hidden on #screen-study (preserved in DOM for JS/Home/Report sync) -->
           <div class="deck-widget widget-theme-gold ink-brackets has-stamp is-home-only-widget" id="widget-leaderboard">
             <div class="widget-header">
-              <div class="widget-panda-lockup">
-                <img src="assets/images/panda_leaderboard.jpg" alt="" class="widget-panda-img">
-              </div>
               <span class="tot-icon-tile warm" aria-hidden="true">
                 <svg viewBox="2 2 20 20" fill="none">
                   <path d="M7 6.5H4.2C4.2 9.4 5.4 11 7.2 11.2M17 6.5H19.8C19.8 9.4 18.6 11 16.8 11.2" stroke="#C78A20" stroke-width="1.8" stroke-linecap="round"/>
@@ -983,7 +979,7 @@
 
           <!-- Khung hoàn thành bộ từ -->
           <div class="fc-finished-box" id="fc-finished-box">
-            <img src="assets/images/totoro_sitting_branch.png" alt="Hoàn thành xuất sắc" class="celebrate-panda-img celebrate-totoro-img">
+            <img src="assets/images/totoro_sitting_branch.webp" alt="Hoàn thành xuất sắc" loading="lazy" decoding="async" class="celebrate-panda-img celebrate-totoro-img">
             <div class="fc-finished-title">Bạn đã hoàn thành lượt thẻ này!</div>
             <div class="fc-finished-desc">Tất cả các thẻ trong danh sách đã được bạn xem qua. Bạn có thể ôn lại từ đầu hoặc lọc riêng các từ chưa thuộc.</div>
             <div class="task-lock-banner" id="fc-finished-task-warn" style="display:none; max-width:460px; margin:2px auto 6px; text-align:left; font-size:13.5px; line-height:1.5;"></div>
@@ -1033,9 +1029,6 @@
               <ellipse cx="28" cy="26.2" rx="1.8" ry="0.9" fill="#F29B9B" opacity="0.65"/>
             </svg>
             <div class="widget-header">
-              <div class="widget-panda-lockup">
-                <img src="assets/images/panda_vocab.jpg" alt="" class="widget-panda-img">
-              </div>
               <span class="tot-icon-tile" aria-hidden="true">
                 <svg viewBox="3 5.5 26 23.5" fill="none">
                   <path d="M10.2 14L8.8 7.2L13.2 10.8C15 10.2 17 10.2 18.8 10.8L23.2 7.2L21.8 14C23.4 15.4 24 17.4 24 19H8C8 17.4 8.6 15.4 10.2 14Z" fill="#595651"/>
@@ -1202,9 +1195,6 @@
               <path d="M15 22C15 32.5 19 39 24 41.5C29 39 33 32.5 33 22" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
             </svg>
             <div class="widget-header">
-              <div class="widget-panda-lockup">
-                <img src="assets/images/panda_streak.jpg" alt="" class="widget-panda-img">
-              </div>
               <span class="tot-icon-tile warm" aria-hidden="true">
                 <svg viewBox="2 2 20 20" fill="none">
                   <rect x="3.5" y="13" width="3.8" height="7" rx="1.6" fill="#D99B58"/>
@@ -1583,7 +1573,7 @@
         <div class="teacher-panel-head">
           <div class="teacher-panel-brand">
             <div class="teacher-mascot-pedestal" aria-hidden="true">
-              <img src="assets/images/totoro_professor.png" alt="" class="teacher-totoro-badge">
+              <img src="assets/images/totoro_professor.webp" alt="" loading="lazy" decoding="async" class="teacher-totoro-badge">
             </div>
             <div>
               <h2 class="teacher-panel-title">Theo Dõi Học Sinh</h2>
@@ -1614,7 +1604,7 @@
           <div class="ts-roster-left">
             <div class="teacher-search-wrap">
               <svg class="tot-ico-sm teacher-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/></svg>
-              <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" name="teacher_filter_query" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Tìm học viên theo tên hoặc mã ID..." oninput="TeacherStudio.renderDashboard()">
+              <input type="search" class="task-link-input teacher-search-input" id="teacher-student-search" aria-label="Tìm học viên theo tên hoặc mã ID" name="teacher_filter_query" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Tìm học viên theo tên hoặc mã ID..." oninput="TeacherStudio.renderDashboard()">
             </div>
             <div class="ts-quick-filters" id="ts-quick-filters"></div>
           </div>
@@ -1719,7 +1709,7 @@
                   <option value="10080">7 ngày (1 tuần)</option>
                   <option value="custom">Ngày giờ cụ thể...</option>
                 </select>
-                <input type="datetime-local" class="task-link-input teacher-deadline-custom" id="teacher-task-deadline-custom" style="display:none;" onchange="TeacherStudio.onDeadlinePresetChange()">
+                <input type="datetime-local" class="task-link-input teacher-deadline-custom" id="teacher-task-deadline-custom" aria-label="Chọn ngày giờ hạn nộp cụ thể" style="display:none;" onchange="TeacherStudio.onDeadlinePresetChange()">
               </div>
               <div class="ts-composer-actions">
                 <button type="button" class="btn btn-primary" onclick="TeacherStudio.copySelectedLink()">Copy mẫu Zalo</button>
@@ -1735,14 +1725,14 @@
         <div class="ts-skill-tabs" id="ts-skill-tabs"></div>
         <div class="ts-picker-bar">
           <div class="task-suite-tabs" id="teacher-task-suite-tabs"></div>
-          <input type="search" class="task-link-input ts-picker-search" id="ts-picker-search" autocomplete="off" placeholder="Tìm nhanh mã bài / chủ đề..." oninput="TeacherStudio.onPickerSearch(this.value)">
+          <input type="search" class="task-link-input ts-picker-search" id="ts-picker-search" aria-label="Tìm nhanh mã bài hoặc chủ đề" autocomplete="off" placeholder="Tìm nhanh mã bài / chủ đề..." oninput="TeacherStudio.onPickerSearch(this.value)">
         </div>
         <div class="ts-picker-grid" id="teacher-dash-task-grid"></div>
 
         <details class="teacher-ai-key-details">
           <summary>Cấu hình Google AI Studio Key dự phòng trên trình duyệt này</summary>
           <div class="teacher-ai-key-row">
-            <input type="text" class="task-link-input teacher-secret-input" id="teacher-dash-gemini-key" name="gemini_api_key_local" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Dán key Google AI Studio nếu chưa cấu hình GEMINI_API_KEY trong Google Apps Script...">
+            <input type="text" class="task-link-input teacher-secret-input" id="teacher-dash-gemini-key" aria-label="Google AI Studio Key dự phòng" name="gemini_api_key_local" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Dán key Google AI Studio nếu chưa cấu hình GEMINI_API_KEY trong Google Apps Script...">
             <button type="button" class="btn-subtle" onclick="TasksModule.saveLocalGeminiKey()">Lưu key</button>
           </div>
         </details>
@@ -1764,7 +1754,7 @@
   </div>
 
   <!-- MODAL: MY VOCAB (TỪ CỦA TÔI — LƯU CỤC BỘ TRÊN MÁY HỌC SINH) -->
-  <div class="modal-overlay" id="modal-my-vocab" onclick="MyVocabUI.closeModal(event)">
+  <div class="modal-overlay" id="modal-my-vocab" role="dialog" aria-modal="true" aria-label="Danh sách từ vựng cá nhân" onclick="MyVocabUI.closeModal(event)">
     <div class="modal-card modal-card-wide mv-modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div>
@@ -1803,10 +1793,10 @@
 
             <form class="mv-collapsible" id="mv-panel-add" onsubmit="MyVocabUI.submitSingleWord(event)">
               <div class="mv-form-grid">
-                <input type="text" class="mv-input" id="mv-add-word" placeholder="Từ / cụm từ tiếng Anh (vd: mitigate)" autocomplete="off">
-                <input type="text" class="mv-input" id="mv-add-meaning" placeholder="Nghĩa tiếng Việt (để trống nếu muốn tự tra từ điển app)" autocomplete="off">
+                <input type="text" class="mv-input" id="mv-add-word" aria-label="Từ hoặc cụm từ tiếng Anh" placeholder="Từ / cụm từ tiếng Anh (vd: mitigate)" autocomplete="off">
+                <input type="text" class="mv-input" id="mv-add-meaning" aria-label="Nghĩa tiếng Việt" placeholder="Nghĩa tiếng Việt (để trống nếu muốn tự tra từ điển app)" autocomplete="off">
               </div>
-              <input type="text" class="mv-input" id="mv-add-context" placeholder="Câu ngữ cảnh ví dụ (tùy chọn)" autocomplete="off">
+              <input type="text" class="mv-input" id="mv-add-context" aria-label="Câu ngữ cảnh ví dụ" placeholder="Câu ngữ cảnh ví dụ (tùy chọn)" autocomplete="off">
               <div class="mv-form-foot">
                 <button type="button" class="btn-subtle mv-act-btn" onclick="MyVocabUI.togglePanel('add', false)">Đóng</button>
                 <button type="submit" class="btn btn-primary mv-act-btn">Lưu vào danh sách</button>
@@ -1826,7 +1816,7 @@
               </div>
             </div>
 
-            <input type="search" class="mv-input" id="mv-search-input" placeholder="Tìm nhanh trong danh sách này..." oninput="MyVocabUI.onSearch(this.value)" autocomplete="off">
+            <input type="search" class="mv-input" id="mv-search-input" aria-label="Tìm nhanh trong danh sách từ cá nhân" placeholder="Tìm nhanh trong danh sách này..." oninput="MyVocabUI.onSearch(this.value)" autocomplete="off">
 
             <div class="mv-table-wrap">
               <table class="mv-table">
@@ -1843,14 +1833,14 @@
   </div>
 
   <!-- MODAL: WORD LIST -->
-  <div class="modal-overlay" id="modal-word-list" onclick="closeWordListModal(event)">
+  <div class="modal-overlay" id="modal-word-list" role="dialog" aria-modal="true" aria-labelledby="wl-modal-title" onclick="closeWordListModal(event)">
     <div class="modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div class="modal-title" id="wl-modal-title">Danh sách từ - <span id="wl-total-count">0</span> từ</div>
-        <button class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="closeWordListModal()">✕</button>
+        <button type="button" class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="closeWordListModal()" aria-label="Đóng">✕</button>
       </div>
       <div class="modal-body">
-        <input type="search" class="word-list-search" id="word-list-search" name="vocab_list_filter_q" autocomplete="off" spellcheck="false" data-lpignore="true" placeholder="Tìm từ vựng hoặc nghĩa tiếng Việt..." oninput="onWordListSearch(this.value)">
+        <input type="search" class="word-list-search" id="word-list-search" aria-label="Tìm từ vựng hoặc nghĩa tiếng Việt" name="vocab_list_filter_q" autocomplete="off" spellcheck="false" data-lpignore="true" placeholder="Tìm từ vựng hoặc nghĩa tiếng Việt..." oninput="onWordListSearch(this.value)">
         <div class="wl-filter-bar" style="display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px;">
           <button class="btn-subtle active" id="wl-filter-all" onclick="filterWordListByStatus('all')">Tất cả</button>
           <button class="btn-subtle" id="wl-filter-unremembered" onclick="filterWordListByStatus('unremembered')">Chưa nhớ</button>
@@ -1866,18 +1856,18 @@
   </div>
 
   <!-- MODAL: SIGNAL WORDS -->
-  <div class="modal-overlay" id="modal-signal-words" onclick="closeSignalWordsModal(event)">
+  <div class="modal-overlay" id="modal-signal-words" role="dialog" aria-modal="true" aria-label="Từ nối chỉ hướng nghĩa" onclick="closeSignalWordsModal(event)">
     <div class="modal-card modal-card-wide" onclick="event.stopPropagation()" style="max-width: 820px; width: 94vw;">
       <div class="modal-header">
         <div>
           <div class="modal-title">Từ Nối Chỉ Hướng Nghĩa</div>
           <div style="font-size:0.84rem; color:var(--text-muted); margin-top:2px;">Nhận diện quan hệ đối lập, nhân quả &amp; bẫy đảo chiều trong đoạn đọc</div>
         </div>
-        <button class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="closeSignalWordsModal()">✕</button>
+        <button type="button" class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="closeSignalWordsModal()" aria-label="Đóng">✕</button>
       </div>
       <div class="modal-body" style="padding: 14px 20px;">
         <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-          <input type="search" class="word-list-search" id="signal-words-search" name="signal_words_filter_q" autocomplete="off" spellcheck="false" data-lpignore="true" placeholder="Tìm từ nối hoặc nhóm nghĩa…" oninput="filterSignalWordsList(this.value)" style="margin-bottom:0; flex:1; min-height:36px; padding:6px 12px; font-size:0.88rem;">
+          <input type="search" class="word-list-search" id="signal-words-search" aria-label="Tìm từ nối hoặc nhóm nghĩa" name="signal_words_filter_q" autocomplete="off" spellcheck="false" data-lpignore="true" placeholder="Tìm từ nối hoặc nhóm nghĩa…" oninput="filterSignalWordsList(this.value)" style="margin-bottom:0; flex:1; min-height:36px; padding:6px 12px; font-size:0.88rem;">
           <button class="btn btn-primary" style="white-space:nowrap; padding:6px 14px; font-size:0.82rem; min-height:36px;" onclick="studySignalWordsAsDeck()">Học bộ này</button>
         </div>
         <div id="signal-categories-bar" style="display:flex; gap:5px; margin-bottom:8px; overflow-x:auto; padding-bottom:4px;"></div>
@@ -1887,7 +1877,7 @@
   </div>
 
   <!-- MODAL: READING TIP FOCUS CARD -->
-  <div class="modal-overlay tip-focus-overlay" id="modal-reading-tip" onclick="closeReadingTipModal(event)">
+  <div class="modal-overlay tip-focus-overlay" id="modal-reading-tip" role="dialog" aria-modal="true" aria-label="Mẹo Reading" onclick="closeReadingTipModal(event)">
     <div class="modal-card tip-focus-card" id="tip-focus-card-box" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -1900,7 +1890,7 @@
   </div>
 
   <!-- MODAL: RECALL CHECK (Test 1 gõ chính xác -> Test 2 chọn từ đồng nghĩa) -->
-  <div class="modal-overlay recall-overlay" id="modal-recall-check" onclick="closeRecallModal(event)">
+  <div class="modal-overlay recall-overlay" id="modal-recall-check" role="dialog" aria-modal="true" aria-label="Kiểm tra nhớ từ" onclick="closeRecallModal(event)">
     <div class="modal-card recall-check-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:10px;">
@@ -1921,7 +1911,7 @@
           </div>
         </div>
         <div id="recall-stage1-body">
-          <input type="text" class="recall-word-input" id="recall-word-input" placeholder="_ _ _ _" autocomplete="off" autocapitalize="none" spellcheck="false">
+          <input type="text" class="recall-word-input" id="recall-word-input" aria-label="Gõ từ tiếng Anh vừa học" placeholder="_ _ _ _" autocomplete="off" autocapitalize="none" spellcheck="false">
           <div id="recall-stage1-prompt" style="font-size:15px; color:var(--text-muted); margin-bottom:16px; text-align:center;">
             Gõ chính xác từ tiếng Anh vừa học (còn 2 lần thử).
           </div>
@@ -1963,7 +1953,7 @@
   </div>
 
   <!-- MODAL: CLASS STUDY HOURS REPORT / LEADERBOARD -->
-  <div class="modal-overlay" id="modal-class-report" onclick="closeClassReportModal(event)">
+  <div class="modal-overlay" id="modal-class-report" role="dialog" aria-modal="true" aria-labelledby="class-report-modal-title" onclick="closeClassReportModal(event)">
     <div class="modal-card modal-card-wide" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div>
@@ -2002,7 +1992,7 @@
   </div>
 
   <!-- MODAL: SETTINGS -->
-  <div class="modal-overlay" id="modal-menu" onclick="closeMenuModal(event)">
+  <div class="modal-overlay" id="modal-menu" role="dialog" aria-modal="true" aria-label="Cài đặt và tùy chọn" onclick="closeMenuModal(event)">
     <div class="modal-card tot-menu-modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div class="tot-menu-hdr-left">
@@ -2045,7 +2035,7 @@
     </div>
   </div>
   <!-- MODAL: DANH SÁCH TASK CỦA HỌC SINH -->
-  <div class="modal-overlay" id="modal-student-tasks" onclick="TasksModule.closeStudentTasksModal(event)">
+  <div class="modal-overlay" id="modal-student-tasks" role="dialog" aria-modal="true" aria-label="Danh sách Task được giao" onclick="TasksModule.closeStudentTasksModal(event)">
     <div class="modal-card modal-card-wide" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div>
@@ -2066,7 +2056,7 @@
   </div>
 
   <!-- MODAL: THÔNG BÁO TRƯỚC KHI VÀO TASK -->
-  <div class="modal-overlay" id="modal-task-brief" onclick="TasksModule.closeTaskBriefModal(event)">
+  <div class="modal-overlay" id="modal-task-brief" role="dialog" aria-modal="true" aria-label="Thông tin trước khi vào Task" onclick="TasksModule.closeTaskBriefModal(event)">
     <div class="modal-card" style="max-width:640px;" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:9px;">
@@ -2096,17 +2086,17 @@
   </div>
 
   <!-- MODAL: NHẮC LÀM BÀI TEST KẾT THÚC TASK SAU KHI THUỘC ĐỦ 50 TỪ -->
-  <div class="modal-overlay" id="modal-task-exam-ready" onclick="TasksModule.closeTaskExamReadyModal(event)">
+  <div class="modal-overlay" id="modal-task-exam-ready" role="dialog" aria-modal="true" aria-labelledby="exam-ready-heading" onclick="TasksModule.closeTaskExamReadyModal(event)">
     <div class="modal-card" style="max-width:560px;" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:8px;">
           <span class="tip-pill" id="exam-ready-task-pill" style="margin:0;">TASK 1</span>
           <div class="modal-title" style="font-size:18px;">Hoàn thành 50/50 từ vựng!</div>
         </div>
-        <button class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="TasksModule.closeTaskExamReadyModal()">✕</button>
+        <button type="button" class="btn-icon-glass" style="width:30px; height:30px; font-size:1rem;" onclick="TasksModule.closeTaskExamReadyModal()" aria-label="Đóng">✕</button>
       </div>
       <div class="modal-body" style="padding:20px 24px 24px; text-align:center;">
-        <img src="assets/images/totoro_sitting_branch.png" alt="" class="celebrate-panda-img celebrate-totoro-img" style="width:94px; height:86px; margin-bottom:10px;">
+        <img src="assets/images/totoro_sitting_branch.webp" alt="" loading="lazy" decoding="async" class="celebrate-panda-img celebrate-totoro-img" style="width:94px; height:86px; margin-bottom:10px;">
         <div style="font-size:20px; font-weight:850; color:var(--text-bright); line-height:1.35;" id="exam-ready-heading">Bạn đã học và bấm Đã thuộc đủ 50 từ!</div>
         <p style="font-size:16.5px; color:var(--text-muted); line-height:1.6; margin:10px 0 20px;" id="exam-ready-desc">
           Bước cuối để hoàn tất Task: vượt qua <strong>Test 1 (Ghép từ) → Test 2 (Đọc hiểu đoạn trích) → Test 3 (Đọc hiểu &amp; Ý chính)</strong>. Chú ý không rời tab khi làm bài nhé!
@@ -2121,7 +2111,7 @@
   </div>
 
   <!-- MODAL: BÀI TEST KẾT THÚC TASK (TEST 1 -> TEST 2 -> TEST 3 ĐỌC HIỂU & Ý CHÍNH) -->
-  <div class="modal-overlay task-exam-overlay" id="screen-task" aria-label="Bài Test kết thúc Task">
+  <div class="modal-overlay task-exam-overlay" id="screen-task" role="dialog" aria-modal="true" aria-label="Bài Test kết thúc Task">
     <div class="modal-card task-exam-dialog" onclick="event.stopPropagation()">
       <div class="task-topbar">
         <div class="task-topbar-left">
@@ -2149,7 +2139,7 @@
   </div>
 
   <!-- MODAL: CHI TIẾT THEO DÕI HỌC SINH LÀM 1 TASK (GIÁO VIÊN) -->
-  <div class="modal-overlay" id="modal-teacher-task-detail" onclick="TasksModule.closeTeacherTaskDetailModal(event)">
+  <div class="modal-overlay" id="modal-teacher-task-detail" role="dialog" aria-modal="true" aria-labelledby="teacher-task-detail-title" onclick="TasksModule.closeTeacherTaskDetailModal(event)">
     <div class="modal-card modal-card-wide teacher-detail-modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div>
@@ -2163,7 +2153,7 @@
   </div>
 
   <!-- MODAL: BẢNG THỐNG KÊ HOÀN THÀNH TASK -->
-  <div class="modal-overlay" id="modal-task-summary" onclick="TasksModule.closeTaskSummaryModal(event)">
+  <div class="modal-overlay" id="modal-task-summary" role="dialog" aria-modal="true" aria-labelledby="task-summary-modal-title" onclick="TasksModule.closeTaskSummaryModal(event)">
     <div class="modal-card modal-card-wide" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div>
@@ -2177,7 +2167,7 @@
   </div>
 
   <!-- MODAL: CẢNH BÁO CHẶN KHI CHUYỂN TAB / RỜI MÀN HÌNH KIỂM TRA -->
-  <div class="modal-overlay cheat-warn-overlay" id="modal-cheat-warn">
+  <div class="modal-overlay cheat-warn-overlay" id="modal-cheat-warn" role="dialog" aria-modal="true" aria-labelledby="cheat-warn-pill">
     <div class="modal-card cheat-warn-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <span class="tip-pill" id="cheat-warn-pill" style="background:#dc2626; color:#fff; border-color:#dc2626; margin:0;">CẢNH BÁO VI PHẠM · LẦN 1 / 3</span>
@@ -2197,7 +2187,7 @@
   </div>
 
   <!-- MODAL: XÁC NHẬN THOÁT NGANG KHI ĐANG HỌC / LÀM BÀI TEST TASK -->
-  <div class="modal-overlay cheat-warn-overlay" id="modal-task-exit-warn">
+  <div class="modal-overlay cheat-warn-overlay" id="modal-task-exit-warn" role="dialog" aria-modal="true" aria-labelledby="task-exit-warn-pill">
     <div class="modal-card cheat-warn-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <span class="tip-pill" id="task-exit-warn-pill" style="background:#dc2626; color:#fff; border-color:#dc2626; margin:0;">CẢNH BÁO BỎ THI GIỮA CHỪNG</span>
@@ -2261,7 +2251,7 @@
   </div>
 
   <!-- MODAL: ĐỘNG CƠ TEST PHẢN XẠ READING HỢP NHẤT (TASK FINAL & LIST CUMULATIVE FINAL) -->
-  <div class="modal-overlay task-exam-overlay" id="modal-recognition-test" onclick="RecognitionTestModule.closeModal(event)" aria-label="Bài Test Phản Xạ Reading">
+  <div class="modal-overlay task-exam-overlay" id="modal-recognition-test" role="dialog" aria-modal="true" onclick="RecognitionTestModule.closeModal(event)" aria-label="Bài Test Phản Xạ Reading">
     <div class="modal-card recog-modal-card" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:10px; min-width:0;">
@@ -2280,11 +2270,10 @@
   <script src="data/listening_paraphrase_bank.js?v=20261124y"></script>
   <script src="data/tasks_data.js?v=20261119t"></script>
   <script src="data/listening_tasks_data.js?v=20261124g"></script>
-  <script src="data/reading_tasks_exam_data.js?v=20261121c"></script>
   <script src="data/ipa_dict.js?v=20261119t"></script>
   <script src="js/motion.js?v=20261121c"></script>
   <script src="js/core/EventBus.js?v=20261119t"></script>
-  <script src="js/core/LazyDataLoader.js?v=20261119t"></script>
+  <script src="js/core/LazyDataLoader.js?v=20261127b"></script>
   <script src="js/core/AudioEngine.js?v=20261125b"></script>
   <script src="js/core/MyVocabStore.js?v=20261125a"></script>
   <script src="js/core/AntiCheatGuard.js?v=20261124m"></script>
@@ -2292,30 +2281,27 @@
   <script src="js/skills/reading/ReadingMode.js?v=20261119t"></script>
   <script src="js/skills/stubs/UpcomingSkillMode.js?v=20261119t"></script>
   <script src="js/core/AppCore.js?v=20261123b"></script>
-  <script src="js/recognition_test.js?v=20261125b"></script>
+  <script src="js/recognition_test.js?v=20261127b"></script>
   <script src="js/speech_stt.js?v=20261123e"></script>
   <script src="js/voice_lab.js?v=20261123c"></script>
-  <script src="js/app.js?v=20261126t"></script>
-  <script src="data/v2_paraphrase.js?v=20261122e"></script>
-  <script src="data/v2_foundation.js?v=20261122e"></script>
-  <script src="data/v2_academic.js?v=20261122e"></script>
-  <script src="data/v2_advanced.js?v=20261122e"></script>
+  <script src="js/app.js?v=20261127b"></script>
   <script src="data/reading_practice_data.js?v=20261124j"></script>
   <script src="data/reading_photo_map.js?v=20261125d"></script>
   <script src="js/live_room.js?v=20261127a"></script>
-  <script src="js/reading_practice.js?v=20261127a"></script>
-  <script src="js/tasks.js?v=20261126q"></script>
+  <script src="js/reading_practice.js?v=20261127b"></script>
+  <script src="js/tasks.js?v=20261127b"></script>
   <script src="data/listening_practice_data.js?v=20261125h"></script>
   <script src="data/listening_photo_map.js?v=20261125h"></script>
   <script src="js/listening_practice.js?v=20261126c"></script>
   <script src="js/listening_tasks.js?v=20261126m"></script>
   <script src="data/dictation_data.js?v=20261125a"></script>
-  <script src="js/dictation_studio.js?v=20261125a"></script>
+  <script src="js/dictation_studio.js?v=20261127b"></script>
+  <script src="js/ielts_grader.js?v=20261127a"></script>
   <script src="data/writing_data.js?v=20261126a"></script>
-  <script src="js/writing_studio.js?v=20261126u"></script>
+  <script src="js/writing_studio.js?v=20261127b"></script>
   <script src="data/speaking_data.js?v=20261126b"></script>
-  <script src="js/speaking_studio.js?v=20261126u"></script>
-  <script src="js/teacher_studio.js?v=20261127a"></script>
-  <script src="js/totoro_ui.js?v=20261126n"></script>
+  <script src="js/speaking_studio.js?v=20261127b"></script>
+  <script src="js/teacher_studio.js?v=20261127b"></script>
+  <script src="js/totoro_ui.js?v=20261127b"></script>
 </body>
 </html>

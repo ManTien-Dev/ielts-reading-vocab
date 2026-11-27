@@ -1453,6 +1453,7 @@
     if (!cur) return;
 
     const el = document.getElementById('sp-pb-card');
+    if (!el) return;
     el.classList.add('sp-pb-cinema-card');
     const pageBadge = `${String(cur.page).padStart(2, '0')} / ${String(pages.length).padStart(2, '0')}`;
 
@@ -2505,7 +2506,7 @@
     examState.t4RecStartedAt = Date.now();
     renderExamModal();
     stt.startRecording({
-      mode: 'sentence',
+      mode: 'speaking',
       autoStopOnSilence: false,
       maxDurationMs: 125000,
       onLevel: ({ bars }) => updateWaveBars('t4', bars),
@@ -2516,7 +2517,13 @@
         examState.t4Processing = false;
         const dur = res.durationSec || Math.max(10, Math.round((Date.now() - examState.t4RecStartedAt) / 1000));
         if (res.silent || !res.text) { toast('Chưa thu được giọng nói — hãy thử lại hoặc dùng Gõ dự phòng!'); renderExamModal(); return; }
-        finalizeTaskTest4(res.text, dur, res.audioUrl || '');
+        finalizeTaskTest4(res.text, dur, res.audioUrl || '', {
+          hasAudio: true,
+          audioUrl: res.audioUrl || '',
+          durationSec: dur,
+          words: res.words || [],
+          segments: res.segments || [],
+        });
       },
       onError: (msg) => { if (examState) { examState.t4Recording = false; examState.t4Processing = false; toast(String(msg)); renderExamModal(); } }
     });
@@ -2526,50 +2533,87 @@
     const val = (document.getElementById('sp-t4-ta')?.value || '').trim();
     if (countWords(val) < 40) { toast('Bài nói 2 phút cần tối thiểu 40 từ bao quát trọn Story 01!'); return; }
     const estDur = Math.min(120, Math.max(45, Math.round(countWords(val) / 2.2)));
-    finalizeTaskTest4(val, estDur, '');
+    finalizeTaskTest4(val, estDur, '', { hasAudio: false, durationSec: estDur, words: [], segments: [] });
   }
-  function finalizeTaskTest4(text, durationSec, audioUrl) {
+  async function finalizeTaskTest4(text, durationSec, audioUrl, acoustic) {
     if (!examState) return;
     clearInterval(examState.timerId);
+    const activeExamRef = examState;
     examState.t4Transcript = text;
     examState.t4AudioUrl = audioUrl;
     examState.t4Metrics = evaluateFullSpeech(text, durationSec);
     examState.t4Phase = 'result';
     examState.t4Finalized = true;
+    examState.t4Grading = Boolean(window.IeltsGrader?.gradeSpeaking);
+    examState.t4Report = null;
+    renderExamModal();
 
+    const cue = (examState.story.cueCards || [])[examState.t4CueIdx];
+    let report = null;
+    if (window.IeltsGrader?.gradeSpeaking) {
+      try {
+        report = await window.IeltsGrader.gradeSpeaking({
+          cueTitle: cue?.title || examState.story.title || '',
+          cueBullets: cue?.bullets || [],
+          curriculumContext: (examState.story?.fullSpeech?.en || []).join(' '),
+          curriculumKeywords: (examState.story?.spokenChunks || []).map((c) => c.en).join(' '),
+          text,
+          acoustic: acoustic || { hasAudio: Boolean(audioUrl), audioUrl, durationSec },
+        });
+      } catch (err) {
+        console.warn('[SpeakingStudio] Test 4 IELTS grader error:', err);
+      }
+    }
+
+    if (examState === activeExamRef) {
+      examState.t4Grading = false;
+      examState.t4Report = report;
+    }
+
+    const band = report ? report.overall : null;
     const map = getTaskDoneMap();
-    map[examState.story.id] = {
+    map[activeExamRef.story.id] = {
       completed: true,
       maxStage: 4,
+      band,
+      criteria: report ? {
+        fc: report.criteria.fc.band,
+        lr: report.criteria.lr.band,
+        gra: report.criteria.gra.band,
+        pr: report.criteria.pr.band,
+      } : null,
       updatedAt: Date.now(),
       metrics: {
-        words: examState.t4Metrics.words,
-        wpm: examState.t4Metrics.wpm,
-        durationSec: examState.t4Metrics.durationSec,
-        chunks: examState.t4Metrics.usedChunks.length
+        words: activeExamRef.t4Metrics.words,
+        wpm: activeExamRef.t4Metrics.wpm,
+        durationSec: activeExamRef.t4Metrics.durationSec,
+        chunks: activeExamRef.t4Metrics.usedChunks.length
       }
     };
     saveTaskDoneMap(map);
 
-    const cue = (examState.story.cueCards || [])[examState.t4CueIdx];
     if (cue) {
       const hist = getPracHistory();
       hist.unshift({
         cueId: cue.id,
         cueTitle: cue.title,
         mode: 'exam',
-        durationSec: examState.t4Metrics.durationSec,
-        wpm: examState.t4Metrics.wpm,
-        words: examState.t4Metrics.words,
-        chunksCount: examState.t4Metrics.usedChunks.length,
-        fillerCount: examState.t4Metrics.fillerCount,
+        band,
+        criteria: map[activeExamRef.story.id].criteria,
+        durationSec: activeExamRef.t4Metrics.durationSec,
+        wpm: activeExamRef.t4Metrics.wpm,
+        words: activeExamRef.t4Metrics.words,
+        chunksCount: activeExamRef.t4Metrics.usedChunks.length,
+        fillerCount: activeExamRef.t4Metrics.fillerCount,
         at: Date.now()
       });
       savePracHistory(hist.slice(0, 40));
     }
 
-    renderExamModal();
-    toast('Chúc mừng! Bạn đã hoàn thành trọn vẹn Task 4 Bước · Story 01!');
+    if (examState === activeExamRef) renderExamModal();
+    toast(band != null
+      ? `Hoàn thành Task 4 Bước · Speaking Band ${band.toFixed(1)}!`
+      : 'Chúc mừng! Bạn đã hoàn thành trọn vẹn Task 4 Bước · Story 01!');
   }
 
   function launchCueCardFromTask() {
@@ -2971,6 +3015,11 @@
             </div>
           </div>
         ` : `
+          ${examState.t4Grading
+            ? (window.IeltsGrader?.renderLoadingHtml('Giám khảo IELTS Speaking AI đang chấm 4 tiêu chí FC / LR / GRA / PR & phân tích lỗi nói...') || '')
+            : (examState.t4Report && window.IeltsGrader?.renderExaminerReportHtml
+              ? window.IeltsGrader.renderExaminerReportHtml(examState.t4Report, { title: 'Kết quả chấm IELTS Speaking Part 2' })
+              : '')}
           <div class="sp-metrics-grid">
             <div class="sp-metric-box"><div class="sp-metric-val">${fmtMmSs(m.durationSec)}</div><div class="sp-metric-lbl">Thời lượng (1:30–2:00)</div></div>
             <div class="sp-metric-box"><div class="sp-metric-val">${m.wpm}</div><div class="sp-metric-lbl">Tốc độ nói (WPM)</div></div>
@@ -3329,7 +3378,7 @@
     roomState.recStartedAt = Date.now();
     renderPracticeRoom();
     stt.startRecording({
-      mode: 'sentence',
+      mode: 'speaking',
       autoStopOnSilence: false,
       maxDurationMs: 125000,
       onLevel: ({ bars }) => updateWaveBars('room', bars),
@@ -3344,7 +3393,13 @@
           renderPracticeRoom();
           return;
         }
-        finalizeRoomAttempt(res.text, dur, res.audioUrl || '');
+        finalizeRoomAttempt(res.text, dur, res.audioUrl || '', {
+          hasAudio: true,
+          audioUrl: res.audioUrl || '',
+          durationSec: dur,
+          words: res.words || [],
+          segments: res.segments || [],
+        });
       },
       onError: (msg) => {
         if (!roomState) return;
@@ -3361,31 +3416,64 @@
     const val = (document.getElementById('sp-room-ta')?.value || '').trim();
     if (countWords(val) < 20) { toast('Hãy nhập bài nói tối thiểu 20 từ!'); return; }
     const dur = Math.min(120, Math.max(30, Math.round(countWords(val) / 2.2)));
-    finalizeRoomAttempt(val, dur, '');
+    finalizeRoomAttempt(val, dur, '', { hasAudio: false, durationSec: dur, words: [], segments: [] });
   }
 
-  function finalizeRoomAttempt(text, durationSec, audioUrl) {
+  async function finalizeRoomAttempt(text, durationSec, audioUrl, acoustic) {
     if (!roomState) return;
     clearInterval(roomState.timerId);
+    const activeRoomRef = roomState;
     roomState.transcript = text;
     roomState.audioUrl = audioUrl;
     roomState.metrics = evaluateFullSpeech(text, durationSec);
     roomState.phase = 'review';
+    roomState.grading = Boolean(window.IeltsGrader?.gradeSpeaking);
+    roomState.report = null;
+    renderPracticeRoom();
+
+    const story = getStory();
+    let report = null;
+    if (window.IeltsGrader?.gradeSpeaking) {
+      try {
+        report = await window.IeltsGrader.gradeSpeaking({
+          cueTitle: activeRoomRef.cue?.title || '',
+          cueBullets: activeRoomRef.cue?.bullets || [],
+          curriculumContext: (story?.fullSpeech?.en || []).join(' '),
+          curriculumKeywords: (story?.spokenChunks || []).map((c) => c.en).join(' '),
+          text,
+          acoustic: acoustic || { hasAudio: Boolean(audioUrl), audioUrl, durationSec },
+        });
+      } catch (err) {
+        console.warn('[SpeakingStudio] Practice Room IELTS grader error:', err);
+      }
+    }
+
+    if (roomState === activeRoomRef) {
+      roomState.grading = false;
+      roomState.report = report;
+    }
 
     const hist = getPracHistory();
     hist.unshift({
-      cueId: roomState.cue.id,
-      cueTitle: roomState.cue.title,
-      mode: roomState.mode,
-      durationSec: roomState.metrics.durationSec,
-      wpm: roomState.metrics.wpm,
-      words: roomState.metrics.words,
-      chunksCount: roomState.metrics.usedChunks.length,
-      fillerCount: roomState.metrics.fillerCount,
+      cueId: activeRoomRef.cue.id,
+      cueTitle: activeRoomRef.cue.title,
+      mode: activeRoomRef.mode,
+      band: report ? report.overall : null,
+      criteria: report ? {
+        fc: report.criteria.fc.band,
+        lr: report.criteria.lr.band,
+        gra: report.criteria.gra.band,
+        pr: report.criteria.pr.band,
+      } : null,
+      durationSec: activeRoomRef.metrics.durationSec,
+      wpm: activeRoomRef.metrics.wpm,
+      words: activeRoomRef.metrics.words,
+      chunksCount: activeRoomRef.metrics.usedChunks.length,
+      fillerCount: activeRoomRef.metrics.fillerCount,
       at: Date.now()
     });
     savePracHistory(hist.slice(0, 40));
-    renderPracticeRoom();
+    if (roomState === activeRoomRef) renderPracticeRoom();
   }
 
   function toggleRoomFullB4() {
@@ -3455,7 +3543,6 @@
             <div class="ws-prac-paper-foot-l">
               <span class="ws-prac-wc-note">Ghi nhanh từ khóa cốt lõi · Hết 60 giây tự chuyển sang phần nói 2 phút</span>
             </div>
-            <button type="button" class="ws-prac-submit-pill" onclick="SpeakingStudio.beginRoomSpeaking(false)">Bắt đầu nói ngay →</button>
           </div>
         </div>
       `;
@@ -3483,7 +3570,6 @@
               placeholder="Gõ bài nói Part 2 của bạn tại đây..."></textarea>
             <div class="ws-prac-paper-foot">
               <div class="ws-prac-paper-foot-l"><span class="ws-prac-wc-note">Chế độ gõ dự phòng · Tối thiểu 20 từ để chấm đối chiếu</span></div>
-              <button type="button" class="ws-prac-submit-pill" onclick="SpeakingStudio.submitRoomTyped()">Nộp bài →</button>
             </div>
           ` : `
             <div class="sp-room-mic-body">
@@ -3531,6 +3617,11 @@
             <span class="ws-prac-paper-meter-fill" style="width:100%"></span>
           </div>
           <div class="sp-room-review-scroll">
+            ${roomState.grading
+              ? (window.IeltsGrader?.renderLoadingHtml('Giám khảo IELTS Speaking AI đang chấm 4 tiêu chí FC / LR / GRA / PR & phân tích bài nói...') || '')
+              : (roomState.report && window.IeltsGrader?.renderExaminerReportHtml
+                ? window.IeltsGrader.renderExaminerReportHtml(roomState.report, { title: 'Kết quả chấm IELTS Speaking Part 2' })
+                : '')}
             <div class="sp-metrics-grid">
               <div class="sp-metric-box"><div class="sp-metric-val">${fmtMmSs(m.durationSec)}</div><div class="sp-metric-lbl">Thời lượng</div></div>
               <div class="sp-metric-box"><div class="sp-metric-val">${m.wpm}</div><div class="sp-metric-lbl">Tốc độ (WPM)</div></div>
@@ -3689,6 +3780,7 @@
     const done = getTaskDoneMap()[story?.id];
     const hist = getPracHistory();
     const el = document.getElementById('sp-summary-card');
+    if (!el) return;
     el.innerHTML = `
       <div class="sp-modal-head">
         <div class="sp-modal-title">Bảng Thống Kê · IELTS Speaking (Story 01)</div>
@@ -3707,8 +3799,30 @@
     document.getElementById('sp-summary-modal')?.classList.remove('open');
   }
 
+  function getOverallStats() {
+    const story = getStory();
+    const mStats = story ? getStoryMasteryStats(story) : { done: 0, total: 0 };
+    const done = story ? getTaskDoneMap()[story.id] : null;
+    const hist = getPracHistory();
+    const cuesTotal = (DATA().CUE_CARDS || []).length || 14;
+    const cuesDone = new Set(hist.map((h) => h.cueId)).size;
+    const masteredCards = mStats.done || 0;
+    const totalCards = mStats.total || 0;
+    const tasksDone = (done?.completed ? 4 : (done?.maxStage || 0)) + cuesDone;
+    const tasksTotal = 4 + cuesTotal;
+    return {
+      masteredCards,
+      totalCards,
+      cardPct: totalCards > 0 ? Math.min(100, Math.round((masteredCards / totalCards) * 100)) : 0,
+      tasksDone,
+      tasksTotal,
+      taskPct: tasksTotal > 0 ? Math.min(100, Math.round((tasksDone / tasksTotal) * 100)) : 0
+    };
+  }
+
   /* ================= EXPORT ================= */
   window.SpeakingStudio = {
+    getOverallStats,
     renderSpeakingHomePanel,
     renderFlashcardWorkspace,
     renderTaskHub,

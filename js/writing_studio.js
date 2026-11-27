@@ -860,6 +860,7 @@
     const cards = buildModuleCards(mod);
     const mmap = getMasteryMap();
     const cardEl = document.getElementById('ws-ac-card');
+    if (!cardEl) return;
     cardEl.innerHTML = `
       <div class="ws-modal-head">
         <div class="ws-modal-title">${esc(flowLabel(mod))}</div>
@@ -2651,14 +2652,20 @@
 
             ${examState.t3Finalized ? `
               <div class="ws-key-box">
-                <div style="font-size:14.5px;font-weight:800;color:var(--ok);">Chấm điểm Đoạn Body: Band ${Number(examState.finalBand || 7.5).toFixed(1)}</div>
-                <div class="ws-criteria-grid">
-                  <div class="ws-crit-cell"><div class="ws-crit-lbl">Task Response</div><div class="ws-crit-val">${Number(aud?.tr || 7.5).toFixed(1)}</div></div>
-                  <div class="ws-crit-cell"><div class="ws-crit-lbl">Coherence &amp; Flow</div><div class="ws-crit-val">${Number(aud?.cc || 7.5).toFixed(1)}</div></div>
-                  <div class="ws-crit-cell"><div class="ws-crit-lbl">Lexical &amp; Spelling</div><div class="ws-crit-val">${Number(aud?.lr || 7.5).toFixed(1)}</div></div>
-                  <div class="ws-crit-cell"><div class="ws-crit-lbl">Grammar Range</div><div class="ws-crit-val">${Number(aud?.gra || 7.5).toFixed(1)}</div></div>
-                </div>
-                <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+                ${examState.t3Grading
+                  ? (window.IeltsGrader?.renderLoadingHtml('Giám khảo IELTS AI đang chấm 4 tiêu chí TR / CC / LR / GRA & soi lỗi câu...') || '<div style="font-size:13px;font-weight:700;color:var(--accent);">Đang chấm chuẩn IELTS...</div>')
+                  : (examState.t3Report && window.IeltsGrader?.renderExaminerReportHtml
+                    ? window.IeltsGrader.renderExaminerReportHtml(examState.t3Report, { title: 'Kết quả chấm Đoạn Body · Chuẩn IELTS' })
+                    : `
+                      <div style="font-size:14.5px;font-weight:800;color:var(--ok);">Chấm điểm Đoạn Body: Band ${Number(examState.finalBand || 7.5).toFixed(1)}</div>
+                      <div class="ws-criteria-grid">
+                        <div class="ws-crit-cell"><div class="ws-crit-lbl">Task Response</div><div class="ws-crit-val">${Number(aud?.tr || 7.5).toFixed(1)}</div></div>
+                        <div class="ws-crit-cell"><div class="ws-crit-lbl">Coherence &amp; Flow</div><div class="ws-crit-val">${Number(aud?.cc || 7.5).toFixed(1)}</div></div>
+                        <div class="ws-crit-cell"><div class="ws-crit-lbl">Lexical &amp; Spelling</div><div class="ws-crit-val">${Number(aud?.lr || 7.5).toFixed(1)}</div></div>
+                        <div class="ws-crit-cell"><div class="ws-crit-lbl">Grammar Range</div><div class="ws-crit-val">${Number(aud?.gra || 7.5).toFixed(1)}</div></div>
+                      </div>
+                    `)}
+                <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
                   <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--accent);margin-bottom:5px;">Đoạn Body Mẫu Band 8.5+ · Giáo Trình Gốc</div>
                   <p style="font-size:13.8px;line-height:1.68;color:var(--ink);text-align:left;">${esc(modelParagraph)}</p>
                 </div>
@@ -3003,8 +3010,9 @@
         allPass = false;
         return;
       }
-      const keyHit = n.keys.length === 0 || n.keys.some((k) => low.includes(String(k).toLowerCase()))
-        || allPhrases.some((ph) => low.includes(ph.toLowerCase()));
+      const keyHit = n.keys.length > 0
+        ? n.keys.some((k) => low.includes(String(k).toLowerCase()))
+        : allPhrases.some((ph) => low.includes(ph.toLowerCase()));
       if (words.length < 2 || !keyHit) {
         auditMap[n.key] = { pass: false, msg: '✕ Chưa thể hiện đúng từ khóa cốt lõi của mắt xích này' };
         allPass = false;
@@ -3094,7 +3102,7 @@
     }
   }
 
-  function submitTaskTest3() {
+  async function submitTaskTest3() {
     if (!examState || examState.t3Finalized) return;
     const raw = String(examState.t3Body || '').trim();
     const low = raw.toLowerCase();
@@ -3111,12 +3119,7 @@
     const vocabOk = vocabHits >= Math.min(3, Math.max(1, allPhrases.length));
     const gramOk = gramHits >= Math.min(2, Math.max(1, allGram.length));
 
-    const tr = lenOk ? (wc >= 105 ? 8.0 : 7.5) : 6.0;
-    const cc = gramOk ? 8.0 : 6.5;
-    const lr = (vocabHits >= 4 && typos.length === 0) ? 8.0 : (vocabOk && typos.length === 0 ? 7.5 : 6.0);
-    const gra = (gramHits >= 3) ? 8.0 : (gramOk ? 7.5 : 6.0);
-
-    examState.t3Audit = { typos, lenOk, vocabOk, gramOk, tr, cc, lr, gra };
+    examState.t3Audit = { typos, lenOk, vocabOk, gramOk, tr: 6.0, cc: 6.0, lr: 6.0, gra: 6.0 };
 
     const allPass = lenOk && vocabOk && gramOk && typos.length === 0;
     if (!allPass && examState.t3RetriesLeft > 0 && !isTeacherBypass()) {
@@ -3127,11 +3130,60 @@
       return;
     }
 
-    const avg = (tr + cc + lr + gra) / 4;
-    const band = isTeacherBypass() && !raw ? 8.5 : (Math.round(avg * 2) / 2);
-    examState.finalBand = band;
+    const activeExamRef = examState;
     examState.t3Finalized = true;
+    examState.t3Grading = !(isTeacherBypass() && !raw);
     clearInterval(examState.timerId);
+    B()?.syncExamLock?.(false);
+
+    if (isTeacherBypass() && !raw) {
+      examState.finalBand = 8.5;
+      examState.t3Audit = { typos: [], lenOk: true, vocabOk: true, gramOk: true, tr: 8.5, cc: 8.5, lr: 8.5, gra: 8.5 };
+      const prog = getTaskProgMap();
+      prog[mod.id] = { status: 'completed', score: sents.length, total: sents.length, band: 8.5, completedAt: Date.now() };
+      saveTaskProgMap(prog);
+      renderExamModal();
+      return;
+    }
+
+    renderExamModal();
+
+    const prompts = (mod.linkedPromptIds || []).map((pid) => (DATA().PRACTICE_PROMPTS || []).find((p) => p.id === pid)).filter(Boolean);
+    const curPrompt = prompts[examState.promptIdx] || prompts[0] || { prompt: mod.title, type: 'Task 2' };
+    const focusVi = mod.bodyFocusVi || mod.title || '';
+
+    let report = null;
+    try {
+      if (window.IeltsGrader?.gradeWriting) {
+        report = await window.IeltsGrader.gradeWriting({
+          mode: 'body',
+          essayType: curPrompt.type || 'Task 2',
+          bodyFocusVi: focusVi,
+          prompt: curPrompt.prompt || mod.title || '',
+          curriculumContext: `${mod.enFlow || ''}\nTarget phrases: ${allPhrases.slice(0, 12).join(', ')}`,
+          curriculumKeywords: allPhrases.join(' '),
+          targetVocab: allPhrases,
+          targetGrammar: allGram,
+          text: raw,
+        });
+      }
+    } catch (err) {
+      console.warn('[WritingStudio] Test 3 IELTS grader error:', err);
+    }
+
+    if (!examState || examState !== activeExamRef) return;
+
+    const band = report ? report.overall : (wc >= 85 ? 6.0 : 5.0);
+    examState.t3Grading = false;
+    examState.t3Report = report;
+    examState.finalBand = band;
+    examState.t3Audit = {
+      typos, lenOk, vocabOk, gramOk,
+      tr: report?.criteria?.tr?.band ?? band,
+      cc: report?.criteria?.cc?.band ?? band,
+      lr: report?.criteria?.lr?.band ?? band,
+      gra: report?.criteria?.gra?.band ?? band,
+    };
 
     const prog = getTaskProgMap();
     prog[mod.id] = {
@@ -3139,12 +3191,17 @@
       score: vocabHits + gramHits,
       total: sents.length,
       band,
+      criteria: report ? {
+        tr: report.criteria.tr.band,
+        cc: report.criteria.cc.band,
+        lr: report.criteria.lr.band,
+        gra: report.criteria.gra.band,
+      } : null,
       completedAt: Date.now()
     };
     saveTaskProgMap(prog);
-    B()?.syncExamLock?.(false);
     renderExamModal();
-    toast(`Hoàn thành Task ${flowLabel(mod)} · Band ${band.toFixed(1)}! Đã mở Đoạn Body Mẫu Band 8.5+ & Paraphrase đề thi.`);
+    toast(`Hoàn thành Task ${flowLabel(mod)} · Band ${band.toFixed(1)}! Đã mở nhận xét Giám khảo & Đoạn Body Mẫu.`);
   }
 
   function requestExitTaskExam() {
@@ -3356,7 +3413,7 @@
       textSize: 'regular', // Practice: 'regular' (Vừa 17px) | 'large' (Lớn 19px)
       showExactSec: false,
       optionsOpen: false,
-      planningOpen: true,
+      planningOpen: typeof window !== 'undefined' ? window.innerWidth > 767 : true,
       splitRatio: mode === 'exam' ? 46 : 37
     };
 
@@ -3388,10 +3445,10 @@
           </div>
           <div class="ws-ins-plan-actions">
             <button type="button" class="ws-ins-plan-btn" onclick="WritingStudio.clearPracPlan()" title="Đặt lại khung dàn ý trống">Đặt lại</button>
-            <button type="button" class="ws-ins-plan-btn" id="ws-ins-plan-toggle" onclick="WritingStudio.togglePracPlan()">Thu gọn</button>
+            <button type="button" class="ws-ins-plan-btn" id="ws-ins-plan-toggle" onclick="WritingStudio.togglePracPlan()">${pracState.planningOpen ? 'Thu gọn' : 'Mở Planning'}</button>
           </div>
         </div>
-        <div class="ws-ins-plan-body ws-plan-single-body" id="ws-ins-plan-body">
+        <div class="ws-ins-plan-body ws-plan-single-body ${pracState.planningOpen ? '' : 'is-collapsed'}" id="ws-ins-plan-body">
           <textarea class="ws-ins-plan-ta ws-plan-single-ta" id="ws-plan-notes" spellcheck="false" ${acGuardAttrs}>${esc(DEFAULT_PLAN_TEMPLATE)}</textarea>
         </div>
       </div>
@@ -3497,6 +3554,7 @@
       `;
 
     const room = document.getElementById('ws-practice-room');
+    if (!room) return;
     room.className = `ws-exam-room open ins-shell ins-contrast-${initContrast} ins-size-regular ${isExam ? 'is-exam' : 'is-practice'}`;
     room.innerHTML = `
       <div class="ins-main-col" onclick="WritingStudio.togglePracOptions(false)">
@@ -3559,7 +3617,7 @@
               <span class="ws-ins-footer-wc" id="ws-prac-footer-wc">0 words</span>
             </div>
           </div>
-          <button type="button" class="ins-submit-check-btn" id="ws-prac-submit" onclick="WritingStudio.submitPracticeEssay(false)" title="Nộp bài / Submit" aria-label="Submit">✓</button>
+          ${isExam ? `<button type="button" class="ins-submit-check-btn" id="ws-prac-submit" onclick="WritingStudio.submitPracticeEssay(false)" title="Nộp bài / Submit" aria-label="Submit">✓</button>` : ''}
         </footer>
       </div>
     `;
@@ -3716,7 +3774,7 @@
     if (barEl) barEl.classList.toggle('is-ready', wc >= 250);
   }
 
-  function submitPracticeEssay(forced) {
+  async function submitPracticeEssay(forced) {
     if (!pracState || pracState.submitted) return;
     const essay = (document.getElementById('ws-prac-editor')?.value || '').trim();
     const wc = essay ? essay.split(/\s+/).length : 0;
@@ -3728,21 +3786,6 @@
     clearInterval(pracState.timerId);
     const editor = document.getElementById('ws-prac-editor');
     if (editor) editor.readOnly = true;
-
-    const estBand = wc >= 250 ? 7.0 : (wc >= 160 ? 6.0 : 5.0);
-    if (!(isTeacherBypass() && wc === 0)) {
-      const hist = getPracticeHist();
-      hist.unshift({
-        promptId: pracState.prompt.id,
-        type: pracState.prompt.type,
-        prompt: pracState.prompt.prompt,
-        mode: pracState.mode,
-        wordCount: wc,
-        band: estBand,
-        completedAt: Date.now()
-      });
-      savePracticeHist(hist);
-    }
 
     const submitBtn = document.getElementById('ws-prac-submit');
     if (submitBtn) {
@@ -3756,16 +3799,70 @@
       paperSubmitBtn.onclick = () => closePracticeRoom();
     }
 
+    const activePracRef = pracState;
     const p = pracState.prompt;
     const paras = cleanPromptParaphrases(p);
+    const curriculumGuideHtml = `
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+        <div class="ws-ins-res-title" style="margin-bottom:6px;">Tham khảo Flow &amp; Paraphrase chuẩn giáo trình</div>
+        ${p.bodyGuide?.length ? `<div style="margin-bottom:8px;"><strong>Hướng dẫn ráp Body:</strong><ul class="ws-exam-hint-list">${p.bodyGuide.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>` : ''}
+        ${paras.length ? `<div><strong>Paraphrase đề thi:</strong><ul class="ws-exam-hint-list">${paras.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>` : ''}
+      </div>
+    `;
+
     const box = document.getElementById('ws-prac-result');
     if (box) {
       box.style.display = 'block';
-      box.innerHTML = `
-        <div class="ws-ins-res-title">Đã nộp bài (${wc} words) · Tham khảo Flow &amp; Paraphrase chuẩn giáo trình</div>
-        ${p.bodyGuide?.length ? `<div style="margin-bottom:8px;"><strong>Hướng dẫn ráp Body:</strong><ul class="ws-exam-hint-list">${p.bodyGuide.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>` : ''}
-        ${paras.length ? `<div><strong>Paraphrase đề thi:</strong><ul class="ws-exam-hint-list">${paras.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></div>` : ''}
-      `;
+      box.innerHTML = (window.IeltsGrader?.renderLoadingHtml('Giám khảo IELTS AI đang chấm bài Essay theo 4 tiêu chí TR / CC / LR / GRA...') || '<div>Đang chấm điểm chuẩn IELTS...</div>') + curriculumGuideHtml;
+      box.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    let report = null;
+    if (wc > 0 && window.IeltsGrader?.gradeWriting) {
+      try {
+        report = await window.IeltsGrader.gradeWriting({
+          mode: 'essay',
+          essayType: p.type || 'Task 2',
+          prompt: p.prompt || '',
+          curriculumContext: (p.bodyGuide || []).join(' | '),
+          curriculumKeywords: [...(p.bodyGuide || []), ...paras].join(' '),
+          text: essay,
+        });
+      } catch (err) {
+        console.warn('[WritingStudio] Practice IELTS grader error:', err);
+      }
+    }
+
+    const finalBand = report ? report.overall : (wc >= 250 ? 6.0 : (wc >= 160 ? 5.0 : 4.0));
+    if (!(isTeacherBypass() && wc === 0)) {
+      const hist = getPracticeHist();
+      hist.unshift({
+        promptId: p.id,
+        type: p.type,
+        prompt: p.prompt,
+        mode: activePracRef.mode,
+        wordCount: wc,
+        band: finalBand,
+        criteria: report ? {
+          tr: report.criteria.tr.band,
+          cc: report.criteria.cc.band,
+          lr: report.criteria.lr.band,
+          gra: report.criteria.gra.band,
+        } : null,
+        completedAt: Date.now()
+      });
+      savePracticeHist(hist);
+    }
+
+    if (pracState === activePracRef) {
+      const curBox = document.getElementById('ws-prac-result');
+      if (curBox) {
+        curBox.style.display = 'block';
+        const reportHtml = report && window.IeltsGrader?.renderExaminerReportHtml
+          ? window.IeltsGrader.renderExaminerReportHtml(report, { title: 'Kết quả chấm IELTS Writing Task 2' })
+          : `<div class="ws-ins-res-title">Đã nộp bài (${wc} words · Band ${finalBand.toFixed(1)})</div>`;
+        curBox.innerHTML = reportHtml + curriculumGuideHtml;
+      }
     }
     renderPracticeHub();
   }
@@ -3830,6 +3927,7 @@
   function showAntiCheatModal(title, desc, isLock, onConfirmAction) {
     ensureOverlays();
     const card = document.getElementById('ws-ac-card');
+    if (!card) return;
     window._wsAcConfirmCb = onConfirmAction || null;
     card.innerHTML = `
       <div class="ws-modal-head">
