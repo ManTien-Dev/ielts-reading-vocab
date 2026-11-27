@@ -3089,6 +3089,28 @@
     try {
       const curUser = B()?.getCurrentUser?.();
       if (!curUser) return false;
+      // 0. Live Collaborative Reading Room (?live=<roomId>&p=<passageId>) — takes priority!
+      const pendingLive = window.LiveReadingRoom?.peekPendingFromUrl?.();
+      if (pendingLive && pendingLive.roomId && pendingLive.passageId) {
+        const liveDedup = `live|${curUser.id}|${pendingLive.roomId}|${pendingLive.passageId}`;
+        if (state.handledUrlKey === liveDedup) return true;
+        state.handledUrlKey = liveDedup;
+        window.LiveReadingRoom.clearPendingFromUrl();
+        const isTeacher = Boolean(B()?.isTeacherUser?.());
+        setTimeout(() => {
+          if (isTeacher && typeof window.toggleTeacherStudyPreview === 'function') {
+            window.toggleTeacherStudyPreview(true);
+          }
+          window.ReadingPracticeApp?.openLiveRoom?.(
+            pendingLive.roomId,
+            pendingLive.passageId,
+            !!pendingLive.isFull,
+            pendingLive.dbUrl || ''
+          );
+        }, 260);
+        return true;
+      }
+
       const sp = new URLSearchParams(window.location.search || '');
       if (sp.get('adminTest') || (B()?.isTeacherUser?.() && sp.get('test'))) return false;
       const single = sp.get('task') || sp.get('wtask');

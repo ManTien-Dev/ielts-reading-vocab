@@ -686,6 +686,9 @@
   let _acTabSession = null;
   let _acDomBound = false;
   let _acCountdownId = null;
+  let _applyingLiveRemote = false;
+  let _lastLiveFocusTs = 0;
+  let _liveFocusToastTimer = null;
 
   function isTeacherBypass() {
     try {
@@ -702,7 +705,7 @@
 
   function isReadingAntiCheatActive() {
     const s = state.session;
-    if (state.view !== 'exam' || !s || s.mode !== 'exam' || s.isNews) return false;
+    if (state.view !== 'exam' || !s || s.mode !== 'exam' || s.isNews || s.liveRoomId) return false;
     if (isTeacherBypass()) return false;
     return true;
   }
@@ -921,7 +924,7 @@
 
   function isReadingPracticeExamOpen() {
     const s = state.session;
-    return state.view === 'exam' && !!s && s.mode === 'exam' && !s.isNews;
+    return state.view === 'exam' && !!s && s.mode === 'exam' && !s.isNews && !s.liveRoomId;
   }
 
   function bindGlobalReadingAntiCheatDom() {
@@ -2450,12 +2453,15 @@
         if (h.end > end) next.push({ ...h, id: h.id + '_r', start: end });
       }
     }
+    const isLive = !!state.session?.liveRoomId;
+    const liveUser = isLive ? getCurrentLiveUser() : null;
     next.push({
       id: 'hl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6),
       paraIdx,
       start,
       end,
-      color: color || 'yellow'
+      color: color || 'yellow',
+      ...(liveUser ? { by: liveUser.name, byRole: liveUser.role, byId: liveUser.uid } : {})
     });
     next.sort((a, b) => {
       const ka = String(a.paraIdx);
@@ -2608,7 +2614,11 @@
       });
     });
 
-    const list = getPassageHighlights(passageId);
+    const rawList = getPassageHighlights(passageId);
+    const hlFilter = state.session?.liveRoomId ? (state.session.liveHlFilter || 'all') : 'all';
+    const list = hlFilter === 'none'
+      ? []
+      : (hlFilter === 'teacher' ? rawList.filter((h) => h.byRole === 'teacher') : rawList);
     if (!list.length) return;
 
     const byPara = new Map();
@@ -2641,8 +2651,13 @@
             const isStart = (tn.start + sLocal) <= h.start;
             const isEnd = (tn.start + eLocal) >= h.end;
             const capCls = isStart && isEnd ? ' hl-cap-both' : (isStart ? ' hl-cap-start' : (isEnd ? ' hl-cap-end' : ''));
-            mark.className = `rp-hl-mark hl-${h.color || 'yellow'}${capCls}`;
+            const teacherCls = h.byRole === 'teacher' ? ' is-teacher-hl' : '';
+            mark.className = `rp-hl-mark hl-${h.color || 'yellow'}${capCls}${teacherCls}`;
             mark.dataset.hlId = h.id;
+            if (h.by) {
+              mark.dataset.hlBy = h.by;
+              mark.title = `${h.byRole === 'teacher' ? 'GV' : 'HS'} · ${h.by}`;
+            }
             mark.textContent = str.slice(sLocal, eLocal);
             frag.appendChild(mark);
             pos = eLocal;
@@ -2704,6 +2719,306 @@
       clearBtn.disabled = cnt === 0;
       clearBtn.classList.toggle('is-empty', cnt === 0);
     }
+  }
+
+  function getCurrentLiveUser() {
+    const u = B()?.getCurrentUser?.();
+    const isT = isTeacherBypass();
+    return {
+      uid: getUid(),
+      name: String(u?.name || (isT ? 'Giáo viên' : 'Học viên')),
+      role: isT ? 'teacher' : 'student'
+    };
+  }
+
+  function showLiveFocusToast(msg) {
+    let el = document.getElementById('rp-live-focus-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'rp-live-focus-toast';
+      el.className = 'rp-live-focus-toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add('open');
+    if (_liveFocusToastTimer) clearTimeout(_liveFocusToastTimer);
+    _liveFocusToastTimer = setTimeout(() => {
+      el.classList.remove('open');
+    }, 4200);
+  }
+
+  function renderLiveRoomBarInnerHtml() {
+    const live = window.LiveReadingRoom?.getActive?.();
+    const s = state.session;
+    if (!live || !s?.liveRoomId) return '';
+    const members = window.LiveReadingRoom.getOnlineMembers();
+    const meta = live.state?.meta || {};
+    const isHost = !!live.isHost;
+    const isCollab = meta.permission !== 'watch';
+    const hlFilter = s.liveHlFilter || 'all';
+    const statusLabel = live.status === 'connected'
+      ? 'Realtime < 0.3s'
+      : (live.status === 'connecting' ? 'Đang kết nối...' : 'Cục bộ (2 tab)');
+    const statusCls = live.status === 'connected' ? 'is-online' : (live.status === 'error' ? 'is-err' : 'is-local');
+
+    const avatarsHtml = members.slice(0, 6).map((m) => {
+      const initials = String(m.name || 'U').trim().split(/\s+/).slice(-2).map((w) => w[0] || '').join('').toUpperCase().slice(0, 2);
+      const isT = m.role === 'teacher';
+      return `<span class="rp-live-av ${isT ? 'is-teacher' : ''}" style="--av-bg:${esc(m.color || '#4A7C59')};" title="${esc(m.name)}${isT ? ' (Giáo viên)' : ''}${m.isMe ? ' · Bạn' : ''}">${isT ? 'GV' : esc(initials)}</span>`;
+    }).join('') + (members.length > 6 ? `<span class="rp-live-av is-more">+${members.length - 6}</span>` : '');
+
+    return `
+      <div class="rp-live-bar-l">
+        <span class="rp-live-badge ${statusCls}" title="${esc(statusLabel)}">
+          <span class="rp-live-dot" aria-hidden="true"></span>
+          <span>LIVE</span>
+        </span>
+        <span class="rp-live-code tabular" title="Mã phòng làm chung">#${esc(live.roomId)}</span>
+        <div class="rp-live-avatars" title="Đang trong phòng (${members.length})">${avatarsHtml}</div>
+        <span class="rp-live-count tabular">${members.length} người</span>
+      </div>
+      <div class="rp-live-bar-r">
+        ${isHost ? `
+          <button type="button" class="rp-live-chip ${isCollab ? 'is-on' : ''}" id="rp-live-perm-btn"
+            onclick="ReadingPracticeApp.setLivePermission('${isCollab ? 'watch' : 'collab'}')"
+            title="Chuyển quyền phòng giống Google Docs: Cùng tô &amp; làm chung hoặc Chỉ xem Thầy chữa">
+            ${isCollab ? '✏️ Cùng làm chung' : '👁 Chỉ xem Thầy chữa'}
+          </button>
+          <button type="button" class="rp-live-chip ${meta.revealAnswers ? 'is-on' : ''}" id="rp-live-reveal-btn"
+            onclick="ReadingPracticeApp.toggleLiveRevealAnswers()"
+            title="Bật/tắt chế độ Hiện đáp án &amp; Locate cho cả lớp cùng lúc">
+            ${meta.revealAnswers ? '✓ Đang hiện đáp án lớp' : 'Hiện đáp án lớp'}
+          </button>
+        ` : `
+          <span class="rp-live-chip is-static">${isCollab ? '✏️ Cùng làm chung' : '👁 Chỉ xem Thầy chữa'}</span>
+        `}
+        ${window.LiveReadingRoom.canLocalUserEdit() ? `
+          <button type="button" class="rp-live-chip" id="rp-live-pull-btn"
+            onclick="ReadingPracticeApp.broadcastLiveFocus()"
+            title="Kéo màn hình cả lớp tới đúng câu hỏi / đoạn văn bạn đang chọn">
+            📍 Kéo lớp tới đây
+          </button>
+        ` : ''}
+        <button type="button" class="rp-live-chip ${hlFilter !== 'all' ? 'is-on' : ''}" id="rp-live-hlfilter-btn"
+          onclick="ReadingPracticeApp.cycleLiveHighlightFilter()"
+          title="Lọc hiển thị highlight trong phòng">
+          ${hlFilter === 'teacher' ? '🎨 Chỉ màu Thầy' : (hlFilter === 'none' ? '🎨 Đang ẩn màu' : '🎨 Tất cả màu')}
+        </button>
+        <button type="button" class="rp-live-chip is-accent" id="rp-live-copy-btn"
+          onclick="ReadingPracticeApp.openLiveShareModal()"
+          title="Lấy link chia sẻ phòng làm chung &amp; cấu hình Realtime">
+          🔗 Chia sẻ link
+        </button>
+        <button type="button" class="rp-live-chip is-exit" id="rp-live-leave-btn"
+          onclick="ReadingPracticeApp.leaveLiveRoom()"
+          title="Rời khỏi phòng làm chung">
+          Rời phòng
+        </button>
+      </div>
+    `;
+  }
+
+  function refreshLiveRoomBarInPlace() {
+    const bar = document.getElementById('rp-live-bar');
+    if (!bar) return;
+    bar.innerHTML = renderLiveRoomBarInnerHtml();
+  }
+
+  function applyLiveAnswersToDom(passageId) {
+    const s = state.session;
+    if (!s) return;
+    const activeEl = document.activeElement;
+    const allQ = getAllSessionQuestions();
+    allQ.forEach((q) => {
+      const val = String(s.answers[q._qid] ?? '');
+      const card = document.getElementById(`rp-qcard-${q._qid}`);
+      if (!card) return;
+      const inp = card.querySelector('input.ins-gap-input');
+      if (inp && inp !== activeEl && inp.value !== val) {
+        inp.value = val;
+      }
+      const sel = card.querySelector('select.ins-inline-select');
+      if (sel && sel !== activeEl && sel.value !== val) {
+        sel.value = val;
+        sel.classList.toggle('is-filled', !!val);
+      }
+      card.querySelectorAll('.ins-sel-chip, .ins-tf-btn, .ins-mcq-opt').forEach((btn) => {
+        const bVal = btn.getAttribute('data-val') || btn.textContent.trim();
+        if (btn.classList.contains('ins-sel-chip') || btn.classList.contains('ins-tf-btn')) {
+          btn.classList.toggle('is-selected', val.toUpperCase() === bVal.toUpperCase());
+        }
+      });
+    });
+    // Update bottom navigator boxes
+    const pQs = allQ.filter((q) => q._pIdx === s.activePassageIdx);
+    const boxes = document.querySelectorAll('.ins-qbox');
+    pQs.forEach((q, i) => {
+      if (boxes[i]) boxes[i].classList.toggle('is-attempted', String(s.answers[q._qid] || '').trim().length > 0);
+    });
+    const doneCnt = allQ.filter((q) => String(s.answers[q._qid] || '').trim()).length;
+    const fill = document.querySelector('.prac-prog-fill');
+    if (fill && allQ.length) fill.style.width = `${Math.round((doneCnt / allQ.length) * 100)}%`;
+    const progStrong = document.querySelector('.prac-prog-pill strong');
+    if (progStrong) progStrong.textContent = String(doneCnt);
+  }
+
+  function applyLiveRoomRemoteUpdate(roomData, changedPath) {
+    const s = state.session;
+    if (!s || !s.liveRoomId || !roomData) return;
+    const live = window.LiveReadingRoom?.getActive?.();
+    if (!live) return;
+
+    _applyingLiveRemote = true;
+    try {
+      const passages = getSessionPassages();
+      const curPassage = passages[s.activePassageIdx] || passages[0];
+      const meta = roomData.meta || {};
+
+      // 1. Sync Reveal Answers mode from Host
+      const wantReview = !!meta.revealAnswers;
+      const isCurReview = s.mode === 'review';
+      let needsFullRerender = false;
+      if (wantReview && !isCurReview) {
+        s.mode = 'review';
+        s.reviewResult = computeReviewResult();
+        needsFullRerender = true;
+      } else if (!wantReview && isCurReview && !live.isHost) {
+        s.mode = 'exam';
+        needsFullRerender = true;
+      }
+
+      // 2. Sync Highlights (in-place, zero scroll jump!)
+      if (roomData.highlights && typeof roomData.highlights === 'object') {
+        s.highlights = JSON.parse(JSON.stringify(roomData.highlights));
+        if (curPassage && !needsFullRerender) {
+          applyStoredHighlightsToPassage(curPassage.id);
+          updatePracticeHighlightBadge(curPassage.id);
+        }
+      }
+
+      // 3. Sync Notes
+      if (Array.isArray(roomData.notes)) {
+        const prevLen = (s.notes || []).length;
+        s.notes = roomData.notes.slice();
+        const badge = document.querySelector('#rp-btn-notes .ins-notes-badge');
+        if (s.notes.length > 0) {
+          if (badge) badge.textContent = String(s.notes.length);
+          else {
+            const btn = document.getElementById('rp-btn-notes');
+            if (btn) btn.insertAdjacentHTML('beforeend', `<span class="ins-notes-badge">${s.notes.length}</span>`);
+          }
+        } else if (badge) {
+          badge.remove();
+        }
+        if (s.notesOpen && prevLen !== s.notes.length) {
+          needsFullRerender = true;
+        } else if (s.notesOpen && String(changedPath || '').includes('notes')) {
+          needsFullRerender = true;
+        }
+      }
+
+      // 4. Sync Shared Answers (when syncAnswers !== false)
+      if (meta.syncAnswers !== false && roomData.answers && typeof roomData.answers === 'object') {
+        let answerChanged = false;
+        Object.entries(roomData.answers).forEach(([qid, rec]) => {
+          const nextVal = rec && typeof rec === 'object' ? String(rec.val ?? '') : String(rec ?? '');
+          if (String(s.answers[qid] ?? '') !== nextVal) {
+            s.answers[qid] = nextVal;
+            answerChanged = true;
+          }
+        });
+        if (answerChanged && !needsFullRerender) {
+          applyLiveAnswersToDom(curPassage?.id);
+        }
+      }
+
+      // 5. Sync Live Focus / Locate Pointer
+      const foc = roomData.focus;
+      if (foc && Number(foc.ts || 0) > _lastLiveFocusTs && foc.byClientId !== window.LiveReadingRoom.getClientId()) {
+        _lastLiveFocusTs = Number(foc.ts || 0);
+        if (foc.kind === 'loc' && foc.passageId) {
+          const pIdx = (s.passageIds || []).indexOf(foc.passageId);
+          if (pIdx >= 0) s.activePassageIdx = pIdx;
+          s.activeEvidenceId = null;
+          s.activeEvidenceLoc = { passageId: foc.passageId, p: Number(foc.p) || 0, s: Number(foc.s) || 0, e: Number(foc.e) || 0, qnum: Number(foc.qnum) || 0 };
+          needsFullRerender = true;
+          setTimeout(() => {
+            const sp = document.querySelector('.rp-ev-span[data-ev-loc="active"]');
+            if (sp) {
+              sp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              sp.classList.add('rp-live-pulse');
+            }
+          }, 80);
+          showLiveFocusToast(`📍 ${foc.by || 'Giáo viên'} đang chỉ dẫn chứng Câu ${foc.qnum || ''}`);
+        } else if (foc.kind === 'ev' && foc.evId) {
+          s.activeEvidenceLoc = null;
+          s.activeEvidenceId = foc.evId;
+          needsFullRerender = true;
+          setTimeout(() => {
+            document.querySelector(`.rp-ev-span[data-ev-id="${foc.evId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 80);
+          showLiveFocusToast(`📍 ${foc.by || 'Giáo viên'} đang chỉ dẫn chứng`);
+        } else if (foc.kind === 'q' && foc.qid) {
+          if (typeof foc.pIdx === 'number' && foc.pIdx !== s.activePassageIdx) {
+            s.activePassageIdx = foc.pIdx;
+            needsFullRerender = true;
+          }
+          s.activeQid = foc.qid;
+          setTimeout(() => {
+            const el = document.getElementById(`rp-qcard-${foc.qid}`) || document.querySelector(`[data-mh-qid="${foc.qid}"]`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.classList.remove('rp-live-pulse');
+              void el.offsetWidth;
+              el.classList.add('rp-live-pulse');
+            }
+          }, needsFullRerender ? 80 : 10);
+          showLiveFocusToast(`📍 ${foc.by || 'Giáo viên'}: ${foc.label || 'Đang giảng câu này'}`);
+        } else if (foc.kind === 'para' && foc.paraIdx !== undefined) {
+          setTimeout(() => {
+            const blk = document.querySelector(`#rp-passage-content .ins-para-block[data-para-idx="${foc.paraIdx}"]`);
+            if (blk) {
+              blk.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              blk.classList.remove('rp-live-pulse');
+              void blk.offsetWidth;
+              blk.classList.add('rp-live-pulse');
+            }
+          }, 20);
+          showLiveFocusToast(`📍 ${foc.by || 'Giáo viên'} đang chỉ đoạn ${Number(foc.paraIdx) + 1}`);
+        }
+      }
+
+      if (needsFullRerender) {
+        renderExamWorkspace();
+      } else {
+        refreshLiveRoomBarInPlace();
+      }
+    } finally {
+      _applyingLiveRemote = false;
+    }
+  }
+
+  function connectCurrentSessionToLiveRoom(roomId, isHost, dbUrl) {
+    const s = state.session;
+    if (!s || !window.LiveReadingRoom) return null;
+    s.liveRoomId = roomId;
+    s.liveHlFilter = s.liveHlFilter || 'all';
+    stopReadingAntiCheat();
+    const room = window.LiveReadingRoom.joinRoom({
+      roomId,
+      passageId: s.itemId,
+      isFull: !!s.isFull,
+      isHost: !!isHost,
+      dbUrl: dbUrl || '',
+      user: getCurrentLiveUser(),
+      initialHighlights: s.highlights || {},
+      initialNotes: s.notes || [],
+      initialAnswers: s.answers || {},
+      onUpdate: (roomData, changedPath) => applyLiveRoomRemoteUpdate(roomData, changedPath),
+      onStatus: () => refreshLiveRoomBarInPlace()
+    });
+    renderExamWorkspace();
+    return room;
   }
 
   function computeReviewResult() {
@@ -3168,8 +3483,8 @@
       </div>
     ` : '';
 
-    // Anti-Cheat Shield Status Pill (active in BOTH Practice & Exam until 100% completion!)
-    const antiCheatPillHtml = (!isReview && !s.isNews) ? `
+    // Anti-Cheat Shield Status Pill (active in solo Practice & Exam; hidden in collaborative Live Room)
+    const antiCheatPillHtml = (!isReview && !s.isNews && !s.liveRoomId) ? `
       <span class="rp-ac-shield ${s.antiCheatStrikes > 0 ? 'is-warn' : ''}" id="rp-ac-shield"
         title="Chống gian lận đang bật: khóa Ctrl+F, khóa từ điển &amp; cảnh báo chuyển tab (tối đa 2 lần) · Cho phép Copy/Paste chuẩn CD-IELTS">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -3263,6 +3578,14 @@
                   Xem đáp án
                 </button>
               ` : ''}
+              ${((isTeacherBypass() || s.liveRoomId) && !s.isNews) ? `
+                <button type="button" class="ins-hdr-pill rp-hdr-live-btn ${s.liveRoomId ? 'is-live-on' : ''}" id="rp-btn-live-share"
+                  onclick="ReadingPracticeApp.openLiveShareModal()"
+                  title="${s.liveRoomId ? 'Phòng làm chung đang bật — Bấm để sao chép link &amp; chỉnh quyền' : 'Tạo link phòng làm chung (Live Highlight, Ghi chú &amp; Locate theo thời gian thực như Google Docs)'}">
+                  <span class="rp-hdr-live-dot" aria-hidden="true"></span>
+                  <span>${s.liveRoomId ? 'Đang Live' : 'Làm chung'}</span>
+                </button>
+              ` : ''}
               ${reviewHeaderActionsHtml}
               ${s.isNews && !isReview ? `
                 <button type="button" class="ins-hdr-pill ${s.showBilingual ? 'active' : ''}" id="rp-btn-bilingual" onclick="ReadingPracticeApp.toggleBilingual()">
@@ -3289,6 +3612,7 @@
             </div>
           </header>
 
+          ${s.liveRoomId ? `<div class="rp-live-bar" id="rp-live-bar">${renderLiveRoomBarInnerHtml()}</div>` : ''}
           ${antiCheatBannerHtml}
           ${retryBannerHtml}
           ${reviewStripHtml}
@@ -4928,6 +5252,10 @@
 
     exitToHub(forceImmediate = false) {
       const s = state.session;
+      if (s?.liveRoomId) {
+        forceImmediate = true;
+        window.LiveReadingRoom?.leaveRoom?.(true);
+      }
       // Strict Finish-to-Leave Policy: leaving an active test ALWAYS requires ending & grading immediately (NO draft!)
       if (!forceImmediate && s && s.mode === 'exam' && !s.isNews) {
         if (s.optionsOpen) {
@@ -5046,6 +5374,7 @@
     finishExitToHub() {
       stopTimer();
       stopReadingAntiCheat();
+      window.LiveReadingRoom?.leaveRoom?.(true);
       const modal = document.getElementById('rp-presubmit-modal');
       if (modal) modal.classList.remove('open');
       state.pendingSelection = null;
@@ -5263,6 +5592,11 @@
 
     setAnswer(qid, value, skipFullRerender = false) {
       if (!state.session || state.session.mode !== 'exam') return;
+      if (state.session.liveRoomId && window.LiveReadingRoom?.isActive() && !window.LiveReadingRoom.canLocalUserEdit()) {
+        toast('Phòng đang ở chế độ Chỉ xem Thầy chữa.');
+        renderExamWorkspace();
+        return;
+      }
       // Do not allow changing already-locked correct answers during Retry phase
       if (state.session.lockedCorrect && state.session.lockedCorrect[qid]) return;
       state.session.answers[qid] = value;
@@ -5270,6 +5604,9 @@
       const wasWrong = !!(state.session.wrongSet && state.session.wrongSet[qid]);
       if (wasWrong) state.session.wrongSet[qid] = 'edited';
       persistDraft();
+      if (!_applyingLiveRemote && state.session.liveRoomId && window.LiveReadingRoom?.isActive()) {
+        window.LiveReadingRoom.pushAnswer(qid, value);
+      }
       if (skipFullRerender) {
         const pQs = getAllSessionQuestions().filter((q) => q._pIdx === state.session.activePassageIdx);
         const idx = pQs.findIndex((q) => q._qid === qid);
@@ -5354,6 +5691,11 @@
 
     addNoteFromSelection() {
       if (!state.session) return;
+      if (state.session.liveRoomId && window.LiveReadingRoom?.isActive() && !window.LiveReadingRoom.canLocalUserEdit()) {
+        toast('Phòng đang ở chế độ Chỉ xem Thầy chữa.');
+        this.hideHighlightToolbar();
+        return;
+      }
       const pending = state.pendingSelection;
       const sel = window.getSelection();
       const quote = ((pending && pending.text) || (sel ? sel.toString() : '')).trim().slice(0, 180);
@@ -5364,7 +5706,16 @@
       this.hideHighlightToolbar();
       state.session.notesOpen = true;
       if (quote) {
-        state.session.notes.unshift({ id: 'n_' + Date.now().toString(36), quote, text: 'Note attached to passage highlight' });
+        const lu = state.session.liveRoomId ? getCurrentLiveUser() : null;
+        state.session.notes.unshift({
+          id: 'n_' + Date.now().toString(36),
+          quote,
+          text: 'Ghi chú đoạn highlight',
+          ...(lu ? { by: lu.name, byRole: lu.role } : {})
+        });
+        if (!_applyingLiveRemote && state.session.liveRoomId && window.LiveReadingRoom?.isActive()) {
+          window.LiveReadingRoom.pushNotes(state.session.notes);
+        }
       }
       persistDraft();
       renderExamWorkspace();
@@ -5374,17 +5725,37 @@
     addManualNote(ev) {
       if (ev) ev.preventDefault();
       if (!state.session) return;
+      if (state.session.liveRoomId && window.LiveReadingRoom?.isActive() && !window.LiveReadingRoom.canLocalUserEdit()) {
+        toast('Phòng đang ở chế độ Chỉ xem Thầy chữa.');
+        return;
+      }
       const ta = document.getElementById('rp-note-input');
       const text = (ta?.value || '').trim();
       if (!text) return;
-      state.session.notes.unshift({ id: 'n_' + Date.now().toString(36), quote: '', text });
+      const lu = state.session.liveRoomId ? getCurrentLiveUser() : null;
+      state.session.notes.unshift({
+        id: 'n_' + Date.now().toString(36),
+        quote: '',
+        text,
+        ...(lu ? { by: lu.name, byRole: lu.role } : {})
+      });
+      if (!_applyingLiveRemote && state.session.liveRoomId && window.LiveReadingRoom?.isActive()) {
+        window.LiveReadingRoom.pushNotes(state.session.notes);
+      }
       persistDraft();
       renderExamWorkspace();
     },
 
     deleteNote(noteId) {
       if (!state.session) return;
+      if (state.session.liveRoomId && window.LiveReadingRoom?.isActive() && !window.LiveReadingRoom.canLocalUserEdit()) {
+        toast('Phòng đang ở chế độ Chỉ xem Thầy chữa.');
+        return;
+      }
       state.session.notes = (state.session.notes || []).filter((n) => n.id !== noteId);
+      if (!_applyingLiveRemote && state.session.liveRoomId && window.LiveReadingRoom?.isActive()) {
+        window.LiveReadingRoom.pushNotes(state.session.notes);
+      }
       persistDraft();
       renderExamWorkspace();
     },
@@ -5757,6 +6128,9 @@
       setTimeout(() => {
         document.querySelector(`.rp-ev-span[data-ev-id="${evId}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 40);
+      if (!_applyingLiveRemote && state.session.liveRoomId && window.LiveReadingRoom?.isActive() && window.LiveReadingRoom.canLocalUserEdit()) {
+        window.LiveReadingRoom.pushFocus({ kind: 'ev', evId });
+      }
     },
 
     locateWebEvidence(passageId, paraIdx, start, end, qnum) {
@@ -5770,6 +6144,9 @@
       setTimeout(() => {
         document.querySelector('.rp-ev-span[data-ev-loc="active"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 45);
+      if (!_applyingLiveRemote && state.session.liveRoomId && window.LiveReadingRoom?.isActive() && window.LiveReadingRoom.canLocalUserEdit()) {
+        window.LiveReadingRoom.pushFocus({ kind: 'loc', passageId, p: Number(paraIdx) || 0, s: Number(start) || 0, e: Number(end) || 0, qnum: Number(qnum) || 0 });
+      }
     },
 
     toggleQuestionExplanation(expKey) {
@@ -5912,6 +6289,11 @@
     applyHighlight(color) {
       const s = state.session;
       if (!s) return;
+      if (s.liveRoomId && window.LiveReadingRoom?.isActive() && !window.LiveReadingRoom.canLocalUserEdit()) {
+        toast('Phòng đang ở chế độ Chỉ xem Thầy chữa.');
+        this.hideHighlightToolbar();
+        return;
+      }
       const passages = getSessionPassages();
       const curPassage = passages[s.activePassageIdx] || passages[0];
       if (!curPassage) return;
@@ -5942,6 +6324,9 @@
       applyStoredHighlightsToPassage(curPassage.id);
       updatePracticeHighlightBadge(curPassage.id);
       persistDraft();
+      if (!_applyingLiveRemote && s.liveRoomId && window.LiveReadingRoom?.isActive()) {
+        window.LiveReadingRoom.pushHighlights(curPassage.id, getPassageHighlights(curPassage.id));
+      }
       window.getSelection()?.removeAllRanges();
       this.hideHighlightToolbar();
     },
@@ -5949,6 +6334,11 @@
     clearSelectionHighlight() {
       const s = state.session;
       if (!s) return;
+      if (s.liveRoomId && window.LiveReadingRoom?.isActive() && !window.LiveReadingRoom.canLocalUserEdit()) {
+        toast('Phòng đang ở chế độ Chỉ xem Thầy chữa.');
+        this.hideHighlightToolbar();
+        return;
+      }
       const passages = getSessionPassages();
       const curPassage = passages[s.activePassageIdx] || passages[0];
       if (!curPassage) return;
@@ -5968,6 +6358,9 @@
       applyStoredHighlightsToPassage(curPassage.id);
       updatePracticeHighlightBadge(curPassage.id);
       persistDraft();
+      if (!_applyingLiveRemote && s.liveRoomId && window.LiveReadingRoom?.isActive()) {
+        window.LiveReadingRoom.pushHighlights(curPassage.id, getPassageHighlights(curPassage.id));
+      }
       window.getSelection()?.removeAllRanges();
       this.hideHighlightToolbar();
     },
@@ -5975,6 +6368,10 @@
     clearAllPassageHighlights() {
       const s = state.session;
       if (!s) return;
+      if (s.liveRoomId && window.LiveReadingRoom?.isActive() && !window.LiveReadingRoom.canLocalUserEdit()) {
+        toast('Phòng đang ở chế độ Chỉ xem Thầy chữa.');
+        return;
+      }
       const passages = getSessionPassages();
       const curPassage = passages[s.activePassageIdx] || passages[0];
       if (!curPassage) return;
@@ -5983,6 +6380,9 @@
       applyStoredHighlightsToPassage(curPassage.id);
       updatePracticeHighlightBadge(curPassage.id);
       persistDraft();
+      if (!_applyingLiveRemote && s.liveRoomId && window.LiveReadingRoom?.isActive()) {
+        window.LiveReadingRoom.pushHighlights(curPassage.id, []);
+      }
       this.hideHighlightToolbar();
       toast('Đã xóa toàn bộ highlight trong bài đọc hiện tại.');
     },
@@ -6096,6 +6496,256 @@
           toast('Không tìm thấy Passage này trong kho dữ liệu.');
         }
       }
+    },
+
+    /* ---------- LIVE COLLABORATIVE ROOM (GOOGLE DOCS STYLE) ---------- */
+    async openLiveRoom(roomId, passageId, isFull = false, dbUrl = '') {
+      const cleanId = String(passageId || '').trim();
+      if (!cleanId || !window.LiveReadingRoom) return;
+      const src = /^vol/i.test(cleanId) ? 'volume' : (/^act/i.test(cleanId) ? 'actual' : 'cambridge');
+      window.TotoroUI?.enterSkillMode?.('Reading', 'practice');
+      await ensureSourceBankLoaded(src);
+      if (isFull) {
+        if ((DATA().FULL_TESTS || []).some((x) => x.id === cleanId)) {
+          this.startFullTest(cleanId, { studyMode: 'practice' });
+        } else {
+          toast('Không tìm thấy đề Full Test cho phòng làm chung.');
+          return;
+        }
+      } else {
+        if ((DATA().PASSAGES || {})[cleanId]) {
+          this.startPassage(cleanId, { studyMode: 'practice' });
+        } else {
+          toast('Không tìm thấy bài đọc cho phòng làm chung.');
+          return;
+        }
+      }
+      connectCurrentSessionToLiveRoom(roomId, isTeacherBypass(), dbUrl);
+      toast(`Đã tham gia phòng làm chung #${roomId}!`);
+    },
+
+    openLiveShareModal() {
+      const s = state.session;
+      if (!s || !window.LiveReadingRoom) return;
+      if (!s.liveRoomId) {
+        const rid = window.LiveReadingRoom.generateRoomId();
+        connectCurrentSessionToLiveRoom(rid, true, '');
+      }
+      const live = window.LiveReadingRoom.getActive();
+      if (!live) return;
+
+      let ov = document.getElementById('rp-live-modal');
+      if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'rp-live-modal';
+        ov.className = 'rp-live-modal-ov';
+        ov.onclick = (e) => { if (e.target === ov) ReadingPracticeApp.closeLiveShareModal(); };
+        document.body.appendChild(ov);
+      }
+      const shareUrl = window.LiveReadingRoom.buildShareUrl();
+      const meta = live.state?.meta || {};
+      const isHost = !!live.isHost;
+      const dbUrl = live.dbUrl || window.LiveReadingRoom.getConfiguredDbUrl();
+      const members = window.LiveReadingRoom.getOnlineMembers();
+
+      ov.innerHTML = `
+        <div class="rp-live-modal-card" role="dialog" aria-modal="true" aria-label="Chia sẻ phòng làm chung Live">
+          <div class="rp-live-modal-head">
+            <div>
+              <h3 class="rp-live-modal-title">Phòng làm chung (Live · Google Docs)</h3>
+              <p class="rp-live-modal-sub">${esc(s.title)} · Mã phòng <strong>#${esc(live.roomId)}</strong> · ${members.length} người đang mở</p>
+            </div>
+            <button type="button" class="rp-live-modal-x" onclick="ReadingPracticeApp.closeLiveShareModal()" aria-label="Đóng">✕</button>
+          </div>
+
+          <div class="rp-live-modal-body">
+            <div class="rp-live-sec">
+              <label class="rp-live-lbl">Đường link chia sẻ cho học sinh (Zalo / Meet / Zoom)</label>
+              <div class="rp-live-link-row">
+                <input type="text" class="rp-live-link-inp" id="rp-live-share-url" readonly value="${esc(shareUrl)}" onclick="this.select()">
+                <button type="button" class="btn btn-primary rp-live-copy-cta" onclick="ReadingPracticeApp.copyLiveShareLink()">📋 Sao chép link</button>
+              </div>
+              <div class="rp-live-hint">Ai bấm vào link này sẽ vào thẳng bài đọc này &amp; đồng bộ Highlight màu pastel, Ghi chú, Locate và Đáp án cùng nhau theo thời gian thực.</div>
+            </div>
+
+            ${isHost ? `
+              <div class="rp-live-sec">
+                <label class="rp-live-lbl">Quyền của học sinh trong phòng</label>
+                <div class="rp-live-perm-grid">
+                  <button type="button" class="rp-live-perm-card ${meta.permission !== 'watch' ? 'is-active' : ''}" onclick="ReadingPracticeApp.setLivePermission('collab')">
+                    <strong>✏️ Cùng làm chung (Editor)</strong>
+                    <span>Cả lớp cùng tô highlight, thêm ghi chú &amp; chọn đáp án giống Google Docs.</span>
+                  </button>
+                  <button type="button" class="rp-live-perm-card ${meta.permission === 'watch' ? 'is-active' : ''}" onclick="ReadingPracticeApp.setLivePermission('watch')">
+                    <strong>👁 Chỉ xem Thầy chữa (Viewer)</strong>
+                    <span>Chỉ Thầy tô màu, ghi chú &amp; điều khiển vị trí; học sinh theo dõi trực tiếp.</span>
+                  </button>
+                </div>
+                <div class="rp-live-toggles">
+                  <label class="rp-live-chk">
+                    <input type="checkbox" ${meta.syncAnswers !== false ? 'checked' : ''} onchange="ReadingPracticeApp.toggleLiveSyncAnswers(this.checked)">
+                    <span>Đồng bộ đáp án khi cả lớp làm chung</span>
+                  </label>
+                  <label class="rp-live-chk">
+                    <input type="checkbox" ${meta.revealAnswers ? 'checked' : ''} onchange="ReadingPracticeApp.toggleLiveRevealAnswers(this.checked)">
+                    <span>Hiện đáp án, giải thích &amp; Locate cho cả lớp ngay bây giờ</span>
+                  </label>
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="rp-live-sec rp-live-db-box ${dbUrl ? 'is-ready' : ''}">
+              <div class="rp-live-db-head">
+                <span class="rp-live-db-status">
+                  ${dbUrl ? '🟢 Đã kết nối Firebase Realtime DB (< 0.3s đa thiết bị)' : '🟡 Chưa gắn Firebase Realtime DB (hiện chỉ đồng bộ giữa các tab cùng máy)'}
+                </span>
+              </div>
+              ${isHost ? `
+                <div class="rp-live-link-row" style="margin-top:8px;">
+                  <input type="text" class="rp-live-link-inp" id="rp-live-db-input"
+                    placeholder="https://your-project-default-rtdb.asia-southeast1.firebasedatabase.app"
+                    value="${esc(dbUrl)}">
+                  <button type="button" class="btn-subtle rp-live-copy-cta" id="rp-live-db-save-btn" onclick="ReadingPracticeApp.saveAndTestLiveDbUrl()">Lưu &amp; Kiểm tra</button>
+                </div>
+                <div class="rp-live-db-msg" id="rp-live-db-msg">
+                  ${dbUrl ? 'Link chia sẻ đã tự đính kèm địa chỉ Realtime — học sinh chỉ cần bấm link là chạy ngay, không cần cài gì thêm.' : 'Tạo miễn phí trong 1 phút: vào console.firebase.google.com → Build → Realtime Database → Create Database (Test mode) → copy URL dán vào đây.'}
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+      ov.classList.add('open');
+    },
+
+    closeLiveShareModal() {
+      document.getElementById('rp-live-modal')?.classList.remove('open');
+    },
+
+    copyLiveShareLink() {
+      const inp = document.getElementById('rp-live-share-url');
+      const url = inp ? inp.value : window.LiveReadingRoom?.buildShareUrl?.();
+      if (!url) return;
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(url).then(() => toast('Đã sao chép link phòng làm chung — gửi ngay cho học sinh nhé!')).catch(() => {
+          inp?.select();
+          document.execCommand('copy');
+          toast('Đã sao chép link phòng làm chung!');
+        });
+      } else {
+        inp?.select();
+        document.execCommand('copy');
+        toast('Đã sao chép link phòng làm chung!');
+      }
+    },
+
+    setLivePermission(perm) {
+      if (!window.LiveReadingRoom?.isActive()) return;
+      window.LiveReadingRoom.patchMeta({ permission: perm === 'watch' ? 'watch' : 'collab' });
+      refreshLiveRoomBarInPlace();
+      if (document.getElementById('rp-live-modal')?.classList.contains('open')) {
+        this.openLiveShareModal();
+      }
+      toast(perm === 'watch' ? 'Đã chuyển sang: Chỉ xem Thầy chữa (Viewer).' : 'Đã chuyển sang: Cùng làm chung (Editor).');
+    },
+
+    toggleLiveSyncAnswers(forceVal) {
+      const live = window.LiveReadingRoom?.getActive?.();
+      if (!live) return;
+      const next = typeof forceVal === 'boolean' ? forceVal : !(live.state?.meta?.syncAnswers !== false);
+      window.LiveReadingRoom.patchMeta({ syncAnswers: next });
+      refreshLiveRoomBarInPlace();
+    },
+
+    toggleLiveRevealAnswers(forceVal) {
+      const live = window.LiveReadingRoom?.getActive?.();
+      const s = state.session;
+      if (!live || !s) return;
+      const next = typeof forceVal === 'boolean' ? forceVal : !live.state?.meta?.revealAnswers;
+      window.LiveReadingRoom.patchMeta({ revealAnswers: next });
+      if (next && s.mode !== 'review') {
+        s.mode = 'review';
+        s.reviewResult = computeReviewResult();
+        renderExamWorkspace();
+      } else if (!next && s.mode === 'review') {
+        s.mode = 'exam';
+        renderExamWorkspace();
+      } else {
+        refreshLiveRoomBarInPlace();
+      }
+      if (document.getElementById('rp-live-modal')?.classList.contains('open')) {
+        this.openLiveShareModal();
+      }
+      toast(next ? 'Đã bật Hiện đáp án & Locate cho cả lớp!' : 'Đã ẩn đáp án — cả lớp quay lại chế độ làm chung.');
+    },
+
+    broadcastLiveFocus() {
+      const s = state.session;
+      if (!s?.liveRoomId || !window.LiveReadingRoom?.isActive()) return;
+      if (s.activeEvidenceLoc) {
+        const loc = s.activeEvidenceLoc;
+        window.LiveReadingRoom.pushFocus({ kind: 'loc', passageId: loc.passageId, p: loc.p, s: loc.s, e: loc.e, qnum: loc.qnum });
+        toast(`Đã kéo cả lớp tới dẫn chứng Câu ${loc.qnum || ''}!`);
+        return;
+      }
+      if (s.activeQid) {
+        const q = getAllSessionQuestions().find((x) => x._qid === s.activeQid);
+        window.LiveReadingRoom.pushFocus({
+          kind: 'q',
+          pIdx: q ? q._pIdx : s.activePassageIdx,
+          qid: s.activeQid,
+          label: q ? `Đang giảng Câu ${q.num}` : 'Đang giảng câu này'
+        });
+        toast(q ? `Đã kéo cả lớp tới Câu ${q.num}!` : 'Đã kéo cả lớp tới vị trí hiện tại!');
+        return;
+      }
+      window.LiveReadingRoom.pushFocus({ kind: 'para', paraIdx: 0 });
+      toast('Đã kéo cả lớp tới đầu bài đọc!');
+    },
+
+    cycleLiveHighlightFilter() {
+      const s = state.session;
+      if (!s?.liveRoomId) return;
+      const order = ['all', 'teacher', 'none'];
+      const idx = order.indexOf(s.liveHlFilter || 'all');
+      s.liveHlFilter = order[(idx + 1) % order.length];
+      const passages = getSessionPassages();
+      const curPassage = passages[s.activePassageIdx] || passages[0];
+      if (curPassage) applyStoredHighlightsToPassage(curPassage.id);
+      refreshLiveRoomBarInPlace();
+    },
+
+    async saveAndTestLiveDbUrl() {
+      const inp = document.getElementById('rp-live-db-input');
+      const msgEl = document.getElementById('rp-live-db-msg');
+      const btn = document.getElementById('rp-live-db-save-btn');
+      if (!inp || !window.LiveReadingRoom) return;
+      if (btn) btn.disabled = true;
+      if (msgEl) msgEl.textContent = 'Đang kiểm tra kết nối tới Firebase...';
+      const res = await window.LiveReadingRoom.testFirebaseUrl(inp.value);
+      if (btn) btn.disabled = false;
+      if (res.ok) {
+        window.LiveReadingRoom.reconnectWithDbUrl(res.url);
+        if (msgEl) msgEl.innerHTML = `<strong style="color:#2E6F40;">✓ ${esc(res.msg)}</strong>`;
+        const urlInp = document.getElementById('rp-live-share-url');
+        if (urlInp) urlInp.value = window.LiveReadingRoom.buildShareUrl();
+        refreshLiveRoomBarInPlace();
+        toast(res.msg);
+      } else if (msgEl) {
+        msgEl.innerHTML = `<strong style="color:#b91c1c;">✕ ${esc(res.msg)}</strong>`;
+      }
+    },
+
+    leaveLiveRoom() {
+      const s = state.session;
+      window.LiveReadingRoom?.leaveRoom?.(true);
+      this.closeLiveShareModal();
+      if (s) {
+        s.liveRoomId = null;
+        s.liveHlFilter = 'all';
+        renderExamWorkspace();
+      }
+      toast('Đã rời phòng làm chung.');
     },
 
     startResize(ev) {

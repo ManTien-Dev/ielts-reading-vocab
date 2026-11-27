@@ -6,6 +6,13 @@
 window.APP_SYNC_URL = 'https://script.google.com/macros/s/AKfycbyMH2gqHW3gZ_O90rDSAqqq_hmVkVR8bO-jsfatWERKoFvs21Zs0kJhzn5cRTN-CyBEKw/exec';
 
 /**
+ * CẤU HÌNH PHÒNG LÀM CHUNG LIVE (FIREBASE REALTIME DATABASE - MIỄN PHÍ < 0.3s)
+ * Dán URL Realtime Database của bạn (vd: 'https://your-app-default-rtdb.asia-southeast1.firebasedatabase.app')
+ * Hoặc dán trực tiếp trong nút "Làm chung (Live)" trên giao diện Giáo viên.
+ */
+window.APP_LIVE_DB_URL = 'https://totoro-ielts-live-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+/**
  * DANH SÁCH TÀI KHOẢN HỌC VIÊN SET SẴN (ID & MẬT KHẨU)
  * -------------------------------------------------------------------------
  * - id: Mã đăng nhập (không phân biệt hoa/thường, viết liền không dấu).
