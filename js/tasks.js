@@ -2482,7 +2482,7 @@
       ? `<div class="task-text-ok" style="margin-top:8px; font-weight:700;">✓ Bạn đã hoàn thành Task này (${doneScoreStr}).${exp.expired ? ' Đã hết thời hạn — chỉ có thể xem lại kết quả.' : ' Còn hạn: có thể làm lại để ôn tập.'}</div>`
       : '';
     const deadlineLine = exp.hasDeadline
-      ? `<div id="brief-deadline-line" style="margin-top:6px; font-weight:700; color:${exp.expired ? '#dc2626' : 'var(--accent)'};">${exp.expired ? `Đã hết hạn lúc ${esc(exp.formattedAt)}` : `⏱ Thời hạn: còn ${esc(formatDeadlineRemaining(exp.remainingMs))} (đóng lúc ${esc(exp.formattedAt)})`}</div>`
+      ? `<div id="brief-deadline-line" style="margin-top:6px; font-weight:700; color:${exp.expired ? '#b45309' : 'var(--accent)'};">${exp.expired ? `Hết hạn nộp lúc ${esc(exp.formattedAt)} (không phải bị khóa)` : `Thời hạn: còn ${esc(formatDeadlineRemaining(exp.remainingMs))} (đóng lúc ${esc(exp.formattedAt)})`}</div>`
       : '';
 
     const test2FlowDesc = isParaSuite
@@ -2600,10 +2600,10 @@
     const exp = getTaskExpiryState(pendingTaskId);
 
     if (dlLine && exp.hasDeadline) {
-      dlLine.style.color = exp.expired ? '#dc2626' : 'var(--accent)';
+      dlLine.style.color = exp.expired ? '#b45309' : 'var(--accent)';
       dlLine.textContent = exp.expired
-        ? `Đã hết hạn lúc ${exp.formattedAt}`
-        : `⏱ Thời hạn: còn ${formatDeadlineRemaining(exp.remainingMs)} (đóng lúc ${exp.formattedAt})`;
+        ? `Hết hạn nộp lúc ${exp.formattedAt} (không phải bị khóa)`
+        : `Thời hạn: còn ${formatDeadlineRemaining(exp.remainingMs)} (đóng lúc ${exp.formattedAt})`;
     }
 
     if (!isTeacherOrBypassed() && exp.expired) {
@@ -2617,10 +2617,16 @@
         lockEl.style.flexWrap = 'wrap';
         if (exp.completed) {
           lockEl.classList.add('is-info-ended');
+          lockEl.style.background = '';
+          lockEl.style.borderColor = '';
+          lockEl.style.color = '';
           lockEl.innerHTML = `<span>Task đã hết thời hạn làm bài (${exp.formattedAt}). Bạn đã hoàn thành — không thể làm lại nữa, chỉ có thể xem lại kết quả.</span>`;
         } else {
           lockEl.classList.remove('is-info-ended');
-          lockEl.innerHTML = `<span>Task đã kết thúc! Đã hết thời hạn làm bài (${exp.formattedAt}) — bạn chưa hoàn thành nên không thể vào làm hay xem kết quả.</span>`;
+          lockEl.style.background = 'var(--ts-warn-bg, #fffbeb)';
+          lockEl.style.borderColor = 'var(--ts-warn-bd, rgba(180,83,9,0.28))';
+          lockEl.style.color = 'var(--ts-warn, #b45309)';
+          lockEl.innerHTML = `<span><strong>Hết hạn nộp bài (${exp.formattedAt})</strong> — đây KHÔNG phải bị khóa chống gian lận. Em nhắn giáo viên bấm gia hạn (+1h) nếu cần làm bù nhé!</span>`;
         }
       }
       if (startBtn) {
@@ -2636,7 +2642,12 @@
       return;
     }
 
-    if (lockEl) lockEl.classList.remove('is-info-ended');
+    if (lockEl) {
+      lockEl.classList.remove('is-info-ended');
+      lockEl.style.background = '';
+      lockEl.style.borderColor = '';
+      lockEl.style.color = '';
+    }
     if (viewBtn) viewBtn.style.display = 'none';
     if (reviewBtn) reviewBtn.style.display = 'none';
     if (startBtn) {

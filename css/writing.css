@@ -169,7 +169,6 @@ html[data-theme="dark"] #ws-recall-modal .fc-target-mark {
   max-height: 176px;
   overflow-y: auto;
   padding-right: 4px;
-  scrollbar-width: thin;
 }
 
 /* === EXACT READING SIDE-WIDGET PARITY (#ws-widget-timer / task / progress / playlist) === */
@@ -3631,14 +3630,16 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
 /* 2. Task Exam Modal: Warm Washi Canvas + Connected 3-Step Stepper */
 #ws-task-exam-card.ws-modal-card.is-wide {
   background: var(--bg-app, #f4f1ea);
-  padding: 18px 24px 20px;
-  gap: 14px;
-  border-radius: 22px;
+  max-width: min(97vw, 1400px);
+  max-height: 96vh;
+  padding: 14px 20px 16px;
+  gap: 10px;
+  border-radius: 20px;
 }
 .ws-task-topbar {
-  padding-bottom: 12px;
+  padding-bottom: 9px;
   border-bottom: 1px solid var(--border);
-  gap: 12px;
+  gap: 10px;
 }
 .ws-task-topbar-left {
   display: flex;
@@ -3740,8 +3741,8 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
 .ws-t1-stage-head {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px 16px;
+  border-radius: 13px;
+  padding: 9px 14px;
 }
 .ws-t1-stage-title {
   font-size: 15.5px;
@@ -3923,20 +3924,33 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
   opacity: 1;
 }
 
-/* 4. Test 2 & Test 3 Spacious 44/56 Washi Split */
+/* 4. Test 2 & Test 3 Spacious Washi Split — Maximized Writing Canvas + Ultra-Slim 4px Custom Scrollbar */
 .ws-task-2col {
-  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr) !important;
+  grid-template-columns: minmax(340px, 0.80fr) minmax(0, 1.36fr) !important;
   gap: 14px !important;
+  align-items: stretch !important;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+@media (min-width: 901px) {
+  #ws-task-exam-card .ws-gram-skeleton-list {
+    max-height: calc(95vh - 144px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding-right: 6px;
+  }
 }
 .ws-task-ref-pane,
 .ws-task-write-pane {
   background: var(--surface);
   border: 1px solid var(--border-strong);
-  border-radius: 16px;
-  padding: 14px 16px;
+  border-radius: 15px;
+  padding: 13px 15px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
 }
 .ws-task-write-head {
   display: flex;
@@ -3947,11 +3961,11 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
 .ws-gram-skel-item {
   background: #faf9f5;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
+  border-radius: 11px;
+  padding: 8px 11px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 .ws-gram-skel-top {
   display: flex;
@@ -3959,39 +3973,96 @@ html[data-theme="dark"] .ws-type-pill.is-twopart { color: #D8B4FE; }
   justify-content: space-between;
   gap: 8px;
 }
-.ws-gram-status { font-size: 11.8px; font-weight: 750; }
+.ws-gram-status { font-size: 11.5px; font-weight: 750; }
 .ws-gram-status.is-ok { color: var(--ok); }
 .ws-gram-status.is-bad { color: var(--danger); }
 .ws-gram-skel-vi {
-  font-size: 13.4px;
-  line-height: 1.54;
+  font-size: 12.8px;
+  line-height: 1.46;
   color: var(--ink);
   font-weight: 500;
 }
 .ws-gram-skel-formula {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   color: #4f3596;
   background: #efeafc;
   border: 1px solid #d9cdf9;
-  padding: 5px 10px;
-  border-radius: 8px;
+  padding: 4px 8px;
+  border-radius: 7px;
   width: fit-content;
 }
 .ws-task-editor {
-  min-height: 310px !important;
+  flex: 1 1 auto !important;
+  min-height: 460px !important;
   font-size: 15.5px !important;
   line-height: 1.74 !important;
-  padding: 14px 16px !important;
+  padding: 15px 17px !important;
   border-radius: 12px !important;
   background: #fdfcf8 !important;
   border: 1.5px solid var(--border-strong) !important;
+  resize: none !important;
+  outline: none !important;
 }
 .ws-task-editor:focus {
   background: #ffffff !important;
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent) !important;
+}
+
+/* Custom Ultra-Slim 4px Pill Scrollbars across Writing Studio (Zero Windows Arrows) */
+#ws-task-exam-card,
+#ws-task-exam-card *,
+#ws-practice-room-overlay *,
+#writing-flashcard-root *,
+.ws-modal-card,
+.ws-modal-card * {
+  scrollbar-width: auto;
+}
+#ws-task-exam-card::-webkit-scrollbar,
+#ws-task-exam-card *::-webkit-scrollbar,
+#ws-practice-room-overlay *::-webkit-scrollbar,
+#writing-flashcard-root *::-webkit-scrollbar,
+.ws-modal-card::-webkit-scrollbar,
+.ws-modal-card *::-webkit-scrollbar {
+  width: 4px !important;
+  height: 4px !important;
+}
+#ws-task-exam-card::-webkit-scrollbar-track,
+#ws-task-exam-card *::-webkit-scrollbar-track,
+#ws-practice-room-overlay *::-webkit-scrollbar-track,
+#writing-flashcard-root *::-webkit-scrollbar-track,
+.ws-modal-card::-webkit-scrollbar-track,
+.ws-modal-card *::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+#ws-task-exam-card::-webkit-scrollbar-thumb,
+#ws-task-exam-card *::-webkit-scrollbar-thumb,
+#ws-practice-room-overlay *::-webkit-scrollbar-thumb,
+#writing-flashcard-root *::-webkit-scrollbar-thumb,
+.ws-modal-card::-webkit-scrollbar-thumb,
+.ws-modal-card *::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent, #3f6e4a) 22%, transparent) !important;
+  border-radius: 999px !important;
+}
+#ws-task-exam-card::-webkit-scrollbar-thumb:hover,
+#ws-task-exam-card *::-webkit-scrollbar-thumb:hover,
+#ws-practice-room-overlay *::-webkit-scrollbar-thumb:hover,
+#writing-flashcard-root *::-webkit-scrollbar-thumb:hover,
+.ws-modal-card::-webkit-scrollbar-thumb:hover,
+.ws-modal-card *::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--accent, #3f6e4a) 48%, transparent) !important;
+}
+#ws-task-exam-card::-webkit-scrollbar-button,
+#ws-task-exam-card *::-webkit-scrollbar-button,
+#ws-practice-room-overlay *::-webkit-scrollbar-button,
+#writing-flashcard-root *::-webkit-scrollbar-button,
+.ws-modal-card::-webkit-scrollbar-button,
+.ws-modal-card *::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 .ws-task-prompt-card {
   display: flex;
@@ -4070,4 +4141,439 @@ html[data-theme="dark"] .ws-task-focus-note {
 html[data-theme="dark"] .ws-task-editor {
   background: var(--surface-panel) !important;
   color: var(--ink) !important;
+}
+
+
+/* =========================================================
+   WRITING PRACTICE PORTAL (TASK 1 · TASK 2 · FULL TEST 60M)
+   100% Native Totoro Editorial Washi + Crisp Offline SVG Charts
+   ========================================================= */
+.wp-view-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 4px;
+  border-radius: 13px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  margin-bottom: 16px;
+}
+.wp-view-tab {
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+.wp-view-tab:hover { color: var(--ink); background: var(--bg-subtle); }
+.wp-view-tab.active {
+  background: var(--accent);
+  color: var(--accent-ink, #ffffff);
+}
+
+.wp-portal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.wp-portal-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-panel);
+  cursor: pointer;
+  transition: transform 180ms var(--ease-out), border-color 180ms ease;
+}
+.wp-portal-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+}
+.wp-portal-cover {
+  padding: 15px 16px 14px;
+  color: #FAF6EB;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wp-portal-cover.is-t1 { background: linear-gradient(135deg, #254731 0%, #3A6345 100%); }
+.wp-portal-cover.is-t2 { background: linear-gradient(135deg, #253C4E 0%, #395970 100%); }
+.wp-portal-cover.is-full { background: linear-gradient(135deg, #4B3828 0%, #6E533B 100%); }
+.wp-cover-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.wp-cover-eyebrow {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(250, 246, 235, 0.9);
+  color: #1F2E23;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.wp-cover-badge {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(15, 22, 17, 0.55);
+  color: #FAF6EB;
+  font-size: 11px;
+  font-weight: 700;
+}
+.wp-cover-art svg {
+  width: 100%;
+  height: 70px;
+  display: block;
+}
+.wp-cover-title {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.wp-cover-title span {
+  color: #E8CA7A;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.wp-portal-body {
+  padding: 15px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.wp-portal-body h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 750;
+  color: var(--ink);
+}
+.wp-portal-body p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  flex: 1;
+}
+.wp-portal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.wp-portal-meta {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.wp-portal-cta {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+}
+
+.wp-rec-section {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+}
+.wp-rec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.wp-rec-head strong { font-size: 14px; color: var(--ink); }
+.wp-rec-head span { font-size: 12px; color: var(--ink-3); }
+.wp-rec-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.wp-rec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 13px 14px;
+  border-radius: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.wp-rec-title {
+  font-size: 13px;
+  font-weight: 750;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.wp-rec-sub {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  flex: 1;
+}
+.wp-rec-acts {
+  display: flex;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+/* Task 1 Visual Cards & Offline SVG Charts */
+.wt1-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.wt1-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 15px 16px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-panel);
+}
+.wt1-card.is-done {
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border-strong));
+}
+.wt1-card-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.wt1-card-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 750;
+  color: var(--ink);
+  line-height: 1.38;
+}
+.wt1-thumb-box {
+  position: relative;
+  padding: 32px 12px 10px;
+  border-radius: 12px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: border-color 140ms ease;
+}
+.wt1-thumb-box:hover { border-color: var(--accent); }
+.wt1-thumb-zoom {
+  position: absolute;
+  right: 9px;
+  top: 7px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.wt1-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.wt1-grid-line { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 3 3; }
+.wt1-axis-txt { font-size: 10.5px; font-weight: 600; fill: var(--ink-2); }
+.wt1-val-txt { font-size: 10px; font-weight: 800; fill: var(--ink); }
+.wt1-pie-hole { fill: var(--surface); }
+.wt1-pie-yr { font-size: 13px; font-weight: 800; fill: var(--ink); }
+.wt1-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 12px;
+  margin-top: 6px;
+}
+.wt1-leg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.wt1-leg-item i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.wt1-table-wrap { overflow-x: auto; }
+.wt1-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+.wt1-table th {
+  text-align: left;
+  padding: 7px 8px;
+  background: var(--bg-subtle);
+  color: var(--ink);
+  font-weight: 800;
+  border-bottom: 1.5px solid var(--border-strong);
+}
+.wt1-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-2);
+}
+.wt1-table td.is-lead { font-weight: 700; color: var(--ink); }
+
+.wt1-proc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.wt1-proc-step {
+  padding: 8px 9px;
+  border-radius: 9px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+}
+.wt1-proc-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--ink);
+}
+.wt1-proc-num {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink, #fff);
+  display: inline-grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.wt1-proc-arr { margin-left: auto; color: var(--accent); font-weight: 800; }
+.wt1-proc-desc { font-size: 10.5px; color: var(--ink-2); margin-top: 4px; line-height: 1.38; }
+.wt1-proc-note { margin-top: 7px; font-size: 11px; font-weight: 700; color: var(--accent); text-align: center; }
+
+.wt1-map-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.wt1-map-box {
+  border-radius: 9px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+.wt1-map-yr {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--bg-subtle);
+  color: var(--ink);
+}
+.wt1-compass { color: var(--accent); }
+
+.wt1-room-chart-card {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--surface, #FAF7F0);
+  border: 1px solid var(--ins-border, var(--border-strong));
+}
+.wt1-room-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  color: var(--ins-ink, var(--ink));
+}
+.ws-chart-zoom-card { max-width: 780px !important; }
+.wt1-zoom-stage {
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+}
+
+/* Task 2 Quick Outline Preview + Full Test Cards */
+.wp-quick-guide-wrap {
+  border-top: 1px dashed var(--border);
+  padding-top: 7px;
+}
+.wp-quick-guide-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+}
+.wp-quick-guide-list {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  font-size: 11.5px;
+  line-height: 1.48;
+  color: var(--ink-2);
+}
+.wfull-pair-box {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  font-size: 12.2px;
+  line-height: 1.48;
+  color: var(--ink-2);
+}
+.wfull-part-row strong { color: var(--ink); }
+
+.ins-footer-parts button.ws-ins-part-tab {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  padding: 0 12px;
+  opacity: 0.72;
+}
+.ins-footer-parts button.ws-ins-part-tab.is-active {
+  opacity: 1;
+  font-weight: 800;
+}
+
+@media (max-width: 980px) {
+  .wp-portal-grid, .wp-rec-grid, .wt1-cards-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .wt1-proc-grid, .wt1-map-pair { grid-template-columns: 1fr; }
 }

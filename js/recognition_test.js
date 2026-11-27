@@ -981,11 +981,13 @@
             ${isErrLoop
               ? `<span class="recog-pill is-err">VÒNG SỬA LỖI 100% · Còn ${curPos} từ</span>`
               : `<span class="recog-pill">${session.mode === 'list_final' ? `Chặng ${curRound}/${totalRounds} · ` : ''}Câu ${curPos} / ${total}</span>`}
+            <div class="recog-feedback-line" id="recog-feedback-line"></div>
           </div>
           <div class="recog-meta-right">
             ${isListenMode ? '' : `<button type="button" class="btn-subtle recog-sound-btn ${soundEnabled ? 'is-on' : 'is-off'}" id="btn-recog-sound-toggle" title="Bật / Tắt phát âm tự động và hiệu ứng âm thanh (phím R để nghe lại)" aria-pressed="${soundEnabled ? 'true' : 'false'}" onclick="RecognitionTestModule.toggleSound()">
               ${soundEnabled ? '🔊 Âm: Bật' : '🔇 Âm: Tắt'}
             </button>`}
+            <button type="button" class="btn-subtle recog-skip-chip" id="btn-recog-dontknow" title="Chưa biết / Bỏ qua nhanh (phím Space)" onclick="RecognitionTestModule.markDontKnow()">Bỏ qua</button>
             <span class="recog-timer-text" id="recog-timer-text">${(getWordTimeLimitMs() / 1000).toFixed(1)}s</span>
             ${session.mode === 'list_final' && !isErrLoop
               ? `<button type="button" class="btn-subtle" style="padding:4px 10px; font-size:12px;" onclick="RecognitionTestModule.pauseAndSaveExit()">Tạm lưu</button>`
@@ -1005,13 +1007,6 @@
 
         <div class="recog-options-grid" id="recog-options-grid">
           ${optsHtml}
-        </div>
-
-        <div class="recog-footer-row">
-          <button type="button" class="recog-dontknow-btn" id="btn-recog-dontknow" onclick="RecognitionTestModule.markDontKnow()">
-            Chưa biết / Bỏ qua nhanh <kbd>Space</kbd>
-          </button>
-          <div class="recog-feedback-line" id="recog-feedback-line"></div>
         </div>
       </div>
     `;

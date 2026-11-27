@@ -1317,13 +1317,17 @@
         });
       });
       const totalDonePeriod = doneBySkill.reading + doneBySkill.listening + doneBySkill.writing + doneBySkill.speaking;
-      const activePendingCount = activeList.reduce((acc, { task }) => (
-        acc + (getStudentHomeworkRow(task, item, nowMs).completed ? 0 : 1)
-      ), 0);
+      const pendingItems = activeList
+        .map(({ task, deadlineAt }) => {
+          const row = getStudentHomeworkRow(task, item, nowMs);
+          return row.completed ? null : { task, deadlineAt, row };
+        })
+        .filter(Boolean);
+      const activePendingCount = pendingItems.length;
       const periodMins = viewMode === 'today' ? Number(item.todayMins || 0) : (viewMode === 'month' ? Number(item.monthMins || 0) : Number(item.weekMins || 0));
       const periodWords = viewMode === 'today' ? Number(item.todayWords || 0) : (viewMode === 'month' ? Number(item.monthWords || 0) : Number(item.mastered || 0));
       const periodActivity = (totalDonePeriod * 100) + (periodWords * 10) + periodMins;
-      return { item, streak, locks, doneBySkill, totalDonePeriod, activePendingCount, periodMins, periodWords, periodActivity };
+      return { item, streak, locks, doneBySkill, totalDonePeriod, pendingItems, activePendingCount, periodMins, periodWords, periodActivity };
     });
 
     if (viewMode !== 'full') {
@@ -1415,9 +1419,148 @@
       return true;
     });
 
+    // Toggle toolbar right slot: Hôm nay/Tháng này/Full only applies to 'all'; 'pending' gets 1-click Copy nhắc cả lớp
+    const viewTabsEl = document.getElementById('teacher-view-tabs');
+    let pendingBulkBtn = document.getElementById('ts-pending-bulk-btn');
+    if (viewTabsEl && !pendingBulkBtn) {
+      pendingBulkBtn = document.createElement('button');
+      pendingBulkBtn.type = 'button';
+      pendingBulkBtn.id = 'ts-pending-bulk-btn';
+      pendingBulkBtn.className = 'btn btn-primary ts-pending-bulk-btn';
+      pendingBulkBtn.onclick = () => copyAllPendingReminder();
+      viewTabsEl.insertAdjacentElement('afterend', pendingBulkBtn);
+    }
+    const isPendingMode = state.rosterFilter === 'pending';
+    const isLockedMode = state.rosterFilter === 'locked';
+    if (viewTabsEl) viewTabsEl.style.display = (isPendingMode || isLockedMode) ? 'none' : '';
+    if (pendingBulkBtn) {
+      if (isPendingMode && visible.length > 0) {
+        pendingBulkBtn.style.display = '';
+        pendingBulkBtn.textContent = `Copy nhắc cả lớp (${visible.length})`;
+      } else {
+        pendingBulkBtn.style.display = 'none';
+      }
+    }
+
     const thead = document.getElementById('teacher-dashboard-thead');
     const tbody = document.getElementById('teacher-dashboard-tbody');
     if (!tbody) return;
+    const tableEl = tbody.closest('table');
+    if (tableEl) tableEl.classList.toggle('is-action-table', isPendingMode || isLockedMode);
+
+    // MODE A: CHƯA XONG BÀI GIAO — Gọn 4 cột, đúng chức năng đốc thúc bài tập!
+    if (isPendingMode) {
+      const pendingSorted = visible.slice().sort((a, b) => (
+        (b.activePendingCount - a.activePendingCount)
+        || (b.locks.length - a.locks.length)
+        || (a.periodActivity - b.periodActivity)
+        || (Number(a.item.order || 0) - Number(b.item.order || 0))
+      ));
+      const totalAssigned = activeList.length;
+
+      if (thead) {
+        thead.innerHTML = `<tr>
+          <th>Học viên</th>
+          <th style="width:120px;">Tiến độ</th>
+          <th>Bài chưa xong (${totalAssigned} bài đang giao)</th>
+          <th style="width:136px; text-align:right;">Nhắc bài</th>
+        </tr>`;
+      }
+
+      if (!pendingSorted.length) {
+        const emptyMsg = totalAssigned > 0
+          ? `Tuyệt vời! Tất cả học viên đã hoàn thành hết ${totalAssigned} bài đang giao.`
+          : 'Hiện chưa có bài tập nào đang giao.';
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:26px; color:${totalAssigned > 0 ? 'var(--ts-ok, #24683b)' : 'var(--ink-3)'}; font-weight:600;">${emptyMsg}</td></tr>`;
+        return;
+      }
+
+      const compactChipLabel = (task) => String(task.code || task.shortCode || task.id)
+        .replace(/^Cambridge IELTS\s+/i, 'Cam ')
+        .replace(/\bTest\s+(\d+)/gi, 'T$1')
+        .replace(/^Part\s+(\d+)\s*·\s*/i, 'P$1 · ')
+        .replace(/^(Writing|Speaking|Listening|Reading)\s*·\s*/i, '');
+
+      tbody.innerHTML = pendingSorted.map((r, idx) => {
+        const doneCnt = Math.max(0, totalAssigned - r.activePendingCount);
+        const pct = totalAssigned > 0 ? Math.round((doneCnt / totalAssigned) * 100) : 0;
+        const isZeroDone = doneCnt === 0;
+        const badgeCls = isZeroDone ? 'is-zero' : 'is-partial';
+        const isCopied = state.remindedKeys.has(`allpending::${r.item.id}`);
+
+        const chipsHtml = r.pendingItems.map(({ task, row }) => {
+          const sm = skillMeta(task.skill);
+          const isProg = row.bucket === 'progress';
+          const isLock = row.bucket === 'locked';
+          const stateCls = isLock ? 'is-locked' : (isProg ? 'is-progress' : 'is-missing');
+          const statusSuffix = isLock ? ' 🔒' : (isProg ? ' •' : '');
+          const shortLbl = compactChipLabel(task);
+          const tip = `${sm.label} · ${task.code} (${task.theme}) — ${row.progressLabel}`;
+          return `
+            <button type="button" class="ts-pend-chip ${stateCls}" title="${esc(tip)}" onclick="TeacherStudio.openTaskDetailModal('${esc(task.id)}', 'pending')">
+              <span class="ts-slot-sk is-${esc(task.skill)}">${esc(sm.short)}</span>
+              <span class="ts-pend-chip-lbl">${esc(shortLbl)}${statusSuffix}</span>
+            </button>
+          `;
+        }).join('');
+
+        const unlockMini = r.locks.length
+          ? `<button type="button" class="ts-btn-unlock-one" style="margin-right:6px;" onclick="TeacherStudio.unlockStudentTask('${esc(r.item.id)}')" title="Mở khóa ${r.locks.length} bài bị khóa">Mở khóa</button>`
+          : '';
+
+        return `
+          <tr class="ts-pend-row">
+            <td>
+              <div class="teacher-student-cell">
+                <span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(monogram(r.item.name))}</span>
+                <strong>${esc(r.item.name)}</strong>
+              </div>
+            </td>
+            <td>
+              <div class="ts-pend-prog-cell">
+                <span class="ts-pend-badge ${badgeCls} tabular">Thiếu ${r.activePendingCount}/${totalAssigned}</span>
+                <div class="ts-pend-bar" aria-hidden="true"><span style="width:${pct}%"></span></div>
+              </div>
+            </td>
+            <td><div class="ts-pend-chips">${chipsHtml}</div></td>
+            <td style="text-align:right; white-space:nowrap;">
+              ${unlockMini}<button type="button" class="btn-subtle thw-remind-btn ${isCopied ? 'is-copied' : ''}" onclick="TeacherStudio.copyStudentAllPendingReminder('${esc(r.item.id)}')">${isCopied ? '✓ Đã copy' : 'Nhắc Zalo'}</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      return;
+    }
+
+    // MODE B: ĐANG BỊ KHÓA — Gọn 3 cột tập trung xử lý mở khóa!
+    if (isLockedMode) {
+      if (thead) {
+        thead.innerHTML = `<tr>
+          <th>Học viên</th>
+          <th>Bài đang bị khóa</th>
+          <th style="width:180px; text-align:right;">Xử lý</th>
+        </tr>`;
+      }
+      if (!visible.length) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:26px; color:var(--ts-ok, #24683b); font-weight:600;">Cả lớp bình thường — không có học viên nào đang bị khóa bài.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = visible.map((r, idx) => `
+        <tr style="background:color-mix(in srgb, var(--ts-danger-bg) 35%, transparent);">
+          <td>
+            <div class="teacher-student-cell">
+              <span class="board-avatar tone-${idx % 4}" aria-hidden="true">${esc(monogram(r.item.name))}</span>
+              <strong>${esc(r.item.name)}</strong>
+            </div>
+          </td>
+          <td>${renderStatusUnlockCell(r.item, r.locks, nowMs)}</td>
+          <td style="text-align:right;">
+            <button type="button" class="ts-btn-unlock-all" onclick="TeacherStudio.unlockStudentTask('${esc(r.item.id)}')">Mở tất cả (${r.locks.length})</button>
+          </td>
+        </tr>
+      `).join('');
+      return;
+    }
 
     if (thead) {
       thead.innerHTML = viewMode === 'full'
@@ -2512,6 +2655,81 @@
     return lines.join('\n');
   }
 
+  function copyStudentAllPendingReminder(studentId) {
+    const nowMs = Date.now();
+    const { activeList } = getActiveAndExpiredTasks(nowMs);
+    const students = B()?.getStudentAccounts?.() || [];
+    const st = students.find((s) => String(s.id) === String(studentId));
+    if (!st || !activeList.length) return;
+
+    const missing = activeList
+      .map(({ task, deadlineAt }) => {
+        const row = getStudentHomeworkRow(task, st, nowMs);
+        return row.completed ? null : { task, deadlineAt, row };
+      })
+      .filter(Boolean);
+
+    if (!missing.length) {
+      B()?.showToast?.(`${shortName(st.name)} đã hoàn thành đủ các bài đang giao!`);
+      return;
+    }
+
+    const nearestDl = missing.reduce((min, x) => (x.deadlineAt > 0 && (!min || x.deadlineAt < min) ? x.deadlineAt : min), 0);
+    const lines = [
+      `Nhắc bài tập cho ${shortName(st.name)} — hiện còn ${missing.length}/${activeList.length} bài chưa xong:`,
+      ...missing.map((x, i) => {
+        const sm = skillMeta(x.task.skill);
+        const stNote = x.row.bucket === 'progress' ? ` (đang làm dở: ${x.row.progressLabel})` : (x.row.bucket === 'locked' ? ' (đang bị khóa)' : '');
+        const dlNote = x.deadlineAt > 0 ? ` — hạn ${formatDeadlineTs(x.deadlineAt)}` : '';
+        return `${i + 1}. [${sm.label}] ${x.task.code}${stNote}${dlNote}`;
+      }),
+      nearestDl > 0 ? `Em tranh thủ hoàn thành trước ${formatDeadlineTs(nearestDl)} nhé!` : 'Em tranh thủ hoàn thành sớm nhé!',
+      `Link làm bài: ${getAppPublicUrl()}`,
+    ];
+    state.remindedKeys.add(`allpending::${st.id}`);
+    copySafe(lines.join('\n'), () => {
+      B()?.showToast?.(`Đã copy tin nhắn nhắc ${missing.length} bài chưa xong cho ${shortName(st.name)}!`);
+      renderDashboard();
+    });
+  }
+
+  function copyAllPendingReminder() {
+    const nowMs = Date.now();
+    const { activeList } = getActiveAndExpiredTasks(nowMs);
+    const students = B()?.getStudentAccounts?.() || [];
+    if (!activeList.length || !students.length) return;
+
+    const pendingRows = students
+      .map((st) => {
+        const miss = activeList
+          .map(({ task }) => {
+            const row = getStudentHomeworkRow(task, st, nowMs);
+            return row.completed ? null : { task, row };
+          })
+          .filter(Boolean);
+        return miss.length ? { st, miss } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.miss.length - a.miss.length);
+
+    if (!pendingRows.length) {
+      B()?.showToast?.('Cả lớp đã hoàn thành tất cả bài đang giao!');
+      return;
+    }
+
+    const lines = [
+      `NHẮC BÀI TẬP ĐANG GIAO (${activeList.length} bài · còn ${pendingRows.length}/${students.length} bạn chưa xong):`,
+      ...pendingRows.map((p, i) => {
+        const codes = p.miss.map((x) => `${skillMeta(x.task.skill).short}:${x.task.code}`).join(', ');
+        return `${i + 1}. ${p.st.name} (thiếu ${p.miss.length}/${activeList.length}): ${codes}`;
+      }),
+      `Các em vào hoàn thành đúng hạn nhé: ${getAppPublicUrl()}`,
+    ];
+    copySafe(lines.join('\n'), () => {
+      B()?.showToast?.(`Đã copy danh sách nhắc ${pendingRows.length} bạn gửi nhóm Zalo!`);
+    });
+  }
+
   function copyStudentReminder(taskId, studentId) {
     const taskObj = getTaskById(taskId || state.detailTaskId);
     const students = B()?.getStudentAccounts?.() || [];
@@ -2868,7 +3086,7 @@
           <td>${renderPctPillHtml(s.skills.reading)}</td>
           <td>${renderPctPillHtml(s.skills.writing)}</td>
           <td onclick="event.stopPropagation()">
-            <button type="button" class="btn-subtle ts-wr-copy-btn" onclick="TeacherStudio.copyWeeklyReportForStudent('${esc(s.student.id)}')">Copy Zalo</button>
+            <button type="button" class="btn-subtle ts-wr-copy-btn" onclick="TeacherStudio.copyWeeklyReportForStudent('${esc(s.student.id)}')" title="Copy báo cáo Zalo cho ${esc(s.student.name)}">Copy</button>
           </td>
         </tr>
       `;
@@ -2894,31 +3112,33 @@
 
       <div class="ts-wr-kpi-grid">${kpiHtml}</div>
 
-      <div class="ts-wr-table-wrap">
-        <table class="ts-wr-table">
-          <thead>
-            <tr>
-              <th>Học viên (bấm dòng để xem mẫu)</th>
-              <th>1- Nghe</th>
-              <th>2- Nói</th>
-              <th>3- Đọc</th>
-              <th>4- Viết</th>
-              <th>Gửi nhanh</th>
-            </tr>
-          </thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>
-      </div>
-
-      <div class="ts-wr-preview-wrap">
-        <div class="ts-wr-preview-head">
-          <span class="ts-wr-preview-lbl">Mẫu tin nhắn Zalo ${state.reportMode === 'student' ? '(theo học viên đang chọn)' : '(tổng hợp cả lớp)'}</span>
-          <div class="ts-wr-preview-opts">
-            ${optCheckHtml}
-            <button type="button" class="btn btn-primary ts-wr-copy-btn" onclick="TeacherStudio.copyWeeklyReportPreview()">Copy báo cáo Zalo</button>
-          </div>
+      <div class="ts-wr-split">
+        <div class="ts-wr-table-wrap">
+          <table class="ts-wr-table">
+            <thead>
+              <tr>
+                <th>Học viên (bấm chọn)</th>
+                <th>Nghe</th>
+                <th>Nói</th>
+                <th>Đọc</th>
+                <th>Viết</th>
+                <th style="text-align:right;">Zalo</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
         </div>
-        <textarea class="task-link-input ts-zalo-preview" id="ts-wr-preview-box" rows="${previewRows}">${esc(previewText)}</textarea>
+
+        <div class="ts-wr-preview-wrap">
+          <div class="ts-wr-preview-head">
+            <span class="ts-wr-preview-lbl">Mẫu Zalo ${state.reportMode === 'student' ? '(học viên đang chọn)' : '(cả lớp)'}</span>
+            <div class="ts-wr-preview-opts">
+              ${optCheckHtml}
+              <button type="button" class="btn btn-primary ts-wr-copy-btn" onclick="TeacherStudio.copyWeeklyReportPreview()">Copy báo cáo Zalo</button>
+            </div>
+          </div>
+          <textarea class="task-link-input ts-zalo-preview" id="ts-wr-preview-box" rows="${previewRows}">${esc(previewText)}</textarea>
+        </div>
       </div>
     `;
   }
@@ -3662,6 +3882,8 @@
     copyWeeklyReportPreview,
     setDetailFilter: (f) => { state.detailFilter = f || 'all'; renderDetailModalBody(); },
     copyStudentReminder,
+    copyStudentAllPendingReminder,
+    copyAllPendingReminder,
     copyGroupReminder,
     previewSkillTask,
     openStudentSkillTask,
