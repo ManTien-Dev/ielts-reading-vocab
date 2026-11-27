@@ -195,10 +195,12 @@ export async function onRequestPost({ request, env }) {
     const mode = String(form.get('mode') || 'word').toLowerCase();
     const enginePref = String(form.get('engine') || 'auto').toLowerCase();
     const isSpeaking = mode === 'speaking';
+    const isAlign = mode === 'align';
+    const useVerbose = isSpeaking || isAlign;
     // Use full `whisper-large-v3` by default for BOTH single words & speaking:
     // far more accurate on quiet voices, short isolated words, and non-native accents than turbo!
-    const model = enginePref === 'turbo' ? 'whisper-large-v3-turbo' : 'whisper-large-v3';
-    // Never inject target answer or artificial word prompt for `word` mode (prevents syllable hyphenation & hallucinations)
+    const model = (enginePref === 'turbo' || isAlign) ? 'whisper-large-v3-turbo' : 'whisper-large-v3';
+    // Never inject target answer or artificial word prompt for `word` or `align` mode (prevents silence hallucinations)
     const prompt = isSpeaking ? VERBATIM_PROMPT : '';
 
     const audioBuffer = await file.arrayBuffer();
@@ -227,7 +229,7 @@ export async function onRequestPost({ request, env }) {
     let lastErr = null;
     for (const key of keys) {
       try {
-        const result = await callGroq(audioBlob, filename, model, isSpeaking, prompt, key);
+        const result = await callGroq(audioBlob, filename, model, useVerbose, prompt, key);
         result.latencyMs = Date.now() - t0;
         return jsonResponse(result, 200, origin, url, allowed);
       } catch (err) {
