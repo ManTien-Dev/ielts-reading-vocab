@@ -278,13 +278,24 @@
         theme = `${snippet.length > 76 ? snippet.slice(0, 76) + '…' : snippet} (${modeTag})`;
       }
     } else if (pm.skill === 'speaking') {
-      const allCues = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []);
-      const cue = allCues.find((x) => x.id === pm.itemId);
-      if (cue) {
-        code = `Speaking · Cue Card`;
-        shortCode = cue.id.replace(/^sp_s\d+_/i, 'SC').toUpperCase();
-        const snippet = String(cue.title || '').trim();
-        theme = `${snippet.length > 76 ? snippet.slice(0, 76) + '…' : snippet} (${modeTag})`;
+      const p13 = window.SPEAKING_PART13_DATA || {};
+      const p1 = (p13.PART1_TOPICS || []).find((x) => x.id === pm.itemId);
+      const p3 = (p13.PART3_TOPICS || []).find((x) => x.id === pm.itemId);
+      if (p1 || p3) {
+        const tp = p1 || p3;
+        code = `Speaking · Part ${tp.part}`;
+        shortCode = `SP${tp.part}-${tp.id.replace(/^sp_p[13]_/i, '').slice(0, 5).toUpperCase()}`;
+        const snippet = String(tp.title || '').trim();
+        theme = `${snippet}${tp.titleVi ? ` (${tp.titleVi})` : ''} (${modeTag})`;
+      } else {
+        const allCues = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []);
+        const cue = allCues.find((x) => x.id === pm.itemId);
+        if (cue) {
+          code = `Speaking · Part 2`;
+          shortCode = cue.id.replace(/^sp_s\d+_/i, 'SC').toUpperCase();
+          const snippet = String(cue.title || '').trim();
+          theme = `${snippet.length > 76 ? snippet.slice(0, 76) + '…' : snippet} (${modeTag})`;
+        }
       }
     }
 
@@ -534,26 +545,63 @@
   }
 
   function getSpeakingPracticeCatalog() {
-    const cues = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []);
+    const p13 = window.SPEAKING_PART13_DATA || {};
+    const p1List = p13.PART1_TOPICS || [];
+    const p2List = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []);
+    const p3List = p13.PART3_TOPICS || [];
     const mode = state.pickerPracticeMode === 'exam' ? 'exam' : 'practice';
     const modeTag = mode === 'exam' ? 'Thi thật' : 'Luyện tập';
-    return cues.map((c, idx) => {
-      const id = buildPracticeTaskId('speaking', c.id, false, mode);
-      const snippet = String(c.title || '').trim();
-      return {
+    const out = [];
+    p1List.forEach((tp, idx) => {
+      const id = buildPracticeTaskId('speaking', tp.id, false, mode);
+      out.push({
         id,
         skill: 'speaking',
         suite: 'sp_practice',
         num: idx + 1,
-        code: `Cue #${String(idx + 1).padStart(2, '0')}`,
-        shortCode: `SC${idx + 1}`,
+        code: `Part 1 · #${String(idx + 1).padStart(2, '0')}`,
+        shortCode: `P1-${idx + 1}`,
+        theme: `${tp.title}${tp.titleVi ? ` · ${tp.titleVi}` : ''} (${modeTag})`,
+        wordTotal: (tp.questions || []).length || 4,
+        isPractice: true,
+        practiceMeta: parsePracticeTaskId(id),
+        raw: tp,
+      });
+    });
+    p2List.forEach((c, idx) => {
+      const id = buildPracticeTaskId('speaking', c.id, false, mode);
+      const snippet = String(c.title || '').trim();
+      out.push({
+        id,
+        skill: 'speaking',
+        suite: 'sp_practice',
+        num: p1List.length + idx + 1,
+        code: `Part 2 · #${String(idx + 1).padStart(2, '0')}`,
+        shortCode: `P2-${idx + 1}`,
         theme: `${snippet.length > 86 ? snippet.slice(0, 86) + '…' : snippet} (${modeTag})`,
         wordTotal: 1,
         isPractice: true,
         practiceMeta: parsePracticeTaskId(id),
         raw: c,
-      };
+      });
     });
+    p3List.forEach((tp, idx) => {
+      const id = buildPracticeTaskId('speaking', tp.id, false, mode);
+      out.push({
+        id,
+        skill: 'speaking',
+        suite: 'sp_practice',
+        num: p1List.length + p2List.length + idx + 1,
+        code: `Part 3 · #${String(idx + 1).padStart(2, '0')}`,
+        shortCode: `P3-${idx + 1}`,
+        theme: `${tp.title}${tp.titleVi ? ` · ${tp.titleVi}` : ''} (${modeTag})`,
+        wordTotal: (tp.questions || []).length || 4,
+        isPractice: true,
+        practiceMeta: parsePracticeTaskId(id),
+        raw: tp,
+      });
+    });
+    return out;
   }
 
   function getCatalogBySkill(skillKey) {
@@ -640,13 +688,16 @@
       ];
     }
     if (skillKey === 'speaking') {
-      const spCues = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []).length;
+      const p13 = window.SPEAKING_PART13_DATA || {};
+      const spTotal = (p13.PART1_TOPICS || []).length
+        + (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []).length
+        + (p13.PART3_TOPICS || []).length;
       if (weeklyOnly) {
-        return [{ key: 'sp_practice', label: `Đề Cue Card (${spCues})` }];
+        return [{ key: 'sp_practice', label: `Đề Speaking P1·P2·P3 (${spTotal})` }];
       }
       return [
         { key: 'all', label: `Story Task (${getSpeakingCatalog().length})` },
-        ...(spCues ? [{ key: 'sp_practice', label: `Đề Cue Card (${spCues})` }] : []),
+        ...(spTotal ? [{ key: 'sp_practice', label: `Đề Speaking P1·P2·P3 (${spTotal})` }] : []),
       ];
     }
     return [];

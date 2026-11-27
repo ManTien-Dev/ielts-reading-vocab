@@ -626,8 +626,12 @@
     });
 
     const spam = detectSpamOrGibberish(raw);
+    const spPart = [1, 2, 3].includes(Number(cueCard?.part)) ? Number(cueCard.part) : 2;
+    const qaCount = Array.isArray(cueCard?.qaTurns) ? cueCard.qaTurns.length : 0;
 
     return {
+      part: spPart,
+      qaCount,
       wordCount,
       durationSec,
       hasAudio,
@@ -848,28 +852,51 @@
       caps.push(`Khóa trần ≤ 2.0: ${tel.spamReason}`);
     }
 
-    // 2. Part 2 Long Turn duration & word-count ceilings
-    if (tel.wordCount < 55 || (tel.hasAudio && tel.durationSec < 32)) {
-      fc = capCrit(fc, 4, `FC ≤ 4.0: Bài nói Part 2 quá ngắn (${tel.wordCount} từ / ${tel.durationSec}s, mục tiêu 90–120s).`);
-      lr = Math.min(lr, 5); gra = Math.min(gra, 5);
-    } else if (tel.wordCount < 90 || (tel.hasAudio && tel.durationSec < 52)) {
-      fc = capCrit(fc, 5, `FC ≤ 5.0: Thời lượng nói chưa đủ dài (${tel.wordCount} từ / ${tel.durationSec}s — Part 2 cần tối thiểu ~1 phút+).`);
-      lr = Math.min(lr, 6); gra = Math.min(gra, 6);
-    } else if (tel.wordCount < 130 || (tel.hasAudio && tel.durationSec < 72)) {
-      fc = capCrit(fc, 6, `FC ≤ 6.0: Bài nói hơi ngắn so với chuẩn Part 2 1.5–2 phút (${tel.wordCount} từ / ${tel.durationSec}s).`);
+    // 2. Duration & word-count ceilings calibrated per Speaking Part (Part 1 / Part 2 / Part 3)
+    const spPart = [1, 2, 3].includes(Number(tel.part)) ? Number(tel.part) : 2;
+    if (spPart === 1) {
+      if (tel.wordCount < 35 || (tel.hasAudio && tel.durationSec < 20)) {
+        fc = capCrit(fc, 4, `FC ≤ 4.0: Câu trả lời Part 1 quá ngắn (${tel.wordCount} từ / ${tel.durationSec}s — cần mở rộng 2–3 câu mỗi câu hỏi).`);
+        lr = Math.min(lr, 5); gra = Math.min(gra, 5);
+      } else if (tel.wordCount < 65 || (tel.hasAudio && tel.durationSec < 40)) {
+        fc = capCrit(fc, 5, `FC ≤ 5.0: Câu trả lời Part 1 còn hơi ngắn (${tel.wordCount} từ / ${tel.durationSec}s — mục tiêu 20–35s/câu theo khung A.R.E.).`);
+        lr = Math.min(lr, 6); gra = Math.min(gra, 6);
+      } else if (tel.wordCount < 95) {
+        fc = capCrit(fc, 6, `FC ≤ 6.0: Độ phát triển ý Part 1 ở mức vừa (${tel.wordCount} từ — hãy thêm lý do hoặc ví dụ ngắn).`);
+      }
+    } else if (spPart === 3) {
+      if (tel.wordCount < 60 || (tel.hasAudio && tel.durationSec < 35)) {
+        fc = capCrit(fc, 4, `FC ≤ 4.0: Bài thảo luận Part 3 quá ngắn (${tel.wordCount} từ / ${tel.durationSec}s — cần phân tích sâu 40–65s/câu).`);
+        lr = Math.min(lr, 5); gra = Math.min(gra, 5);
+      } else if (tel.wordCount < 110 || (tel.hasAudio && tel.durationSec < 65)) {
+        fc = capCrit(fc, 5, `FC ≤ 5.0: Bài nói Part 3 chưa đủ chiều sâu phân tích (${tel.wordCount} từ / ${tel.durationSec}s — hãy dùng khung P.E.E.C.).`);
+        lr = Math.min(lr, 6); gra = Math.min(gra, 6);
+      } else if (tel.wordCount < 160 || (tel.hasAudio && tel.durationSec < 95)) {
+        fc = capCrit(fc, 6, `FC ≤ 6.0: Part 3 cần mở rộng thêm ví dụ xã hội & góc nhìn tương phản (${tel.wordCount} từ / ${tel.durationSec}s).`);
+      }
+    } else {
+      if (tel.wordCount < 55 || (tel.hasAudio && tel.durationSec < 32)) {
+        fc = capCrit(fc, 4, `FC ≤ 4.0: Bài nói Part 2 quá ngắn (${tel.wordCount} từ / ${tel.durationSec}s, mục tiêu 90–120s).`);
+        lr = Math.min(lr, 5); gra = Math.min(gra, 5);
+      } else if (tel.wordCount < 90 || (tel.hasAudio && tel.durationSec < 52)) {
+        fc = capCrit(fc, 5, `FC ≤ 5.0: Thời lượng nói chưa đủ dài (${tel.wordCount} từ / ${tel.durationSec}s — Part 2 cần tối thiểu ~1 phút+).`);
+        lr = Math.min(lr, 6); gra = Math.min(gra, 6);
+      } else if (tel.wordCount < 130 || (tel.hasAudio && tel.durationSec < 72)) {
+        fc = capCrit(fc, 6, `FC ≤ 6.0: Bài nói hơi ngắn so với chuẩn Part 2 1.5–2 phút (${tel.wordCount} từ / ${tel.durationSec}s).`);
+      }
     }
 
-    // 3. Off-topic / Missing Cue Card bullets
+    // 3. Off-topic / Missing Cue Card bullets (Cue Card bullet penalty applies strictly to Part 2)
     if (ck.offTopicSeverity === 'full' || (tel.topicOverlapRatio < 0.08 && tel.wordCount >= 40 && ck.offTopicSeverity !== 'none')) {
-      fc = capCrit(fc, 4, 'FC ≤ 4.0: Nội dung nói bị lạc đề so với Cue Card.');
+      fc = capCrit(fc, 4, `FC ≤ 4.0: Nội dung nói bị lạc đề so với ${spPart === 2 ? 'Cue Card' : `câu hỏi Part ${spPart}`}.`);
     } else if (ck.offTopicSeverity === 'partial') {
-      fc = capCrit(fc, 5, 'FC ≤ 5.0: Nội dung nói mới bám một phần yêu cầu Cue Card.');
+      fc = capCrit(fc, 5, `FC ≤ 5.0: Nội dung nói mới bám một phần yêu cầu ${spPart === 2 ? 'Cue Card' : `Part ${spPart}`}.`);
     }
     const bulletsTotal = Number(ck.cueBulletsTotal || tel.cueBulletsTotal || 0);
     const bulletsCov = Number.isFinite(Number(ck.cueBulletsCoveredCount))
       ? Number(ck.cueBulletsCoveredCount)
       : tel.cueBulletsCoveredHeuristic;
-    if (bulletsTotal >= 3 && bulletsTotal - bulletsCov >= 2) {
+    if (spPart === 2 && bulletsTotal >= 3 && bulletsTotal - bulletsCov >= 2) {
       fc = capCrit(fc, 5, `FC ≤ 5.0: Bỏ sót ${bulletsTotal - bulletsCov}/${bulletsTotal} gạch đầu dòng trên Cue Card.`);
     }
 
@@ -1056,40 +1083,55 @@
   }
 
   function gradeSpeakingLocal(payload, tel) {
+    const spPart = [1, 2, 3].includes(Number(tel.part)) ? Number(tel.part) : 2;
     let fc = 6;
     if (tel.isSpam) fc = 2;
-    else if (tel.wordCount >= 165 && tel.durationSec >= 85 && tel.pausesPerMin <= 2.5 && tel.totalFillerPct <= 6 && tel.spokenMarkerCount >= 2) fc = 7;
-    else if (tel.wordCount >= 120 && tel.durationSec >= 65 && tel.totalFillerPct <= 9) fc = 6;
-    else if (tel.wordCount >= 70) fc = 5;
-    else fc = 4;
+    else if (spPart === 1) {
+      if (tel.wordCount >= 115 && tel.pausesPerMin <= 2.5 && tel.totalFillerPct <= 6 && tel.spokenMarkerCount >= 2) fc = 7;
+      else if (tel.wordCount >= 75 && tel.totalFillerPct <= 9) fc = 6;
+      else if (tel.wordCount >= 45) fc = 5;
+      else fc = 4;
+    } else if (spPart === 3) {
+      if (tel.wordCount >= 185 && tel.pausesPerMin <= 2.5 && tel.totalFillerPct <= 6 && tel.spokenMarkerCount >= 2 && tel.complexClauseCount >= 4) fc = 7;
+      else if (tel.wordCount >= 120 && tel.totalFillerPct <= 9) fc = 6;
+      else if (tel.wordCount >= 70) fc = 5;
+      else fc = 4;
+    } else {
+      if (tel.wordCount >= 165 && tel.durationSec >= 85 && tel.pausesPerMin <= 2.5 && tel.totalFillerPct <= 6 && tel.spokenMarkerCount >= 2) fc = 7;
+      else if (tel.wordCount >= 120 && tel.durationSec >= 65 && tel.totalFillerPct <= 9) fc = 6;
+      else if (tel.wordCount >= 70) fc = 5;
+      else fc = 4;
+    }
 
     let lr = 6;
     if (tel.isSpam) lr = 2;
-    else if (tel.guiraud >= 8.2 && tel.spokenMarkerCount >= 2 && tel.detectedIssueCount <= 1) lr = 7;
-    else if (tel.guiraud >= 6.4) lr = 6;
+    else if (tel.guiraud >= (spPart === 1 ? 7.6 : 8.2) && tel.spokenMarkerCount >= 2 && tel.detectedIssueCount <= 1) lr = 7;
+    else if (tel.guiraud >= 6.2) lr = 6;
     else lr = 5;
 
     let gra = 6;
     if (tel.isSpam) gra = 2;
-    else if (tel.complexClauseCount >= 4 && tel.detectedIssueCount === 0) gra = 7;
+    else if (tel.complexClauseCount >= (spPart === 1 ? 3 : 4) && tel.detectedIssueCount === 0) gra = 7;
     else if (tel.complexClauseCount >= 2 && tel.detectedIssueCount <= 2) gra = 6;
     else gra = 5;
 
     const pr = tel.hasAudio ? (tel.whisperPronEstBand || 6) : null;
 
     const upgrades = [];
-    if (tel.wordCount < 140 || tel.durationSec < 85) upgrades.push(`Kéo dài bài nói Part 2 lên 1 phút 30 – 2 phút (~160–240 từ) bằng cách kể rõ diễn biến & cảm xúc (hiện tại ${tel.wordCount} từ / ${tel.durationSec}s).`);
-    if (tel.missedBullets.length > 0) upgrades.push(`Chú ý trả lời đủ các ý trên Cue Card còn thiếu: "${tel.missedBullets[0]}".`);
-    if (tel.silentPausesOver1_2s >= 3 || tel.fillerCount >= 5) upgrades.push('Giảm ngập ngừng/từ đệm bằng cách dùng cụm chuyển ý văn nói tự nhiên (Actually, Looking back, What stood out was...).');
-    if (tel.detectedIssueCount > 0) upgrades.push('Chú ý chia thì quá khứ nhất quán khi kể chuyện và tránh lỗi kép "because ... so ...".');
+    if (spPart === 1 && tel.wordCount < 105) upgrades.push(`Mở rộng mỗi câu Part 1 lên 2–3 câu tự nhiên (20–35s/câu) theo khung A.R.E.: Trả lời trực tiếp → Lý do → Ví dụ ngắn (hiện tổng ${tel.wordCount} từ).`);
+    if (spPart === 3 && tel.wordCount < 175) upgrades.push(`Phát triển câu trả lời Part 3 sâu hơn (40–65s/câu) theo khung P.E.E.C.: Luận điểm → Giải thích → Ví dụ xã hội → Góc nhìn tương phản (hiện tổng ${tel.wordCount} từ).`);
+    if (spPart === 2 && (tel.wordCount < 140 || tel.durationSec < 85)) upgrades.push(`Kéo dài bài nói Part 2 lên 1 phút 30 – 2 phút (~160–240 từ) bằng cách kể rõ diễn biến & cảm xúc (hiện tại ${tel.wordCount} từ / ${tel.durationSec}s).`);
+    if (spPart === 2 && tel.missedBullets.length > 0) upgrades.push(`Chú ý trả lời đủ các ý trên Cue Card còn thiếu: "${tel.missedBullets[0]}".`);
+    if (tel.silentPausesOver1_2s >= 3 || tel.fillerCount >= 5) upgrades.push('Giảm ngập ngừng/từ đệm bằng cách dùng cụm chuyển ý văn nói tự nhiên (To be honest, Having said that, What stands out is...).');
+    if (tel.detectedIssueCount > 0) upgrades.push(spPart === 3 ? 'Tăng cường câu điều kiện, câu nhượng bộ (While / Whereas) và kiểm tra hòa hợp chủ-vị khi phân tích.' : 'Chú ý chia thì nhất quán và tránh lỗi kép "because ... so ...".');
     if (!tel.hasAudio) upgrades.push('Lần sau hãy dùng Micro ghi âm thật để hệ thống đo khoảng dừng, tốc độ nói (WPM) và chấm đủ tiêu chí Pronunciation.');
 
     const rawGrade = {
       checklist: {
-        offTopicSeverity: tel.topicOverlapRatio < 0.1 ? 'full' : (tel.topicOverlapRatio < 0.2 ? 'partial' : 'none'),
+        offTopicSeverity: tel.topicOverlapRatio < 0.08 ? 'full' : (tel.topicOverlapRatio < 0.16 ? 'partial' : 'none'),
         cueBulletsCoveredCount: tel.cueBulletsCoveredHeuristic,
-        cueBulletsTotal: tel.cueBulletsTotal,
-        sustainsLongTurn: tel.wordCount >= 130 && tel.durationSec >= 75,
+        cueBulletsTotal: spPart === 2 ? tel.cueBulletsTotal : 0,
+        sustainsLongTurn: spPart === 1 ? tel.wordCount >= 95 : (spPart === 3 ? tel.wordCount >= 160 : (tel.wordCount >= 130 && tel.durationSec >= 75)),
         heavyHesitationOrRepetition: tel.filledPausePct > 8 || tel.stutterCount >= 4,
         usesNaturalSpokenMarkers: tel.spokenMarkerCount >= 2,
         usesIdiomaticOrLessCommonLexis: tel.guiraud >= 7.5,
@@ -1099,7 +1141,9 @@
       criteria: {
         fc: {
           band: fc,
-          commentVi: `Thời lượng ${tel.durationSec}s (${tel.wordCount} từ, tốc độ ${tel.wpm} WPM), ${tel.fillerCount} từ đệm${tel.hasAudio && tel.silentPausesOver1_2s ? `, ${tel.silentPausesOver1_2s} khoảng dừng >1.2s` : ''}. Phủ ước tính ${tel.cueBulletsCoveredHeuristic}/${tel.cueBulletsTotal || 4} ý Cue Card.`,
+          commentVi: spPart === 2
+            ? `Thời lượng ${tel.durationSec}s (${tel.wordCount} từ, tốc độ ${tel.wpm} WPM), ${tel.fillerCount} từ đệm${tel.hasAudio && tel.silentPausesOver1_2s ? `, ${tel.silentPausesOver1_2s} khoảng dừng >1.2s` : ''}. Phủ ước tính ${tel.cueBulletsCoveredHeuristic}/${tel.cueBulletsTotal || 4} ý Cue Card.`
+            : `Tổng thời lượng Part ${spPart} đạt ${tel.durationSec}s (${tel.wordCount} từ qua ${tel.qaCount || 4} câu hỏi, tốc độ ${tel.wpm} WPM), ${tel.fillerCount} từ đệm${tel.hasAudio && tel.silentPausesOver1_2s ? `, ${tel.silentPausesOver1_2s} khoảng dừng >1.2s` : ''}.`,
         },
         lr: {
           band: lr,
@@ -1118,7 +1162,7 @@
       },
       errors: tel.grammarIssues.slice(0, 6),
       topUpgradesVi: upgrades.slice(0, 3),
-      overallCommentVi: 'Kết quả ước lượng từ Bộ chấm Speaking cục bộ chuẩn IELTS (kèm khóa trần thời lượng & độ phủ Cue Card).',
+      overallCommentVi: `Kết quả ước lượng từ Bộ chấm Speaking Part ${spPart} cục bộ chuẩn IELTS (kèm khóa trần thời lượng & độ phát triển câu trả lời).`,
     };
 
     const capped = applySpeakingExaminerCaps(rawGrade, tel);
@@ -1213,10 +1257,13 @@
   }
 
   async function gradeSpeaking(payload = {}) {
+    const spPart = [1, 2, 3].includes(Number(payload.part)) ? Number(payload.part) : 2;
     const tel = analyzeSpeakingTelemetry(
       payload.text || '',
       payload.acoustic || {},
       {
+        part: spPart,
+        qaTurns: payload.qaTurns || [],
         title: payload.cueTitle || '',
         bullets: payload.cueBullets || [],
         curriculumKeywords: payload.curriculumKeywords || '',
@@ -1231,11 +1278,15 @@
       try {
         const apiRes = await callServerGradeApi({
           skill: 'speaking',
+          part: spPart,
+          qaTurns: Array.isArray(payload.qaTurns) ? payload.qaTurns.slice(0, 6) : [],
           cueTitle: payload.cueTitle || '',
           cueBullets: payload.cueBullets || [],
           curriculumContext: payload.curriculumContext || '',
           text: payload.text || '',
           telemetry: {
+            part: spPart,
+            qaCount: tel.qaCount,
             wordCount: tel.wordCount,
             durationSec: tel.durationSec,
             hasAudio: tel.hasAudio,

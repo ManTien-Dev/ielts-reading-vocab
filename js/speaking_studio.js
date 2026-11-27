@@ -7,8 +7,23 @@
   'use strict';
 
   const DATA = () => window.SPEAKING_STUDIO_DATA || { STORIES: [] };
+  const P13 = () => window.SPEAKING_PART13_DATA || { PART1_TOPICS: [], PART3_TOPICS: [] };
   const B = () => window.__VOCAB_BRIDGE__ || null;
   const STT = () => window.TotoroSpeechSTT || null;
+
+  function getPart1Topics() { return P13().PART1_TOPICS || []; }
+  function getPart3Topics() { return P13().PART3_TOPICS || []; }
+  function getPart13Topic(id) {
+    if (!id) return null;
+    return getPart1Topics().find((t) => t.id === id) || getPart3Topics().find((t) => t.id === id) || null;
+  }
+  function getTopicTargetLabel(tp) {
+    if (!tp) return '';
+    if (tp.targetTime) return tp.targetTime;
+    const lo = tp.targetSecMin || (tp.part === 1 ? 20 : 40);
+    const hi = tp.targetSecMax || (tp.part === 1 ? 35 : 65);
+    return `${lo}–${hi}s/câu`;
+  }
 
   const MASTERY_KEY_BASE = 'totoro_speaking_mastery_v1_';
   const TASK_DONE_KEY_BASE = 'totoro_speaking_task_done_v1_';
@@ -276,6 +291,7 @@
     flowMaskOn: false,
     flowRevealed: {},
     sectionEnRevealed: {},
+    pracPart: 1,
     pracCat: 'all',
     pracQuery: '',
     cooldownMap: {},
@@ -350,22 +366,26 @@
     const taskDone = getTaskDoneMap()[story.id] || null;
     const tasksDoneCnt = taskDone?.completed ? 4 : (taskDone?.maxStage || 0);
     const hist = getPracHistory();
-    const practicedCueIds = new Set(hist.map((h) => h.cueId));
+    const practicedIds = new Set(hist.map((h) => h.cueId));
+    const p1Topics = getPart1Topics();
     const allCues = story.cueCards || [];
-    const totalCue = allCues.length;
+    const p3Topics = getPart3Topics();
+    const totalAllTopics = p1Topics.length + allCues.length + p3Topics.length;
+    const p1Done = p1Topics.filter((t) => practicedIds.has(t.id)).length;
+    const p2Done = allCues.filter((c) => practicedIds.has(c.id)).length;
+    const p3Done = p3Topics.filter((t) => practicedIds.has(t.id)).length;
+    const totalDoneTopics = p1Done + p2Done + p3Done;
 
-    const groups = [
-      { key: 'person', label: 'Person' },
-      { key: 'cross_topic', label: 'Cross-Topic' },
-      { key: 'cross_category', label: 'Cross-Category' }
+    const partBars = [
+      { label: 'Part 1 · Phỏng vấn', done: p1Done, total: p1Topics.length, part: 1 },
+      { label: 'Part 2 · Cue Card', done: p2Done, total: allCues.length, part: 2 },
+      { label: 'Part 3 · Thảo luận sâu', done: p3Done, total: p3Topics.length, part: 3 }
     ];
-    const barsHtml = groups.map((g) => {
-      const list = allCues.filter((c) => c.category === g.key);
-      const done = list.filter((c) => practicedCueIds.has(c.id)).length;
-      const pct = Math.round((done / Math.max(1, list.length)) * 100);
+    const barsHtml = partBars.map((g) => {
+      const pct = Math.round((g.done / Math.max(1, g.total)) * 100);
       return `
-        <div class="rh-deck-row">
-          <div class="rh-deck-meta"><span>${esc(g.label)}</span><strong class="tabular">${done}/${list.length}</strong></div>
+        <div class="rh-deck-row" style="cursor:pointer;" onclick="SpeakingStudio.openPracticePart(${g.part})" title="Mở kho đề ${esc(g.label)}">
+          <div class="rh-deck-meta"><span>${esc(g.label)}</span><strong class="tabular">${g.done}/${g.total}</strong></div>
           <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:${pct}%"></div></div>
         </div>
       `;
@@ -378,54 +398,63 @@
               <div class="rh-hist-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(h.cueTitle)}</div>
               <div class="rh-hist-meta">${h.mode === 'exam' ? 'Thi thật' : 'Luyện tập'} · ${fmtMmSs(h.durationSec)} · ${h.wpm || 0} WPM</div>
             </div>
-            <span class="tot-hist-badge tabular">${h.words || 0}w</span>
+            <span class="tot-hist-badge tabular">${h.band ? `B${Number(h.band).toFixed(1)}` : `${h.words || 0}w`}</span>
           </div>
         `).join('')
       : '';
 
     const storyPct = Math.round((tasksDoneCnt / 4) * 100);
     const quickTiles = [
-      { name: 'Flashcard Story 01', meta: '30 Spoken Chunks · Âm thanh US/UK', tag: 'Cốt lõi', act: "window.TotoroUI.enterSkillMode('Speaking', 'flashcard')" },
-      { name: 'Mindmap Bẻ Lái', meta: 'Sơ đồ mạch kể Story 01 trực quan', tag: 'Tư duy', act: "SpeakingStudio.openMindmapModal('master')" },
-      { name: `Sách Tranh ${(story?.pictureBook || []).length || 10} cảnh`, meta: 'Ghi nhớ trọn 5 chặng bằng hình ảnh', tag: 'Trực quan', act: "SpeakingStudio.openPictureBook(0)" },
-      { name: `Kho ${totalCue} Đề Part 2`, meta: 'Person · Cross-Topic · Cross-Category', tag: 'Thi thật', act: "window.TotoroUI.enterSkillMode('Speaking', 'practice')" }
+      { name: `Part 1 · Phỏng vấn (${p1Topics.length})`, meta: '48 câu hỏi quen thuộc · Khung A.R.E.', tag: 'Part 1', tone: 'is-sage', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', act: 'SpeakingStudio.openPracticePart(1)' },
+      { name: `Part 2 · Cue Card (${allCues.length})`, meta: '1p chuẩn bị · 2p nói · Story 01 Bẻ lái', tag: 'Part 2', tone: 'is-teal', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>', act: 'SpeakingStudio.openPracticePart(2)' },
+      { name: `Part 3 · Thảo luận (${p3Topics.length})`, meta: '40 câu phân tích sâu · Khung P.E.E.C.', tag: 'Part 3', tone: 'is-indigo', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M9.6 10.2 6.6 7.4M14.4 10.2 17.4 7.4M9.6 13.8 6.6 16.6M14.4 13.8 17.4 16.6"/></svg>', act: 'SpeakingStudio.openPracticePart(3)' },
+      { name: `Sách Tranh & Mindmap`, meta: `${(story?.pictureBook || []).length || 10} cảnh Story 01 · Ghi nhớ trực quan`, tag: 'Cốt lõi', tone: 'is-warm', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.5"/><path d="m21 16-5-5-4 4-2-2-5 5"/></svg>', act: "SpeakingStudio.openPictureBook(0)" }
     ];
     const quickTilesHtml = quickTiles.map((q) => `
-      <button type="button" class="rh-quick-tile" onclick="${q.act}">
-        <div class="rh-quick-top">
-          <span class="rh-quick-name">${esc(q.name)}</span>
+      <button type="button" class="rh-quick-tile is-visual ${q.tone}" onclick="${q.act}">
+        <div class="rh-quick-head-row">
+          <span class="rh-quick-ico ${q.tone}" aria-hidden="true">${q.ico}</span>
           <span class="rh-quick-tag">${esc(q.tag)}</span>
         </div>
-        <div class="rh-quick-meta">${esc(q.meta)}</div>
+        <div class="rh-quick-name">${esc(q.name)}</div>
+        <div class="rh-quick-meta-row">
+          <span class="rh-quick-meta">${esc(q.meta)}</span>
+          <span class="rh-quick-arr" aria-hidden="true">→</span>
+        </div>
       </button>
     `).join('');
+
+    const spRingOff = (176 * (1 - (mStats.pct || 0) / 100)).toFixed(1);
 
     el.innerHTML = `
       <div class="rh-layout rh-clean">
         <div class="rh-top-asym">
-          <div class="tot-hero-card rh-main-hero">
+          <div class="tot-hero-card rh-main-hero has-mascot is-speaking">
             <div class="rh-hero-copy">
               <div class="rh-head-row">
                 <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
                 </span>
                 <div>
-                  <h2 class="tot-shell-title" style="margin:0;">IELTS Speaking</h2>
-                  <div class="tot-shell-sub tabular">${mStats.done} / ${mStats.total} thẻ · ${tasksDoneCnt} / 4 Bước Task · ${practicedCueIds.size} / ${totalCue} Đề Part 2</div>
+                  <h2 class="tot-shell-title" style="margin:0;">IELTS Speaking · Full 3 Parts</h2>
+                  <div class="tot-shell-sub tabular">${mStats.done} / ${mStats.total} thẻ · ${tasksDoneCnt} / 4 Bước Task · ${totalDoneTopics} / ${totalAllTopics} Chủ đề (P1 · P2 · P3)</div>
                 </div>
               </div>
               <div class="rh-decks-grid-4 sp-home-cat-grid">${barsHtml}</div>
-              <div class="sp-home-flow-strip" aria-label="Cấu trúc mạch Story 01">
-                <span>Mở bài</span><span aria-hidden="true">→</span>
-                <span>Dẫn chuyện</span><span aria-hidden="true">→</span>
-                <span>Cốt truyện (5 chặng)</span><span aria-hidden="true">→</span>
-                <span>Kết bài</span>
+              <div class="sp-home-flow-strip" aria-label="Cấu trúc thi IELTS Speaking">
+                <span>Part 1 (4–5p)</span><span aria-hidden="true">→</span>
+                <span>Part 2 (1p+2p)</span><span aria-hidden="true">→</span>
+                <span>Part 3 (4–5p)</span><span aria-hidden="true">→</span>
+                <span>Chấm 4 tiêu chí AI</span>
               </div>
               <div class="rh-hero-actions" style="margin-top:12px;">
-                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'flashcard')">Học Flashcard →</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'task')">Task 4 Bước</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'practice')">Kho ${totalCue} Đề</button>
+                <button type="button" class="btn btn-primary tot-demo-btn" onclick="SpeakingStudio.openPracticePart(1)">Luyện Part 1 →</button>
+                <button type="button" class="tot-demo-btn" onclick="SpeakingStudio.openPracticePart(2)">Part 2 Cue Card</button>
+                <button type="button" class="tot-demo-btn" onclick="SpeakingStudio.openPracticePart(3)">Part 3 Thảo luận</button>
               </div>
+            </div>
+            <div class="rh-hero-mascot-stage" aria-hidden="true">
+              <img class="rh-hero-mascot-img" src="assets/images/totoro_speaking_mascot.webp" alt="" decoding="async" draggable="false">
             </div>
           </div>
 
@@ -433,9 +462,15 @@
             <div class="tot-panel-head" style="margin-bottom:10px;">
               <div>
                 <div class="tot-panel-title">Tiến độ Speaking</div>
-                <div class="tot-panel-sub tabular">${tasksDoneCnt} / 4 bước Task Story 01</div>
+                <div class="tot-panel-sub tabular">${tasksDoneCnt} / 4 bước Task · ${totalDoneTopics} / ${totalAllTopics} đề P1–P3</div>
               </div>
-              <span class="rh-band-big tabular">${mStats.pct}%</span>
+              <div class="rh-ring-wrap is-indigo" aria-label="Tiến độ Speaking">
+                <svg viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="var(--bg-subtle)" stroke-width="5.5"/>
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="#4D5C8C" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="176" stroke-dashoffset="${spRingOff}" transform="rotate(-90 32 32)"/>
+                </svg>
+                <span class="rh-ring-val tabular">${mStats.pct}%</span>
+              </div>
             </div>
             <div class="rh-kpi-strip tabular">
               <div class="rh-kpi-cell">
@@ -447,13 +482,13 @@
                 <span class="rh-kpi-lbl">Bước Task</span>
               </div>
               <div class="rh-kpi-cell">
-                <span class="rh-kpi-num">${practicedCueIds.size}/${totalCue}</span>
-                <span class="rh-kpi-lbl">Đề đã nói</span>
+                <span class="rh-kpi-num">${totalDoneTopics}/${totalAllTopics}</span>
+                <span class="rh-kpi-lbl">Đề P1–P3</span>
               </div>
             </div>
             ${histHtml ? `<div class="rh-hist-list is-flat" style="margin-top:8px;">${histHtml}</div>` : ''}
             <div class="tot-panel-foot" style="margin-top:auto;padding-top:10px;">
-              <span class="tot-foot-meta">Story 01 · ${totalCue} đề thi thật Part 2</span>
+              <span class="tot-foot-meta">P1 (${p1Topics.length}) · P2 (${allCues.length}) · P3 (${p3Topics.length})</span>
               <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'practice')">Kho đề →</button>
             </div>
           </div>
@@ -3207,7 +3242,25 @@
     card.scrollTop = 0;
   }
 
-  /* ================= TAB 4: PRACTICE HUB & PART 2 EXAMINER ROOM ================= */
+  /* ================= TAB 4: PRACTICE HUB (PART 1 · PART 2 · PART 3) & EXAMINER ROOMS ================= */
+  function setPracticePart(partNum) {
+    const p = [1, 2, 3].includes(Number(partNum)) ? Number(partNum) : 1;
+    state.pracPart = p;
+    state.pracCat = 'all';
+    state.pracQuery = '';
+    renderPracticeHub();
+  }
+  function openPracticePart(partNum) {
+    const p = [1, 2, 3].includes(Number(partNum)) ? Number(partNum) : 1;
+    state.pracPart = p;
+    state.pracCat = 'all';
+    state.pracQuery = '';
+    if (window.TotoroUI?.enterSkillMode) {
+      window.TotoroUI.enterSkillMode('Speaking', 'practice');
+    } else {
+      renderPracticeHub();
+    }
+  }
   function setPracticeCat(cat) {
     state.pracCat = cat;
     renderPracticeHub();
@@ -3228,85 +3281,195 @@
     const story = getStory();
     if (!root || !story) return;
 
-    const allCues = story.cueCards || [];
+    const p1List = getPart1Topics();
+    const p2List = story.cueCards || [];
+    const p3List = getPart3Topics();
+    const activePart = [1, 2, 3].includes(Number(state.pracPart)) ? Number(state.pracPart) : 1;
+
     const hist = getPracHistory();
-    const lastByCue = {};
-    hist.forEach((h) => { if (!lastByCue[h.cueId]) lastByCue[h.cueId] = h; });
+    const lastById = {};
+    hist.forEach((h) => { if (!lastById[h.cueId]) lastById[h.cueId] = h; });
+
+    const p1DoneCnt = p1List.filter((t) => lastById[t.id]).length;
+    const p2DoneCnt = p2List.filter((c) => lastById[c.id]).length;
+    const p3DoneCnt = p3List.filter((t) => lastById[t.id]).length;
 
     const q = state.pracQuery.trim().toLowerCase();
-    const filtered = allCues.filter((c) => {
-      if (state.pracCat !== 'all' && c.category !== state.pracCat) return false;
-      if (q && !c.title.toLowerCase().includes(q)) return false;
-      return true;
-    });
-
-    const catLabel = { person: 'Person · Bẻ lái', cross_topic: 'Cross-Topic', cross_category: 'Cross-Category' };
-    const catPillCls = { person: 'is-cause', cross_topic: 'is-adv', cross_category: 'is-opinion' };
-
     const activeSearchFocused = document.activeElement?.id === 'sp-prac-search-input';
     const selStart = activeSearchFocused ? document.activeElement.selectionStart : null;
+
+    const partSegHtml = `
+      <div class="sp-part-seg-bar" role="tablist" aria-label="Chọn phần thi IELTS Speaking">
+        <button type="button" role="tab" aria-selected="${activePart === 1 ? 'true' : 'false'}" class="sp-part-seg-btn ${activePart === 1 ? 'active' : ''}" onclick="SpeakingStudio.setPracticePart(1)">
+          <span class="sp-part-seg-top"><strong>Part 1 · Phỏng vấn</strong><span class="sp-part-seg-cnt tabular">${p1DoneCnt}/${p1List.length}</span></span>
+          <span class="sp-part-seg-sub">4 câu hỏi quen thuộc · 20–35s/câu · Khung A.R.E.</span>
+        </button>
+        <button type="button" role="tab" aria-selected="${activePart === 2 ? 'true' : 'false'}" class="sp-part-seg-btn ${activePart === 2 ? 'active' : ''}" onclick="SpeakingStudio.setPracticePart(2)">
+          <span class="sp-part-seg-top"><strong>Part 2 · Cue Card</strong><span class="sp-part-seg-cnt tabular">${p2DoneCnt}/${p2List.length}</span></span>
+          <span class="sp-part-seg-sub">1 phút chuẩn bị · 2 phút nói · Story 01 Bẻ lái</span>
+        </button>
+        <button type="button" role="tab" aria-selected="${activePart === 3 ? 'true' : 'false'}" class="sp-part-seg-btn ${activePart === 3 ? 'active' : ''}" onclick="SpeakingStudio.setPracticePart(3)">
+          <span class="sp-part-seg-top"><strong>Part 3 · Thảo luận sâu</strong><span class="sp-part-seg-cnt tabular">${p3DoneCnt}/${p3List.length}</span></span>
+          <span class="sp-part-seg-sub">4 câu phân tích xã hội · 40–65s/câu · Khung P.E.E.C.</span>
+        </button>
+      </div>
+    `;
+
+    let shellTitle = '';
+    let shellSub = '';
+    let doneCount = 0;
+    let totalCount = 0;
+    let filterTabs = [];
+    let cardsHtml = '';
+    let filteredLen = 0;
+
+    if (activePart === 2) {
+      shellTitle = 'Luyện đề IELTS Speaking Part 2';
+      shellSub = `Ngân hàng ${p2List.length} Cue Card thi thật áp dụng trọn mạch <strong>Story 01 (B1 → B5)</strong> · 1 phút chuẩn bị + 2 phút nói.`;
+      doneCount = p2DoneCnt;
+      totalCount = p2List.length;
+      filterTabs = [
+        { key: 'all', label: 'Tất cả' },
+        { key: 'person', label: 'Person' },
+        { key: 'cross_topic', label: 'Cross-Topic' },
+        { key: 'cross_category', label: 'Cross-Category' }
+      ];
+      const catLabel = { person: 'Person · Bẻ lái', cross_topic: 'Cross-Topic', cross_category: 'Cross-Category' };
+      const catPillCls = { person: 'is-cause', cross_topic: 'is-adv', cross_category: 'is-opinion' };
+      const filtered = p2List.filter((c) => {
+        if (state.pracCat !== 'all' && c.category !== state.pracCat) return false;
+        if (q && !c.title.toLowerCase().includes(q)) return false;
+        return true;
+      });
+      filteredLen = filtered.length;
+      cardsHtml = filtered.map((cue) => {
+        const prev = lastById[cue.id];
+        return `
+          <article class="ws-prac-card sp-cue-card ${prev ? 'is-done' : ''}">
+            <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
+              <div class="ws-prac-head">
+                <span class="ws-type-pill ${catPillCls[cue.category] || 'is-cause'}">${catLabel[cue.category] || cue.category}</span>
+                ${prev
+                  ? `<span class="ws-pill ok tabular">${prev.band ? `Band ${Number(prev.band).toFixed(1)} · ` : ''}${fmtMmSs(prev.durationSec)} · ${prev.wpm} WPM</span>`
+                  : `<span class="ws-prac-sub-tag">${esc(cue.source || 'Actual Test')}</span>`}
+              </div>
+              <p class="ws-prac-prompt">${esc(cue.title)}</p>
+              <ul class="sp-cue-bullets">
+                ${(cue.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('')}
+              </ul>
+            </div>
+            <div class="ws-prac-foot">
+              <div class="ws-prac-btns">
+                <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'practice')">Luyện tập</button>
+                <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'exam')">Thi thật →</button>
+                ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'speaking', itemId: '${esc(cue.id)}', isFull: false, title: '${esc(String(cue.title || '').slice(0, 80)).replace(/'/g, "\\'")}', subtitle: '${esc(catLabel[cue.category] || 'Speaking Part 2').replace(/'/g, "\\'")}' })" title="Tạo link giao Cue Card này cho học sinh">🔗 Giao link đề này</button>` : ''}
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    } else {
+      const isP1 = activePart === 1;
+      const list = isP1 ? p1List : p3List;
+      shellTitle = isP1 ? 'Luyện đề IELTS Speaking Part 1' : 'Luyện đề IELTS Speaking Part 3';
+      shellSub = isP1
+        ? `Ngân hàng ${p1List.length} chủ đề phỏng vấn tủ 2025–2026 (${p1List.length * 4} câu hỏi) · Giám khảo đọc câu hỏi UK, trả lời tự nhiên <strong>20–35s/câu</strong> theo khung <strong>A.R.E.</strong>`
+        : `Ngân hàng ${p3List.length} chủ đề thảo luận học thuật (${p3List.length * 4} câu hỏi) · Phân tích sâu <strong>40–65s/câu</strong> theo khung <strong>P.E.E.C.</strong> chuẩn Band 7.5–8.5.`;
+      doneCount = isP1 ? p1DoneCnt : p3DoneCnt;
+      totalCount = list.length;
+      filterTabs = isP1
+        ? [
+            { key: 'all', label: 'Tất cả' },
+            { key: 'core', label: 'Bắt buộc · Core' },
+            { key: 'daily', label: 'Đời sống' },
+            { key: 'hobby', label: 'Sở thích' },
+            { key: 'tech', label: 'Công nghệ' },
+            { key: 'social', label: 'Xã hội' }
+          ]
+        : [
+            { key: 'all', label: 'Tất cả' },
+            { key: 'society', label: 'Xã hội & Thế hệ' },
+            { key: 'education', label: 'Giáo dục & Nghề nghiệp' },
+            { key: 'tech', label: 'Công nghệ & Truyền thông' },
+            { key: 'lifestyle', label: 'Đô thị & Đời sống' }
+          ];
+      const pillClsMap = { core: 'is-cause', daily: 'is-adv', hobby: 'is-opinion', tech: 'is-adv', social: 'is-cause', society: 'is-cause', education: 'is-opinion', lifestyle: 'is-adv' };
+      const filtered = list.filter((tp) => {
+        if (state.pracCat !== 'all' && tp.category !== state.pracCat) return false;
+        if (q) {
+          const hay = `${tp.title} ${tp.titleVi || ''} ${tp.catLabel || ''} ${(tp.questions || []).map((x) => x.q).join(' ')}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      filteredLen = filtered.length;
+      cardsHtml = filtered.map((tp) => {
+        const prev = lastById[tp.id];
+        const qs = tp.questions || [];
+        const targetLbl = getTopicTargetLabel(tp);
+        return `
+          <article class="ws-prac-card sp-cue-card sp-p13-card ${prev ? 'is-done' : ''}">
+            <div style="display:flex;flex-direction:column;gap:9px;flex:1;">
+              <div class="ws-prac-head">
+                <span class="ws-type-pill ${pillClsMap[tp.category] || 'is-cause'}">${esc(tp.catLabel || (isP1 ? 'Part 1' : 'Part 3'))}</span>
+                ${prev
+                  ? `<span class="ws-pill ok tabular">${prev.band ? `Band ${Number(prev.band).toFixed(1)} · ` : ''}${fmtMmSs(prev.durationSec)}</span>`
+                  : `<span class="ws-prac-sub-tag">${tp.linkedStory ? '★ Nối Story 01' : `${qs.length} câu · ${esc(targetLbl)}`}</span>`}
+              </div>
+              <div class="sp-p13-card-title-grp">
+                <p class="ws-prac-prompt" style="margin:0;">${esc(tp.title)}</p>
+                <div class="sp-p13-card-sub">${esc(tp.titleVi || '')}</div>
+              </div>
+              <ol class="sp-p13-q-preview">
+                ${qs.map((item) => `<li>${esc(item.q)}</li>`).join('')}
+              </ol>
+            </div>
+            <div class="ws-prac-foot">
+              <div class="ws-prac-btns">
+                <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openInterviewRoom('${esc(tp.id)}', 'practice')">Luyện tập</button>
+                <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openInterviewRoom('${esc(tp.id)}', 'exam')">Thi thật →</button>
+                ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'speaking', itemId: '${esc(tp.id)}', isFull: false, title: '${esc(`Part ${tp.part} · ${tp.title}`).replace(/'/g, "\\'")}', subtitle: '${esc(tp.titleVi || `Speaking Part ${tp.part}`).replace(/'/g, "\\'")}' })" title="Tạo link giao chủ đề này cho học sinh">🔗 Giao link đề này</button>` : ''}
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
 
     root.innerHTML = `
       <div class="tot-section-shell sp-prac-shell">
         <div class="tot-shell-head">
           <div>
-            <h2 class="tot-shell-title">Luyện đề IELTS Speaking Part 2</h2>
-            <p class="tot-shell-sub">Ngân hàng ${allCues.length} Cue Card thi thật áp dụng trọn mạch <strong>Story 01 (B1 → B5)</strong> · 1 phút chuẩn bị + 2 phút nói.</p>
+            <h2 class="tot-shell-title">${shellTitle}</h2>
+            <p class="tot-shell-sub">${shellSub}</p>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openRandomCueCard('practice')" title="Bốc ngẫu nhiên 1 Cue Card chưa luyện giống thi thật">🎲 Bốc đề ngẫu nhiên</button>
-            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openMindmapModal('master')">Mindmap</button>
-            <span class="ws-pill tabular">${Object.keys(lastByCue).length} / ${allCues.length} đề đã luyện</span>
+            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openRandomTopic('practice')" title="Bốc ngẫu nhiên 1 đề chưa luyện trong Part ${activePart}">🎲 Bốc đề ngẫu nhiên</button>
+            ${activePart === 2 ? `<button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openMindmapModal('master')">Mindmap</button>` : ''}
+            <span class="ws-pill tabular">${doneCount} / ${totalCount} đề đã luyện</span>
           </div>
         </div>
 
+        ${partSegHtml}
+
         <div class="sp-prac-toolbar-pro">
-          <div class="ws-prac-subtabs" role="tablist" aria-label="Lọc theo nhóm Cue Card">
-            <button type="button" class="ws-prac-subtab ${state.pracCat === 'all' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('all')">Tất cả</button>
-            <button type="button" class="ws-prac-subtab ${state.pracCat === 'person' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('person')">Person</button>
-            <button type="button" class="ws-prac-subtab ${state.pracCat === 'cross_topic' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('cross_topic')">Cross-Topic</button>
-            <button type="button" class="ws-prac-subtab ${state.pracCat === 'cross_category' ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('cross_category')">Cross-Category</button>
+          <div class="ws-prac-subtabs" role="tablist" aria-label="Lọc theo nhóm đề">
+            ${filterTabs.map((ft) => `<button type="button" class="ws-prac-subtab ${state.pracCat === ft.key ? 'active' : ''}" onclick="SpeakingStudio.setPracticeCat('${ft.key}')">${esc(ft.label)}</button>`).join('')}
           </div>
 
           <div class="sp-prac-toolbar-r">
-            <span class="ws-prac-count tabular">${filtered.length} / ${allCues.length} đề</span>
+            <span class="ws-prac-count tabular">${filteredLen} / ${totalCount} đề</span>
             <div class="ws-prac-search-wrap">
               <svg class="ws-prac-search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="search" id="sp-prac-search-input" class="ws-prac-search" placeholder="Tìm đề Speaking..." value="${esc(state.pracQuery)}" oninput="SpeakingStudio.setPracticeQuery(this.value)" />
+              <input type="search" id="sp-prac-search-input" class="ws-prac-search" placeholder="Tìm chủ đề hoặc câu hỏi..." value="${esc(state.pracQuery)}" oninput="SpeakingStudio.setPracticeQuery(this.value)" />
             </div>
           </div>
         </div>
 
         <div class="ws-prac-grid">
-          ${filtered.length ? filtered.map((cue) => {
-            const prev = lastByCue[cue.id];
-            return `
-              <article class="ws-prac-card sp-cue-card ${prev ? 'is-done' : ''}">
-                <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
-                  <div class="ws-prac-head">
-                    <span class="ws-type-pill ${catPillCls[cue.category] || 'is-cause'}">${catLabel[cue.category] || cue.category}</span>
-                    ${prev
-                      ? `<span class="ws-pill ok tabular">${prev.band ? `Band ${Number(prev.band).toFixed(1)} · ` : ''}${fmtMmSs(prev.durationSec)} · ${prev.wpm} WPM</span>`
-                      : `<span class="ws-prac-sub-tag">${esc(cue.source || 'Actual Test')}</span>`}
-                  </div>
-                  <p class="ws-prac-prompt">${esc(cue.title)}</p>
-                  <ul class="sp-cue-bullets">
-                    ${(cue.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('')}
-                  </ul>
-                </div>
-
-                <div class="ws-prac-foot">
-                  <div class="ws-prac-btns">
-                    <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'practice')">Luyện tập</button>
-                    <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'exam')">Thi thật →</button>
-                    ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'speaking', itemId: '${esc(cue.id)}', isFull: false, title: '${esc(String(cue.title || '').slice(0, 80)).replace(/'/g, "\\'")}', subtitle: '${esc(catLabel[cue.category] || 'Speaking Part 2').replace(/'/g, "\\'")}' })" title="Tạo link giao Cue Card này cho học sinh">🔗 Giao link đề này</button>` : ''}
-                  </div>
-                </div>
-              </article>
-            `;
-          }).join('') : `
+          ${filteredLen ? cardsHtml : `
             <div class="ws-prac-empty">
-              <div style="font-size:14.5px;font-weight:750;color:var(--ink);">Không tìm thấy đề phù hợp</div>
+              <div style="font-size:14.5px;font-weight:750;color:var(--ink);">Không tìm thấy chủ đề phù hợp</div>
               <div style="font-size:12.5px;">Hãy thử từ khóa khác hoặc đặt lại bộ lọc nhóm đề.</div>
               <button type="button" class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="SpeakingStudio.resetPracticeFilters()">Xóa bộ lọc</button>
             </div>
@@ -3324,18 +3487,30 @@
     }
   }
 
-  function openRandomCueCard(mode) {
-    const cues = getStory()?.cueCards || [];
-    if (!cues.length) return;
+  function openRandomTopic(mode) {
+    const activePart = [1, 2, 3].includes(Number(state.pracPart)) ? Number(state.pracPart) : 1;
+    const items = activePart === 1 ? getPart1Topics() : (activePart === 3 ? getPart3Topics() : (getStory()?.cueCards || []));
+    if (!items.length) return;
     const doneIds = new Set(getPracHistory().map((h) => h.cueId));
-    const pool = cues.filter((c) => !doneIds.has(c.id));
-    const list = pool.length ? pool : cues;
+    const pool = items.filter((c) => !doneIds.has(c.id));
+    const list = pool.length ? pool : items;
     const picked = list[Math.floor(Math.random() * list.length)];
-    if (picked) openPracticeRoom(picked.id, mode || 'practice');
+    if (!picked) return;
+    if (activePart === 2) openPracticeRoom(picked.id, mode || 'practice');
+    else openInterviewRoom(picked.id, mode || 'practice');
+  }
+
+  function openRandomCueCard(mode) {
+    openRandomTopic(mode);
   }
 
   /* --- Speaking Part 2 Room (1-Min Prep -> 2-Min Speaking -> Review & Pivot Model) --- */
   function openPracticeRoom(cueId, mode) {
+    const p13 = getPart13Topic(cueId);
+    if (p13) {
+      openInterviewRoom(cueId, mode);
+      return;
+    }
     ensureOverlays();
     STT()?.abort?.();
     const story = getStory();
@@ -3364,6 +3539,7 @@
     });
 
     roomState = {
+      kind: 'part2',
       cue,
       mode: mode === 'exam' ? 'exam' : 'practice',
       phase: 'prep',
@@ -4010,6 +4186,7 @@
                     ${roomState.showFullB4 ? 'Ẩn cốt truyện nguyên văn' : 'Xem cốt truyện chính (~220 từ)'}
                   </button>
                   <button type="button" class="btn" style="padding:4px 10px;font-size:12px;" onclick="SpeakingStudio.openMindmapModal('master')">Mở Mindmap</button>
+                  ${getPart3Topics().length ? `<button type="button" class="btn btn-primary" style="padding:4px 12px;font-size:12px;" onclick="SpeakingStudio.openInterviewRoom('sp_p3_older_gen', '${esc(mode)}')">Tiếp tục thảo luận Part 3 →</button>` : ''}
                 </div>
                 ${roomState.showFullB4 ? `<div style="font-size:13.2px;line-height:1.62;color:var(--ink-2);padding-top:8px;border-top:1px solid var(--border);">${esc((fs.en || []).slice(1).join(' '))}</div>` : ''}
               </div>
@@ -4037,6 +4214,791 @@
     `;
   }
 
+  /* ================= PART 1 & PART 3 EXAMINER INTERVIEW ROOM ================= */
+  function openInterviewRoom(topicId, mode) {
+    ensureOverlays();
+    STT()?.abort?.();
+    clearInterval(roomState?.timerId);
+    const topic = getPart13Topic(topicId);
+    if (!topic) return;
+
+    const cleanMode = mode === 'exam' ? 'exam' : 'practice';
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const initContrast = cleanMode === 'exam' ? 'cd' : (isDark ? 'dark' : 'totoro');
+
+    state.pracPart = topic.part;
+
+    window.TotoroUI?.recordLastSession?.({
+      skill: 'Speaking',
+      view: 'practice',
+      label: `Speaking Part ${topic.part} · ${topic.title}`,
+      action: `window.SpeakingStudio?.openPracticePart(${topic.part})`
+    });
+
+    roomState = {
+      kind: 'interview',
+      topic,
+      part: topic.part,
+      mode: cleanMode,
+      phase: 'interview', // 'interview' | 'review'
+      qIdx: 0,
+      turns: (topic.questions || []).map((qObj) => ({
+        qId: qObj.id,
+        q: qObj.q,
+        text: '',
+        durationSec: 0,
+        audioUrl: '',
+        acoustic: null,
+        words: 0,
+        wpm: 0,
+        usedChunks: []
+      })),
+      recording: false,
+      processing: false,
+      typeMode: false,
+      recStartedAt: 0,
+      recElapsedSec: 0,
+      totalElapsedSec: 0,
+      timerId: null,
+      showGuide: cleanMode !== 'exam',
+      showModel: false,
+      strikes: 0,
+      contrast: initContrast,
+      textSize: 'regular',
+      grading: false,
+      report: null,
+      metrics: null,
+      combinedText: ''
+    };
+
+    const el = document.getElementById('sp-practice-room');
+    el.className = `sp-exam-room open ins-shell ins-contrast-${initContrast} ins-size-regular ${cleanMode === 'exam' ? 'is-exam ins-mode-exam' : 'is-practice'}`;
+    startInterviewTimer();
+    renderInterviewRoom();
+    setTimeout(() => speakInterviewQuestion(), 220);
+  }
+
+  function startInterviewTimer() {
+    clearInterval(roomState?.timerId);
+    roomState.timerId = setInterval(() => {
+      if (!roomState || roomState.kind !== 'interview' || roomState.phase === 'review') return;
+      roomState.totalElapsedSec++;
+      const hdrTimer = document.getElementById('sp-room-timer');
+      if (hdrTimer) {
+        hdrTimer.textContent = `Câu ${roomState.qIdx + 1}/${roomState.turns.length} · ${fmtMmSs(roomState.totalElapsedSec)}`;
+      }
+      if (roomState.recording) {
+        roomState.recElapsedSec = Math.max(0, Math.round((Date.now() - roomState.recStartedAt) / 1000));
+        const recTimeEl = document.getElementById('sp-int-rec-time');
+        if (recTimeEl) recTimeEl.textContent = fmtMmSs(roomState.recElapsedSec);
+
+        const isP1 = roomState.part === 1;
+        const maxScale = isP1 ? 45 : 75;
+        const minIdeal = isP1 ? 20 : 40;
+        const maxIdeal = isP1 ? 35 : 65;
+        const minAccept = isP1 ? 12 : 25;
+        const pct = Math.min(100, Math.round((roomState.recElapsedSec / maxScale) * 100));
+
+        const zFill = document.getElementById('sp-int-zone-fill');
+        const zTxt = document.getElementById('sp-int-zone-status');
+        if (zFill) zFill.style.width = `${pct}%`;
+        if (zTxt) {
+          const inZone = roomState.recElapsedSec >= minIdeal && roomState.recElapsedSec <= maxIdeal + 10;
+          zTxt.textContent = inZone
+            ? `✓ Vùng thời lượng lý tưởng Band 7+ (${minIdeal}–${maxIdeal}s)`
+            : (roomState.recElapsedSec > maxIdeal + 10
+              ? `Đã vượt ${maxIdeal}s — bạn có thể chốt câu trả lời gọn gàng!`
+              : (roomState.recElapsedSec >= minAccept
+                ? `Đang nói ${roomState.recElapsedSec}s · Thêm 1 ý nhỏ để chạm vùng ${minIdeal}–${maxIdeal}s`
+                : `Đang thu ${roomState.recElapsedSec}s · Mục tiêu ${minIdeal}–${maxIdeal}s`));
+          zTxt.classList.toggle('is-ideal', inZone);
+        }
+      }
+    }, 500);
+  }
+
+  function speakInterviewQuestion(idxOverride) {
+    if (!roomState || roomState.kind !== 'interview') return;
+    const idx = typeof idxOverride === 'number' ? idxOverride : roomState.qIdx;
+    const qObj = roomState.topic?.questions?.[idx];
+    if (qObj?.q) speakText(qObj.q, 'en-GB');
+  }
+
+  function toggleInterviewGuide() {
+    if (!roomState || roomState.kind !== 'interview' || roomState.mode === 'exam') return;
+    roomState.showGuide = !roomState.showGuide;
+    renderInterviewRoom();
+  }
+
+  function toggleInterviewModel() {
+    if (!roomState || roomState.kind !== 'interview' || roomState.mode === 'exam') return;
+    roomState.showModel = !roomState.showModel;
+    renderInterviewRoom();
+  }
+
+  function toggleInterviewTypeMode() {
+    if (!roomState || roomState.kind !== 'interview' || roomState.mode === 'exam') return;
+    if (roomState.recording) {
+      STT()?.abort?.();
+      roomState.recording = false;
+    }
+    roomState.typeMode = !roomState.typeMode;
+    renderInterviewRoom();
+  }
+
+  function toggleInterviewMic() {
+    if (!roomState || roomState.kind !== 'interview') return;
+    const stt = STT();
+    if (!stt?.isSupported?.()) {
+      toast('Thiết bị chưa có Micro — bật ô nhập dự phòng.');
+      if (roomState.mode !== 'exam') roomState.typeMode = true;
+      renderInterviewRoom();
+      return;
+    }
+    if (roomState.recording) {
+      stt.stop();
+      roomState.recording = false;
+      roomState.processing = true;
+      renderInterviewRoom();
+      return;
+    }
+    stt.abort();
+    const targetQIdx = roomState.qIdx;
+    roomState.recording = true;
+    roomState.processing = false;
+    roomState.recStartedAt = Date.now();
+    roomState.recElapsedSec = 0;
+    renderInterviewRoom();
+    stt.startRecording({
+      mode: 'speaking',
+      autoStopOnSilence: false,
+      maxDurationMs: roomState.part === 1 ? 55000 : 85000,
+      onLevel: ({ bars }) => updateWaveBars('room', bars),
+      onProcessing: () => {
+        if (roomState && roomState.kind === 'interview') {
+          roomState.recording = false;
+          roomState.processing = true;
+          renderInterviewRoom();
+        }
+      },
+      onResult: (res) => {
+        if (!roomState || roomState.kind !== 'interview') return;
+        roomState.recording = false;
+        roomState.processing = false;
+        const dur = res.durationSec || Math.max(4, Math.round((Date.now() - roomState.recStartedAt) / 1000));
+        if (res.silent || !res.text) {
+          toast('Chưa thu được giọng nói rõ — hãy bấm Mic trả lời lại câu này!');
+          renderInterviewRoom();
+          return;
+        }
+        saveInterviewTurn(targetQIdx, res.text, dur, res.audioUrl || '', {
+          hasAudio: true,
+          audioUrl: res.audioUrl || '',
+          durationSec: dur,
+          words: res.words || [],
+          segments: res.segments || [],
+        });
+      },
+      onError: (msg) => {
+        if (!roomState || roomState.kind !== 'interview') return;
+        roomState.recording = false;
+        roomState.processing = false;
+        toast(String(msg || 'Lỗi Micro.'));
+        renderInterviewRoom();
+      }
+    });
+  }
+
+  function submitInterviewTyped() {
+    if (!roomState || roomState.kind !== 'interview') return;
+    const ta = document.getElementById('sp-int-ta');
+    const val = (ta?.value || '').trim();
+    const minWords = roomState.part === 1 ? 6 : 10;
+    if (countWords(val) < minWords) {
+      toast(`Hãy trả lời tối thiểu ${minWords} từ cho câu hỏi Part ${roomState.part} này!`);
+      return;
+    }
+    const dur = Math.max(roomState.part === 1 ? 15 : 30, Math.round(countWords(val) / 2.2));
+    saveInterviewTurn(roomState.qIdx, val, dur, '', { hasAudio: false, durationSec: dur, words: [], segments: [] });
+  }
+
+  function saveInterviewTurn(idx, text, durationSec, audioUrl, acoustic) {
+    if (!roomState || roomState.kind !== 'interview') return;
+    const qObj = roomState.topic.questions[idx];
+    const cleanText = String(text || '').trim();
+    const words = countWords(cleanText);
+    const wpm = durationSec > 0 ? Math.round((words / durationSec) * 60) : 0;
+    const low = cleanText.toLowerCase();
+    const usedChunks = (qObj?.chunks || []).filter((ch) => {
+      const k = String(ch || '').toLowerCase().trim();
+      return k.length >= 3 && low.includes(k);
+    });
+
+    roomState.turns[idx] = {
+      qId: qObj?.id || `q${idx + 1}`,
+      q: qObj?.q || '',
+      text: cleanText,
+      durationSec,
+      audioUrl: audioUrl || '',
+      acoustic: acoustic || null,
+      words,
+      wpm,
+      usedChunks
+    };
+
+    const isLast = idx >= roomState.turns.length - 1;
+    if (roomState.mode === 'exam' && !isLast) {
+      toast(`Đã ghi nhận Câu ${idx + 1}/${roomState.turns.length} — chuyển sang Câu ${idx + 2}...`);
+      roomState.qIdx = idx + 1;
+      roomState.showModel = false;
+      renderInterviewRoom();
+      setTimeout(() => speakInterviewQuestion(), 280);
+    } else if (roomState.mode === 'exam' && isLast) {
+      finishInterview();
+    } else {
+      toast(`Đã lưu Câu ${idx + 1}/${roomState.turns.length} (${words} từ · ${durationSec}s)`);
+      renderInterviewRoom();
+    }
+  }
+
+  function nextInterviewQ() {
+    if (!roomState || roomState.kind !== 'interview') return;
+    if (roomState.recording || roomState.processing) return;
+    if (roomState.qIdx < roomState.turns.length - 1) {
+      roomState.qIdx++;
+      roomState.showModel = false;
+      renderInterviewRoom();
+      setTimeout(() => speakInterviewQuestion(), 200);
+    } else {
+      finishInterview();
+    }
+  }
+
+  function jumpInterviewQ(idx) {
+    if (!roomState || roomState.kind !== 'interview') return;
+    if (roomState.recording || roomState.processing) return;
+    if (roomState.mode === 'exam' && idx !== roomState.qIdx) return;
+    if (idx < 0 || idx >= roomState.turns.length) return;
+    roomState.qIdx = idx;
+    roomState.showModel = false;
+    renderInterviewRoom();
+  }
+
+  async function finishInterview() {
+    if (!roomState || roomState.kind !== 'interview') return;
+    const answered = roomState.turns.filter((t) => countWords(t.text) > 0);
+    if (!answered.length) {
+      toast('Bạn chưa trả lời câu hỏi nào — hãy bấm Mic hoặc nhập câu trả lời trước nhé!');
+      return;
+    }
+    clearInterval(roomState.timerId);
+    STT()?.abort?.();
+    const activeRoomRef = roomState;
+    const topic = activeRoomRef.topic;
+
+    const combinedText = answered.map((t) => t.text).join(' ');
+    const totalDur = answered.reduce((acc, t) => acc + (Number(t.durationSec) || 0), 0);
+    const totalWords = countWords(combinedText);
+    const wpm = totalDur > 0 ? Math.round((totalWords / totalDur) * 60) : 0;
+    const allTopicChunks = (topic.questions || []).flatMap((q) => q.chunks || []);
+    const lowAll = combinedText.toLowerCase();
+    const usedChunks = [...new Set(allTopicChunks.filter((ch) => {
+      const k = String(ch || '').toLowerCase().trim();
+      return k.length >= 3 && lowAll.includes(k);
+    }))];
+    const fillerCount = (combinedText.match(/\b(um+|uh+|er+|erm+|hmm+|you know|actually|basically|like)\b/gi) || []).length;
+
+    const hasAnyAudio = answered.some((t) => t.acoustic?.hasAudio);
+    const mergedSegments = [];
+    const mergedWords = [];
+    let timeOffset = 0;
+    answered.forEach((t) => {
+      if (t.acoustic?.segments?.length) {
+        t.acoustic.segments.forEach((s) => mergedSegments.push({ ...s, start: (s.start || 0) + timeOffset, end: (s.end || 0) + timeOffset }));
+      }
+      if (t.acoustic?.words?.length) {
+        t.acoustic.words.forEach((w) => mergedWords.push({ ...w, start: (w.start || 0) + timeOffset, end: (w.end || 0) + timeOffset }));
+      }
+      timeOffset += (Number(t.durationSec) || 0) + 0.3;
+    });
+
+    activeRoomRef.combinedText = combinedText;
+    activeRoomRef.metrics = {
+      durationSec: totalDur,
+      words: totalWords,
+      wpm,
+      usedChunks,
+      fillerCount,
+      answeredCount: answered.length,
+      totalQuestions: activeRoomRef.turns.length
+    };
+    activeRoomRef.phase = 'review';
+    activeRoomRef.grading = Boolean(window.IeltsGrader?.gradeSpeaking);
+    activeRoomRef.report = null;
+    renderInterviewRoom();
+
+    let report = null;
+    if (window.IeltsGrader?.gradeSpeaking) {
+      try {
+        report = await window.IeltsGrader.gradeSpeaking({
+          part: topic.part,
+          cueTitle: `${topic.title}${topic.titleVi ? ` (${topic.titleVi})` : ''}`,
+          cueBullets: (topic.questions || []).map((q) => q.q),
+          qaTurns: answered.map((t) => ({ q: t.q, a: t.text, durationSec: t.durationSec })),
+          curriculumContext: (topic.questions || []).map((q) => q.modelEn).join(' '),
+          curriculumKeywords: allTopicChunks.join(' '),
+          text: combinedText,
+          acoustic: {
+            hasAudio: hasAnyAudio,
+            durationSec: totalDur,
+            words: mergedWords,
+            segments: mergedSegments
+          }
+        });
+      } catch (err) {
+        console.warn('[SpeakingStudio] Interview IELTS grader error:', err);
+      }
+    }
+
+    if (roomState === activeRoomRef) {
+      roomState.grading = false;
+      roomState.report = report;
+    }
+
+    const hist = getPracHistory();
+    hist.unshift({
+      part: topic.part,
+      cueId: topic.id,
+      cueTitle: `Part ${topic.part} · ${topic.title}`,
+      mode: activeRoomRef.mode,
+      band: report ? report.overall : null,
+      criteria: report ? {
+        fc: report.criteria.fc.band,
+        lr: report.criteria.lr.band,
+        gra: report.criteria.gra.band,
+        pr: report.criteria.pr.band,
+      } : null,
+      durationSec: totalDur,
+      wpm,
+      words: totalWords,
+      chunksCount: usedChunks.length,
+      fillerCount,
+      at: Date.now()
+    });
+    savePracHistory(hist.slice(0, 60));
+    if (roomState === activeRoomRef) renderInterviewRoom();
+  }
+
+  function renderInterviewRoom() {
+    if (!roomState || roomState.kind !== 'interview') return;
+    const { topic, part, mode, phase, qIdx, turns, recording, processing, typeMode, showGuide, showModel, totalElapsedSec, recElapsedSec, metrics } = roomState;
+    const isExam = mode === 'exam';
+    const isP1 = part === 1;
+    const root = document.getElementById('sp-practice-room');
+    const qList = topic.questions || [];
+    const curQ = qList[qIdx] || qList[0];
+    const curTurn = turns[qIdx] || {};
+    const answeredCount = turns.filter((t) => countWords(t.text) > 0).length;
+    const allAnswered = answeredCount === turns.length;
+
+    const headerBrandHtml = isExam
+      ? `<span class="ins-brand-mark">IELTS</span>`
+      : `<span class="ws-prac-brand-badge" aria-hidden="true">
+           <svg viewBox="2 2 24 24" width="22" height="22" fill="none">
+             <path d="M8.5 11.2L7 5.6L11.2 9C12.5 8.5 14 8.5 15.3 9L19.5 5.6L18 11.2C20.2 12.8 21.2 15.2 21 18.2C20.7 21.5 17.8 23.2 13.2 23.2C8.6 23.2 5.7 21.5 5.4 18.2C5.2 15.2 6.2 12.8 8.5 11.2Z" fill="#6F6B64" stroke="#484540" stroke-width="1.1"/>
+             <path d="M13.2 8.4C14.8 5.4 17.5 5 19.2 6.6C17.4 8.3 15 8.8 13.2 8.4Z" fill="#52A063" stroke="#2D6A3B" stroke-width="0.9"/>
+             <ellipse cx="13.2" cy="18.8" rx="5.2" ry="3.4" fill="#FBF6E8"/>
+             <circle cx="10.6" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="10.8" cy="13.5" r="0.75" fill="#181A1F"/>
+             <circle cx="15.8" cy="13.5" r="1.5" fill="#FFFFFF"/><circle cx="15.6" cy="13.5" r="0.75" fill="#181A1F"/>
+           </svg>
+         </span>`;
+
+    const acChipHtml = phase !== 'review' ? `
+      <span class="rp-ac-shield ${roomState.strikes > 0 ? 'is-warn' : ''}" id="sp-prac-ac-pill" title="Chống gian lận đang bật trong phòng phỏng vấn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span id="sp-prac-ac-text">${roomState.strikes > 0 ? `Cảnh báo ${roomState.strikes}/2` : 'Anti-Cheat'}</span>
+      </span>
+    ` : '';
+
+    const roomOptHtml = isExam
+      ? `
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Contrast</div>
+          <div class="ws-ins-opt-grid">
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'cd' ? 'active' : ''}" data-contrast="cd" onclick="SpeakingStudio.setRoomContrast('cd')">Black on White</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'totoro' ? 'active' : ''}" data-contrast="totoro" onclick="SpeakingStudio.setRoomContrast('totoro')">Totoro Washi</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'dark' ? 'active' : ''}" data-contrast="dark" onclick="SpeakingStudio.setRoomContrast('dark')">White on Black</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'yellow' ? 'active' : ''}" data-contrast="yellow" onclick="SpeakingStudio.setRoomContrast('yellow')">Yellow on Black</button>
+          </div>
+        </div>
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Text size</div>
+          <div class="ws-ins-opt-row">
+            <button type="button" class="ws-ins-opt-choice ${roomState.textSize === 'regular' ? 'active' : ''}" data-size="regular" onclick="SpeakingStudio.setRoomTextSize('regular')">Regular</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.textSize === 'large' ? 'active' : ''}" data-size="large" onclick="SpeakingStudio.setRoomTextSize('large')">Large</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.textSize === 'xlarge' ? 'active' : ''}" data-size="xlarge" onclick="SpeakingStudio.setRoomTextSize('xlarge')">Extra large</button>
+          </div>
+        </div>
+      `
+      : `
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Màu sắc</div>
+          <div class="ws-ins-opt-row">
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'totoro' ? 'active' : ''}" data-contrast="totoro" onclick="SpeakingStudio.setRoomContrast('totoro')">Totoro Sáng</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.contrast === 'dark' ? 'active' : ''}" data-contrast="dark" onclick="SpeakingStudio.setRoomContrast('dark')">Chế độ Tối</button>
+          </div>
+        </div>
+        <div class="ws-ins-opt-group">
+          <div class="ws-ins-opt-lbl">Cỡ chữ hiển thị</div>
+          <div class="ws-ins-opt-row">
+            <button type="button" class="ws-ins-opt-choice ${roomState.textSize === 'regular' ? 'active' : ''}" data-size="regular" onclick="SpeakingStudio.setRoomTextSize('regular')">Vừa</button>
+            <button type="button" class="ws-ins-opt-choice ${roomState.textSize === 'large' ? 'active' : ''}" data-size="large" onclick="SpeakingStudio.setRoomTextSize('large')">Lớn</button>
+          </div>
+        </div>
+      `;
+
+    const timerLabel = phase === 'review'
+      ? `Đã hoàn thành Part ${part}`
+      : `Câu ${qIdx + 1}/${turns.length} · ${fmtMmSs(totalElapsedSec)}`;
+
+    let leftPaneHtml = '';
+    let rightPaneHtml = '';
+
+    const targetLbl = getTopicTargetLabel(topic);
+
+    if (phase === 'interview') {
+      const qPillsHtml = turns.map((t, i) => {
+        const done = countWords(t.text) > 0;
+        const active = i === qIdx;
+        const disabled = isExam && !active;
+        return `
+          <button type="button" class="sp-int-q-pill ${active ? 'is-active' : ''} ${done ? 'is-done' : ''}"
+            ${disabled ? 'disabled' : ''} onclick="SpeakingStudio.jumpInterviewQ(${i})">
+            <span class="sp-int-q-num">${done ? '✓' : (i + 1)}</span>
+            <span>Câu ${i + 1}</span>
+          </button>
+        `;
+      }).join('');
+
+      leftPaneHtml = `
+        <div class="ws-prac-prompt-meta">
+          <span class="ws-prac-part-badge">Part ${part}</span>
+          <span>${esc(topic.title)} · ${esc(targetLbl)}</span>
+        </div>
+
+        <div class="sp-int-q-pills" role="tablist" aria-label="Tiến độ câu hỏi phỏng vấn">${qPillsHtml}</div>
+
+        <div class="sp-int-examiner-card">
+          <div class="sp-int-examiner-head">
+            <div class="sp-int-examiner-who">
+              <span class="sp-int-examiner-dot" aria-hidden="true"></span>
+              <strong>Examiner · Câu ${qIdx + 1}/${turns.length}</strong>
+              <span class="sp-int-qtype-tag">${esc(curQ.qType || (isP1 ? 'Interview' : 'Discussion'))}</span>
+            </div>
+            <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakInterviewQuestion()" title="Nghe Giám khảo đọc lại câu hỏi (Giọng Anh-Anh)">
+              <span>🔊 Nghe UK</span>
+            </button>
+          </div>
+          <div class="sp-int-q-text">${esc(curQ.q)}</div>
+          <div class="sp-int-q-sub">${isP1 ? 'Trả lời trực tiếp, tự nhiên 2–3 câu (~20–35 giây).' : 'Phân tích theo góc nhìn xã hội/chung, giải thích & nêu ví dụ (~40–65 giây).'}</div>
+        </div>
+
+        ${!isExam ? `
+          <div class="sp-int-coach-card">
+            <div class="sp-int-coach-head">
+              <strong>${isP1 ? 'Khung tư duy A.R.E. & Spoken Chunks' : 'Khung tư duy P.E.E.C. & Cụm học thuật'}</strong>
+              <button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.toggleInterviewGuide()">${showGuide ? 'Thu gọn' : 'Hiện gợi ý'}</button>
+            </div>
+            ${showGuide ? `
+              <div class="sp-int-formula-box">${esc(curQ.formulaVi || '')}</div>
+              <div class="sp-int-chunks-wrap">
+                <div class="sp-int-chunks-lbl">Cụm từ ăn điểm Band 7.5–8.5 (chạm để nghe phát âm UK):</div>
+                <div class="sp-int-chunks-row">
+                  ${(curQ.chunks || []).map((ch) => `
+                    <button type="button" class="sp-int-chunk-chip" onclick="SpeakingStudio.speakRaw('${esc(ch).replace(/'/g, "\\'")}', 'en-GB')" title="Bấm để nghe phát âm UK">
+                      <span>🔊</span><span>${esc(ch)}</span>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+              <div class="sp-int-model-toggle-row">
+                <button type="button" class="btn-reading-tip ${showModel ? 'is-active' : ''}" onclick="SpeakingStudio.toggleInterviewModel()">
+                  ${showModel ? 'Ẩn bài mẫu Band 8.0' : 'Xem bài mẫu tham khảo Band 8.0'}
+                </button>
+                ${showModel ? `<button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(curQ.modelEn || '').replace(/'/g, "\\'")}', 'en-GB')"><span>🔊 Nghe mẫu UK</span></button>` : ''}
+              </div>
+              ${showModel ? `<div class="sp-int-model-box">${esc(curQ.modelEn || '')}</div>` : ''}
+            ` : ''}
+          </div>
+        ` : `
+          <p class="ws-ins-inst">${isP1
+            ? 'In Part 1, the examiner asks you general questions about yourself and familiar topics. Speak naturally and give full answers of 2 to 3 sentences.'
+            : 'In Part 3, the examiner discusses more abstract issues connected to the topic. Develop your ideas with explanations, examples, and balanced viewpoints.'}</p>
+        `}
+      `;
+
+      const maxScale = isP1 ? 45 : 75;
+      const idealLeftPct = isP1 ? Math.round((20 / maxScale) * 100) : Math.round((40 / maxScale) * 100);
+      const idealWidthPct = isP1 ? Math.round((15 / maxScale) * 100) : Math.round((25 / maxScale) * 100);
+      const curFillPct = Math.min(100, Math.round((recElapsedSec / maxScale) * 100));
+      const meterPct = Math.round(((answeredCount + (recording ? 0.5 : 0)) / Math.max(1, turns.length)) * 100);
+
+      const savedTurnsHtml = turns
+        .map((t, i) => ({ t, i }))
+        .filter(({ t }) => countWords(t.text) > 0)
+        .map(({ t, i }) => `
+          <div class="sp-int-log-item ${i === qIdx ? 'is-current' : ''}">
+            <div class="sp-int-log-head">
+              <strong>Câu ${i + 1}</strong>
+              <span class="tabular">${t.words} từ · ${t.durationSec}s${t.wpm ? ` · ${t.wpm} WPM` : ''}</span>
+            </div>
+            <div class="sp-int-log-txt">${esc(t.text)}</div>
+            ${t.audioUrl ? `<audio class="sp-audio-replay sp-int-mini-audio" controls src="${esc(t.audioUrl)}"></audio>` : ''}
+          </div>
+        `).join('');
+
+      rightPaneHtml = `
+        <div class="ws-prac-paper-card sp-studio-paper">
+          <div class="ws-prac-paper-head">
+            <div class="ws-prac-paper-title-grp">
+              <span class="ws-prac-paper-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              </span>
+              <span class="ws-prac-paper-title">Phòng Phỏng Vấn Part ${part}</span>
+              <span class="ws-prac-para-pill tabular">Đã trả lời ${answeredCount}/${turns.length}</span>
+            </div>
+            <div class="ws-prac-paper-badges">
+              ${!isExam ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.toggleInterviewTypeMode()">${typeMode ? 'Dùng Mic AI' : 'Gõ dự phòng'}</button>` : ''}
+            </div>
+          </div>
+          <div class="ws-prac-paper-meter" aria-hidden="true">
+            <span class="ws-prac-paper-meter-fill" style="width:${meterPct}%"></span>
+          </div>
+
+          <div class="sp-int-right-scroll">
+            ${typeMode && !isExam ? `
+              <div class="sp-int-type-wrap">
+                <label class="sp-int-type-lbl" for="sp-int-ta">Câu trả lời của bạn cho Câu ${qIdx + 1}:</label>
+                <textarea class="ws-ins-editor ws-prac-editor sp-int-ta" id="sp-int-ta" spellcheck="false"
+                  placeholder="${isP1 ? 'Gõ câu trả lời Part 1 tự nhiên (2–3 câu theo A.R.E.)...' : 'Gõ câu trả lời Part 3 phân tích sâu (3–5 câu theo P.E.E.C.)...'}">${esc(curTurn.text || '')}</textarea>
+                <div class="sp-int-type-acts">
+                  <button type="button" class="btn btn-primary" onclick="SpeakingStudio.submitInterviewTyped()">Lưu câu trả lời Câu ${qIdx + 1} ✓</button>
+                  ${countWords(curTurn.text) > 0 && qIdx < turns.length - 1 ? `<button type="button" class="btn" onclick="SpeakingStudio.nextInterviewQ()">Sang Câu ${qIdx + 2} →</button>` : ''}
+                </div>
+              </div>
+            ` : `
+              <div class="sp-room-mic-body sp-int-mic-stage">
+                <div class="sp-int-rec-clock ${recording ? 'is-recording' : ''}">
+                  <div class="sp-int-rec-time tabular" id="sp-int-rec-time">${fmtMmSs(recording ? recElapsedSec : (curTurn.durationSec || 0))}</div>
+                  <div class="sp-int-rec-sub">${recording ? 'Đang ghi âm câu trả lời...' : (countWords(curTurn.text) > 0 ? 'Đã lưu câu trả lời — có thể thu lại hoặc sang câu tiếp' : `Mục tiêu ${esc(targetLbl)}`)}</div>
+                </div>
+                <div class="sp-wave-bars">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="room"></span>`).join('')}</div>
+                <div class="sp-zone-gauge">
+                  <div class="sp-zone-track">
+                    <span class="sp-zone-ideal" style="left:${idealLeftPct}%;width:${idealWidthPct}%;right:auto;" title="Vùng thời lượng lý tưởng Band 7+"></span>
+                    <span class="sp-zone-fill" id="sp-int-zone-fill" style="width:${recording ? curFillPct : 0}%"></span>
+                  </div>
+                  <div class="sp-zone-marks tabular"><span>0s</span><span>${isP1 ? '15s' : '30s'}</span><span>${isP1 ? '20–35s (Lý tưởng)' : '40–65s (Lý tưởng)'}</span></div>
+                  <div class="sp-zone-status" id="sp-int-zone-status">${recording ? `Đang thu ${recElapsedSec}s · Mục tiêu ${esc(targetLbl)}` : `Bấm Mic để trả lời Câu ${qIdx + 1}/${turns.length}`}</div>
+                </div>
+                <div class="sp-int-mic-actions">
+                  <button type="button" class="sp-mic-btn ${recording ? 'is-recording' : ''}" ${processing ? 'disabled' : ''} onclick="SpeakingStudio.toggleInterviewMic()">
+                    <span>${processing ? 'Đang chuyển giọng nói AI...' : (recording ? `Dừng & Lưu Câu ${qIdx + 1}` : (countWords(curTurn.text) > 0 ? `Thu lại Câu ${qIdx + 1}` : `Bấm Mic trả lời Câu ${qIdx + 1}`))}</span>
+                  </button>
+                  ${!recording && !processing && countWords(curTurn.text) > 0 && qIdx < turns.length - 1 ? `
+                    <button type="button" class="btn btn-primary" style="padding:11px 18px;font-size:13.5px;border-radius:999px;" onclick="SpeakingStudio.nextInterviewQ()">Câu tiếp theo (${qIdx + 2}/${turns.length}) →</button>
+                  ` : ''}
+                </div>
+              </div>
+            `}
+
+            ${savedTurnsHtml ? `
+              <div class="sp-int-log-section">
+                <div class="sp-int-log-title">Nhật ký hội thoại đã trả lời (${answeredCount}/${turns.length})</div>
+                <div class="sp-int-log-list">${savedTurnsHtml}</div>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="ws-prac-paper-foot">
+            <div class="ws-prac-paper-foot-l">
+              <span class="ws-prac-wc-note">${allAnswered ? '✓ Đã hoàn tất cả 4 câu hỏi — bấm Nộp & Chấm điểm để nhận Band Score!' : `Trả lời lần lượt ${turns.length} câu hỏi rồi bấm Chấm điểm tổng hợp.`}</span>
+            </div>
+            ${!isExam && !typeMode ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.toggleInterviewTypeMode()">Gõ dự phòng</button>` : ''}
+          </div>
+        </div>
+      `;
+    } else {
+      // REVIEW & SCORECARD PHASE
+      const m = metrics || { durationSec: 0, wpm: 0, words: 0, usedChunks: [], fillerCount: 0 };
+      const annotatedHtml = buildAnnotatedTranscriptHtml(roomState.combinedText, m.usedChunks, roomState.report?.errors || []);
+      const siblingList = isP1 ? getPart1Topics() : getPart3Topics();
+      const curTopicIdx = siblingList.findIndex((x) => x.id === topic.id);
+      const nextTopic = siblingList[(curTopicIdx + 1) % Math.max(1, siblingList.length)];
+
+      leftPaneHtml = `
+        <div class="ws-prac-prompt-meta">
+          <span class="ws-prac-part-badge">Part ${part} · Đối chiếu</span>
+          <span>${esc(topic.title)}</span>
+        </div>
+
+        <div class="sp-int-compare-list">
+          ${qList.map((qObj, i) => {
+            const t = turns[i] || {};
+            const hasAns = countWords(t.text) > 0;
+            return `
+              <div class="sp-int-compare-card">
+                <div class="sp-int-compare-q">
+                  <span class="sp-int-q-badge">Q${i + 1}</span>
+                  <strong>${esc(qObj.q)}</strong>
+                </div>
+                <div class="sp-int-compare-you">
+                  <div class="sp-int-compare-lbl">Câu trả lời của bạn ${hasAns ? `<span class="tabular">(${t.words}w · ${t.durationSec}s)</span>` : ''}</div>
+                  ${hasAns ? `<div class="sp-int-compare-txt">${esc(t.text)}</div>` : `<div class="sp-int-compare-empty">Chưa trả lời câu này</div>`}
+                  ${t.audioUrl ? `<audio class="sp-audio-replay sp-int-mini-audio" controls src="${esc(t.audioUrl)}"></audio>` : ''}
+                </div>
+                <div class="sp-int-compare-model">
+                  <div class="sp-int-compare-mhead">
+                    <strong>Bài mẫu Band 8.0</strong>
+                    <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(qObj.modelEn || '').replace(/'/g, "\\'")}', 'en-GB')"><span>🔊 UK</span></button>
+                  </div>
+                  <div class="sp-int-compare-mtxt">${esc(qObj.modelEn || '')}</div>
+                  <div class="sp-int-chunks-row" style="margin-top:6px;">
+                    ${(qObj.chunks || []).map((ch) => `<button type="button" class="sp-int-chunk-chip is-sm" onclick="SpeakingStudio.speakRaw('${esc(ch).replace(/'/g, "\\'")}', 'en-GB')"><span>🔊</span><span>${esc(ch)}</span></button>`).join('')}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      rightPaneHtml = `
+        <div class="ws-prac-paper-card sp-studio-paper">
+          <div class="ws-prac-paper-head">
+            <div class="ws-prac-paper-title-grp">
+              <span class="ws-prac-paper-ico" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="ws-prac-paper-title">Scorecard · Kết quả Speaking Part ${part}</span>
+              <span class="ws-prac-para-pill tabular">${m.words} từ · ${m.answeredCount}/${m.totalQuestions} câu</span>
+            </div>
+            <div class="ws-prac-paper-badges">
+              <button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.openInterviewRoom('${esc(topic.id)}', '${esc(mode)}')">Nói lại</button>
+              ${nextTopic && nextTopic.id !== topic.id ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.openInterviewRoom('${esc(nextTopic.id)}', '${esc(mode)}')">Chủ đề tiếp →</button>` : ''}
+              <button type="button" class="ws-prac-submit-pill" style="height:30px;padding:0 13px;font-size:12px;" onclick="SpeakingStudio.closePracticeRoom()">Về kho đề</button>
+            </div>
+          </div>
+          <div class="ws-prac-paper-meter" aria-hidden="true">
+            <span class="ws-prac-paper-meter-fill" style="width:100%"></span>
+          </div>
+          <div class="sp-room-review-scroll">
+            ${roomState.grading
+              ? (window.IeltsGrader?.renderLoadingHtml(`Giám khảo IELTS Speaking AI đang chấm 4 tiêu chí Part ${part} (FC / LR / GRA / PR)...`) || '')
+              : (roomState.report && window.IeltsGrader?.renderExaminerReportHtml
+                ? window.IeltsGrader.renderExaminerReportHtml(roomState.report, { title: `Kết quả chấm IELTS Speaking Part ${part}` })
+                : '')}
+            <div class="sp-metrics-grid">
+              <div class="sp-metric-box"><div class="sp-metric-val">${fmtMmSs(m.durationSec)}</div><div class="sp-metric-lbl">Tổng thời lượng</div></div>
+              <div class="sp-metric-box"><div class="sp-metric-val">${m.wpm}</div><div class="sp-metric-lbl">Tốc độ (WPM)</div></div>
+              <div class="sp-metric-box"><div class="sp-metric-val">${m.usedChunks.length}</div><div class="sp-metric-lbl">Spoken Chunks</div></div>
+              <div class="sp-metric-box"><div class="sp-metric-val">${m.fillerCount}</div><div class="sp-metric-lbl">Từ đệm</div></div>
+            </div>
+            <div class="sp-transcript-box">
+              <div class="sp-tr-legend-head">
+                <strong>Toàn bộ bài nói Part ${part} đã phân tích màu</strong>
+                <div class="sp-tr-legend-chips">
+                  <span class="sp-tr-leg is-chunk">Spoken Chunk</span>
+                  <span class="sp-tr-leg is-filler">Từ đệm</span>
+                  <span class="sp-tr-leg is-err">Lỗi cần sửa</span>
+                </div>
+              </div>
+              <div class="sp-tr-annotated">${annotatedHtml}</div>
+              ${m.usedChunks.length ? `<div class="sp-kw-row" style="margin-top:10px;">${m.usedChunks.map((c) => `<span class="sp-kw-chip hit">✓ ${esc(c)}</span>`).join('')}</div>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    const canFinish = answeredCount >= (isExam ? turns.length : 1);
+    const footBtnAct = phase === 'review'
+      ? 'SpeakingStudio.closePracticeRoom()'
+      : (allAnswered
+        ? 'SpeakingStudio.finishInterview()'
+        : (countWords(curTurn.text) > 0 && qIdx < turns.length - 1
+          ? 'SpeakingStudio.nextInterviewQ()'
+          : (typeMode && !isExam ? 'SpeakingStudio.submitInterviewTyped()' : 'SpeakingStudio.toggleInterviewMic()')));
+    const footBtnLabel = phase === 'review'
+      ? 'Về kho đề ✓'
+      : (allAnswered
+        ? `Nộp & Chấm điểm Part ${part} →`
+        : (countWords(curTurn.text) > 0 && qIdx < turns.length - 1
+          ? `Câu tiếp (${qIdx + 2}/${turns.length}) →`
+          : (typeMode && !isExam ? `Lưu Câu ${qIdx + 1} ✓` : (recording ? `Dừng & Lưu Q${qIdx + 1}` : `Bắt đầu trả lời Q${qIdx + 1}`))));
+
+    root.innerHTML = `
+      <div class="ins-main-col" onclick="SpeakingStudio.toggleRoomOptions(false)">
+        <header class="ins-header ${isExam ? '' : 'ws-prac-custom-hdr'}">
+          <div class="ins-hdr-left">
+            ${headerBrandHtml}
+            <div class="ins-hdr-meta">
+              <div class="ins-hdr-title">${isExam ? `Test taker · Speaking Part ${part}` : `Speaking Studio · Luyện tập Part ${part}`}</div>
+              <div class="ins-hdr-timer" style="cursor:default;"><span id="sp-room-timer">${timerLabel}</span></div>
+            </div>
+          </div>
+          <div class="ins-hdr-right">
+            ${acChipHtml}
+            <div class="ws-ins-opt-wrap" onclick="event.stopPropagation()">
+              <button type="button" class="ins-hdr-ico" id="sp-prac-opt-btn" onclick="SpeakingStudio.toggleRoomOptions()" title="Màu sắc &amp; Cỡ chữ" aria-label="Options">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+              </button>
+              <div class="ws-ins-opt-pop" id="sp-prac-opt-pop">${roomOptHtml}</div>
+            </div>
+            <button type="button" class="ins-hdr-exit" onclick="SpeakingStudio.closePracticeRoom()">Thoát</button>
+          </div>
+        </header>
+
+        ${isExam ? `
+          <div class="ins-part-banner">
+            <strong>Part ${part}</strong>
+            <span>${isP1
+              ? 'Introduction & Interview — Answer 4 questions naturally (20–35 seconds each).'
+              : 'Two-Way Discussion — Discuss 4 abstract questions in depth (40–65 seconds each).'}</span>
+          </div>
+        ` : ''}
+
+        <div class="ins-split-body">
+          <section class="ins-pane ins-pane-left sp-ins-left">
+            ${leftPaneHtml}
+          </section>
+          <section class="ins-pane ins-pane-right sp-ins-right">
+            ${rightPaneHtml}
+          </section>
+        </div>
+
+        <footer class="ins-footer">
+          <div class="ins-footer-parts">
+            <div class="sp-foot-steps">
+              ${turns.map((t, i) => `
+                ${i > 0 ? '<span class="sp-foot-sep">→</span>' : ''}
+                <span class="sp-foot-step ${phase === 'interview' && i === qIdx ? 'is-active' : (countWords(t.text) > 0 || phase === 'review' ? 'is-done' : '')}">
+                  <span class="sp-foot-full">Câu ${i + 1}</span><span class="sp-foot-short">Q${i + 1}</span>
+                </span>
+              `).join('')}
+              <span class="sp-foot-sep">→</span>
+              <span class="sp-foot-step ${phase === 'review' ? 'is-active' : ''}"><span class="sp-foot-full">Chấm điểm</span><span class="sp-foot-short">Điểm</span></span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${phase === 'interview' && !isExam && canFinish && !allAnswered ? `<button type="button" class="ws-ins-plan-btn" style="height:34px;padding:0 12px;" onclick="SpeakingStudio.finishInterview()">Chấm sớm (${answeredCount}/${turns.length})</button>` : ''}
+            <button type="button" class="sp-foot-action-btn" onclick="${footBtnAct}">${footBtnLabel}</button>
+          </div>
+        </footer>
+      </div>
+    `;
+  }
+
   /* ================= SUMMARY MODAL (BẢNG THỐNG KÊ) ================= */
   function openSummaryModal() {
     ensureOverlays();
@@ -4046,15 +5008,16 @@
     const hist = getPracHistory();
     const el = document.getElementById('sp-summary-card');
     if (!el) return;
+    const totalTopics = getPart1Topics().length + (story?.cueCards || []).length + getPart3Topics().length;
     el.innerHTML = `
       <div class="sp-modal-head">
-        <div class="sp-modal-title">Bảng Thống Kê · IELTS Speaking (Story 01)</div>
+        <div class="sp-modal-title">Bảng Thống Kê · IELTS Speaking (Part 1 · 2 · 3)</div>
         <button type="button" class="btn" style="padding:5px 11px;" onclick="SpeakingStudio.closeSummaryModal()">Đóng ✕</button>
       </div>
       <div class="sp-metrics-grid">
         <div class="sp-metric-box"><div class="sp-metric-val">${mStats.done}/${mStats.total}</div><div class="sp-metric-lbl">Thẻ đã thuộc</div></div>
         <div class="sp-metric-box"><div class="sp-metric-val">${done?.completed ? '4/4' : `${done?.maxStage || 0}/4`}</div><div class="sp-metric-lbl">Task Story 01</div></div>
-        <div class="sp-metric-box"><div class="sp-metric-val">${new Set(hist.map((h) => h.cueId)).size}/14</div><div class="sp-metric-lbl">Cue Card đã luyện</div></div>
+        <div class="sp-metric-box"><div class="sp-metric-val">${new Set(hist.map((h) => h.cueId)).size}/${totalTopics}</div><div class="sp-metric-lbl">Chủ đề P1–P3</div></div>
         <div class="sp-metric-box"><div class="sp-metric-val">${hist.length}</div><div class="sp-metric-lbl">Tổng lượt nói</div></div>
       </div>
     `;
@@ -4069,12 +5032,12 @@
     const mStats = story ? getStoryMasteryStats(story) : { done: 0, total: 0 };
     const done = story ? getTaskDoneMap()[story.id] : null;
     const hist = getPracHistory();
-    const cuesTotal = (DATA().CUE_CARDS || []).length || 14;
-    const cuesDone = new Set(hist.map((h) => h.cueId)).size;
+    const topicsTotal = getPart1Topics().length + ((story?.cueCards || []).length || 14) + getPart3Topics().length;
+    const topicsDone = new Set(hist.map((h) => h.cueId)).size;
     const masteredCards = mStats.done || 0;
     const totalCards = mStats.total || 0;
-    const tasksDone = (done?.completed ? 4 : (done?.maxStage || 0)) + cuesDone;
-    const tasksTotal = 4 + cuesTotal;
+    const tasksDone = (done?.completed ? 4 : (done?.maxStage || 0)) + topicsDone;
+    const tasksTotal = 4 + topicsTotal;
     return {
       masteredCards,
       totalCards,
@@ -4152,10 +5115,13 @@
     toggleT4Mic,
     submitT4Typed,
     launchCueCardFromTask,
-    // Practice hub & room
+    // Practice hub & room (Part 1, Part 2, Part 3)
+    setPracticePart,
+    openPracticePart,
     setPracticeCat,
     setPracticeQuery,
     resetPracticeFilters,
+    openRandomTopic,
     openRandomCueCard,
     openPracticeRoom,
     closePracticeRoom,
@@ -4170,6 +5136,17 @@
     toggleRoomBullet,
     toggleRoomOptions,
     setRoomContrast,
-    setRoomTextSize
+    setRoomTextSize,
+    // Part 1 & Part 3 Examiner Interview Room
+    openInterviewRoom,
+    speakInterviewQuestion,
+    toggleInterviewGuide,
+    toggleInterviewModel,
+    toggleInterviewTypeMode,
+    toggleInterviewMic,
+    submitInterviewTyped,
+    nextInterviewQ,
+    jumpInterviewQ,
+    finishInterview
   };
 })();

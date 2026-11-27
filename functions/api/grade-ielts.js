@@ -204,15 +204,26 @@ function buildUserMessage(payload) {
     ].filter(Boolean).join('\n\n');
   }
 
+  const spPart = [1, 2, 3].includes(Number(payload.part)) ? Number(payload.part) : 2;
+  const taskLine = spPart === 1
+    ? 'TASK: IELTS Speaking Part 1 (Interview on Familiar Topics — 4 short conversational answers, target 20-35 seconds each, natural direct answer + brief reason/example; do NOT penalize for not being a 2-minute monologue)'
+    : (spPart === 3
+      ? 'TASK: IELTS Speaking Part 3 (Two-Way Abstract Discussion — 4 analytical answers, target 40-65 seconds each, assessing ability to discuss general/societal issues, compare, justify, and speculate)'
+      : 'TASK: IELTS Speaking Part 2 (Individual Long Turn, target 90-120 seconds)');
+
+  const qaBlock = Array.isArray(payload.qaTurns) && payload.qaTurns.length
+    ? `EXAMINER QUESTIONS & STUDENT ANSWERS:\n${payload.qaTurns.map((t, i) => `Q${i + 1}: ${String(t?.q || '').slice(0, 260)}\nA${i + 1} (${Number(t?.durationSec || 0)}s): ${String(t?.a || '').slice(0, 900)}`).join('\n\n')}`
+    : '';
+
   return [
-    `TASK: IELTS Speaking Part 2 (Individual Long Turn, target 90-120 seconds)`,
-    `CUE CARD TITLE: ${String(payload.cueTitle || '').slice(0, 400)}`,
-    Array.isArray(payload.cueBullets) && payload.cueBullets.length
+    taskLine,
+    `${spPart === 2 ? 'CUE CARD TITLE' : `PART ${spPart} TOPIC`}: ${String(payload.cueTitle || '').slice(0, 400)}`,
+    spPart === 2 && Array.isArray(payload.cueBullets) && payload.cueBullets.length
       ? `CUE CARD BULLETS:\n${payload.cueBullets.map((b, i) => `${i + 1}. ${b}`).join('\n')}`
       : '',
-    payload.curriculumContext ? `CURRICULUM STORY REFERENCE (optional context):\n${String(payload.curriculumContext).slice(0, 600)}` : '',
+    payload.curriculumContext ? `CURRICULUM REFERENCE (optional context):\n${String(payload.curriculumContext).slice(0, 600)}` : '',
     `OBJECTIVE ACOUSTIC & TEXT TELEMETRY (COMPUTED BY CODE — DO NOT RECOUNT):\n${JSON.stringify(payload.telemetry || {}, null, 2)}`,
-    `STUDENT SPOKEN TRANSCRIPT:\n"""\n${String(payload.text || '').slice(0, 4000)}\n"""`,
+    qaBlock || `STUDENT SPOKEN TRANSCRIPT:\n"""\n${String(payload.text || '').slice(0, 4000)}\n"""`,
     'Evaluate strictly using the Evidence-First Spoken JSON schema. Remember: NEVER penalize contractions or ASR punctuation; set criteria.pr.band to null if telemetry.hasAudio is false.',
   ].filter(Boolean).join('\n\n');
 }
