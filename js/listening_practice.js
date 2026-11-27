@@ -2627,45 +2627,35 @@
     return w;
   }
 
-  function buildReviewTimelineFromMeta(turnMetaList, durationSec) {
-    if (!Array.isArray(turnMetaList) || !turnMetaList.length) return null;
-    const totalWeight = turnMetaList.reduce((acc, tm) => acc + tm.totalWeight + 2.4, 0);
-    if (totalWeight <= 0) return null;
-
-    const dur = Number(durationSec) > 4 ? Number(durationSec) : Math.max(45, totalWeight * 0.14);
-    const leadIn = dur > 90 ? Math.min(16, dur * 0.038) : (dur > 30 ? 2.0 : 0.4);
-    const leadOut = dur > 90 ? Math.min(8, dur * 0.018) : 0.3;
-    const usable = Math.max(5, dur - leadIn - leadOut);
-
-    let cursorW = 0;
-    const turns = turnMetaList.map((tm) => {
-      const tStart = leadIn + (cursorW / totalWeight) * usable;
-      const words = tm.wordWeights.map((ww) => {
-        const wStart = leadIn + (cursorW / totalWeight) * usable;
-        cursorW += ww;
-        const wEnd = leadIn + (cursorW / totalWeight) * usable;
-        return { start: wStart, end: wEnd };
-      });
-      const tEnd = leadIn + (cursorW / totalWeight) * usable;
-      cursorW += 2.4; // Natural inter-speaker breath pause
-      return { idx: tm.idx, start: tStart, end: tEnd, words };
-    });
-
-    return { duration: dur, turns };
+  function buildReviewTimelineFromSyncCues(syncCues) {
+    if (!Array.isArray(syncCues) || !syncCues.length) return null;
+    const turns = syncCues.map((c, idx) => ({
+      idx,
+      start: Number(c.start) || 0,
+      end: Number(c.end) || 0,
+      words: Array.isArray(c.words) ? c.words : []
+    }));
+    const lastEnd = turns.length ? turns[turns.length - 1].end : 0;
+    return { duration: lastEnd, turns, verified: true };
   }
 
   function updateTurnTimeLabels() {
-    if (!reviewTimeline || !reviewTimeline.turns) return;
+    if (!reviewTimeline || !reviewTimeline.verified || !reviewTimeline.turns) return;
     reviewTimeline.turns.forEach((t) => {
       const el = document.querySelector(`.lp-yrev-turn[data-turn-idx="${t.idx}"] .lp-yrev-tmark`);
       if (el) el.textContent = formatMMSS(t.start);
     });
   }
 
-  function rebuildReviewTimelineForDuration(durationSec) {
+  function rebuildReviewTimelineForDuration() {
+    // Only use real verified audio sync cues; NEVER fabricate estimated linear timestamps
+    // (real Cambridge MP3s contain 40-75s narrator intros, mid-part reading silences, and 30s end checks).
     const rev = state.lastReview;
-    if (!rev || !rev._turnMeta) return;
-    reviewTimeline = buildReviewTimelineFromMeta(rev._turnMeta, durationSec);
+    if (!rev || !rev._syncCues) {
+      reviewTimeline = null;
+      return;
+    }
+    reviewTimeline = buildReviewTimelineFromSyncCues(rev._syncCues);
     updateTurnTimeLabels();
   }
 
@@ -2741,12 +2731,9 @@
 
   function startReviewKaraokeLoop(audio) {
     stopReviewKaraoke();
-    if (!audio) return;
-    if (!reviewTimeline && state.lastReview?._turnMeta) {
-      rebuildReviewTimelineForDuration(audio.duration || 0);
-    }
+    if (!audio || !reviewTimeline || !reviewTimeline.verified) return;
     const tick = () => {
-      if (state.view !== 'review' || !audio || audio.paused || audio.ended) {
+      if (state.view !== 'review' || !audio || audio.paused || audio.ended || !reviewTimeline?.verified) {
         reviewKaraokeRaf = null;
         return;
       }
@@ -2758,12 +2745,9 @@
 
   function seekReviewTurn(turnIdx, autoPlay = true) {
     const rev = state.lastReview;
-    if (!rev) return;
+    if (!rev || !reviewTimeline || !reviewTimeline.verified) return;
     const idx = Number(turnIdx);
     const audio = document.getElementById('lp-ex-audio');
-    if (!reviewTimeline && rev._turnMeta) {
-      rebuildReviewTimelineForDuration(audio?.duration || 0);
-    }
     const turn = reviewTimeline?.turns?.[idx];
     if (!turn) return;
 
@@ -2775,17 +2759,41 @@
         const p = audio.play();
         if (p && p.catch) p.catch(() => {});
       }
-    } else {
-      // Visual preview even before audio finishes buffering / offline
-      syncReviewKaraokeAtTime(targetTime + Math.min(1.6, (turn.end - turn.start) * 0.35), true);
-      if (audio && autoPlay && audio.paused) {
-        const p = audio.play();
-        if (p && p.catch) p.catch(() => {});
-      }
     }
   }
 
-  function buildTranscriptEvidenceHtml(transcript, partRows, query) {
+  function splitLongMonologueLines(rawLines) {
+    const out = [];
+    rawLines.forEach((ln) => {
+      const trimmed = String(ln || '').trim();
+      if (!trimmed) return;
+      const hasSpk = /^([A-Z][a-zA-Z0-9 .'-]{1,22}:)\s*/.test(trimmed);
+      if (hasSpk || trimmed.length <= 520) {
+        out.push(trimmed);
+        return;
+      }
+      // Split long unbroken monologue paragraphs cleanly every ~3-4 sentences (~420 chars)
+      const sents = trimmed.match(/[^.!?]+[.!?]+["')\]]*(?:\s+|$)|[^.!?]+$/g) || [trimmed];
+      let buf = '';
+      let sentCount = 0;
+      sents.forEach((s) => {
+        const part = s.trim();
+        if (!part) return;
+        if (buf && (buf.length + part.length > 440 || sentCount >= 4)) {
+          out.push(buf.trim());
+          buf = part;
+          sentCount = 1;
+        } else {
+          buf = buf ? `${buf} ${part}` : part;
+          sentCount++;
+        }
+      });
+      if (buf.trim()) out.push(buf.trim());
+    });
+    return out;
+  }
+
+  function buildTranscriptEvidenceHtml(transcript, partRows, query, hasRealSync = false) {
     if (!transcript) {
       return {
         html: '<div class="lp-yrev-empty-tr"><strong>Chưa có Transcript cho bài nghe này</strong><p>Bạn vẫn có thể nghe lại từng đoạn bằng thanh Audio phía trên và đối chiếu trực tiếp đáp án ở khung bên phải.</p></div>',
@@ -2794,7 +2802,8 @@
       };
     }
 
-    const lines = String(transcript).split('\n').filter((x) => x.trim());
+    const rawLines = String(transcript).split('\n').filter((x) => x.trim());
+    const lines = hasRealSync ? rawLines : splitLongMonologueLines(rawLines);
     const matchedQSet = new Set();
     const lineSpans = lines.map(() => []);
 
@@ -2897,17 +2906,17 @@
         ? (/^(MAN|MALE|TOM|JOHN|DAVID|MARK|ALEX|BEN|TUTOR|LECTURER|INTERVIEWER)/i.test(spkLabel) ? 'is-spk-b' : 'is-spk-a')
         : 'is-spk-a';
 
+      const spkDisplay = spkLabel || (lines.length > 1 ? `ĐOẠN ${li + 1}` : 'AUDIO SCRIPT');
       return `
-        <div class="lp-yrev-turn ${spkLabel ? '' : 'is-narration'} ${hasEv ? 'has-ev' : ''}"
+        <div class="lp-yrev-turn ${spkLabel ? '' : 'is-narration'} ${hasEv ? 'has-ev' : ''} ${hasRealSync ? '' : 'is-static'}"
           id="lp-yrev-turn-${li}" data-turn-idx="${li}"${evNumsAttr}
-          onclick="ListeningPracticeApp.seekReviewTurn(${li})"
-          title="Nhấn để nghe từ lượt thoại này">
+          ${hasRealSync ? `onclick="ListeningPracticeApp.seekReviewTurn(${li})" title="Nhấn để nghe từ lượt thoại này"` : ''}>
           <div class="lp-yrev-turn-head">
             <div class="lp-yrev-turn-id">
-              ${spkLabel ? `<span class="lp-yrev-spk ${spkTone}">${esc(spkLabel)}</span>` : '<span class="lp-yrev-spk is-spk-a">SPEAKER</span>'}
-              <span class="lp-yrev-eq" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="lp-yrev-spk ${spkTone}">${esc(spkDisplay)}</span>
+              ${hasRealSync ? '<span class="lp-yrev-eq" aria-hidden="true"><i></i><i></i><i></i></span>' : ''}
             </div>
-            <span class="lp-yrev-tmark tabular"></span>
+            ${hasRealSync ? '<span class="lp-yrev-tmark tabular"></span>' : ''}
           </div>
           <p class="lp-yrev-txt">${bodyHtml}</p>
         </div>
@@ -3179,11 +3188,13 @@
     const partBadCount = partRows.length - partOkCount;
     const rightTab = rev.rightTab === 'summary' ? 'summary' : 'paper';
 
-    const trBuilt = buildTranscriptEvidenceHtml(activePart?.transcript || '', partRows, rev.transcriptQuery || '');
+    const hasRealSync = Array.isArray(activePart?.syncCues) && activePart.syncCues.length > 0;
+    const trBuilt = buildTranscriptEvidenceHtml(activePart?.transcript || '', partRows, rev.transcriptQuery || '', hasRealSync);
     rev._matchedQSet = trBuilt.matchedQSet;
     rev._turnMeta = trBuilt.turnMeta;
+    rev._syncCues = hasRealSync ? activePart.syncCues : null;
     reviewActiveTurnIdx = -1;
-    reviewTimeline = buildReviewTimelineFromMeta(trBuilt.turnMeta, 0);
+    reviewTimeline = hasRealSync ? buildReviewTimelineFromSyncCues(activePart.syncCues) : null;
 
     const bandTone = rev.band >= 7.0 ? 'is-high' : (rev.band >= 5.5 ? 'is-mid' : 'is-low');
 
@@ -3250,7 +3261,9 @@
               </span>
               <div class="ins-hdr-meta">
                 <div class="ins-hdr-title">${esc(rev.title)}</div>
-                <div class="lp-yrev-sub">Xem lại bài làm · Nhấn từng lượt thoại để nghe &amp; theo dõi chữ chạy</div>
+                <div class="lp-yrev-sub">${hasRealSync
+                  ? 'Xem lại bài làm · Nhấn từng lượt thoại để nghe &amp; theo dõi chữ chạy'
+                  : 'Xem lại bài làm · Đối chiếu Audio Script &amp; Đáp án · Dùng thanh Audio −5s / +5s để tua nghe lại'}</div>
               </div>
             </div>
 
@@ -3685,15 +3698,17 @@
       ? state.lastReview.rows.filter((r) => r.partId === activePart?.id)
       : state.lastReview.rows;
     if (box) {
-      const built = buildTranscriptEvidenceHtml(activePart?.transcript || '', partRows, state.lastReview.transcriptQuery);
+      const hasRealSync = Array.isArray(activePart?.syncCues) && activePart.syncCues.length > 0;
+      const built = buildTranscriptEvidenceHtml(activePart?.transcript || '', partRows, state.lastReview.transcriptQuery, hasRealSync);
       state.lastReview._matchedQSet = built.matchedQSet;
       state.lastReview._turnMeta = built.turnMeta;
+      state.lastReview._syncCues = hasRealSync ? activePart.syncCues : null;
       reviewActiveTurnIdx = -1;
       const audio = document.getElementById('lp-ex-audio');
-      reviewTimeline = buildReviewTimelineFromMeta(built.turnMeta, audio?.duration || 0);
+      reviewTimeline = hasRealSync ? buildReviewTimelineFromSyncCues(activePart.syncCues) : null;
       box.innerHTML = built.html;
       updateTurnTimeLabels();
-      if (audio && audio.currentTime > 0) {
+      if (hasRealSync && audio && audio.currentTime > 0) {
         syncReviewKaraokeAtTime(audio.currentTime, false);
       }
     }

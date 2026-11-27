@@ -14242,3 +14242,13 @@ html[data-mode][data-theme="dark"] .lp-yrev-shell {
     padding: 14px 14px 86px;
   }
 }
+
+/* Honest static Audio Script cards (when real forced-alignment timestamps are not present) */
+.lp-yrev-turn.is-static {
+  cursor: text;
+  user-select: text;
+}
+.lp-yrev-turn.is-static:hover {
+  border-color: var(--yrev-bd);
+  background: var(--yrev-surface);
+}
