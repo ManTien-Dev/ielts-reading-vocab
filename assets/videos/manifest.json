@@ -2,22 +2,23 @@
   "version": 2,
   "baseUrl": "./assets/videos/",
   "simliAutoConnect": true,
+  "notes": "Veo 3.1 seamless 8s Start=End Frame multi-track cinema loops for Ms. Claire & Mr. Oliver (idle, speak with hand gestures, nod with pen note, Part 2 prep notes).",
   "examiners": {
     "claire": {
       "baseLoops": {
-        "idle": "",
-        "speak": "",
-        "nod": "",
-        "notes": ""
+        "idle": "claire/idle.mp4",
+        "speak": "claire/speak.mp4",
+        "nod": "claire/nod.mp4",
+        "notes": "claire/notes.mp4"
       },
       "clips": {}
     },
     "oliver": {
       "baseLoops": {
-        "idle": "",
-        "speak": "",
-        "nod": "",
-        "notes": ""
+        "idle": "oliver/idle.mp4",
+        "speak": "oliver/speak.mp4",
+        "nod": "oliver/nod.mp4",
+        "notes": "oliver/notes.mp4"
       },
       "clips": {}
     }

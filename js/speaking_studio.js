@@ -4416,6 +4416,10 @@
     if (!ref || !ref.proStarted || ref.phase === 'review') return;
 
     if (res.silent || !res.text) {
+      if (res.reason === 'stt_error') {
+        proExaminerSpeakAndListen("Sorry, I didn't quite catch that. Could you say that again?", getProTurnListenConfig(), 0.94);
+        return;
+      }
       if (res.reason === 'time_limit') {
         if (ref.kind === 'part2' && !ref.p2RoundingOff) {
           // Move to rounding off even if last slice was quiet

@@ -26,7 +26,7 @@ const WORD_CONTEXT_PROMPT =
 const MAX_AUDIO_BYTES = 12 * 1024 * 1024; // 12 MB safety cap
 
 function isOriginAllowed(origin, requestUrl, env) {
-  if (!origin) return true;
+  if (!origin || origin === 'null') return true;
   if (origin === requestUrl.origin) return true;
   if (/^https:\/\/[a-z0-9-]+\.totoro-ieltsmaster\.pages\.dev$/i.test(origin)) return true;
   const extra = String(env.ALLOWED_ORIGINS || '')
@@ -40,7 +40,7 @@ function isOriginAllowed(origin, requestUrl, env) {
 
 function corsHeaders(origin, requestUrl, allowed) {
   return {
-    'Access-Control-Allow-Origin': allowed && origin ? origin : requestUrl.origin,
+    'Access-Control-Allow-Origin': !allowed ? requestUrl.origin : (origin === 'null' ? '*' : (origin || '*')),
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',

@@ -28,6 +28,53 @@
   let voicedFrames = 0;
   let turnSeq = 0;
   let opts = {};
+  let shadowRec = null;
+  let shadowFinalText = '';
+  let shadowInterimText = '';
+
+  function startShadowRecognition() {
+    stopShadowRecognition();
+    shadowFinalText = '';
+    shadowInterimText = '';
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    try {
+      const r = new SR();
+      r.lang = 'en-GB';
+      r.continuous = true;
+      r.interimResults = true;
+      r.onresult = (ev) => {
+        let fin = '';
+        let intr = '';
+        for (let i = 0; i < ev.results.length; i++) {
+          const t = String(ev.results[i]?.[0]?.transcript || '').trim();
+          if (!t) continue;
+          if (ev.results[i].isFinal) fin += (fin ? ' ' : '') + t;
+          else intr += (intr ? ' ' : '') + t;
+        }
+        shadowFinalText = fin;
+        shadowInterimText = intr;
+      };
+      r.onerror = () => {};
+      r.start();
+      shadowRec = r;
+    } catch (_) {
+      shadowRec = null;
+    }
+  }
+
+  function stopShadowRecognition() {
+    const out = [shadowFinalText, shadowInterimText].filter(Boolean).join(' ').trim();
+    if (shadowRec) {
+      try {
+        shadowRec.onresult = null;
+        shadowRec.onerror = null;
+        shadowRec.stop();
+      } catch (_) {}
+      shadowRec = null;
+    }
+    return out;
+  }
 
   function pickMime() {
     if (typeof window.MediaRecorder === 'undefined') return '';
@@ -123,6 +170,7 @@
     speechOnsetAt = 0;
     lastVoiceAt = 0;
     voicedFrames = 0;
+    stopShadowRecognition();
     stopRecorderDiscard();
     opts.onStateChange?.('paused');
   }
@@ -142,6 +190,7 @@
     lastVoiceAt = 0;
     voicedFrames = 0;
     startRecorderSlice();
+    startShadowRecognition();
     opts.onStateChange?.('listening');
   }
 
@@ -151,6 +200,7 @@
     const hadSpeech = Boolean(speechOnsetAt);
     const spokenSec = hadSpeech ? Math.max(1, Math.round((Date.now() - speechOnsetAt) / 1000)) : 0;
     const activeRec = recorder;
+    const shadowFallbackText = stopShadowRecognition();
 
     gateState = 'processing';
     opts.onStateChange?.('processing');
@@ -160,56 +210,77 @@
       if (reason === 'no_speech') {
         opts.onNoSpeech?.();
       } else {
-        opts.onTurnResult?.({ silent: true, text: '', durationSec: 0, reason });
+        opts.onTurnResult?.({ silent: !shadowFallbackText, text: shadowFallbackText, durationSec: spokenSec, reason });
       }
       return;
     }
 
     const recMime = activeRec.mimeType || pickMime() || 'audio/webm';
-    activeRec.onstop = async () => {
+    let stopHandled = false;
+    const handleStopped = async () => {
+      if (stopHandled) return;
+      stopHandled = true;
+      clearTimeout(stopGuard);
       const captured = chunks.slice();
       chunks = [];
       recorder = null;
       if (!sessionActive || mySeq !== turnSeq) return;
 
-      if (!hadSpeech && reason === 'no_speech') {
+      if (!hadSpeech && reason === 'no_speech' && !shadowFallbackText) {
         opts.onNoSpeech?.();
         return;
       }
       if (!captured.length) {
-        opts.onTurnResult?.({ silent: true, text: '', durationSec: spokenSec, reason });
+        opts.onTurnResult?.({ silent: !shadowFallbackText, text: shadowFallbackText, durationSec: spokenSec, reason });
         return;
       }
 
       const rawBlob = new Blob(captured, { type: recMime });
+      const localAudioUrl = (() => { try { return URL.createObjectURL(rawBlob); } catch (_) { return ''; } })();
       try {
         const stt = window.TotoroSpeechSTT;
         if (!stt?.transcribeRawBlob) {
-          opts.onError?.('Không tìm thấy bộ nhận diện giọng nói.');
-          return;
+          throw new Error('Không tìm thấy bộ nhận diện giọng nói.');
         }
         const res = await stt.transcribeRawBlob(rawBlob, { mode: 'speaking', durationSec: spokenSec });
         if (!sessionActive || mySeq !== turnSeq) return;
+        const finalText = String(res.text || '').trim() || shadowFallbackText;
         opts.onTurnResult?.({
-          silent: Boolean(res.silent || !String(res.text || '').trim()),
-          text: String(res.text || '').trim(),
+          silent: Boolean(!finalText),
+          text: finalText,
           durationSec: Math.max(spokenSec, Math.round(res.durationSec || 0)),
-          audioUrl: res.audioUrl || '',
+          audioUrl: res.audioUrl || localAudioUrl,
           words: res.words || [],
           segments: res.segments || [],
           reason,
         });
       } catch (err) {
         if (!sessionActive || mySeq !== turnSeq) return;
-        opts.onError?.(err?.message || 'Lỗi kết nối STT.');
+        // Graceful fallback so exam room NEVER freezes on "Đang xử lý câu trả lời..."!
+        if (shadowFallbackText) {
+          opts.onTurnResult?.({
+            silent: false,
+            text: shadowFallbackText,
+            durationSec: Math.max(1, spokenSec),
+            audioUrl: localAudioUrl,
+            words: [],
+            segments: [],
+            reason,
+          });
+          return;
+        }
+        opts.onError?.(err?.message || 'Lỗi kết nối STT — đang tự động mở lại Micro...');
+        opts.onTurnResult?.({ silent: true, text: '', durationSec: spokenSec, audioUrl: localAudioUrl, reason: 'stt_error' });
       }
     };
+
+    const stopGuard = setTimeout(handleStopped, 2200);
+    activeRec.onstop = handleStopped;
 
     try {
       activeRec.stop();
     } catch (_) {
-      stopRecorderDiscard();
-      opts.onTurnResult?.({ silent: true, text: '', durationSec: spokenSec, reason });
+      handleStopped();
     }
   }
 
@@ -304,6 +375,7 @@
       cancelAnimationFrame(rafId);
       rafId = null;
     }
+    stopShadowRecognition();
     stopRecorderDiscard();
     if (audioCtx) {
       try { audioCtx.close(); } catch (_) {}

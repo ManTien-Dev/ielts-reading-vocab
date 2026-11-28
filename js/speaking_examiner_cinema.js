@@ -60,7 +60,9 @@
   let webcamStream = null;
   let webcamActive = false;
   let nodTimer = null;
+  let speakRewindTimer = null;
   let lastNodAt = 0;
+  let listenEnteredAt = 0;
   let micSmooth = 0;
   let boundParallaxEl = null;
   let boundMoveFn = null;
@@ -100,22 +102,48 @@
     }
   }
 
+  const DEFAULT_LOCAL_MANIFEST = {
+    version: 2,
+    baseUrl: './assets/videos/',
+    simliAutoConnect: false,
+    examiners: {
+      claire: {
+        baseLoops: {
+          idle: 'claire/idle.mp4',
+          speak: 'claire/speak.mp4',
+          nod: 'claire/nod.mp4',
+          notes: 'claire/notes.mp4',
+        },
+        clips: {},
+      },
+      oliver: {
+        baseLoops: {
+          idle: 'oliver/idle.mp4',
+          speak: 'oliver/speak.mp4',
+          nod: 'oliver/nod.mp4',
+          notes: 'oliver/notes.mp4',
+        },
+        clips: {},
+      },
+    },
+  };
+
   async function loadManifest() {
     if (manifestData) return manifestData;
     if (window.location.protocol === 'file:') {
-      manifestData = { baseUrl: './assets/videos/', simliAutoConnect: false, examiners: {} };
+      manifestData = DEFAULT_LOCAL_MANIFEST;
       return manifestData;
     }
     if (!manifestPromise) {
       const base = typeof window.__APP_BASE_PATH__ === 'string' ? window.__APP_BASE_PATH__ : '';
-      manifestPromise = fetch(`${base}/assets/videos/manifest.json?v=20261128j`)
+      manifestPromise = fetch(`${base}/assets/videos/manifest.json?v=20261128l`)
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => {
-          manifestData = j && typeof j === 'object' ? j : { baseUrl: './assets/videos/', examiners: {} };
+          manifestData = j && typeof j === 'object' ? j : DEFAULT_LOCAL_MANIFEST;
           return manifestData;
         })
         .catch(() => {
-          manifestData = { baseUrl: './assets/videos/', examiners: {} };
+          manifestData = DEFAULT_LOCAL_MANIFEST;
           return manifestData;
         });
     }
@@ -307,26 +335,46 @@
 
       let inner = '';
       if (idleUrl) {
-        inner += `<video class="sp-cinema-vid is-layer-idle" src="${idleUrl}" autoplay loop muted playsinline preload="auto"></video>`;
-        if (speakUrl) inner += `<video class="sp-cinema-vid is-layer-speak" src="${speakUrl}" autoplay loop muted playsinline preload="auto"></video>`;
+        inner += `<video class="sp-cinema-vid is-layer-idle" id="sp-cinema-idle-vid" src="${idleUrl}" autoplay loop muted playsinline preload="auto"></video>`;
+        if (speakUrl) inner += `<video class="sp-cinema-vid is-layer-speak" id="sp-cinema-speak-vid" src="${speakUrl}" loop muted playsinline preload="auto"></video>`;
         if (nodUrl) inner += `<video class="sp-cinema-vid is-layer-nod" id="sp-cinema-nod-vid" src="${nodUrl}" muted playsinline preload="auto"></video>`;
-        if (notesUrl) inner += `<video class="sp-cinema-vid is-layer-notes" src="${notesUrl}" autoplay loop muted playsinline preload="auto"></video>`;
-        stage.classList.add('has-cinema-video');
+        if (notesUrl) inner += `<video class="sp-cinema-vid is-layer-notes" id="sp-cinema-notes-vid" src="${notesUrl}" loop muted playsinline preload="auto"></video>`;
       }
       // Exact pre-rendered Lip-Sync Clip layer + Optional Simli WebRTC layer
       inner += `<video class="sp-cinema-clip-vid" id="sp-cinema-clip-vid" playsinline preload="auto"></video>`;
       inner += `<video class="sp-cinema-webrtc-vid" id="sp-simli-video" autoplay playsinline></video><audio id="sp-simli-audio" autoplay></audio>`;
       vWrap.innerHTML = inner;
 
+      const idleVid = document.getElementById('sp-cinema-idle-vid');
+      const markCinemaReady = () => {
+        document.getElementById('sp-pro-stage')?.classList.add('has-cinema-video');
+      };
+      if (idleVid) {
+        if (idleVid.readyState >= 2) markCinemaReady();
+        else {
+          idleVid.addEventListener('loadeddata', markCinemaReady, { once: true });
+          idleVid.addEventListener('playing', markCinemaReady, { once: true });
+        }
+      }
+
       vWrap.querySelectorAll('.sp-cinema-vid').forEach((v) => {
-        if (!v.classList.contains('is-layer-nod')) v.play?.().catch(() => {});
+        if (v.classList.contains('is-layer-idle')) v.playbackRate = 0.85;
+        else if (v.classList.contains('is-layer-speak')) v.playbackRate = 0.90;
+        else if (v.classList.contains('is-layer-nod')) v.playbackRate = 0.92;
+        else if (v.classList.contains('is-layer-notes')) v.playbackRate = 0.88;
+        if (!v.classList.contains('is-layer-nod') && !v.classList.contains('is-layer-speak')) {
+          v.play?.().catch(() => {});
+        }
       });
 
-      // One-shot nod video cleanly returns to idle when ended
+      // One-shot nod video cleanly fades back to idle when ended
       const nodVid = document.getElementById('sp-cinema-nod-vid');
       if (nodVid) {
         nodVid.onended = () => {
           document.getElementById('sp-pro-stage')?.classList.remove('is-nodding');
+          setTimeout(() => {
+            try { nodVid.pause(); nodVid.currentTime = 0; } catch (_) {}
+          }, 700);
         };
       }
     }
@@ -336,6 +384,7 @@
   }
 
   function setMode(mode) {
+    const prevMode = currentMode;
     currentMode = mode || 'idle';
     const stage = document.getElementById('sp-pro-stage');
     if (!stage) return;
@@ -344,20 +393,57 @@
     stage.classList.toggle('is-prep', currentMode === 'prep');
     stage.classList.toggle('is-processing', currentMode === 'processing');
     stage.classList.toggle('is-nodding', currentMode === 'nod');
+
+    const sv = document.getElementById('sp-cinema-speak-vid');
+    if (currentMode === 'speaking') {
+      if (speakRewindTimer) { clearTimeout(speakRewindTimer); speakRewindTimer = null; }
+      if (sv) {
+        sv.playbackRate = 0.90;
+        sv.play?.().catch(() => {});
+      }
+    } else if (prevMode === 'speaking' && sv) {
+      // Wait until 650ms opacity fade-out completes BEFORE rewinding to frame 0 (zero seek stutter!)
+      if (speakRewindTimer) clearTimeout(speakRewindTimer);
+      speakRewindTimer = setTimeout(() => {
+        if (currentMode !== 'speaking') {
+          try { sv.pause(); sv.currentTime = 0; } catch (_) {}
+        }
+      }, 720);
+    }
+
+    if (currentMode === 'listening' && prevMode !== 'listening') {
+      // Never nod immediately when student starts speaking — wait calmly >= 8s first!
+      listenEnteredAt = Date.now();
+      lastNodAt = Date.now();
+    }
+
+    if (currentMode === 'prep' && prevMode !== 'prep') {
+      const nv = document.getElementById('sp-cinema-notes-vid');
+      if (nv) {
+        nv.playbackRate = 0.88;
+        nv.play?.().catch(() => {});
+      }
+    }
   }
 
   function triggerBriefNod() {
     const stage = document.getElementById('sp-pro-stage');
     if (!stage || currentMode !== 'listening') return;
-    stage.classList.add('is-nodding');
     const nodVid = document.getElementById('sp-cinema-nod-vid');
     if (nodVid && stage.classList.contains('has-cinema-video')) {
       try {
-        nodVid.currentTime = 0;
-        nodVid.play?.().catch(() => {});
+        nodVid.playbackRate = 0.92;
+        if (nodVid.paused) {
+          nodVid.play?.().then(() => {
+            if (currentMode === 'listening') stage.classList.add('is-nodding');
+          }).catch(() => {});
+        } else {
+          stage.classList.add('is-nodding');
+        }
         return;
       } catch (_) {}
     }
+    stage.classList.add('is-nodding');
     if (nodTimer) clearTimeout(nodTimer);
     nodTimer = setTimeout(() => {
       document.getElementById('sp-pro-stage')?.classList.remove('is-nodding');
@@ -376,7 +462,13 @@
     }
 
     const now = Date.now();
-    if (currentMode === 'listening' && micSmooth > 0.2 && now - lastNodAt > 3600) {
+    // Only trigger ONE natural encouraging nod after student has spoken calmly >= 8s, max once per 16s
+    if (
+      currentMode === 'listening' &&
+      micSmooth > 0.18 &&
+      now - listenEnteredAt > 8000 &&
+      now - lastNodAt > 16000
+    ) {
       lastNodAt = now;
       triggerBriefNod();
     }
@@ -714,6 +806,10 @@
     if (nodTimer) {
       clearTimeout(nodTimer);
       nodTimer = null;
+    }
+    if (speakRewindTimer) {
+      clearTimeout(speakRewindTimer);
+      speakRewindTimer = null;
     }
     if (boundParallaxEl && boundMoveFn) boundParallaxEl.removeEventListener('mousemove', boundMoveFn);
     if (boundParallaxEl && boundLeaveFn) boundParallaxEl.removeEventListener('mouseleave', boundLeaveFn);
