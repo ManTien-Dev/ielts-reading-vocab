@@ -974,7 +974,7 @@
         { label: 'Luyện đề Reading', val: rpStats.avgBand ? `${rpStats.completedUnique} bài · Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} bài đã nộp`, pct: readPracPct, cls: 'is-emerald', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'practice')" },
         { label: 'Luyện đề Listening & Dictation', val: `133 Full Đề nghe · Dictation`, pct: listenPct, cls: 'is-indigo', tone: 'is-listening', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>', action: "window.TotoroUI?.enterSkillMode('Listening', 'practice')" },
         { label: 'Luyện đề Writing (T1·T2·Full)', val: `${wsStats.practiceDone || 0} / ${(window.WRITING_TASK1_DATA?.TASK1_PROMPTS?.length || 28) + (wsStats.practiceTotal || 57)} đề`, pct: writePct, cls: 'is-sage', tone: 'is-writing', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', action: "window.TotoroUI?.enterSkillMode('Writing', 'practice')" },
-        { label: 'Luyện đề Speaking (Part 1 & 3)', val: `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24) + (window.SPEAKING_PART13_DATA?.PART3_TOPICS?.length || 24)} bộ Cam 15–20`, pct: speakPct, cls: 'is-warm', tone: 'is-speaking', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>', action: "window.TotoroUI?.enterSkillMode('Speaking', 'practice')" },
+        { label: 'Luyện đề Speaking (P1–P3 & Full)', val: `${(window.SPEAKING_PART13_DATA?.FULL_TESTS?.length || 24)} Full · 72 Part Cam 15–20`, pct: speakPct, cls: 'is-warm', tone: 'is-speaking', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>', action: "window.TotoroUI?.enterSkillMode('Speaking', 'practice')" },
       ] : [
         { label: 'Từ vựng Reading', val: `${snap.mastered.toLocaleString('vi-VN')} / ${snap.totalFamilies.toLocaleString('vi-VN')}`, pct: snap.masteryPct, cls: 'is-sage', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'flashcard')" },
         { label: 'Reading Tasks', val: `${snap.completedTasks.length} / 110 bài`, pct: readTaskPct, cls: 'is-warm', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.3 2.3 4.8-5"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'task')" },
@@ -1079,13 +1079,13 @@
           {
             key: 'speaking',
             name: 'Speaking',
-            sub: isRestricted ? 'Part 1 & 3 · Cam 15–20' : 'Part 1–3 · Story 01',
-            metricA: isRestricted ? `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24)} P1` : `${spStats.tasksDone}/${spStats.tasksTotal}`,
+            sub: isRestricted ? 'Part 1–3 & Full · Cam 15–20' : 'Part 1–3 & Full · Story 01',
+            metricA: isRestricted ? `${(window.SPEAKING_PART13_DATA?.FULL_TESTS?.length || 24)} Full` : `${spStats.tasksDone}/${spStats.tasksTotal}`,
             lblA: isRestricted ? 'Cam 15–20' : 'Bước',
             metricB: isRestricted
-              ? `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24) + (window.SPEAKING_PART13_DATA?.PART3_TOPICS?.length || 24)} Đề`
-              : `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24) + (window.SPEAKING_STORY01_DATA?.stories?.[0]?.cueCards?.length || window.SPEAKING_STUDIO_DATA?.STORIES?.[0]?.cueCards?.length || 14) + (window.SPEAKING_PART13_DATA?.PART3_TOPICS?.length || 24)} Đề`,
-            lblB: isRestricted ? 'Part 1 & 3' : 'Part 1–3',
+              ? `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24) + (window.SPEAKING_PART13_DATA?.PART2_CAMBRIDGE_TOPICS?.length || 24) + (window.SPEAKING_PART13_DATA?.PART3_TOPICS?.length || 24)} Part`
+              : `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24) + (window.SPEAKING_PART13_DATA?.PART2_CAMBRIDGE_TOPICS?.length || 24) + (window.SPEAKING_STORY01_DATA?.stories?.[0]?.cueCards?.length || window.SPEAKING_STUDIO_DATA?.STORIES?.[0]?.cueCards?.length || 14) + (window.SPEAKING_PART13_DATA?.PART3_TOPICS?.length || 24)} Đề`,
+            lblB: 'Part 1–3',
             ringTxt: `${speakPct}%`,
             pct: speakPct,
             stroke: '#4A5B94',

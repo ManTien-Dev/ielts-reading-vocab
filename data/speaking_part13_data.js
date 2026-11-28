@@ -1,9 +1,10 @@
 /* ==========================================================================
-   TOTORO IELTS MASTER — AUTHENTIC CAMBRIDGE IELTS 15–20 SPEAKING PART 1 & 3
-   - Part 1: 24 Official Real Cambridge Sets (96 Verbatim Examiner Qs) · A.R.E.
-   - Part 3: 24 Official Real Cambridge Sets (144 Verbatim Examiner Qs) · P.E.E.C.
-   Total: 48 Authentic Cambridge Exam Sets · 240 Verbatim Questions + Band 8.0+ Models
-   Source Archive: Cambridge IELTS 15–20 Academic (engnovate.com)
+   TOTORO IELTS MASTER — AUTHENTIC CAMBRIDGE IELTS 15–20 SPEAKING BANK
+   • PART1_TOPICS: 24 Official Sets (96 verbatim questions · Cam 15–20)
+   • PART2_CAMBRIDGE_TOPICS: 24 Official Cue Cards (Cam 15–20 · Band 8.0+ Models)
+   • PART3_TOPICS: 24 Official Sets (144 verbatim questions · Cam 15–20)
+   • FULL_TESTS: 24 Complete Official Speaking Exams (Part 1 → Part 2 → Part 3)
+   Public Cambridge exam curriculum — authorized for ALL classes.
    ========================================================================== */
 (function () {
   'use strict';
@@ -1592,6 +1593,825 @@
         "modelEn": "Yes, a couple of years ago I saved up for a dainty silver necklace to give my younger sister on her university graduation. I spent ages browsing designs to make sure I picked something simple that truly matched her taste. Seeing her smile when she opened the box—and noticing that she still wears it to this day—made it a really special keepsake."
       }
     ]
+  }
+];
+
+  const PART2_CAMBRIDGE_TOPICS = [
+  {
+    "id": "sp_p2_cam20_t1",
+    "book": 20,
+    "test": 1,
+    "source": "Cambridge IELTS 20 · Test 1",
+    "part": 2,
+    "isCambridge": true,
+    "category": "object",
+    "catLabel": "Sự vật & Chủ đề",
+    "title": "Describe a play or a film you have seen that you would like to see again with friends.",
+    "titleVi": "Kể về một vở kịch hoặc bộ phim bạn từng xem và muốn đi xem lại cùng bạn bè",
+    "bullets": [
+      "what play or film you'd like to go to see again",
+      "who you would go with",
+      "what other people have said about this play or film",
+      "and explain why you would like to see this play or film again with friends."
+    ],
+    "linkedPart3Id": "sp_p3_cam20_t1",
+    "outlineVi": [
+      "Giới thiệu bộ phim muốn xem lại: Interstellar (bản chiếu lại định dạng IMAX)",
+      "Nhóm bạn muốn đi cùng: hội bạn thân thời đại học mê phim khoa học viễn tưởng",
+      "Đánh giá từ mọi người: được ca ngợi là kiệt tác hình ảnh, âm thanh và chiều sâu cảm xúc",
+      "Lý do muốn xem lại cùng nhau: trải nghiệm màn ảnh lớn sống động và cùng bàn luận sau phim"
+    ],
+    "chunks": [
+      "left a lasting impression on me",
+      "visually breathtaking",
+      "on the edge of my seat",
+      "universally acclaimed",
+      "immersive cinematic experience",
+      "spark a lively debate"
+    ],
+    "modelEn": "Well, if I could pick one film to watch all over again with my friends, it would definitely be Interstellar, Christopher Nolan's sci-fi epic. I first saw it years ago on a small laptop screen, yet it still left a lasting impression on me, so catching a special IMAX re-screening would be incredible. I'd love to go with three of my closest university friends, because we share a genuine obsession with space exploration and mind-bending plots. In terms of reception, the movie is universally acclaimed by both critics and casual viewers alike. People constantly praise how visually breathtaking the black-hole sequences are, not to mention Hans Zimmer's haunting organ score, which kept me on the edge of my seat from start to finish. Some reviewers did argue that the third act gets a bit overly sentimental, though most fans feel that the father-daughter bond is actually its beating heart. The main reason I want to revisit it with friends is that a story this ambitious deserves an immersive cinematic experience rather than solitary viewing. More importantly, I know the ending would spark a lively debate over late-night coffee afterwards, turning a simple movie night into a genuinely memorable evening."
+  },
+  {
+    "id": "sp_p2_cam20_t2",
+    "book": 20,
+    "test": 2,
+    "source": "Cambridge IELTS 20 · Test 2",
+    "part": 2,
+    "isCambridge": true,
+    "category": "event",
+    "catLabel": "Trải nghiệm",
+    "title": "Describe a time when you changed a plan you had made.",
+    "titleVi": "Kể về một lần bạn phải thay đổi kế hoạch đã định sẵn",
+    "bullets": [
+      "what your original plan was",
+      "why you changed it",
+      "what new plan you made",
+      "and explain how you felt about changing your plan."
+    ],
+    "linkedPart3Id": "sp_p3_cam20_t2",
+    "outlineVi": [
+      "Kế hoạch ban đầu: chuyến du lịch biển 3 ngày tại Phú Quốc dịp nghỉ lễ",
+      "Lý do thay đổi: áp thấp nhiệt đới gây mưa lớn và hủy chuyến bay phút chót",
+      "Kế hoạch thay thế: chuyển hướng đi Đà Lạt bằng xe khách, thuê homestay yên tĩnh",
+      "Cảm xúc sau thay đổi: ban đầu hụt hẫng nhưng cuối cùng thấy cực kỳ trọn vẹn và thư giãn"
+    ],
+    "chunks": [
+      "booked everything well in advance",
+      "threw a spanner in the works",
+      "adapt on the fly",
+      "at the eleventh hour",
+      "a blessing in disguise",
+      "unwind and recharge"
+    ],
+    "modelEn": "A couple of summers ago, I had to completely overhaul a weekend getaway that my friends and I had been planning for months. Originally, we were supposed to fly to Phu Quoc Island for three days of snorkelling and beach hopping, and we had booked everything well in advance to lock in decent hotel rates. Unfortunately, an unexpected tropical storm threw a spanner in the works just two days before departure. Heavy rain warnings went out across the coast, and our airline eventually cancelled the flight at the eleventh hour. Rather than wasting our rare long weekend sitting at home, we decided to adapt on the fly. Within a couple of hours, we hopped on an overnight sleeper bus up to Da Lat, a misty highland town, and snagged a cosy wooden homestay tucked away in the pine hills. Honestly, I felt pretty frustrated at first because I'd been craving sunshine and ocean air. Looking back, though, the detour turned out to be a blessing in disguise. Sipping hot ginger tea by the veranda while rain tapped on the roof gave us the exact chance to unwind and recharge that we didn't even realise we needed."
+  },
+  {
+    "id": "sp_p2_cam20_t3",
+    "book": 20,
+    "test": 3,
+    "source": "Cambridge IELTS 20 · Test 3",
+    "part": 2,
+    "isCambridge": true,
+    "category": "object",
+    "catLabel": "Sự vật & Chủ đề",
+    "title": "Describe a piece of work you did for your job or your studies that you felt very satisfied with.",
+    "titleVi": "Kể về một bài tập hoặc công việc học tập/nghề nghiệp khiến bạn cảm thấy rất hài lòng",
+    "bullets": [
+      "what this piece of work was",
+      "why you did this piece of work",
+      "who or what helped you to do this work",
+      "and explain why you felt so satisfied with this piece of work."
+    ],
+    "linkedPart3Id": "sp_p3_cam20_t3",
+    "outlineVi": [
+      "Công việc cụ thể: dự án nghiên cứu cuối khóa về giải pháp bao bì xanh cho chuỗi cà phê địa phương",
+      "Lý do thực hiện: bài tốt nghiệp bắt buộc và đam mê cá nhân về kinh doanh bền vững",
+      "Người và công cụ hỗ trợ: giảng viên hướng dẫn góp ý sắc sảo cùng dữ liệu khảo sát thực tế",
+      "Lý do tự hào: đề xuất khả thi, được hội đồng đánh giá cao và chủ quán áp dụng thử nghiệm"
+    ],
+    "chunks": [
+      "poured my heart and soul into",
+      "bridge the gap between",
+      "invaluable guidance",
+      "hit a few roadblocks",
+      "exceeded my own expectations",
+      "a tremendous sense of fulfilment"
+    ],
+    "modelEn": "One piece of work I still look back on with real pride is my final-year university capstone project, where I designed a practical sustainable-packaging roadmap for independent coffee shops in my city. It was a mandatory graduation requirement, of course, but I chose this particular angle because I wanted to bridge the gap between environmental ideals and the tight profit margins small business owners actually face. I poured my heart and soul into it for nearly four months, interviewing twenty café managers and comparing unit costs from local suppliers. Along the way, I hit a few roadblocks trying to make sense of messy financial spreadsheets, and I wouldn't have pulled it off without my supervisor's invaluable guidance. She pushed me to trim the academic jargon and focus on actionable recommendations. What gave me such a tremendous sense of fulfilment wasn't just earning top marks from the grading panel, which honestly exceeded my own expectations. Two weeks after my defence, one of the café owners I had surveyed emailed me to say he'd switched to our recommended cup-return discount scheme. Seeing my research create tangible value in the real world made every late night worthwhile."
+  },
+  {
+    "id": "sp_p2_cam20_t4",
+    "book": 20,
+    "test": 4,
+    "source": "Cambridge IELTS 20 · Test 4",
+    "part": 2,
+    "isCambridge": true,
+    "category": "event",
+    "catLabel": "Trải nghiệm",
+    "title": "Describe a time when you had a long discussion about a news story.",
+    "titleVi": "Kể về một lần bạn có cuộc thảo luận kéo dài về một bản tin thời sự",
+    "bullets": [
+      "what the news story was about",
+      "who you discussed this news story with",
+      "what people's opinions were",
+      "and explain why you had such a long discussion about this news story."
+    ],
+    "linkedPart3Id": "sp_p3_cam20_t4",
+    "outlineVi": [
+      "Nội dung bản tin: đề xuất cấm học sinh mang điện thoại thông minh vào khuôn viên trường học",
+      "Người cùng thảo luận: nhóm bạn đại học và chị họ đang làm giáo viên cấp ba",
+      "Quan điểm trái chiều: bên ủng hộ giúp tập trung học tập, bên lo ngại mất công cụ học số và liên lạc",
+      "Lý do thảo luận kéo dài: vấn đề gần gũi, đụng chạm trực tiếp đến giáo dục và thói quen công nghệ"
+    ],
+    "chunks": [
+      "made headlines nationwide",
+      "sharply divided",
+      "constant digital distractions",
+      "play devil's advocate",
+      "struck a chord with",
+      "lost track of time"
+    ],
+    "modelEn": "Not long ago, I ended up in a nearly three-hour conversation about a news story that had made headlines nationwide. The report covered a government proposal to introduce a blanket ban on smartphones across secondary schools during class hours and even lunch breaks. I brought it up over Sunday dinner with my cousin, who teaches high school English, and two of my old classmates who work in tech. Unsurprisingly, opinions around the table were sharply divided. My cousin strongly backed the policy, arguing that constant digital distractions and hidden social-media scrolling had eroded students' attention spans and face-to-face social skills. Meanwhile, one of my friends decided to play devil's advocate, insisting that outright bans rarely teach teenagers self-regulation and that parents rely on phones for safety after school. I found myself somewhere in the middle, suggesting locked classroom pouches as a sensible compromise. The reason the discussion dragged on so long is that the topic genuinely struck a chord with all of us—we all struggle with screen time ourselves. Before we knew it, we'd completely lost track of time, and the restaurant staff were politely stacking chairs around us."
+  },
+  {
+    "id": "sp_p2_cam19_t1",
+    "book": 19,
+    "test": 1,
+    "source": "Cambridge IELTS 19 · Test 1",
+    "part": 2,
+    "isCambridge": true,
+    "category": "object",
+    "catLabel": "Sự vật & Chủ đề",
+    "title": "Describe a law that was introduced in your country and that you thought was a very good idea.",
+    "titleVi": "Kể về một đạo luật mới ban hành ở đất nước bạn mà bạn cho là rất đúng đắn",
+    "bullets": [
+      "what the law was",
+      "who introduced it",
+      "when and why it was introduced",
+      "and explain why you thought this law was such a good idea."
+    ],
+    "linkedPart3Id": "sp_p3_cam19_t1",
+    "outlineVi": [
+      "Nội dung luật: quy định nồng độ cồn bằng 0 khi lái xe (Nghị định 100)",
+      "Cơ quan ban hành: Chính phủ và Bộ Giao thông Vận tải Việt Nam",
+      "Thời điểm và lý do: đầu năm 2020 nhằm kéo giảm tai nạn giao thông do rượu bia",
+      "Lý do đánh giá cao: thay đổi hẳn văn hóa nhậu nhẹt, bảo vệ tính mạng và nâng ý thức cộng đồng"
+    ],
+    "chunks": [
+      "zero-tolerance policy",
+      "hefty fines",
+      "curb reckless behaviour",
+      "a noticeable cultural shift",
+      "a strong deterrent",
+      "far outweighs the inconvenience"
+    ],
+    "modelEn": "One piece of legislation in Vietnam that I genuinely applaud is the strict drink-driving law commonly known as Decree 100. Put simply, it enforces a zero-tolerance policy for alcohol behind the wheel, meaning both car drivers and motorbike riders face hefty fines and immediate licence suspension if even a trace of alcohol shows up on a breathalyser. It was introduced by the Vietnamese government at the beginning of 2020 to tackle an alarming rise in road fatalities, especially around public holidays when heavy drinking used to be almost routine. Prior to this law, penalties were relatively lenient and rarely acted as a strong deterrent. I think it was such a brilliant move because it managed to curb reckless behaviour almost overnight and sparked a noticeable cultural shift. Nowadays, whenever my colleagues go out for celebratory drinks, people automatically book ride-hailing cars or designate a sober driver without anyone feeling awkward about refusing a glass. Of course, a few restaurant owners initially worried about losing revenue, yet in my view, saving countless innocent lives on the road far outweighs the inconvenience."
+  },
+  {
+    "id": "sp_p2_cam19_t2",
+    "book": 19,
+    "test": 2,
+    "source": "Cambridge IELTS 19 · Test 2",
+    "part": 2,
+    "isCambridge": true,
+    "category": "person",
+    "catLabel": "Con người",
+    "title": "Describe a person from your country who has won a prize, award or medal.",
+    "titleVi": "Kể về một người đồng hương từng giành giải thưởng hoặc huy chương danh giá",
+    "bullets": [
+      "who this person is",
+      "which prize, award or medal they received",
+      "what they did to win this",
+      "and explain whether you think it was right that this person received this prize, award or medal."
+    ],
+    "linkedPart3Id": "sp_p3_cam19_t2",
+    "outlineVi": [
+      "Nhân vật: Giáo sư toán học Ngô Bảo Châu",
+      "Giải thưởng: Huy chương Fields năm 2010 (được ví như giải Nobel Toán học)",
+      "Thành tựu đạt giải: chứng minh thành công Bổ đề cơ bản trong chương trình Langlands",
+      "Quan điểm cá nhân: hoàn toàn xứng đáng nhờ nỗ lực bền bỉ và cảm hứng lớn cho thế hệ trẻ"
+    ],
+    "chunks": [
+      "widely regarded as",
+      "a monumental breakthrough",
+      "decades of quiet perseverance",
+      "put our country on the map",
+      "well-deserved recognition",
+      "inspired a whole generation"
+    ],
+    "modelEn": "A fellow citizen who immediately comes to mind is Professor Ngo Bao Chau, a Vietnamese-born mathematician who won the prestigious Fields Medal back in 2010. For anyone outside academia, the Fields Medal is widely regarded as the Nobel Prize of mathematics, awarded only once every four years to scholars under forty. He earned this honour by proving what's known as the Fundamental Lemma, a notoriously difficult conjecture in the Langlands programme that had baffled leading mathematicians for nearly three decades. While I'll freely admit the pure algebra behind his proof goes way over my head, Time magazine actually listed his work among the top ten scientific discoveries of the year, which shows what a monumental breakthrough it was. In my eyes, it was completely well-deserved recognition. Success in theoretical mathematics doesn't happen through luck or self-promotion; it demands decades of quiet perseverance and extraordinary intellectual discipline. Beyond his academic brilliance, he genuinely put our country on the map in global STEM circles and inspired a whole generation of Vietnamese students to pursue fundamental research rather than chasing quick fame."
+  },
+  {
+    "id": "sp_p2_cam19_t3",
+    "book": 19,
+    "test": 3,
+    "source": "Cambridge IELTS 19 · Test 3",
+    "part": 2,
+    "isCambridge": true,
+    "category": "event",
+    "catLabel": "Trải nghiệm",
+    "title": "Describe a car journey you made that took longer than expected.",
+    "titleVi": "Kể về một chuyến đi ô tô kéo dài lâu hơn nhiều so với dự kiến",
+    "bullets": [
+      "where you were going",
+      "who you were with",
+      "how you felt during the journey",
+      "and explain why this car journey took longer than expected."
+    ],
+    "linkedPart3Id": "sp_p3_cam19_t3",
+    "outlineVi": [
+      "Điểm đến: chuyến đi cuối tuần từ TP.HCM xuống thành phố biển Vũng Tàu",
+      "Người đồng hành: bố mẹ và em trai trên chiếc xe gia đình",
+      "Cảm xúc dọc đường: ban đầu sốt ruột và mệt mỏi, sau dần thư thả nhờ nghe nhạc và trò chuyện",
+      "Nguyên nhân chậm trễ: kẹt xe kéo dài trên cao tốc do sự cố xe tải cộng thêm dịp lễ lớn"
+    ],
+    "chunks": [
+      "bumper-to-bumper traffic",
+      "normally takes around",
+      "came to a complete standstill",
+      "patience was wearing thin",
+      "make the best of a bad situation",
+      "crawled along at a snail's pace"
+    ],
+    "modelEn": "I'll never forget a family road trip from Ho Chi Minh City down to Vung Tau, a coastal town that normally takes around two and a half hours to reach. I was travelling with my parents and younger brother over a national holiday weekend, hoping to grab fresh seafood by lunchtime. What was meant to be a breezy morning drive ended up stretching past six exhausting hours. About forty minutes onto the expressway, the entire highway came to a complete standstill. At first we assumed it was just typical holiday congestion, so we crawled along at a snail's pace through bumper-to-bumper traffic under the blazing midday sun. Later, a traffic radio update explained that a heavy cargo truck had broken down right across two lanes near a toll booth, creating a massive bottleneck with nowhere to exit. Honestly, after the third hour, everyone's patience was wearing thin and I felt trapped and irritable. Eventually, though, my brother put on a nostalgic throwback playlist and handed out snacks, which helped us make the best of a bad situation. By the time we finally smelled the sea breeze, we were laughing about the whole ordeal."
+  },
+  {
+    "id": "sp_p2_cam19_t4",
+    "book": 19,
+    "test": 4,
+    "source": "Cambridge IELTS 19 · Test 4",
+    "part": 2,
+    "isCambridge": true,
+    "category": "place",
+    "catLabel": "Địa điểm",
+    "title": "Describe a place you visited that has beautiful views.",
+    "titleVi": "Kể về một địa điểm bạn từng ghé thăm có khung cảnh thiên nhiên tuyệt đẹp",
+    "bullets": [
+      "where this place is",
+      "when and why you visited it",
+      "what views you can see from this place",
+      "and explain why you think these views are so beautiful."
+    ],
+    "linkedPart3Id": "sp_p3_cam19_t4",
+    "outlineVi": [
+      "Địa điểm: Đèo Hải Vân nằm giữa Đà Nẵng và Thừa Thiên Huế",
+      "Thời điểm và lý do: chuyến phượt xe máy mùa xuân năm ngoái cùng bạn thân",
+      "Khung cảnh nhìn thấy: cung đường uốn lượn, vịnh biển xanh ngọc, mây phủ đỉnh núi và tàu hỏa dưới chân đèo",
+      "Lý do thấy đẹp mê hồn: sự giao thoa hiếm có giữa núi rừng hùng vĩ và đại dương bao la"
+    ],
+    "chunks": [
+      "panoramic views",
+      "winding mountain road",
+      "dramatic contrast",
+      "took my breath away",
+      "shrouded in mist",
+      "a sense of sheer serenity"
+    ],
+    "modelEn": "One spot that genuinely took my breath away is Hai Van Pass, a famous twenty-kilometre coastal mountain pass linking Da Nang and Hue in central Vietnam. I visited it last spring during a week-long road trip with two university mates. Rather than taking the faster highway tunnel straight through the mountain, we rented scooters specifically so we could ride up the winding mountain road at our own pace. When we pulled over near the summit around late afternoon, the panoramic views were almost surreal. On one side, lush emerald peaks were partially shrouded in mist, while far below us lay the turquoise sweep of Lang Co Bay, dotted with tiny fishing boats and a narrow strip of white sand. We even spotted a coastal train snaking gracefully along the cliff edge. What makes the scenery so extraordinarily beautiful to me is that dramatic contrast between rugged wilderness and the calm, endless ocean. Standing up there with cool mountain wind rushing past, far removed from city noise, gave me a sense of sheer serenity I still think about whenever life gets hectic."
+  },
+  {
+    "id": "sp_p2_cam18_t1",
+    "book": 18,
+    "test": 1,
+    "source": "Cambridge IELTS 18 · Test 1",
+    "part": 2,
+    "isCambridge": true,
+    "category": "object",
+    "catLabel": "Sự vật & Chủ đề",
+    "title": "Describe some food or drink that you learned to prepare.",
+    "titleVi": "Kể về một món ăn hoặc thức uống mà bạn đã học cách tự pha chế hoặc nấu nướng",
+    "bullets": [
+      "what food or drink you learned to prepare",
+      "when and where you learned to prepare this",
+      "how you learned to prepare this",
+      "and explain how you felt about learning to prepare this food or drink."
+    ],
+    "linkedPart3Id": "sp_p3_cam18_t1",
+    "outlineVi": [
+      "Thức uống học làm: cà phê trứng truyền thống Hà Nội",
+      "Thời điểm và nơi học: lớp workshop cuối tuần ở phố cổ Hà Nội mùa thu năm ngoái",
+      "Cách học: pha phin cà phê đậm, đánh lòng đỏ trứng với sữa đặc và mật ong đến khi bông mịn",
+      "Cảm xúc khi học: vừa tò mò vừa hào hứng, cực kỳ tự hào khi tự tay pha cho gia đình thưởng thức"
+    ],
+    "chunks": [
+      "acquired a taste for",
+      "rich, velvety foam",
+      "get the consistency right",
+      "trial and error",
+      "surprisingly therapeutic",
+      "a great party trick"
+    ],
+    "modelEn": "A drink I recently learned to make from scratch is traditional Vietnamese egg coffee, a beloved Hanoi speciality. I'd acquired a taste for it years ago, so when I visited Hanoi's Old Quarter last autumn, I signed up for a two-hour hands-on coffee workshop tucked inside a historic courtyard café. The instructor walked us through every step, starting with brewing strong dark-roast Robusta coffee using a metal phin filter. The trickiest part, though, was whisking fresh egg yolks with condensed milk and a drop of vanilla until they transformed into a rich, velvety foam. It took a fair bit of trial and error—my first batch was slightly too runny, and my arm ached from whipping—before I finally managed to get the consistency right so the custard floated cleanly on top of the hot espresso. Honestly, I found the whole process surprisingly therapeutic, and tasting that first balanced spoonful felt hugely rewarding. Now I make it on lazy Sunday mornings at home, and it's become a great party trick whenever friends drop by, especially since most of them are amazed that something tasting like melted tiramisu takes just ten minutes to whip up."
+  },
+  {
+    "id": "sp_p2_cam18_t2",
+    "book": 18,
+    "test": 2,
+    "source": "Cambridge IELTS 18 · Test 2",
+    "part": 2,
+    "isCambridge": true,
+    "category": "place",
+    "catLabel": "Địa điểm",
+    "title": "Describe a tourist attraction in your country that you would recommend.",
+    "titleVi": "Kể về một điểm du lịch nổi tiếng ở đất nước bạn mà bạn muốn giới thiệu cho mọi người",
+    "bullets": [
+      "what the tourist attraction is",
+      "where in your country this tourist attraction is",
+      "what visitors can see and do at this tourist attraction",
+      "and explain why you would recommend this tourist attraction."
+    ],
+    "linkedPart3Id": "sp_p3_cam18_t2",
+    "outlineVi": [
+      "Địa điểm: Phố cổ Hội An — Di sản Văn hóa Thế giới",
+      "Vị trí: ven sông Thu Bồn, miền Trung Việt Nam, cách Đà Nẵng khoảng 30 phút",
+      "Hoạt động trải nghiệm: tản bộ ngắm nhà cổ tường vàng, đạp xe qua đồng lúa, thả đèn hoa đăng, may đo áo quần",
+      "Lý do gợi ý: giữ trọn nét cổ kính yên bình, ẩm thực tinh tế và phù hợp với mọi lứa tuổi"
+    ],
+    "chunks": [
+      "steeped in history",
+      "cobblestone lanes",
+      "at a leisurely pace",
+      "a feast for the senses",
+      "well-preserved heritage",
+      "strikes the perfect balance"
+    ],
+    "modelEn": "If an overseas friend asked me to recommend just one destination in Vietnam, I wouldn't hesitate to suggest Hoi An Ancient Town. It sits along the Thu Bon River in central Vietnam, roughly thirty minutes south of Da Nang, and the entire historic quarter is steeped in history from its days as a thriving sixteenth-century trading port. Visitors can wander down traffic-free cobblestone lanes lined with mustard-yellow merchant houses, admire the iconic Japanese Covered Bridge, or cycle out through emerald rice paddies to nearby craft villages at a leisurely pace. After sunset, the whole town turns into a feast for the senses: thousands of silk lanterns glow above the river, street stalls serve fragrant cao lau noodles, and you can even have bespoke linen clothes tailored overnight. What makes me recommend it so enthusiastically is how gracefully it strikes the perfect balance between well-preserved heritage and warm, modern hospitality. Unlike larger cities that can feel overwhelming to first-time travellers, Hoi An is compact, walkable, and deeply atmospheric—almost everyone who goes ends up wishing they had booked an extra two nights."
+  },
+  {
+    "id": "sp_p2_cam18_t3",
+    "book": 18,
+    "test": 3,
+    "source": "Cambridge IELTS 18 · Test 3",
+    "part": 2,
+    "isCambridge": true,
+    "category": "event",
+    "catLabel": "Trải nghiệm",
+    "title": "Describe a time when you enjoyed visiting a member of your family in their home.",
+    "titleVi": "Kể về một lần bạn rất thích thú khi đến thăm nhà một người thân trong gia đình",
+    "bullets": [
+      "who you visited and where they lived",
+      "why you made this visit",
+      "what happened during this visit",
+      "and explain what you enjoyed about this visit."
+    ],
+    "linkedPart3Id": "sp_p3_cam18_t3",
+    "outlineVi": [
+      "Người được thăm: dì ruột sống trong căn nhà nhỏ trên sườn đồi ở Đà Lạt",
+      "Lý do chuyến thăm: kỳ nghỉ Tết năm ngoái, cả nhà muốn trốn khỏi nhịp sống ồn ào thành phố",
+      "Hoạt động diễn ra: cùng dì hái rau trong vườn, nấu lẩu gà lá é và trò chuyện bên bếp ấm",
+      "Điều khiến chuyến thăm đáng nhớ: sự ấm cúng, gần gũi và những câu chuyện đầy ắp tiếng cười"
+    ],
+    "chunks": [
+      "a welcome escape from",
+      "warm and hospitable",
+      "tucked away in",
+      "pitched in with",
+      "heart-to-heart conversations",
+      "a genuine sense of belonging"
+    ],
+    "modelEn": "One family visit I remember with real affection was spending four days at my aunt's hillside home in Da Lat during last year's Lunar New Year holiday. Her house is tucked away in a quiet lane surrounded by persimmon trees and tidy vegetable beds, about ten minutes from the town centre. I decided to make the trip because work had been relentless for months, and I desperately needed a welcome escape from the constant hum of the city. My aunt has always been effortlessly warm and hospitable, so the moment I arrived, she handed me a mug of roasted artichoke tea and gave me a tour of her new greenhouse. Over the next few days, we fell into the loveliest rhythm: harvesting fresh herbs every morning, riding to the local market, and then I pitched in with chopping ingredients for steaming pots of chicken hotpot every evening. What I enjoyed most wasn't any grand sightseeing, but the unhurried heart-to-heart conversations we had late into the night without anyone checking their phone. Leaving her house, I felt completely recharged and reminded of how comforting a genuine sense of belonging can be."
+  },
+  {
+    "id": "sp_p2_cam18_t4",
+    "book": 18,
+    "test": 4,
+    "source": "Cambridge IELTS 18 · Test 4",
+    "part": 2,
+    "isCambridge": true,
+    "category": "event",
+    "catLabel": "Trải nghiệm",
+    "title": "Describe a time when you met someone who you became good friends with.",
+    "titleVi": "Kể về một lần bạn gặp gỡ một người và sau đó hai bạn trở thành bạn thân",
+    "bullets": [
+      "who you met",
+      "when and where you met this person",
+      "what you thought about this person when you first met",
+      "and explain why you think you became good friends with this person."
+    ],
+    "linkedPart3Id": "sp_p3_cam18_t4",
+    "outlineVi": [
+      "Người bạn gặp: Minh, một thành viên cùng câu lạc bộ leo núi dã ngoại",
+      "Thời điểm và địa điểm: buổi trekking cuối tuần ngoại ô thành phố cách đây hai năm",
+      "Ấn tượng ban đầu: trông hơi ít nói, nghiêm túc nhưng cực kỳ chu đáo và hài hước ngầm",
+      "Lý do trở thành bạn thân: cùng trải qua cơn mưa rào bất ngờ, hợp tính cách và chung giá trị sống"
+    ],
+    "chunks": [
+      "crossed paths with",
+      "quiet and reserved",
+      "hit it off immediately",
+      "broke the ice",
+      "on the exact same wavelength",
+      "stood the test of time"
+    ],
+    "modelEn": "I'd like to talk about the day I first crossed paths with Minh, who is now one of my closest confidants. We met about two years ago on a Saturday morning trekking trip organised by a local outdoor club just outside the city. During the bus ride up to the trailhead, I noticed he seemed quite quiet and reserved—sitting near the back with a camera slung over his shoulder—so I honestly assumed he preferred keeping to himself. Everything changed halfway down the trail when a sudden tropical downpour caught our group completely off guard. We ended up ducking under the same tiny roadside pavilion for nearly an hour while waiting for the rain to pass. He offered me a spare poncho and cracked a dry joke about our soaked trainers, which instantly broke the ice. From that moment on, we hit it off immediately, swapping stories about books, photography, and career anxieties. Looking back, we became such good friends because we're on the exact same wavelength: neither of us enjoys superficial small talk, yet we always show up for each other. Our friendship has really stood the test of time."
+  },
+  {
+    "id": "sp_p2_cam17_t1",
+    "book": 17,
+    "test": 1,
+    "source": "Cambridge IELTS 17 · Test 1",
+    "part": 2,
+    "isCambridge": true,
+    "category": "place",
+    "catLabel": "Địa điểm",
+    "title": "Describe the neighbourhood you lived in when you were a child.",
+    "titleVi": "Kể về khu phố nơi bạn từng sinh sống khi còn nhỏ",
+    "bullets": [
+      "where in your town/city the neighbourhood was",
+      "what kind of people lived there",
+      "what it was like to live in this neighbourhood",
+      "and explain whether you would like to live in this neighbourhood in the future."
+    ],
+    "linkedPart3Id": "sp_p3_cam17_t1",
+    "outlineVi": [
+      "Vị trí khu phố: một con hẻm rợp bóng cây nằm gần bờ sông ở quận ven trung tâm",
+      "Cư dân sinh sống: chủ yếu là các gia đình lao động, giáo viên và tiểu thương thân thiện",
+      "Trải nghiệm tuổi thơ: chiều nào trẻ con cũng đánh cầu lông ngoài ngõ, hàng xóm chia sẻ đồ ăn",
+      "Có muốn sống lại ở đó không: rất trân trọng ký ức nhưng tương lai thích nơi tiện đi làm hơn"
+    ],
+    "chunks": [
+      "a tight-knit community",
+      "tree-lined alley",
+      "looked out for one another",
+      "a real sense of safety",
+      "nostalgic charm",
+      "outgrown the area"
+    ],
+    "modelEn": "When I was growing up, I lived in a peaceful residential quarter tucked along a tree-lined alley near the river, roughly twenty minutes from the downtown core. It was a wonderfully mixed, down-to-earth neighbourhood inhabited mostly by young families, retired schoolteachers, and small shopkeepers who had known each other for decades. What made it such a tight-knit community was how naturally everyone looked out for one another. Every late afternoon, the neighbourhood kids would pour out onto the pavement to play badminton or ride bicycles while parents chatted on plastic stools outside their front doors. Neighbours routinely passed plates of homemade sweet soup over the garden fence, which gave my childhood a real sense of safety and warmth that feels rarer in high-rise apartments today. As for whether I'd like to live there again in the future, I'm honestly torn. Part of me still adores its nostalgic charm and friendly pace of life, yet realistically I've probably outgrown the area. It's a bit too far from major business districts now, so I'd rather visit often than move back permanently."
+  },
+  {
+    "id": "sp_p2_cam17_t2",
+    "book": 17,
+    "test": 2,
+    "source": "Cambridge IELTS 17 · Test 2",
+    "part": 2,
+    "isCambridge": true,
+    "category": "place",
+    "catLabel": "Địa điểm",
+    "title": "Describe a big city you would like to visit.",
+    "titleVi": "Kể về một thành phố lớn mà bạn rất muốn có dịp ghé thăm",
+    "bullets": [
+      "which big city you would like to visit",
+      "how you would travel there",
+      "what you would do there",
+      "and explain why you would like to visit this big city."
+    ],
+    "linkedPart3Id": "sp_p3_cam17_t2",
+    "outlineVi": [
+      "Thành phố mơ ước: Tokyo, Nhật Bản",
+      "Cách thức di chuyển: bay thẳng khoảng 5 tiếng rồi khám phá bằng hệ thống tàu điện ngầm",
+      "Hoạt động dự định: thăm đền cổ Asakusa, khám phá khu phố Shibuya, thưởng thức ramen và kiến trúc",
+      "Lý do yêu thích: sự giao thoa kỳ diệu giữa công nghệ vị lai và truyền thống tinh tế"
+    ],
+    "chunks": [
+      "high on my bucket list",
+      "seamless blend of",
+      "world-class public transport",
+      "soak up the atmosphere",
+      "culinary paradise",
+      "remarkably orderly"
+    ],
+    "modelEn": "A major metropolis that has been high on my bucket list for years is Tokyo, Japan. Since it's roughly a five-hour direct flight from Vietnam, I'd ideally fly overnight into Haneda Airport and then rely entirely on the city's world-class public transport—especially the iconic Yamanote train loop—to zip between districts. Once there, I'd probably spend my mornings wandering through tranquil historic areas like Asakusa and Meiji Shrine, just to soak up the atmosphere before the crowds build up. In the afternoons, I'd explore quirky independent bookshops in Shimokitazawa and visit cutting-edge digital art museums, before ending my evenings hunting down steaming bowls of ramen in tiny lantern-lit alleyways. The reason Tokyo fascinates me so much is its seamless blend of ultra-modern innovation and centuries-old cultural etiquette. It's also a genuine culinary paradise, where even a humble convenience-store meal is crafted with obsessive care. Above all, I'm amazed by how a city of tens of millions remains remarkably orderly, spotlessly clean, and deeply respectful of personal space—it's something I'd love to witness first-hand rather than just admiring it through travel vlogs and photographs online."
+  },
+  {
+    "id": "sp_p2_cam17_t3",
+    "book": 17,
+    "test": 3,
+    "source": "Cambridge IELTS 17 · Test 3",
+    "part": 2,
+    "isCambridge": true,
+    "category": "place",
+    "catLabel": "Địa điểm",
+    "title": "Describe a monument (e.g., a statue or sculpture) that you like.",
+    "titleVi": "Kể về một tượng đài hoặc công trình điêu khắc mà bạn yêu thích",
+    "bullets": [
+      "what this monument is",
+      "where this monument is",
+      "what it looks like",
+      "and explain why you like this monument."
+    ],
+    "linkedPart3Id": "sp_p3_cam17_t3",
+    "outlineVi": [
+      "Tượng đài yêu thích: Tượng đài Vua Lý Thái Tổ — vị vua khai lập kinh thành Thăng Long",
+      "Vị trí đặt tượng: quảng trường rộng lớn ngay sát bờ đông Hồ Hoàn Kiếm, Hà Nội",
+      "Đặc điểm thiết kế: bức tượng đồng cao lớn, một tay cầm Chiếu dời đô, dáng vẻ uy nghiêm hướng ra hồ",
+      "Lý do yêu thích: giàu giá trị lịch sử và là không gian sinh hoạt cộng đồng đầy sức sống"
+    ],
+    "chunks": [
+      "imposing bronze statue",
+      "commands attention",
+      "steeped in national pride",
+      "a lively civic hub",
+      "timeless elegance",
+      "bridges the past and the present"
+    ],
+    "modelEn": "A monument I've always been particularly fond of is the King Ly Thai To statue, which honours the eleventh-century monarch who founded Hanoi as Vietnam's imperial capital. It stands right at the centre of a spacious, landscaped plaza on the eastern edge of Hoan Kiem Lake, right in the beating heart of the city. Visually, it's an imposing bronze statue towering roughly ten metres high on a solid granite pedestal. The king is depicted in traditional royal robes, holding a scrolled royal edict in one hand while pointing firmly downward with the other—a symbolic gesture marking the chosen site of the capital. It immediately commands attention without feeling overly flashy, radiating a kind of timeless elegance against the backdrop of ancient banyan trees. What I love most about this monument is that it isn't just a cold relic steeped in national pride; it's also a lively civic hub. On weekend evenings, children rollerblade across the square while elderly residents dance nearby, so the statue effortlessly bridges the past and the present in everyday city life."
+  },
+  {
+    "id": "sp_p2_cam17_t4",
+    "book": 17,
+    "test": 4,
+    "source": "Cambridge IELTS 17 · Test 4",
+    "part": 2,
+    "isCambridge": true,
+    "category": "event",
+    "catLabel": "Trải nghiệm",
+    "title": "Describe an occasion when you had to do something in a hurry.",
+    "titleVi": "Kể về một dịp bạn buộc phải hoàn thành một việc gì đó thật gấp rút",
+    "bullets": [
+      "what you had to do",
+      "why you had to do this in a hurry",
+      "how well you did this",
+      "and explain how you felt about having to do this in a hurry."
+    ],
+    "linkedPart3Id": "sp_p3_cam17_t4",
+    "outlineVi": [
+      "Việc cần làm gấp: làm lại toàn bộ bài thuyết trình nhóm ngay trước giờ báo cáo",
+      "Lý do bị gấp: laptop bị lỗi treo ổ cứng khiến file slide chưa kịp đồng bộ mất sạch trước giờ G 45 phút",
+      "Kết quả thực hiện: giữ bình tĩnh, tận dụng dàn ý cũ và hoàn thiện bản slide gọn gàng đúng giờ",
+      "Cảm xúc trải qua: ban đầu hoảng loạn tột độ, sau đó nhẹ nhõm và rút ra bài học sao lưu dữ liệu"
+    ],
+    "chunks": [
+      "racing against the clock",
+      "my heart sank",
+      "kept a cool head",
+      "stripped everything back to basics",
+      "pulled it off",
+      "a huge wave of relief"
+    ],
+    "modelEn": "One occasion when I was genuinely racing against the clock happened during my third year at university, right before an assessed marketing presentation. About forty-five minutes before our group was due to speak, my laptop froze mid-edit and refused to reboot, taking our entire slide deck with it because I'd forgotten to turn on cloud sync. Honestly, my heart sank the moment the black screen appeared, and I felt a jolt of pure panic. Fortunately, I still had our rough outline and key charts saved in a messaging thread on my phone. Instead of spiralling, my teammates and I kept a cool head, borrowed a spare laptop from a classmate, and divided the sections between us. We stripped everything back to basics—ditching fancy animations in favour of clean headlines and crisp visuals—and somehow finished rebuilding the deck with three minutes to spare. To our amazement, we actually pulled it off and scored an A-minus because the stripped-down slides kept us focused on our spoken delivery. Afterwards, I felt a huge wave of relief, and needless to say, I now back up every single file automatically."
+  },
+  {
+    "id": "sp_p2_cam16_t1",
+    "book": 16,
+    "test": 1,
+    "source": "Cambridge IELTS 16 · Test 1",
+    "part": 2,
+    "isCambridge": true,
+    "category": "place",
+    "catLabel": "Địa điểm",
+    "title": "Describe a tourist attraction you enjoyed visiting.",
+    "titleVi": "Kể về một điểm tham quan du lịch mà bạn rất thích khi ghé thăm",
+    "bullets": [
+      "what this tourist attraction is",
+      "when and why you visited it",
+      "what you did there",
+      "and explain why you enjoyed visiting this tourist attraction."
+    ],
+    "linkedPart3Id": "sp_p3_cam16_t1",
+    "outlineVi": [
+      "Địa điểm: Quần thể danh thắng Tràng An ở tỉnh Ninh Bình",
+      "Thời điểm và lý do: chuyến đi ngắn ngày mùa thu năm ngoái cùng gia đình nhân dịp sinh nhật mẹ",
+      "Hoạt động trải nghiệm: ngồi thuyền nan len lỏi qua hang động đá vôi tự nhiên và viếng đền cổ",
+      "Lý do yêu thích: thiên nhiên nguyên sơ tĩnh lặng, không bị thương mại hóa quá mức"
+    ],
+    "chunks": [
+      "towering limestone karsts",
+      "gliding effortlessly",
+      "unspoilt natural beauty",
+      "a world away from",
+      "refreshingly peaceful",
+      "left me completely spellbound"
+    ],
+    "modelEn": "A tourist attraction I thoroughly enjoyed visiting is the Trang An Scenic Landscape Complex in Ninh Binh province, about two hours south of Hanoi. I went there last November with my parents to celebrate my mum's birthday, as she'd always wanted to see its famous river valleys. The highlight of the visit was a three-hour wooden boat tour rowed by a local boatwoman. We spent the afternoon gliding effortlessly along crystal-clear waterways framed by towering limestone karsts, ducking our heads as the boat drifted right through pitch-dark natural river caves with stalactites hanging overhead. Along the route, we also stepped ashore to explore centuries-old hillside temples tucked beneath dense forest canopies. What made the experience so memorable was how refreshingly peaceful and well-managed the whole site felt—there were no noisy motorboats or aggressive souvenir vendors spoiling the stillness. Drifting silently through such unspoilt natural beauty felt a world away from urban stress, and the sheer scale of those emerald cliffs mirrored on the glassy water left me completely spellbound from start to finish. I'd happily go back in a heartbeat."
+  },
+  {
+    "id": "sp_p2_cam16_t2",
+    "book": 16,
+    "test": 2,
+    "source": "Cambridge IELTS 16 · Test 2",
+    "part": 2,
+    "isCambridge": true,
+    "category": "object",
+    "catLabel": "Sự vật & Chủ đề",
+    "title": "Describe a review you read about a product or service.",
+    "titleVi": "Kể về một bài đánh giá bạn từng đọc về một sản phẩm hoặc dịch vụ",
+    "bullets": [
+      "where you read the review",
+      "what the product or service was",
+      "what information the review gave about the product or service",
+      "and explain what you did as a result of reading this review."
+    ],
+    "linkedPart3Id": "sp_p3_cam16_t2",
+    "outlineVi": [
+      "Nơi đọc đánh giá: bài phân tích chi tiết của một người dùng lâu năm trên diễn đàn công nghệ Reddit",
+      "Sản phẩm được đánh giá: mẫu tai nghe chống ồn không dây cao cấp Sony WH-1000XM5",
+      "Thông tin nhận được: khen khả năng chống ồn và pin trâu, nhưng cảnh báo phần khớp gập hơi mong manh",
+      "Hành động sau khi đọc: ra cửa hàng đeo thử trực tiếp và chọn mua phiên bản tiền nhiệm bền và tiết kiệm hơn"
+    ],
+    "chunks": [
+      "in-depth breakdown",
+      "refreshingly objective",
+      "pros and cons",
+      "blindly trusting",
+      "make an informed decision",
+      "saved me from buyer's remorse"
+    ],
+    "modelEn": "A few months ago, I read a remarkably helpful product review on a tech forum on Reddit while I was shopping for wireless noise-cancelling headphones to help me focus in noisy cafés. The post was a six-month usage report on a flagship model I'd been eyeing, written by an audio engineer rather than a sponsored influencer. What drew me in was how refreshingly objective the review felt. Instead of simply gushing over the specs, the writer laid out an in-depth breakdown of the real-world pros and cons. He praised the superb active noise cancellation and comfortable ear cups, yet pointed out two drawbacks that glossy YouTube ads rarely mention: the headband doesn't fold compactly for travel, and the narrow plastic hinges can crack under regular commuting. Rather than blindly trusting the hype and ordering online straight away, I went to an electronics store to test the headphones myself. After comparing the build quality side by side, I actually opted for the sturdier previous-generation model at a steep discount. That single honest review helped me make an informed decision and definitely saved me from buyer's remorse."
+  },
+  {
+    "id": "sp_p2_cam16_t3",
+    "book": 16,
+    "test": 3,
+    "source": "Cambridge IELTS 16 · Test 3",
+    "part": 2,
+    "isCambridge": true,
+    "category": "object",
+    "catLabel": "Sự vật & Chủ đề",
+    "title": "Describe a luxury item you would like to own in the future.",
+    "titleVi": "Kể về một món đồ xa xỉ mà bạn mong muốn sở hữu trong tương lai",
+    "bullets": [
+      "what item you would like to own",
+      "what this item looks like",
+      "why you would like to own this item",
+      "and explain whether you think you will ever own this item."
+    ],
+    "linkedPart3Id": "sp_p3_cam16_t3",
+    "outlineVi": [
+      "Món đồ mơ ước: một chiếc đồng hồ cơ Thụy Sĩ thiết kế tối giản cổ điển",
+      "Mô tả ngoại hình: mặt số xanh đậm tinh tế, kính sapphire chống xước và dây thép không gỉ thanh lịch",
+      "Lý do muốn sở hữu: đề cao nghệ thuật chế tác thủ công bền bỉ và đánh dấu cột mốc trưởng thành sự nghiệp",
+      "Khả năng sở hữu: tin rằng sẽ mua được trong khoảng 5–7 năm tới nhờ tiết kiệm có kế hoạch"
+    ],
+    "chunks": [
+      "understated elegance",
+      "intricate craftsmanship",
+      "built to last a lifetime",
+      "mark a major career milestone",
+      "a status symbol",
+      "within reach"
+    ],
+    "modelEn": "If I could own one luxury item down the road, it would be a classic Swiss mechanical wristwatch—specifically something minimalist like an Omega Seamaster Aqua Terra. Visually, it's the definition of understated elegance: it features a deep navy dial with subtle horizontal texture, polished silver hands behind scratch-resistant sapphire crystal, and a brushed stainless-steel bracelet that works just as well with a crisp shirt as with casual weekend wear. Unlike flashy designer logos, what appeals to me isn't showing off a status symbol; it's the sheer intricate craftsmanship packed into hundreds of tiny gears that run purely on mechanical motion without ever needing a battery. In an age of disposable smartwatches that become obsolete every three years, I love the idea of owning an heirloom piece built to last a lifetime. As for whether I'll ever actually own one, I'm quietly optimistic. It's definitely far beyond my current budget, yet if I stay disciplined with my savings, I think it could be within reach in five or six years to mark a major career milestone."
+  },
+  {
+    "id": "sp_p2_cam16_t4",
+    "book": 16,
+    "test": 4,
+    "source": "Cambridge IELTS 16 · Test 4",
+    "part": 2,
+    "isCambridge": true,
+    "category": "object",
+    "catLabel": "Sự vật & Chủ đề",
+    "title": "Describe some technology (e.g. an app, phone, software program) that you decided to stop using.",
+    "titleVi": "Kể về một công nghệ (ứng dụng, thiết bị, phần mềm) mà bạn đã quyết định ngừng sử dụng",
+    "bullets": [
+      "when and where you got this technology",
+      "why you started using this technology",
+      "why you decided to stop using it",
+      "and explain how you feel about the decision you made."
+    ],
+    "linkedPart3Id": "sp_p3_cam16_t4",
+    "outlineVi": [
+      "Công nghệ ngừng dùng: ứng dụng video ngắn TikTok tải trên điện thoại cá nhân",
+      "Lý do bắt đầu dùng: cài đặt từ thời giãn cách để giải trí nhanh và xem mẹo nấu ăn",
+      "Lý do quyết định bỏ: thuật toán gây nghiện khiến mất ngủ, suy giảm khả năng tập trung sâu",
+      "Cảm xúc hiện tại: hoàn toàn sáng suốt, đầu óc thanh thản và có thêm thời gian đọc sách"
+    ],
+    "chunks": [
+      "mindlessly scrolling",
+      "hooked on the algorithm",
+      "eroding my attention span",
+      "bite the bullet",
+      "reclaimed hours of my week",
+      "never looked back"
+    ],
+    "modelEn": "A piece of technology I consciously decided to walk away from is TikTok, the short-form video app. I originally downloaded it onto my smartphone about three years ago during a quiet spell at home, mostly because all my friends were sending me funny clips and quick cooking tutorials. At first it felt like harmless five-minute entertainment while waiting for the bus. Before long, though, I realised I'd become completely hooked on the algorithm. What started as a brief break before bed routinely spiralled into ninety minutes of mindlessly scrolling past midnight. Worse still, I noticed it was quietly eroding my attention span—even sitting through a ten-minute documentary or reading a book chapter started feeling strangely restless. So about eight months ago, I decided to bite the bullet, deactivated my account, and deleted the app altogether. Looking back, it's honestly one of the healthiest habits I've ever adopted. I've reclaimed hours of my week for reading and evening walks, my sleep quality improved almost immediately, and apart from missing the occasional viral meme, I've never looked back."
+  },
+  {
+    "id": "sp_p2_cam15_t1",
+    "book": 15,
+    "test": 1,
+    "source": "Cambridge IELTS 15 · Test 1",
+    "part": 2,
+    "isCambridge": true,
+    "category": "place",
+    "catLabel": "Địa điểm",
+    "title": "Describe a hotel that you know.",
+    "titleVi": "Kể về một khách sạn mà bạn biết rõ",
+    "bullets": [
+      "where this hotel is",
+      "what this hotel looks like",
+      "what facilities this hotel has",
+      "and explain whether you think this is a nice hotel to stay in."
+    ],
+    "linkedPart3Id": "sp_p3_cam15_t1",
+    "outlineVi": [
+      "Vị trí khách sạn: khách sạn di sản Sofitel Legend Metropole nằm ngay trung tâm quận Hoàn Kiếm, Hà Nội",
+      "Diện mạo kiến trúc: phong cách Pháp cổ điển với tường trắng thanh lịch, cửa chớp xanh và sân vườn rợp bóng",
+      "Tiện nghi dịch vụ: hồ bơi ngoài trời ấm cúng, nhà hàng ẩm thực tinh tế, spa cao cấp và hầm trú ẩn lịch sử",
+      "Đánh giá trải nghiệm: cực kỳ đáng ở cho dịp đặc biệt nhờ đẳng cấp dịch vụ và bầu không khí giàu lịch sử"
+    ],
+    "chunks": [
+      "architectural landmark",
+      "old-world charm",
+      "manicured courtyard",
+      "impeccable attention to detail",
+      "steeped in character",
+      "well worth the splurge"
+    ],
+    "modelEn": "A hotel I know quite well is the Sofitel Legend Metropole Hanoi, a century-old heritage property located just a short walk from the Opera House in central Hanoi. Even though I've only attended a family afternoon tea and a work conference there rather than staying overnight, it's an unmistakable architectural landmark in the city. From the outside, the historic wing exudes classic French colonial elegance, with crisp white facades, dark green wooden shutters, and vintage wrought-iron balconies. Inside, the facilities are genuinely first-rate: there's a tranquil, manicured courtyard surrounding a heated outdoor pool, several acclaimed restaurants serving both Vietnamese and French cuisine, a serene spa, and even a preserved wartime bunker where staff offer fascinating guided tours for guests. In my opinion, it would be an extraordinary place to stay, especially for a milestone anniversary or a once-in-a-lifetime trip. What sets it apart from sleek modern skyscrapers is its genuine old-world charm combined with impeccable attention to detail from the staff. It's undeniably pricey, of course, yet for travellers who love places steeped in character, it's well worth the splurge."
+  },
+  {
+    "id": "sp_p2_cam15_t2",
+    "book": 15,
+    "test": 2,
+    "source": "Cambridge IELTS 15 · Test 2",
+    "part": 2,
+    "isCambridge": true,
+    "category": "object",
+    "catLabel": "Sự vật & Chủ đề",
+    "title": "Describe a website that you bought something from.",
+    "titleVi": "Kể về một trang web thương mại điện tử mà bạn từng mua hàng",
+    "bullets": [
+      "what the website is",
+      "what you bought from this website",
+      "how satisfied you were with what you bought",
+      "and explain what you liked or disliked about using this website."
+    ],
+    "linkedPart3Id": "sp_p3_cam15_t2",
+    "outlineVi": [
+      "Trang web mua sắm: sàn thương mại điện tử Tiki của Việt Nam",
+      "Món hàng đã mua: một chiếc đèn bàn chống cận kèm bộ sách tiếng Anh luyện thi",
+      "Mức độ hài lòng: cực kỳ ưng ý vì hàng chính hãng, bọc chống sốc kỹ lưỡng và giao nhanh 2 giờ",
+      "Điểm thích và chưa thích: thích quy trình đổi trả minh bạch, nhưng hơi rối mắt bởi các pop-up khuyến mãi"
+    ],
+    "chunks": [
+      "go-to platform",
+      "arrived in pristine condition",
+      "lightning-fast delivery",
+      "peace of mind",
+      "a bit cluttered",
+      "hassle-free shopping experience"
+    ],
+    "modelEn": "A website I regularly buy from is Tiki, one of Vietnam's most established e-commerce marketplaces. Just last month, I used it to order an adjustable LED desk lamp along with three paperback English novels for my evening reading. It's become my go-to platform whenever I'm buying books or small electronics because they partner directly with verified official stores. Overall, I couldn't have been more satisfied with the purchase. Thanks to their two-hour express option, the parcel landed on my doorstep that very afternoon, and everything arrived in pristine condition—the books were neatly shrink-wrapped with cardboard corner protectors so there wasn't a single bent page. What I particularly like about using Tiki is that combination of lightning-fast delivery and genuine peace of mind about authenticity, plus a straightforward return policy if anything goes wrong. If I had to point out one minor annoyance, the homepage can feel a bit cluttered at times with flashing flash-sale banners and overlapping voucher pop-ups. Still, once you know what you're searching for, it offers an impressively reliable, hassle-free shopping experience."
+  },
+  {
+    "id": "sp_p2_cam15_t3",
+    "book": 15,
+    "test": 3,
+    "source": "Cambridge IELTS 15 · Test 3",
+    "part": 2,
+    "isCambridge": true,
+    "category": "person",
+    "catLabel": "Con người",
+    "title": "Describe a famous business person that you know about.",
+    "titleVi": "Kể về một doanh nhân nổi tiếng mà bạn biết",
+    "bullets": [
+      "who this person is",
+      "what kind of business this person is involved in",
+      "what you know about this business person",
+      "and explain what you think of this business person."
+    ],
+    "linkedPart3Id": "sp_p3_cam15_t3",
+    "outlineVi": [
+      "Nhân vật: Jensen Huang — nhà đồng sáng lập kiêm Giám đốc điều hành tập đoàn NVIDIA",
+      "Lĩnh vực kinh doanh: thiết kế chip đồ họa (GPU) và hạ tầng phần cứng trí tuệ nhân tạo toàn cầu",
+      "Thông tin ấn tượng: xuất thân nhập cư làm phục vụ quán ăn, gây dựng công ty từ bờ vực phá sản lên nghìn tỷ đô",
+      "Nhận xét cá nhân: ngưỡng mộ tầm nhìn đi trước thời đại, sự kiên định và phong cách lãnh đạo gần gũi"
+    ],
+    "chunks": [
+      "a household name",
+      "ahead of the curve",
+      "from humble beginnings",
+      "weathered numerous storms",
+      "unwavering long-term vision",
+      "down-to-earth leadership style"
+    ],
+    "modelEn": "A well-known business leader I genuinely admire is Jensen Huang, the co-founder and CEO of NVIDIA, the American semiconductor giant. Although tech enthusiasts have followed him for decades, he's recently become a household name because NVIDIA's graphics chips now power the vast majority of modern artificial-intelligence systems around the world. What fascinates me most about his story is that he rose from humble beginnings—moving to the United States as a young immigrant, washing dishes at a diner as a teenager, and later sketching out the idea for NVIDIA over pancakes with two engineering friends in 1993. In the early years, the company weathered numerous storms and came perilously close to bankruptcy, yet Huang stayed remarkably ahead of the curve by investing billions into AI computing software long before anyone else saw its commercial potential. I think he's a rare breed of executive. Beyond his unwavering long-term vision, he comes across with a surprisingly down-to-earth leadership style—famous for his signature black leather jacket, candid technical talks, and refusal to blame luck for either failures or breakthroughs."
+  },
+  {
+    "id": "sp_p2_cam15_t4",
+    "book": 15,
+    "test": 4,
+    "source": "Cambridge IELTS 15 · Test 4",
+    "part": 2,
+    "isCambridge": true,
+    "category": "object",
+    "catLabel": "Sự vật & Chủ đề",
+    "title": "Describe an interesting TV programme you watched about a science topic.",
+    "titleVi": "Kể về một chương trình truyền hình thú vị về chủ đề khoa học bạn từng xem",
+    "bullets": [
+      "what science topic this TV programme was about",
+      "when you saw this TV programme",
+      "what you learnt from this TV programme about a science topic",
+      "and explain why you found this TV programme interesting."
+    ],
+    "linkedPart3Id": "sp_p3_cam15_t4",
+    "outlineVi": [
+      "Chủ đề khoa học: hệ sinh thái đại dương sâu thẳm và rạn san hô trong loạt phim Our Planet",
+      "Thời điểm xem: một buổi tối mưa cuối tuần vào mùa hè năm ngoái trên Netflix",
+      "Kiến thức học được: cơ chế phát quang sinh học của sinh vật biển sâu và vai trò lọc carbon của đại dương",
+      "Lý do cuốn hút: hình ảnh quay sắc nét tuyệt mỹ, lời dẫn truyền cảm và thông điệp bảo vệ môi trường sâu sắc"
+    ],
+    "chunks": [
+      "eye-opening documentary",
+      "delicate ecological balance",
+      "cutting-edge camera technology",
+      "accessible to a general audience",
+      "food for thought",
+      "captivated from start to finish"
+    ],
+    "modelEn": "An eye-opening documentary series I watched last summer was the high-seas episode of Our Planet, narrated by Sir David Attenborough. I put it on during a rainy Sunday evening expecting light background viewing, yet I ended up completely captivated from start to finish. The episode focused on marine biology and deep-ocean ecosystems—places that remain largely unexplored despite covering most of our planet. I learned a surprising amount of real science from it, particularly how deep-sea creatures rely on bioluminescence to hunt or communicate in total darkness, and how microscopic plankton quietly absorb massive quantities of atmospheric carbon while anchoring the entire marine food chain. What made the programme so gripping was how effortlessly it made complex ecological concepts accessible to a general audience. Thanks to cutting-edge camera technology, the underwater footage looked sharper than a cinema blockbuster, capturing migrating whales and glowing jellyfish in hypnotic detail. Beyond the visual spectacle, it highlighted the delicate ecological balance threatened by overfishing and warming waters, leaving me with plenty of food for thought long after the credits rolled."
   }
 ];
 
@@ -3807,9 +4627,493 @@
   }
 ];
 
+  const FULL_TESTS = [
+  {
+    "id": "sp_full_cam20_t1",
+    "book": 20,
+    "test": 1,
+    "source": "Cambridge IELTS 20 · Test 1",
+    "shortSource": "Cam 20 · Test 1",
+    "title": "Cam 20 · Test 1 — Full Speaking Test",
+    "part1Id": "sp_p1_cam20_t1",
+    "part1Title": "Walking",
+    "part1TitleVi": "Đi bộ hằng ngày",
+    "part2Id": "sp_p2_cam20_t1",
+    "part2Title": "Describe a play or a film you have seen that you would like to see again with friends.",
+    "part2TitleVi": "Kể về một vở kịch hoặc bộ phim bạn từng xem và muốn đi xem lại cùng bạn bè",
+    "part3Id": "sp_p3_cam20_t1",
+    "part3Title": "Theatre, Live Shows & Acting",
+    "part3TitleVi": "Sân khấu, Biểu diễn & Nghề diễn viên",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "object"
+  },
+  {
+    "id": "sp_full_cam20_t2",
+    "book": 20,
+    "test": 2,
+    "source": "Cambridge IELTS 20 · Test 2",
+    "shortSource": "Cam 20 · Test 2",
+    "title": "Cam 20 · Test 2 — Full Speaking Test",
+    "part1Id": "sp_p1_cam20_t2",
+    "part1Title": "Fruit",
+    "part1TitleVi": "Trái cây hằng ngày",
+    "part2Id": "sp_p2_cam20_t2",
+    "part2Title": "Describe a time when you changed a plan you had made.",
+    "part2TitleVi": "Kể về một lần bạn phải thay đổi kế hoạch đã định sẵn",
+    "part3Id": "sp_p3_cam20_t2",
+    "part3Title": "Making Plans & Career Choices",
+    "part3TitleVi": "Lập kế hoạch & Lựa chọn Nghề nghiệp",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "event"
+  },
+  {
+    "id": "sp_full_cam20_t3",
+    "book": 20,
+    "test": 3,
+    "source": "Cambridge IELTS 20 · Test 3",
+    "shortSource": "Cam 20 · Test 3",
+    "title": "Cam 20 · Test 3 — Full Speaking Test",
+    "part1Id": "sp_p1_cam20_t3",
+    "part1Title": "Museums",
+    "part1TitleVi": "Bảo tàng & Khám phá văn hóa",
+    "part2Id": "sp_p2_cam20_t3",
+    "part2Title": "Describe a piece of work you did for your job or your studies that you felt very satisfied with.",
+    "part2TitleVi": "Kể về một bài tập hoặc công việc học tập/nghề nghiệp khiến bạn cảm thấy rất hài lòng",
+    "part3Id": "sp_p3_cam20_t3",
+    "part3Title": "Life Ambitions & Job Satisfaction",
+    "part3TitleVi": "Hoài bão Cuộc sống & Hài lòng Công việc",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "object"
+  },
+  {
+    "id": "sp_full_cam20_t4",
+    "book": 20,
+    "test": 4,
+    "source": "Cambridge IELTS 20 · Test 4",
+    "shortSource": "Cam 20 · Test 4",
+    "title": "Cam 20 · Test 4 — Full Speaking Test",
+    "part1Id": "sp_p1_cam20_t4",
+    "part1Title": "Personal Qualities",
+    "part1TitleVi": "Phẩm chất cá nhân",
+    "part2Id": "sp_p2_cam20_t4",
+    "part2Title": "Describe a time when you had a long discussion about a news story.",
+    "part2TitleVi": "Kể về một lần bạn có cuộc thảo luận kéo dài về một bản tin thời sự",
+    "part3Id": "sp_p3_cam20_t4",
+    "part3Title": "News Media & Public Discussions",
+    "part3TitleVi": "Tin tức Truyền thông & Thảo luận Công chúng",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "event"
+  },
+  {
+    "id": "sp_full_cam19_t1",
+    "book": 19,
+    "test": 1,
+    "source": "Cambridge IELTS 19 · Test 1",
+    "shortSource": "Cam 19 · Test 1",
+    "title": "Cam 19 · Test 1 — Full Speaking Test",
+    "part1Id": "sp_p1_cam19_t1",
+    "part1Title": "International Food",
+    "part1TitleVi": "Ẩm thực quốc tế",
+    "part2Id": "sp_p2_cam19_t1",
+    "part2Title": "Describe a law that was introduced in your country and that you thought was a very good idea.",
+    "part2TitleVi": "Kể về một đạo luật mới ban hành ở đất nước bạn mà bạn cho là rất đúng đắn",
+    "part3Id": "sp_p3_cam19_t1",
+    "part3Title": "School Rules & Legal Careers",
+    "part3TitleVi": "Nội quy Trường học & Nghề Luật",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "object"
+  },
+  {
+    "id": "sp_full_cam19_t2",
+    "book": 19,
+    "test": 2,
+    "source": "Cambridge IELTS 19 · Test 2",
+    "shortSource": "Cam 19 · Test 2",
+    "title": "Cam 19 · Test 2 — Full Speaking Test",
+    "part1Id": "sp_p1_cam19_t2",
+    "part1Title": "Air Travel",
+    "part1TitleVi": "Di chuyển bằng máy bay",
+    "part2Id": "sp_p2_cam19_t2",
+    "part2Title": "Describe a person from your country who has won a prize, award or medal.",
+    "part2TitleVi": "Kể về một người đồng hương từng giành giải thưởng hoặc huy chương danh giá",
+    "part3Id": "sp_p3_cam19_t2",
+    "part3Title": "School Rewards & Sports Prizes",
+    "part3TitleVi": "Khen thưởng Học đường & Giải thưởng Thể thao",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "person"
+  },
+  {
+    "id": "sp_full_cam19_t3",
+    "book": 19,
+    "test": 3,
+    "source": "Cambridge IELTS 19 · Test 3",
+    "shortSource": "Cam 19 · Test 3",
+    "title": "Cam 19 · Test 3 — Full Speaking Test",
+    "part1Id": "sp_p1_cam19_t3",
+    "part1Title": "Holidays",
+    "part1TitleVi": "Kỳ nghỉ & Du lịch",
+    "part2Id": "sp_p2_cam19_t3",
+    "part2Title": "Describe a car journey you made that took longer than expected.",
+    "part2TitleVi": "Kể về một chuyến đi ô tô kéo dài lâu hơn nhiều so với dự kiến",
+    "part3Id": "sp_p3_cam19_t3",
+    "part3Title": "Driving Culture & Electric Cars",
+    "part3TitleVi": "Văn hóa Lái xe & Xe điện",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "event"
+  },
+  {
+    "id": "sp_full_cam19_t4",
+    "book": 19,
+    "test": 4,
+    "source": "Cambridge IELTS 19 · Test 4",
+    "shortSource": "Cam 19 · Test 4",
+    "title": "Cam 19 · Test 4 — Full Speaking Test",
+    "part1Id": "sp_p1_cam19_t4",
+    "part1Title": "Cafés",
+    "part1TitleVi": "Quán cà phê",
+    "part2Id": "sp_p2_cam19_t4",
+    "part2Title": "Describe a place you visited that has beautiful views.",
+    "part2TitleVi": "Kể về một địa điểm bạn từng ghé thăm có khung cảnh thiên nhiên tuyệt đẹp",
+    "part3Id": "sp_p3_cam19_t4",
+    "part3Title": "Beauty Standards & Advertising",
+    "part3TitleVi": "Chuẩn mực Cái đẹp & Quảng cáo Mỹ phẩm",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "place"
+  },
+  {
+    "id": "sp_full_cam18_t1",
+    "book": 18,
+    "test": 1,
+    "source": "Cambridge IELTS 18 · Test 1",
+    "shortSource": "Cam 18 · Test 1",
+    "title": "Cam 18 · Test 1 — Full Speaking Test",
+    "part1Id": "sp_p1_cam18_t1",
+    "part1Title": "Paying Bills",
+    "part1TitleVi": "Thanh toán hóa đơn",
+    "part2Id": "sp_p2_cam18_t1",
+    "part2Title": "Describe some food or drink that you learned to prepare.",
+    "part2TitleVi": "Kể về một món ăn hoặc thức uống mà bạn đã học cách tự pha chế hoặc nấu nướng",
+    "part3Id": "sp_p3_cam18_t1",
+    "part3Title": "Children Cooking & Professional Chefs",
+    "part3TitleVi": "Trẻ em Nấu ăn & Nghề Đầu bếp",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "object"
+  },
+  {
+    "id": "sp_full_cam18_t2",
+    "book": 18,
+    "test": 2,
+    "source": "Cambridge IELTS 18 · Test 2",
+    "shortSource": "Cam 18 · Test 2",
+    "title": "Cam 18 · Test 2 — Full Speaking Test",
+    "part1Id": "sp_p1_cam18_t2",
+    "part1Title": "Science at School",
+    "part1TitleVi": "Môn Khoa học ở trường",
+    "part2Id": "sp_p2_cam18_t2",
+    "part2Title": "Describe a tourist attraction in your country that you would recommend.",
+    "part2TitleVi": "Kể về một điểm du lịch nổi tiếng ở đất nước bạn mà bạn muốn giới thiệu cho mọi người",
+    "part3Id": "sp_p3_cam18_t2",
+    "part3Title": "Museums & Tourism Impact",
+    "part3TitleVi": "Bảo tàng & Tác động của Du lịch",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "place"
+  },
+  {
+    "id": "sp_full_cam18_t3",
+    "book": 18,
+    "test": 3,
+    "source": "Cambridge IELTS 18 · Test 3",
+    "shortSource": "Cam 18 · Test 3",
+    "title": "Cam 18 · Test 3 — Full Speaking Test",
+    "part1Id": "sp_p1_cam18_t3",
+    "part1Title": "Online Shopping",
+    "part1TitleVi": "Mua sắm trực tuyến",
+    "part2Id": "sp_p2_cam18_t3",
+    "part2Title": "Describe a time when you enjoyed visiting a member of your family in their home.",
+    "part2TitleVi": "Kể về một lần bạn rất thích thú khi đến thăm nhà một người thân trong gia đình",
+    "part3Id": "sp_p3_cam18_t3",
+    "part3Title": "Family Celebrations & Generations",
+    "part3TitleVi": "Sum họp Gia đình & Các Thế hệ",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "event"
+  },
+  {
+    "id": "sp_full_cam18_t4",
+    "book": 18,
+    "test": 4,
+    "source": "Cambridge IELTS 18 · Test 4",
+    "shortSource": "Cam 18 · Test 4",
+    "title": "Cam 18 · Test 4 — Full Speaking Test",
+    "part1Id": "sp_p1_cam18_t4",
+    "part1Title": "Sleep",
+    "part1TitleVi": "Giấc ngủ & Thói quen nghỉ ngơi",
+    "part2Id": "sp_p2_cam18_t4",
+    "part2Title": "Describe a time when you met someone who you became good friends with.",
+    "part2TitleVi": "Kể về một lần bạn gặp gỡ một người và sau đó hai bạn trở thành bạn thân",
+    "part3Id": "sp_p3_cam18_t4",
+    "part3Title": "Friendship Across Life Stages",
+    "part3TitleVi": "Tình bạn Qua Các Giai đoạn Cuộc đời",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "event"
+  },
+  {
+    "id": "sp_full_cam17_t1",
+    "book": 17,
+    "test": 1,
+    "source": "Cambridge IELTS 17 · Test 1",
+    "shortSource": "Cam 17 · Test 1",
+    "title": "Cam 17 · Test 1 — Full Speaking Test",
+    "part1Id": "sp_p1_cam17_t1",
+    "part1Title": "History",
+    "part1TitleVi": "Lịch sử",
+    "part2Id": "sp_p2_cam17_t1",
+    "part2Title": "Describe the neighbourhood you lived in when you were a child.",
+    "part2TitleVi": "Kể về khu phố nơi bạn từng sinh sống khi còn nhỏ",
+    "part3Id": "sp_p3_cam17_t1",
+    "part3Title": "Neighbours & Local Communities",
+    "part3TitleVi": "Láng giềng & Cộng đồng Địa phương",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "place"
+  },
+  {
+    "id": "sp_full_cam17_t2",
+    "book": 17,
+    "test": 2,
+    "source": "Cambridge IELTS 17 · Test 2",
+    "shortSource": "Cam 17 · Test 2",
+    "title": "Cam 17 · Test 2 — Full Speaking Test",
+    "part1Id": "sp_p1_cam17_t2",
+    "part1Title": "Reading & Books",
+    "part1TitleVi": "Đọc sách & Báo chí",
+    "part2Id": "sp_p2_cam17_t2",
+    "part2Title": "Describe a big city you would like to visit.",
+    "part2TitleVi": "Kể về một thành phố lớn mà bạn rất muốn có dịp ghé thăm",
+    "part3Id": "sp_p3_cam17_t2",
+    "part3Title": "City Holidays & Urbanisation",
+    "part3TitleVi": "Du lịch Thành phố & Đô thị hóa",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "place"
+  },
+  {
+    "id": "sp_full_cam17_t3",
+    "book": 17,
+    "test": 3,
+    "source": "Cambridge IELTS 17 · Test 3",
+    "shortSource": "Cam 17 · Test 3",
+    "title": "Cam 17 · Test 3 — Full Speaking Test",
+    "part1Id": "sp_p1_cam17_t3",
+    "part1Title": "Drinks",
+    "part1TitleVi": "Đồ uống hằng ngày",
+    "part2Id": "sp_p2_cam17_t3",
+    "part2Title": "Describe a monument (e.g., a statue or sculpture) that you like.",
+    "part2TitleVi": "Kể về một tượng đài hoặc công trình điêu khắc mà bạn yêu thích",
+    "part3Id": "sp_p3_cam17_t3",
+    "part3Title": "Monuments & Modern Architecture",
+    "part3TitleVi": "Tượng đài Di tích & Kiến trúc Hiện đại",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "place"
+  },
+  {
+    "id": "sp_full_cam17_t4",
+    "book": 17,
+    "test": 4,
+    "source": "Cambridge IELTS 17 · Test 4",
+    "shortSource": "Cam 17 · Test 4",
+    "title": "Cam 17 · Test 4 — Full Speaking Test",
+    "part1Id": "sp_p1_cam17_t4",
+    "part1Title": "Maps",
+    "part1TitleVi": "Bản đồ & Định vị",
+    "part2Id": "sp_p2_cam17_t4",
+    "part2Title": "Describe an occasion when you had to do something in a hurry.",
+    "part2TitleVi": "Kể về một dịp bạn buộc phải hoàn thành một việc gì đó thật gấp rút",
+    "part3Id": "sp_p3_cam17_t4",
+    "part3Title": "Punctuality & Study Time Management",
+    "part3TitleVi": "Đúng giờ & Quản lý Thời gian Học tập",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "event"
+  },
+  {
+    "id": "sp_full_cam16_t1",
+    "book": 16,
+    "test": 1,
+    "source": "Cambridge IELTS 16 · Test 1",
+    "shortSource": "Cam 16 · Test 1",
+    "title": "Cam 16 · Test 1 — Full Speaking Test",
+    "part1Id": "sp_p1_cam16_t1",
+    "part1Title": "Studying & Working with Others",
+    "part1TitleVi": "Học tập & Làm việc nhóm",
+    "part2Id": "sp_p2_cam16_t1",
+    "part2Title": "Describe a tourist attraction you enjoyed visiting.",
+    "part2TitleVi": "Kể về một điểm tham quan du lịch mà bạn rất thích khi ghé thăm",
+    "part3Id": "sp_p3_cam16_t1",
+    "part3Title": "Tourism & Cultural Attractions",
+    "part3TitleVi": "Du lịch & Điểm tham quan Văn hóa",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "place"
+  },
+  {
+    "id": "sp_full_cam16_t2",
+    "book": 16,
+    "test": 2,
+    "source": "Cambridge IELTS 16 · Test 2",
+    "shortSource": "Cam 16 · Test 2",
+    "title": "Cam 16 · Test 2 — Full Speaking Test",
+    "part1Id": "sp_p1_cam16_t2",
+    "part1Title": "Flowers & Plants",
+    "part1TitleVi": "Hoa & Cây cảnh",
+    "part2Id": "sp_p2_cam16_t2",
+    "part2Title": "Describe a review you read about a product or service.",
+    "part2TitleVi": "Kể về một bài đánh giá bạn từng đọc về một sản phẩm hoặc dịch vụ",
+    "part3Id": "sp_p3_cam16_t2",
+    "part3Title": "Online Reviews & Customer Service",
+    "part3TitleVi": "Đánh giá Trực tuyến & Chăm sóc Khách hàng",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "object"
+  },
+  {
+    "id": "sp_full_cam16_t3",
+    "book": 16,
+    "test": 3,
+    "source": "Cambridge IELTS 16 · Test 3",
+    "shortSource": "Cam 16 · Test 3",
+    "title": "Cam 16 · Test 3 — Full Speaking Test",
+    "part1Id": "sp_p1_cam16_t3",
+    "part1Title": "Summer",
+    "part1TitleVi": "Mùa hè",
+    "part2Id": "sp_p2_cam16_t3",
+    "part2Title": "Describe a luxury item you would like to own in the future.",
+    "part2TitleVi": "Kể về một món đồ xa xỉ mà bạn mong muốn sở hữu trong tương lai",
+    "part3Id": "sp_p3_cam16_t3",
+    "part3Title": "Luxury Goods & Wealth in Society",
+    "part3TitleVi": "Hàng xa xỉ & Sự giàu có trong Xã hội",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "object"
+  },
+  {
+    "id": "sp_full_cam16_t4",
+    "book": 16,
+    "test": 4,
+    "source": "Cambridge IELTS 16 · Test 4",
+    "shortSource": "Cam 16 · Test 4",
+    "title": "Cam 16 · Test 4 — Full Speaking Test",
+    "part1Id": "sp_p1_cam16_t4",
+    "part1Title": "Fast Food",
+    "part1TitleVi": "Đồ ăn nhanh",
+    "part2Id": "sp_p2_cam16_t4",
+    "part2Title": "Describe some technology (e.g. an app, phone, software program) that you decided to stop using.",
+    "part2TitleVi": "Kể về một công nghệ (ứng dụng, thiết bị, phần mềm) mà bạn đã quyết định ngừng sử dụng",
+    "part3Id": "sp_p3_cam16_t4",
+    "part3Title": "Computer Games & Classroom Tech",
+    "part3TitleVi": "Trò chơi Điện tử & Công nghệ Lớp học",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "object"
+  },
+  {
+    "id": "sp_full_cam15_t1",
+    "book": 15,
+    "test": 1,
+    "source": "Cambridge IELTS 15 · Test 1",
+    "shortSource": "Cam 15 · Test 1",
+    "title": "Cam 15 · Test 1 — Full Speaking Test",
+    "part1Id": "sp_p1_cam15_t1",
+    "part1Title": "Emails",
+    "part1TitleVi": "Email & Giao tiếp số",
+    "part2Id": "sp_p2_cam15_t1",
+    "part2Title": "Describe a hotel that you know.",
+    "part2TitleVi": "Kể về một khách sạn mà bạn biết rõ",
+    "part3Id": "sp_p3_cam15_t1",
+    "part3Title": "Hotels & Hospitality Careers",
+    "part3TitleVi": "Khách sạn & Nghề Quản trị Khách sạn",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "place"
+  },
+  {
+    "id": "sp_full_cam15_t2",
+    "book": 15,
+    "test": 2,
+    "source": "Cambridge IELTS 15 · Test 2",
+    "shortSource": "Cam 15 · Test 2",
+    "title": "Cam 15 · Test 2 — Full Speaking Test",
+    "part1Id": "sp_p1_cam15_t2",
+    "part1Title": "Languages",
+    "part1TitleVi": "Ngoại ngữ",
+    "part2Id": "sp_p2_cam15_t2",
+    "part2Title": "Describe a website that you bought something from.",
+    "part2TitleVi": "Kể về một trang web thương mại điện tử mà bạn từng mua hàng",
+    "part3Id": "sp_p3_cam15_t2",
+    "part3Title": "Online Shopping & Consumerism",
+    "part3TitleVi": "Mua sắm Trực tuyến & Chủ nghĩa Tiêu dùng",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "object"
+  },
+  {
+    "id": "sp_full_cam15_t3",
+    "book": 15,
+    "test": 3,
+    "source": "Cambridge IELTS 15 · Test 3",
+    "shortSource": "Cam 15 · Test 3",
+    "title": "Cam 15 · Test 3 — Full Speaking Test",
+    "part1Id": "sp_p1_cam15_t3",
+    "part1Title": "Swimming",
+    "part1TitleVi": "Bơi lội",
+    "part2Id": "sp_p2_cam15_t3",
+    "part2Title": "Describe a famous business person that you know about.",
+    "part2TitleVi": "Kể về một doanh nhân nổi tiếng mà bạn biết",
+    "part3Id": "sp_p3_cam15_t3",
+    "part3Title": "Fame, Celebrities & Social Influence",
+    "part3TitleVi": "Sự nổi tiếng, Người nổi tiếng & Ảnh hưởng Xã hội",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "person"
+  },
+  {
+    "id": "sp_full_cam15_t4",
+    "book": 15,
+    "test": 4,
+    "source": "Cambridge IELTS 15 · Test 4",
+    "shortSource": "Cam 15 · Test 4",
+    "title": "Cam 15 · Test 4 — Full Speaking Test",
+    "part1Id": "sp_p1_cam15_t4",
+    "part1Title": "Jewellery",
+    "part1TitleVi": "Trang sức",
+    "part2Id": "sp_p2_cam15_t4",
+    "part2Title": "Describe an interesting TV programme you watched about a science topic.",
+    "part2TitleVi": "Kể về một chương trình truyền hình thú vị về chủ đề khoa học bạn từng xem",
+    "part3Id": "sp_p3_cam15_t4",
+    "part3Title": "Science, Discoveries & Research Funding",
+    "part3TitleVi": "Khoa học, Phát minh & Tài trợ Nghiên cứu",
+    "totalQuestions": 11,
+    "durationLabel": "11–14 phút",
+    "category": "object"
+  }
+];
+
   window.SPEAKING_PART13_DATA = {
-    VERSION: '20261128g-cam15-20-real',
     PART1_TOPICS,
-    PART3_TOPICS
+    PART2_CAMBRIDGE_TOPICS,
+    PART3_TOPICS,
+    FULL_TESTS
   };
 })();

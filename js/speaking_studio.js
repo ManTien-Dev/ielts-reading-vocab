@@ -7,12 +7,28 @@
   'use strict';
 
   const DATA = () => window.SPEAKING_STUDIO_DATA || { STORIES: [] };
-  const P13 = () => window.SPEAKING_PART13_DATA || { PART1_TOPICS: [], PART3_TOPICS: [] };
+  const P13 = () => window.SPEAKING_PART13_DATA || { PART1_TOPICS: [], PART2_CAMBRIDGE_TOPICS: [], PART3_TOPICS: [], FULL_TESTS: [] };
   const B = () => window.__VOCAB_BRIDGE__ || null;
   const STT = () => window.TotoroSpeechSTT || null;
 
   function getPart1Topics() { return P13().PART1_TOPICS || []; }
+  function getPart2CambridgeTopics() { return P13().PART2_CAMBRIDGE_TOPICS || []; }
   function getPart3Topics() { return P13().PART3_TOPICS || []; }
+  function getFullSpeakingTests() { return P13().FULL_TESTS || []; }
+  function getFullSpeakingTest(id) {
+    if (!id) return null;
+    return getFullSpeakingTests().find((t) => t.id === id) || null;
+  }
+  function getPart2CueById(id) {
+    if (!id) return null;
+    const cam = getPart2CambridgeTopics().find((c) => c.id === id);
+    if (cam) return cam;
+    const hasStory = Boolean(!window.AccessPolicy || window.AccessPolicy.can('speaking.story_mindmap'));
+    if (hasStory) {
+      return (getStory()?.cueCards || []).find((c) => c.id === id) || null;
+    }
+    return null;
+  }
   function getPart13Topic(id) {
     if (!id) return null;
     return getPart1Topics().find((t) => t.id === id) || getPart3Topics().find((t) => t.id === id) || null;
@@ -224,19 +240,24 @@
     return { hits, misses, ratio, words: countWords(text) };
   }
 
-  function evaluateFullSpeech(text, durationSec) {
+  function evaluateFullSpeech(text, durationSec, customChunks) {
     const story = getStory();
     const norm = normText(text);
     const words = countWords(text);
     const dur = Math.max(1, Math.round(Number(durationSec) || Math.max(15, words / 2.2)));
     const wpm = Math.round((words / dur) * 60);
-    const usedChunks = (story?.spokenChunks || []).filter((c) => {
+    const chunkSource = Array.isArray(customChunks) && customChunks.length
+      ? customChunks.map((en) => ({ en }))
+      : (story?.spokenChunks || []);
+    const usedChunks = chunkSource.filter((c) => {
       const cn = normText(c.en);
       const toks = cn.split(' ').filter((w) => w.length >= 3);
-      return norm.includes(cn) || (toks.length >= 2 && toks.filter((t) => norm.includes(t)).length >= Math.ceil(toks.length * 0.75));
+      return cn.length >= 3 && (norm.includes(cn) || (toks.length >= 2 && toks.filter((t) => norm.includes(t)).length >= Math.ceil(toks.length * 0.75)));
     }).map((c) => c.en);
     const fillerMatches = (String(text || '').match(/\b(um+|uh+|er+|hmm+|like|you know|actually|basically)\b/gi) || []);
-    const stationHits = (story?.speakStations || []).filter((st) => evaluateKeywords(text, st.keywords).hits.length >= 2).length;
+    const stationHits = Array.isArray(customChunks) && customChunks.length
+      ? 0
+      : (story?.speakStations || []).filter((st) => evaluateKeywords(text, st.keywords).hits.length >= 2).length;
     return {
       words,
       durationSec: dur,
@@ -342,7 +363,157 @@
   let mmState = null;
   let examState = null;
   let roomState = null;
+  let fullTestSession = null;
   let overlaysMounted = false;
+
+  function roundIeltsBand(val) {
+    const n = Number(val);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return Math.round(n * 2) / 2;
+  }
+
+  function startFullSpeakingTest(fullId, mode) {
+    const ft = getFullSpeakingTest(fullId);
+    if (!ft) return;
+    const cleanMode = mode === 'exam' ? 'exam' : 'practice';
+    fullTestSession = {
+      test: ft,
+      mode: cleanMode,
+      stage: 1,
+      results: { p1: null, p2: null, p3: null },
+      combinedSaved: false,
+      combinedOverall: null
+    };
+    state.pracPart = 'full';
+    window.TotoroUI?.recordLastSession?.({
+      skill: 'Speaking',
+      view: 'practice',
+      label: `Speaking Full Test · ${ft.shortSource}`,
+      action: "window.SpeakingStudio?.openPracticePart('full')"
+    });
+    openInterviewRoom(ft.part1Id, cleanMode, { preserveFullTest: true });
+  }
+
+  function advanceFullSpeakingTest() {
+    if (!fullTestSession) return;
+    const { test, mode, stage } = fullTestSession;
+    if (stage === 1) {
+      fullTestSession.stage = 2;
+      openPracticeRoom(test.part2Id, mode, { preserveFullTest: true });
+    } else if (stage === 2) {
+      fullTestSession.stage = 3;
+      openInterviewRoom(test.part3Id, mode, { preserveFullTest: true });
+    } else {
+      closePracticeRoom();
+    }
+  }
+
+  function recordFullTestStageResult(stageKey, payload) {
+    if (!fullTestSession || !stageKey) return;
+    fullTestSession.results[stageKey] = payload || null;
+    if (stageKey === 'p3' && !fullTestSession.combinedSaved) {
+      const parts = [fullTestSession.results.p1, fullTestSession.results.p2, fullTestSession.results.p3].filter(Boolean);
+      const bands = parts.map((p) => Number(p.band)).filter((b) => Number.isFinite(b) && b > 0);
+      const avgCrit = (k) => {
+        const vals = parts.map((p) => Number(p.criteria?.[k])).filter((v) => Number.isFinite(v) && v > 0);
+        return vals.length ? roundIeltsBand(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+      };
+      const crit = { fc: avgCrit('fc'), lr: avgCrit('lr'), gra: avgCrit('gra'), pr: avgCrit('pr') };
+      const overall = bands.length ? roundIeltsBand(bands.reduce((a, b) => a + b, 0) / bands.length) : null;
+      const totalDurationSec = parts.reduce((acc, p) => acc + (Number(p.durationSec) || 0), 0);
+      const totalWords = parts.reduce((acc, p) => acc + (Number(p.words) || 0), 0);
+      const totalChunks = parts.reduce((acc, p) => acc + (Number(p.chunksCount) || 0), 0);
+      const totalFillers = parts.reduce((acc, p) => acc + (Number(p.fillerCount) || 0), 0);
+      const avgWpm = totalDurationSec > 0 ? Math.round((totalWords / totalDurationSec) * 60) : 0;
+
+      fullTestSession.combinedOverall = {
+        band: overall,
+        criteria: crit,
+        durationSec: totalDurationSec,
+        words: totalWords,
+        wpm: avgWpm,
+        chunksCount: totalChunks,
+        fillerCount: totalFillers
+      };
+      fullTestSession.combinedSaved = true;
+
+      const hist = getPracHistory();
+      hist.unshift({
+        part: 'full',
+        cueId: fullTestSession.test.id,
+        cueTitle: fullTestSession.test.title,
+        mode: fullTestSession.mode,
+        band: overall,
+        criteria: overall ? crit : null,
+        durationSec: totalDurationSec,
+        wpm: avgWpm,
+        words: totalWords,
+        chunksCount: totalChunks,
+        fillerCount: totalFillers,
+        at: Date.now()
+      });
+      savePracHistory(hist.slice(0, 80));
+    }
+  }
+
+  function renderFullTestRibbonHtml(currentStage) {
+    if (!fullTestSession) return '';
+    const { test, results } = fullTestSession;
+    const steps = [
+      { n: 1, key: 'p1', label: 'Part 1 · Phỏng vấn' },
+      { n: 2, key: 'p2', label: 'Part 2 · Cue Card' },
+      { n: 3, key: 'p3', label: 'Part 3 · Thảo luận' }
+    ];
+    return `
+      <div class="sp-full-ribbon" aria-label="Tiến độ Full Speaking Test">
+        <div class="sp-full-ribbon-title">
+          <span class="sp-full-ribbon-badge">Full Test · 14p</span>
+          <span>${esc(test.shortSource)}</span>
+        </div>
+        <div class="sp-full-ribbon-steps">
+          ${steps.map((st, idx) => {
+            const res = results[st.key];
+            const cls = st.n === currentStage ? 'is-active' : (st.n < currentStage || res ? 'is-done' : '');
+            const bStr = res?.band ? ` · ${Number(res.band).toFixed(1)}` : (st.n < currentStage || res ? ' ✓' : '');
+            return `${idx > 0 ? '<span style="color:var(--ink-3);font-weight:700;">→</span>' : ''}<span class="sp-full-step ${cls}">${st.label}${bStr}</span>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderFullTestCombinedCardHtml() {
+    if (!fullTestSession || fullTestSession.stage !== 3) return '';
+    const { test, results, combinedOverall } = fullTestSession;
+    const c = combinedOverall;
+    if (!c) return '';
+    const fmtPart = (r) => r ? (r.band ? `Band ${Number(r.band).toFixed(1)}` : `${r.words || 0} từ`) : 'Chưa chấm';
+    return `
+      <div class="sp-full-combined-card">
+        <div class="sp-full-combined-head">
+          <div>
+            <div style="font-size:11px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;color:var(--accent);">Tổng kết Full Speaking Test · ${esc(test.shortSource)}</div>
+            <div style="font-size:15px;font-weight:800;color:var(--ink);margin-top:2px;">Hoàn tất trọn bộ 3 phần thi IELTS Speaking</div>
+          </div>
+          ${c.band ? `<div class="sp-full-combined-band tabular"><span>Overall</span><strong>${Number(c.band).toFixed(1)}</strong></div>` : `<span class="ws-pill ok tabular">${fmtMmSs(c.durationSec)} · ${c.words} từ</span>`}
+        </div>
+        <div class="sp-full-combined-grid">
+          <div class="sp-full-combined-part"><span style="color:var(--ink-3);font-weight:700;">Part 1 · Phỏng vấn</span><strong class="tabular">${fmtPart(results.p1)}</strong></div>
+          <div class="sp-full-combined-part"><span style="color:var(--ink-3);font-weight:700;">Part 2 · Cue Card</span><strong class="tabular">${fmtPart(results.p2)}</strong></div>
+          <div class="sp-full-combined-part"><span style="color:var(--ink-3);font-weight:700;">Part 3 · Thảo luận</span><strong class="tabular">${fmtPart(results.p3)}</strong></div>
+        </div>
+        ${c.criteria?.fc ? `
+          <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:11.8px;color:var(--ink-2);">
+            <span class="ws-pill tabular">FC ${Number(c.criteria.fc).toFixed(1)}</span>
+            <span class="ws-pill tabular">LR ${Number(c.criteria.lr || c.band).toFixed(1)}</span>
+            <span class="ws-pill tabular">GRA ${Number(c.criteria.gra || c.band).toFixed(1)}</span>
+            <span class="ws-pill tabular">PR ${Number(c.criteria.pr || c.band).toFixed(1)}</span>
+            <span class="ws-pill tabular" style="margin-left:auto;">${fmtMmSs(c.durationSec)} · ${c.words} từ · ${c.wpm} WPM</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
 
   /* ================= OVERLAY MOUNTING ================= */
   function ensureOverlays() {
@@ -3312,17 +3483,20 @@
     card.scrollTop = 0;
   }
 
-  /* ================= TAB 4: PRACTICE HUB (PART 1 · PART 2 · PART 3) & EXAMINER ROOMS ================= */
+  /* ================= TAB 4: PRACTICE HUB (PART 1 · PART 2 · PART 3 · FULL TEST 14P) & EXAMINER ROOMS ================= */
+  function normalizePracticePart(partNum) {
+    if (String(partNum) === 'full') return 'full';
+    const n = Number(partNum);
+    return [1, 2, 3].includes(n) ? n : 1;
+  }
   function setPracticePart(partNum) {
-    const p = [1, 2, 3].includes(Number(partNum)) ? Number(partNum) : 1;
-    state.pracPart = p;
+    state.pracPart = normalizePracticePart(partNum);
     state.pracCat = 'all';
     state.pracQuery = '';
     renderPracticeHub();
   }
   function openPracticePart(partNum) {
-    const p = [1, 2, 3].includes(Number(partNum)) ? Number(partNum) : 1;
-    state.pracPart = p;
+    state.pracPart = normalizePracticePart(partNum);
     state.pracCat = 'all';
     state.pracQuery = '';
     if (window.TotoroUI?.enterSkillMode) {
@@ -3353,13 +3527,12 @@
     const hasStoryAccess = Boolean(story && (!window.AccessPolicy || window.AccessPolicy.can('speaking.story_mindmap')));
 
     const p1List = getPart1Topics();
-    const p2List = hasStoryAccess ? (story.cueCards || []) : [];
+    const p2CamList = getPart2CambridgeTopics();
+    const p2StoryList = hasStoryAccess ? (story.cueCards || []) : [];
+    const p2List = [...p2CamList, ...p2StoryList];
     const p3List = getPart3Topics();
-    let activePart = [1, 2, 3].includes(Number(state.pracPart)) ? Number(state.pracPart) : 1;
-    if (!hasStoryAccess && activePart === 2) {
-      activePart = 1;
-      state.pracPart = 1;
-    }
+    const fullList = getFullSpeakingTests();
+    const activePart = normalizePracticePart(state.pracPart);
 
     const hist = getPracHistory();
     const lastById = {};
@@ -3368,6 +3541,7 @@
     const p1DoneCnt = p1List.filter((t) => lastById[t.id]).length;
     const p2DoneCnt = p2List.filter((c) => lastById[c.id]).length;
     const p3DoneCnt = p3List.filter((t) => lastById[t.id]).length;
+    const fullDoneCnt = fullList.filter((f) => lastById[f.id]).length;
 
     const q = state.pracQuery.trim().toLowerCase();
     const activeSearchFocused = document.activeElement?.id === 'sp-prac-search-input';
@@ -3377,17 +3551,19 @@
       <div class="sp-part-seg-bar" role="tablist" aria-label="Chọn phần thi IELTS Speaking">
         <button type="button" role="tab" aria-selected="${activePart === 1 ? 'true' : 'false'}" class="sp-part-seg-btn ${activePart === 1 ? 'active' : ''}" onclick="SpeakingStudio.setPracticePart(1)">
           <span class="sp-part-seg-top"><strong>Part 1 · Phỏng vấn</strong><span class="sp-part-seg-cnt tabular">${p1DoneCnt}/${p1List.length}</span></span>
-          <span class="sp-part-seg-sub">4 câu hỏi quen thuộc · 20–35s/câu · Khung A.R.E.</span>
+          <span class="sp-part-seg-sub">4 câu hỏi Cambridge 15–20 · 20–35s/câu · A.R.E.</span>
         </button>
-        ${hasStoryAccess ? `
         <button type="button" role="tab" aria-selected="${activePart === 2 ? 'true' : 'false'}" class="sp-part-seg-btn ${activePart === 2 ? 'active' : ''}" onclick="SpeakingStudio.setPracticePart(2)">
           <span class="sp-part-seg-top"><strong>Part 2 · Cue Card</strong><span class="sp-part-seg-cnt tabular">${p2DoneCnt}/${p2List.length}</span></span>
-          <span class="sp-part-seg-sub">1 phút chuẩn bị · 2 phút nói · Story 01 Bẻ lái</span>
+          <span class="sp-part-seg-sub">${hasStoryAccess ? `${p2CamList.length} Cam 15–20 + ${p2StoryList.length} Story 01 Bẻ lái · 1p + 2p` : `${p2CamList.length} Cue Card thật Cam 15–20 · 1p chuẩn bị + 2p nói`}</span>
         </button>
-        ` : ''}
         <button type="button" role="tab" aria-selected="${activePart === 3 ? 'true' : 'false'}" class="sp-part-seg-btn ${activePart === 3 ? 'active' : ''}" onclick="SpeakingStudio.setPracticePart(3)">
-          <span class="sp-part-seg-top"><strong>Part 3 · Thảo luận sâu</strong><span class="sp-part-seg-cnt tabular">${p3DoneCnt}/${p3List.length}</span></span>
-          <span class="sp-part-seg-sub">6 câu đề thật Cambridge · 40–65s/câu · Khung P.E.E.C.</span>
+          <span class="sp-part-seg-top"><strong>Part 3 · Thảo luận</strong><span class="sp-part-seg-cnt tabular">${p3DoneCnt}/${p3List.length}</span></span>
+          <span class="sp-part-seg-sub">6 câu đề thật Cam 15–20 · 40–65s/câu · P.E.E.C.</span>
+        </button>
+        <button type="button" role="tab" aria-selected="${activePart === 'full' ? 'true' : 'false'}" class="sp-part-seg-btn is-full-tab ${activePart === 'full' ? 'active' : ''}" onclick="SpeakingStudio.setPracticePart('full')">
+          <span class="sp-part-seg-top"><strong>Full Test · 14p</strong><span class="sp-part-seg-cnt tabular">${fullDoneCnt}/${fullList.length}</span></span>
+          <span class="sp-part-seg-sub">Thi trọn bộ Part 1 → Part 2 → Part 3 · Cam 15–20</span>
         </button>
       </div>
     `;
@@ -3400,37 +3576,136 @@
     let cardsHtml = '';
     let filteredLen = 0;
 
-    if (activePart === 2) {
+    if (activePart === 'full') {
+      shellTitle = 'Đề thi Full Test IELTS Speaking (11–14 phút)';
+      shellSub = `Trọn bộ <strong>${fullList.length} đề thi thật Cambridge IELTS 15–20</strong> nối liền 3 phần chuẩn giám khảo: <strong>Part 1 (4 câu) → Part 2 (1p chuẩn bị + 2p nói) → Part 3 (6 câu)</strong> kèm điểm Overall Band tổng hợp.`;
+      doneCount = fullDoneCnt;
+      totalCount = fullList.length;
+      filterTabs = [
+        { key: 'all', label: `Tất cả (${fullList.length})` },
+        { key: '20', label: 'Cam 20' },
+        { key: '19', label: 'Cam 19' },
+        { key: '18', label: 'Cam 18' },
+        { key: '17', label: 'Cam 17' },
+        { key: '16', label: 'Cam 16' },
+        { key: '15', label: 'Cam 15' }
+      ];
+      const filtered = fullList.filter((ft) => {
+        if (state.pracCat !== 'all' && String(ft.book) !== String(state.pracCat)) return false;
+        if (q) {
+          const hay = `${ft.title} ${ft.source} ${ft.part1Title} ${ft.part2Title} ${ft.part3Title} ${ft.part2TitleVi || ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+      filteredLen = filtered.length;
+      cardsHtml = filtered.map((ft) => {
+        const prev = lastById[ft.id];
+        return `
+          <article class="ws-prac-card sp-cue-card sp-full-card ${prev ? 'is-done' : ''}">
+            <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
+              <div class="ws-prac-head">
+                <span class="ws-pill warm">${esc(ft.shortSource)}</span>
+                <span class="ws-type-pill is-opinion">Full · 11–14p</span>
+                ${prev
+                  ? `<span class="ws-pill ok tabular" style="margin-left:auto;">${prev.band ? `Overall ${Number(prev.band).toFixed(1)} · ` : ''}${fmtMmSs(prev.durationSec)}</span>`
+                  : `<span class="ws-prac-sub-tag" style="margin-left:auto;">${ft.totalQuestions || 11} lượt · P1→P3</span>`}
+              </div>
+              <div class="sp-full-parts-list">
+                <div class="sp-full-part-row">
+                  <span class="sp-full-part-tag">P1</span>
+                  <span class="sp-full-part-txt">${esc(ft.part1Title)}</span>
+                </div>
+                <div class="sp-full-part-row">
+                  <span class="sp-full-part-tag">P2</span>
+                  <span class="sp-full-part-txt">${esc(ft.part2Title)}</span>
+                </div>
+                <div class="sp-full-part-row">
+                  <span class="sp-full-part-tag">P3</span>
+                  <span class="sp-full-part-txt">${esc(ft.part3Title)}</span>
+                </div>
+              </div>
+            </div>
+            <div class="ws-prac-foot">
+              <div class="ws-prac-btns">
+                <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.startFullSpeakingTest('${esc(ft.id)}', 'practice')">Luyện Full Test</button>
+                <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.startFullSpeakingTest('${esc(ft.id)}', 'exam')">Thi thật 14p →</button>
+                ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'speaking', itemId: '${esc(ft.id)}', isFull: true, title: '${esc(ft.title).replace(/'/g, "\\'")}', subtitle: 'Full Speaking Test · Part 1 → Part 2 → Part 3 (11–14 phút)' })" title="Tạo link giao Full Speaking Test này cho học sinh">🔗 Giao link Full Test này</button>` : ''}
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    } else if (activePart === 2) {
       shellTitle = 'Luyện đề IELTS Speaking Part 2';
-      shellSub = `Ngân hàng ${p2List.length} Cue Card thi thật áp dụng trọn mạch <strong>Story 01 (B1 → B5)</strong> · 1 phút chuẩn bị + 2 phút nói.`;
+      shellSub = hasStoryAccess
+        ? `Ngân hàng <strong>${p2CamList.length} Cue Card đề thật Cambridge IELTS 15–20</strong> + <strong>${p2StoryList.length} đề Story 01 Bẻ lái</strong> · 1 phút chuẩn bị + 2 phút nói.`
+        : `Ngân hàng <strong>${p2CamList.length} Cue Card đề thi thật Cambridge IELTS 15–20</strong> nguyên văn kèm dàn ý 4 ý, 6 cụm từ &amp; bài mẫu Band 8.0+ · 1 phút chuẩn bị + 2 phút nói.`;
       doneCount = p2DoneCnt;
       totalCount = p2List.length;
       filterTabs = [
         { key: 'all', label: 'Tất cả' },
-        { key: 'person', label: 'Person' },
-        { key: 'cross_topic', label: 'Cross-Topic' },
-        { key: 'cross_category', label: 'Cross-Category' }
+        { key: 'object', label: 'Sự vật & Chủ đề' },
+        { key: 'place', label: 'Địa điểm' },
+        { key: 'event', label: 'Trải nghiệm' },
+        { key: 'person', label: 'Con người' }
       ];
-      const catLabel = { person: 'Person · Bẻ lái', cross_topic: 'Cross-Topic', cross_category: 'Cross-Category' };
-      const catPillCls = { person: 'is-cause', cross_topic: 'is-adv', cross_category: 'is-opinion' };
+      if (hasStoryAccess) {
+        filterTabs.push({ key: 'story01', label: '★ Story 01 Bẻ lái' });
+      }
+      const catLabel = {
+        object: 'Sự vật & Chủ đề',
+        place: 'Địa điểm',
+        event: 'Trải nghiệm',
+        person: 'Con người',
+        cross_topic: 'Story 01 · Cross-Topic',
+        cross_category: 'Story 01 · Cross-Category'
+      };
+      const catPillCls = {
+        object: 'is-cause',
+        place: 'is-adv',
+        event: 'is-opinion',
+        person: 'is-cause',
+        cross_topic: 'is-adv',
+        cross_category: 'is-opinion'
+      };
       const filtered = p2List.filter((c) => {
-        if (state.pracCat !== 'all' && c.category !== state.pracCat) return false;
-        if (q && !c.title.toLowerCase().includes(q)) return false;
+        if (state.pracCat === 'story01') {
+          if (c.isCambridge) return false;
+        } else if (state.pracCat !== 'all') {
+          if (!c.isCambridge && state.pracCat === 'person') {
+            if (c.category !== 'person') return false;
+          } else if (c.category !== state.pracCat) {
+            return false;
+          }
+        }
+        if (q) {
+          const hay = `${c.title} ${c.titleVi || ''} ${c.source || ''} ${(c.bullets || []).join(' ')}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
         return true;
       });
       filteredLen = filtered.length;
       cardsHtml = filtered.map((cue) => {
         const prev = lastById[cue.id];
+        const isCam = Boolean(cue.isCambridge);
+        const badgeLbl = isCam
+          ? (cue.catLabel || catLabel[cue.category] || 'Part 2')
+          : (cue.category === 'person' ? 'Story 01 · Person' : (catLabel[cue.category] || 'Story 01'));
         return `
           <article class="ws-prac-card sp-cue-card ${prev ? 'is-done' : ''}">
             <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
               <div class="ws-prac-head">
-                <span class="ws-type-pill ${catPillCls[cue.category] || 'is-cause'}">${catLabel[cue.category] || cue.category}</span>
+                ${isCam && cue.source ? `<span class="ws-pill warm">${esc(cue.source.replace('Cambridge IELTS ', 'Cam '))}</span>` : ''}
+                <span class="ws-type-pill ${catPillCls[cue.category] || 'is-cause'}">${esc(badgeLbl)}</span>
                 ${prev
-                  ? `<span class="ws-pill ok tabular">${prev.band ? `Band ${Number(prev.band).toFixed(1)} · ` : ''}${fmtMmSs(prev.durationSec)} · ${prev.wpm} WPM</span>`
-                  : `<span class="ws-prac-sub-tag">${esc(cue.source || 'Actual Test')}</span>`}
+                  ? `<span class="ws-pill ok tabular" style="margin-left:auto;">${prev.band ? `Band ${Number(prev.band).toFixed(1)} · ` : ''}${fmtMmSs(prev.durationSec)} · ${prev.wpm} WPM</span>`
+                  : `<span class="ws-prac-sub-tag" style="margin-left:auto;">${isCam ? '1p + 2p nói' : esc(cue.source || 'Story 01')}</span>`}
               </div>
-              <p class="ws-prac-prompt">${esc(cue.title)}</p>
+              <div class="sp-p13-card-title-grp">
+                <p class="ws-prac-prompt" style="margin:0;">${esc(cue.title)}</p>
+                ${cue.titleVi ? `<div class="sp-p13-card-sub">${esc(cue.titleVi)}</div>` : ''}
+              </div>
               <ul class="sp-cue-bullets">
                 ${(cue.bullets || []).map((b) => `<li>${esc(b)}</li>`).join('')}
               </ul>
@@ -3439,7 +3714,7 @@
               <div class="ws-prac-btns">
                 <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'practice')">Luyện tập</button>
                 <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', 'exam')">Thi thật →</button>
-                ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'speaking', itemId: '${esc(cue.id)}', isFull: false, title: '${esc(String(cue.title || '').slice(0, 80)).replace(/'/g, "\\'")}', subtitle: '${esc(catLabel[cue.category] || 'Speaking Part 2').replace(/'/g, "\\'")}' })" title="Tạo link giao Cue Card này cho học sinh">🔗 Giao link đề này</button>` : ''}
+                ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'speaking', itemId: '${esc(cue.id)}', isFull: false, title: '${esc(String(isCam ? `${cue.source.replace('Cambridge IELTS ', 'Cam ')} · ${cue.title}` : cue.title).slice(0, 90)).replace(/'/g, "\\'")}', subtitle: '${esc(badgeLbl).replace(/'/g, "\\'")}' })" title="Tạo link giao Cue Card này cho học sinh">🔗 Giao link đề này</button>` : ''}
               </div>
             </div>
           </article>
@@ -3526,11 +3801,11 @@
             <p class="tot-shell-sub">${shellSub}</p>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;" onclick="SpeakingStudio.openRandomTopic('practice')" title="Bốc ngẫu nhiên 1 đề chưa luyện trong Part ${activePart}">
+            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;" onclick="SpeakingStudio.openRandomTopic('practice')" title="Bốc ngẫu nhiên 1 đề chưa luyện">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
               <span>Bốc đề ngẫu nhiên</span>
             </button>
-            ${activePart === 2 ? `<button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openMindmapModal('master')">Mindmap</button>` : ''}
+            ${(activePart === 2 && hasStoryAccess) ? `<button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openMindmapModal('master')">Mindmap</button>` : ''}
             <span class="ws-pill tabular">${doneCount} / ${totalCount} đề đã luyện</span>
           </div>
         </div>
@@ -3573,15 +3848,23 @@
   }
 
   function openRandomTopic(mode) {
-    const activePart = [1, 2, 3].includes(Number(state.pracPart)) ? Number(state.pracPart) : 1;
-    const items = activePart === 1 ? getPart1Topics() : (activePart === 3 ? getPart3Topics() : (getStory()?.cueCards || []));
+    const activePart = normalizePracticePart(state.pracPart);
+    const hasStoryAccess = Boolean(!window.AccessPolicy || window.AccessPolicy.can('speaking.story_mindmap'));
+    const items = activePart === 'full'
+      ? getFullSpeakingTests()
+      : (activePart === 1
+        ? getPart1Topics()
+        : (activePart === 3
+          ? getPart3Topics()
+          : [...getPart2CambridgeTopics(), ...(hasStoryAccess ? (getStory()?.cueCards || []) : [])]));
     if (!items.length) return;
     const doneIds = new Set(getPracHistory().map((h) => h.cueId));
     const pool = items.filter((c) => !doneIds.has(c.id));
     const list = pool.length ? pool : items;
     const picked = list[Math.floor(Math.random() * list.length)];
     if (!picked) return;
-    if (activePart === 2) openPracticeRoom(picked.id, mode || 'practice');
+    if (activePart === 'full') startFullSpeakingTest(picked.id, mode || 'practice');
+    else if (activePart === 2) openPracticeRoom(picked.id, mode || 'practice');
     else openInterviewRoom(picked.id, mode || 'practice');
   }
 
@@ -4335,39 +4618,59 @@
     window.SpeakingExaminerCinema?.mount?.(examinerId, activeMode);
   }
 
-  /* --- Speaking Part 2 Room (1-Min Prep -> 2-Min Speaking -> Review & Pivot Model) --- */
-  function openPracticeRoom(cueId, mode) {
-    const p13 = getPart13Topic(cueId);
-    if (p13) {
-      openInterviewRoom(cueId, mode);
+  /* --- Speaking Part 2 Room (1-Min Prep -> 2-Min Speaking -> Review & Model) --- */
+  function openPracticeRoom(cueId, mode, opts) {
+    const fullTest = getFullSpeakingTest(cueId);
+    if (fullTest) {
+      startFullSpeakingTest(cueId, mode);
       return;
     }
+    const p13 = getPart13Topic(cueId);
+    if (p13) {
+      openInterviewRoom(cueId, mode, opts);
+      return;
+    }
+    if (!opts?.preserveFullTest) fullTestSession = null;
     ensureOverlays();
     STT()?.abort?.();
-    const story = getStory();
-    const cue = (story?.cueCards || []).find((c) => c.id === cueId);
+    clearInterval(roomState?.timerId);
+    const cue = getPart2CueById(cueId);
     if (!cue) return;
 
-    const DEFAULT_SP_PLAN = [
-      '1. Mở bài (B1–B3):',
-      '- ',
-      '',
-      '2. Cốt truyện chính (B4):',
-      '- ',
-      '',
-      '3. Kết bài chốt đề (B5):',
-      '- '
-    ].join('\n');
+    const DEFAULT_SP_PLAN = cue.isCambridge
+      ? [
+          '1. Giới thiệu chủ đề (Who / What / Where):',
+          '- ',
+          '',
+          '2. Chi tiết & Trải nghiệm cụ thể:',
+          '- ',
+          '',
+          '3. Cảm xúc & Lý do đáng nhớ (Explain why):',
+          '- '
+        ].join('\n')
+      : [
+          '1. Mở bài (B1–B3):',
+          '- ',
+          '',
+          '2. Cốt truyện chính (B4):',
+          '- ',
+          '',
+          '3. Kết bài chốt đề (B5):',
+          '- '
+        ].join('\n');
 
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const initContrast = mode === 'exam' ? 'cd' : (isDark ? 'dark' : 'totoro');
 
-    window.TotoroUI?.recordLastSession?.({
-      skill: 'Speaking',
-      view: 'practice',
-      label: `Speaking · ${cue.title}`,
-      action: "window.TotoroUI?.enterSkillMode('Speaking', 'practice')"
-    });
+    if (!opts?.preserveFullTest) {
+      state.pracPart = 2;
+      window.TotoroUI?.recordLastSession?.({
+        skill: 'Speaking',
+        view: 'practice',
+        label: `Speaking Part 2 · ${cue.title}`,
+        action: "window.SpeakingStudio?.openPracticePart(2)"
+      });
+    }
 
     roomState = {
       kind: 'part2',
@@ -4449,6 +4752,7 @@
     cleanupProEngines();
     STT()?.abort?.();
     roomState = null;
+    fullTestSession = null;
     const el = document.getElementById('sp-practice-room');
     if (el) el.className = 'sp-exam-room';
     renderPracticeHub();
@@ -4568,7 +4872,12 @@
 
   function resetRoomPlan() {
     if (!roomState) return;
-    roomState.notes.sheet = roomState.mode === 'exam' ? '' : '1. Mở bài (B1–B3):\n- \n\n2. Cốt truyện chính (B4):\n- \n\n3. Kết bài chốt đề (B5):\n- ';
+    const isCam = Boolean(roomState.cue?.isCambridge);
+    roomState.notes.sheet = roomState.mode === 'exam'
+      ? ''
+      : (isCam
+        ? '1. Giới thiệu chủ đề (Who / What / Where):\n- \n\n2. Chi tiết & Trải nghiệm cụ thể:\n- \n\n3. Cảm xúc & Lý do đáng nhớ (Explain why):\n- '
+        : '1. Mở bài (B1–B3):\n- \n\n2. Cốt truyện chính (B4):\n- \n\n3. Kết bài chốt đề (B5):\n- ');
     const ta = document.getElementById('sp-room-plan-ta');
     if (ta) ta.value = roomState.notes.sheet;
   }
@@ -4667,9 +4976,10 @@
     if (!roomState) return;
     clearInterval(roomState.timerId);
     const activeRoomRef = roomState;
+    const isCam = Boolean(activeRoomRef.cue?.isCambridge);
     roomState.transcript = text;
     roomState.audioUrl = audioUrl;
-    roomState.metrics = evaluateFullSpeech(text, durationSec);
+    roomState.metrics = evaluateFullSpeech(text, durationSec, isCam ? (activeRoomRef.cue.chunks || []) : null);
     roomState.phase = 'review';
     roomState.grading = Boolean(window.IeltsGrader?.gradeSpeaking);
     roomState.report = null;
@@ -4680,10 +4990,11 @@
     if (window.IeltsGrader?.gradeSpeaking) {
       try {
         report = await window.IeltsGrader.gradeSpeaking({
+          part: 2,
           cueTitle: activeRoomRef.cue?.title || '',
           cueBullets: activeRoomRef.cue?.bullets || [],
-          curriculumContext: (story?.fullSpeech?.en || []).join(' '),
-          curriculumKeywords: (story?.spokenChunks || []).map((c) => c.en).join(' '),
+          curriculumContext: isCam ? (activeRoomRef.cue?.modelEn || '') : (story?.fullSpeech?.en || []).join(' '),
+          curriculumKeywords: isCam ? (activeRoomRef.cue?.chunks || []).join(' ') : (story?.spokenChunks || []).map((c) => c.en).join(' '),
           text,
           acoustic: acoustic || { hasAudio: Boolean(audioUrl), audioUrl, durationSec },
         });
@@ -4697,8 +5008,8 @@
       roomState.report = report;
     }
 
-    const hist = getPracHistory();
-    hist.unshift({
+    const attemptPayload = {
+      part: 2,
       cueId: activeRoomRef.cue.id,
       cueTitle: activeRoomRef.cue.title,
       mode: activeRoomRef.mode,
@@ -4715,8 +5026,16 @@
       chunksCount: activeRoomRef.metrics.usedChunks.length,
       fillerCount: activeRoomRef.metrics.fillerCount,
       at: Date.now()
-    });
-    savePracHistory(hist.slice(0, 40));
+    };
+
+    const hist = getPracHistory();
+    hist.unshift(attemptPayload);
+    savePracHistory(hist.slice(0, 80));
+
+    if (fullTestSession && fullTestSession.stage === 2 && fullTestSession.test.part2Id === activeRoomRef.cue.id) {
+      recordFullTestStageResult('p2', attemptPayload);
+    }
+
     if (roomState === activeRoomRef) renderPracticeRoom();
   }
 
@@ -4880,8 +5199,10 @@
               <span class="ws-prac-para-pill tabular">${m.words} từ</span>
             </div>
             <div class="ws-prac-paper-badges">
-              <button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', '${esc(mode)}')">Nói lại</button>
-              <button type="button" class="ws-prac-submit-pill" style="height:30px;padding:0 13px;font-size:12px;" onclick="SpeakingStudio.closePracticeRoom()">Về kho đề</button>
+              <button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.openPracticeRoom('${esc(cue.id)}', '${esc(mode)}', { preserveFullTest: ${Boolean(fullTestSession)} })">Nói lại</button>
+              ${fullTestSession && fullTestSession.stage === 2
+                ? `<button type="button" class="ws-prac-submit-pill" style="height:30px;padding:0 13px;font-size:12px;" onclick="SpeakingStudio.advanceFullSpeakingTest()">Tiếp sang Part 3 →</button>`
+                : `<button type="button" class="ws-prac-submit-pill" style="height:30px;padding:0 13px;font-size:12px;" onclick="SpeakingStudio.closePracticeRoom()">Về kho đề</button>`}
             </div>
           </div>
           <div class="ws-prac-paper-meter" aria-hidden="true">
@@ -5057,7 +5378,7 @@
             <div class="ins-hdr-left">
               ${headerBrandHtml}
               <div class="ins-hdr-meta">
-                <div class="ins-hdr-title">Speaking Studio · Phòng Thi Thật 3D Pro · Part 2</div>
+                <div class="ins-hdr-title">${fullTestSession ? `Full Test · ${esc(fullTestSession.test.shortSource)} · 3D Pro · Part 2` : 'Speaking Studio · Phòng Thi Thật 3D Pro · Part 2'}</div>
                 <div class="ins-hdr-timer" style="cursor:default;"><span id="sp-room-timer">${timerLabel}</span></div>
               </div>
             </div>
@@ -5074,6 +5395,8 @@
             </div>
           </header>
 
+          ${fullTestSession ? renderFullTestRibbonHtml(2) : ''}
+
           ${renderProStageShell({ stageClasses, examiner, statusLabel, topRightHtml, lobbyHtml, sidePanelHtml, controlBarHtml, barState })}
         </div>
       `;
@@ -5087,7 +5410,7 @@
           <div class="ins-hdr-left">
             ${headerBrandHtml}
             <div class="ins-hdr-meta">
-              <div class="ins-hdr-title">${isExam ? 'Test taker · Speaking Part 2' : 'Speaking Studio · Luyện tập Part 2'}</div>
+              <div class="ins-hdr-title">${fullTestSession ? `Full Test · ${esc(fullTestSession.test.shortSource)} · Part 2` : (isExam ? 'Test taker · Speaking Part 2' : (cue.isCambridge ? `Speaking Studio · Part 2 · ${esc((cue.source || '').replace('Cambridge IELTS ', 'Cam '))}` : 'Speaking Studio · Luyện tập Part 2'))}</div>
               <div class="ins-hdr-timer" style="cursor:default;"><span id="sp-room-timer">${timerLabel}</span></div>
             </div>
           </div>
@@ -5104,6 +5427,8 @@
           </div>
         </header>
 
+        ${fullTestSession ? renderFullTestRibbonHtml(2) : ''}
+
         ${isExam ? `
           <div class="ins-part-banner">
             <strong>Part 2</strong>
@@ -5115,7 +5440,7 @@
           <section class="ins-pane ins-pane-left sp-ins-left">
             <div class="ws-prac-prompt-meta">
               <span class="ws-prac-part-badge">Part 2</span>
-              <span>1 phút chuẩn bị · 2 phút nói</span>
+              <span>${cue.isCambridge && cue.source ? `${esc(cue.source)} · ` : ''}1 phút chuẩn bị · 2 phút nói</span>
             </div>
 
             <div class="sp-ins-cue-card">
@@ -5134,7 +5459,29 @@
 
             ${phase === 'prep' ? `
               <p class="ws-ins-inst">You will have to talk about the topic for 1 to 2 minutes. You have 1 minute to think about what you are going to say. You can make some notes to help you if you wish.</p>
-              ${!isExam ? `
+              ${!isExam ? (cue.isCambridge ? `
+                <div class="sp-prep-hint-card">
+                  <button type="button" class="btn-reading-tip ${roomState.showPrepHint ? 'is-active' : ''}" onclick="SpeakingStudio.toggleRoomPrepHint()">
+                    ${roomState.showPrepHint ? 'Ẩn dàn ý & cụm từ gợi ý' : 'Gợi ý dàn ý 4 ý & 6 cụm từ Band 8.0'}
+                  </button>
+                  ${roomState.showPrepHint ? `
+                    <div class="sp-prep-hint-body">
+                      <div><strong>Dàn ý triển khai nhanh theo 4 câu hỏi Cue Card:</strong></div>
+                      <ul class="sp-cam-outline-list">
+                        ${(cue.outlineVi || []).map((line) => `<li>${esc(line)}</li>`).join('')}
+                      </ul>
+                      ${(cue.chunks || []).length ? `
+                        <div class="sp-int-chunks-wrap" style="margin-top:8px;">
+                          <div class="sp-int-chunks-lbl">6 cụm từ ăn điểm Band 8.0 (chạm để nghe UK):</div>
+                          <div class="sp-int-chunks-row">
+                            ${(cue.chunks || []).map((ch) => `<button type="button" class="sp-int-chunk-chip is-sm" onclick="SpeakingStudio.speakRaw('${esc(ch).replace(/'/g, "\\'")}', 'en-GB')"><span>🔊</span><span>${esc(ch)}</span></button>`).join('')}
+                          </div>
+                        </div>
+                      ` : ''}
+                    </div>
+                  ` : ''}
+                </div>
+              ` : `
                 <div class="sp-prep-hint-card">
                   <button type="button" class="btn-reading-tip ${roomState.showPrepHint ? 'is-active' : ''}" onclick="SpeakingStudio.toggleRoomPrepHint()">
                     ${roomState.showPrepHint ? 'Ẩn gợi ý bẻ lái' : 'Gợi ý khung bẻ lái (B1–B3 & B5)'}
@@ -5146,7 +5493,7 @@
                     </div>
                   ` : ''}
                 </div>
-              ` : ''}
+              `) : ''}
             ` : ''}
 
             ${phase === 'speak' && noteText ? `
@@ -5156,7 +5503,27 @@
               </div>
             ` : ''}
 
-            ${phase === 'review' ? `
+            ${phase === 'review' ? (cue.isCambridge ? `
+              <div class="sp-model-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <strong style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;">Bài mẫu tham khảo Band 8.0+ · ${esc((cue.source || 'Cambridge IELTS').replace('Cambridge IELTS ', 'Cam '))}</strong>
+                  <button type="button" class="btn-voice-speak" onclick="SpeakingStudio.speakRaw('${esc(cue.modelEn || '').replace(/'/g, "\\'")}', 'en-GB')"><span>🔊 Nghe UK</span></button>
+                </div>
+                <div style="font-size:13.6px;line-height:1.65;color:var(--ink);">${esc(cue.modelEn || '')}</div>
+                ${(cue.chunks || []).length ? `
+                  <div class="sp-int-chunks-row" style="margin-top:4px;">
+                    ${(cue.chunks || []).map((ch) => `<button type="button" class="sp-int-chunk-chip is-sm" onclick="SpeakingStudio.speakRaw('${esc(ch).replace(/'/g, "\\'")}', 'en-GB')"><span>🔊</span><span>${esc(ch)}</span></button>`).join('')}
+                  </div>
+                ` : ''}
+                <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:4px;">
+                  ${fullTestSession && fullTestSession.stage === 2
+                    ? `<button type="button" class="btn btn-primary" style="padding:6px 14px;font-size:12.5px;" onclick="SpeakingStudio.advanceFullSpeakingTest()">Tiếp tục sang Part 3 · Thảo luận →</button>`
+                    : (cue.linkedPart3Id && getPart13Topic(cue.linkedPart3Id)
+                      ? `<button type="button" class="btn btn-primary" style="padding:6px 14px;font-size:12.5px;" onclick="SpeakingStudio.openInterviewRoom('${esc(cue.linkedPart3Id)}', '${esc(mode)}')">Tiếp tục thảo luận Part 3 cùng đề →</button>`
+                      : '')}
+                </div>
+              </div>
+            ` : `
               <div class="sp-model-card">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
                   <strong style="font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;">Mẫu Bẻ Lái Chuẩn Cho Đề Này</strong>
@@ -5173,7 +5540,7 @@
                 </div>
                 ${roomState.showFullB4 ? `<div style="font-size:13.2px;line-height:1.62;color:var(--ink-2);padding-top:8px;border-top:1px solid var(--border);">${esc((fs.en || []).slice(1).join(' '))}</div>` : ''}
               </div>
-            ` : ''}
+            `) : ''}
           </section>
 
           <section class="ins-pane ins-pane-right sp-ins-right">
@@ -5191,14 +5558,15 @@
               <span class="sp-foot-step ${phase === 'review' ? 'is-active' : ''}"><span class="sp-foot-full">3. Đối chiếu</span><span class="sp-foot-short">3. Chấm</span></span>
             </div>
           </div>
-          <button type="button" class="sp-foot-action-btn" onclick="${phase === 'prep' ? 'SpeakingStudio.beginRoomSpeaking(false)' : (phase === 'review' ? 'SpeakingStudio.closePracticeRoom()' : (typeMode ? 'SpeakingStudio.submitRoomTyped()' : 'SpeakingStudio.toggleRoomMic()'))}">${phase === 'prep' ? 'Bắt đầu nói →' : (phase === 'review' ? 'Về kho đề ✓' : (typeMode ? 'Nộp bài →' : (recording ? 'Dừng & Nộp' : 'Bắt đầu thu âm')))}</button>
+          <button type="button" class="sp-foot-action-btn" onclick="${phase === 'prep' ? 'SpeakingStudio.beginRoomSpeaking(false)' : (phase === 'review' ? (fullTestSession && fullTestSession.stage === 2 ? 'SpeakingStudio.advanceFullSpeakingTest()' : 'SpeakingStudio.closePracticeRoom()') : (typeMode ? 'SpeakingStudio.submitRoomTyped()' : 'SpeakingStudio.toggleRoomMic()'))}">${phase === 'prep' ? 'Bắt đầu nói →' : (phase === 'review' ? (fullTestSession && fullTestSession.stage === 2 ? 'Tiếp tục sang Part 3 →' : 'Về kho đề ✓') : (typeMode ? 'Nộp bài →' : (recording ? 'Dừng & Nộp' : 'Bắt đầu thu âm')))}</button>
         </footer>
       </div>
     `;
   }
 
   /* ================= PART 1 & PART 3 EXAMINER INTERVIEW ROOM ================= */
-  function openInterviewRoom(topicId, mode) {
+  function openInterviewRoom(topicId, mode, opts) {
+    if (!opts?.preserveFullTest) fullTestSession = null;
     ensureOverlays();
     STT()?.abort?.();
     clearInterval(roomState?.timerId);
@@ -5209,14 +5577,15 @@
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const initContrast = cleanMode === 'exam' ? 'cd' : (isDark ? 'dark' : 'totoro');
 
-    state.pracPart = topic.part;
-
-    window.TotoroUI?.recordLastSession?.({
-      skill: 'Speaking',
-      view: 'practice',
-      label: `Speaking Part ${topic.part} · ${topic.title}`,
-      action: `window.SpeakingStudio?.openPracticePart(${topic.part})`
-    });
+    if (!opts?.preserveFullTest) {
+      state.pracPart = topic.part;
+      window.TotoroUI?.recordLastSession?.({
+        skill: 'Speaking',
+        view: 'practice',
+        label: `Speaking Part ${topic.part} · ${topic.title}`,
+        action: `window.SpeakingStudio?.openPracticePart(${topic.part})`
+      });
+    }
 
     roomState = {
       kind: 'interview',
@@ -5564,8 +5933,7 @@
       roomState.report = report;
     }
 
-    const hist = getPracHistory();
-    hist.unshift({
+    const stagePayload = {
       part: topic.part,
       cueId: topic.id,
       cueTitle: `Part ${topic.part} · ${topic.title}`,
@@ -5583,8 +5951,20 @@
       chunksCount: usedChunks.length,
       fillerCount,
       at: Date.now()
-    });
-    savePracHistory(hist.slice(0, 60));
+    };
+
+    const hist = getPracHistory();
+    hist.unshift(stagePayload);
+    savePracHistory(hist.slice(0, 80));
+
+    if (fullTestSession) {
+      if (fullTestSession.stage === 1 && fullTestSession.test.part1Id === topic.id) {
+        recordFullTestStageResult('p1', stagePayload);
+      } else if (fullTestSession.stage === 3 && fullTestSession.test.part3Id === topic.id) {
+        recordFullTestStageResult('p3', stagePayload);
+      }
+    }
+
     if (roomState === activeRoomRef) renderInterviewRoom();
   }
 
@@ -5883,15 +6263,19 @@
               <span class="ws-prac-para-pill tabular">${m.words} từ · ${m.answeredCount}/${m.totalQuestions} câu</span>
             </div>
             <div class="ws-prac-paper-badges">
-              <button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.openInterviewRoom('${esc(topic.id)}', '${esc(mode)}')">Nói lại</button>
-              ${nextTopic && nextTopic.id !== topic.id ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.openInterviewRoom('${esc(nextTopic.id)}', '${esc(mode)}')">Chủ đề tiếp →</button>` : ''}
-              <button type="button" class="ws-prac-submit-pill" style="height:30px;padding:0 13px;font-size:12px;" onclick="SpeakingStudio.closePracticeRoom()">Về kho đề</button>
+              <button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.openInterviewRoom('${esc(topic.id)}', '${esc(mode)}', { preserveFullTest: ${Boolean(fullTestSession)} })">Nói lại</button>
+              ${fullTestSession && fullTestSession.stage === 1
+                ? `<button type="button" class="ws-prac-submit-pill" style="height:30px;padding:0 13px;font-size:12px;" onclick="SpeakingStudio.advanceFullSpeakingTest()">Tiếp sang Part 2 →</button>`
+                : (fullTestSession && fullTestSession.stage === 3
+                  ? `<button type="button" class="ws-prac-submit-pill" style="height:30px;padding:0 13px;font-size:12px;" onclick="SpeakingStudio.closePracticeRoom()">Hoàn tất Full Test ✓</button>`
+                  : `${nextTopic && nextTopic.id !== topic.id ? `<button type="button" class="ws-ins-plan-btn" onclick="SpeakingStudio.openInterviewRoom('${esc(nextTopic.id)}', '${esc(mode)}')">Chủ đề tiếp →</button>` : ''}<button type="button" class="ws-prac-submit-pill" style="height:30px;padding:0 13px;font-size:12px;" onclick="SpeakingStudio.closePracticeRoom()">Về kho đề</button>`)}
             </div>
           </div>
           <div class="ws-prac-paper-meter" aria-hidden="true">
             <span class="ws-prac-paper-meter-fill" style="width:100%"></span>
           </div>
           <div class="sp-room-review-scroll">
+            ${fullTestSession && fullTestSession.stage === 3 ? renderFullTestCombinedCardHtml() : ''}
             ${roomState.grading
               ? (window.IeltsGrader?.renderLoadingHtml(`Giám khảo IELTS Speaking AI đang chấm 4 tiêu chí Part ${part} (FC / LR / GRA / PR)...`) || '')
               : (roomState.report && window.IeltsGrader?.renderExaminerReportHtml
@@ -5922,14 +6306,16 @@
 
     const canFinish = answeredCount >= (isExam ? turns.length : 1);
     const footBtnAct = phase === 'review'
-      ? 'SpeakingStudio.closePracticeRoom()'
+      ? (fullTestSession && fullTestSession.stage === 1 ? 'SpeakingStudio.advanceFullSpeakingTest()' : 'SpeakingStudio.closePracticeRoom()')
       : (allAnswered
         ? 'SpeakingStudio.finishInterview()'
         : (countWords(curTurn.text) > 0 && qIdx < turns.length - 1
           ? 'SpeakingStudio.nextInterviewQ()'
           : (typeMode && !isExam ? 'SpeakingStudio.submitInterviewTyped()' : 'SpeakingStudio.toggleInterviewMic()')));
     const footBtnLabel = phase === 'review'
-      ? 'Về kho đề ✓'
+      ? (fullTestSession && fullTestSession.stage === 1
+        ? 'Tiếp tục sang Part 2 · Cue Card →'
+        : (fullTestSession && fullTestSession.stage === 3 ? 'Hoàn tất Full Test ✓' : 'Về kho đề ✓'))
       : (allAnswered
         ? `Nộp & Chấm điểm Part ${part} →`
         : (countWords(curTurn.text) > 0 && qIdx < turns.length - 1
@@ -5998,7 +6384,7 @@
             <div class="ins-hdr-left">
               ${headerBrandHtml}
               <div class="ins-hdr-meta">
-                <div class="ins-hdr-title">Speaking Studio · Phòng Thi Thật 3D Pro · Part ${part}</div>
+                <div class="ins-hdr-title">${fullTestSession ? `Full Test · ${esc(fullTestSession.test.shortSource)} · 3D Pro · Part ${part}` : `Speaking Studio · Phòng Thi Thật 3D Pro · Part ${part}`}</div>
                 <div class="ins-hdr-timer" style="cursor:default;"><span id="sp-room-timer">${timerLabel}</span></div>
               </div>
             </div>
@@ -6015,6 +6401,8 @@
             </div>
           </header>
 
+          ${fullTestSession ? renderFullTestRibbonHtml(part) : ''}
+
           ${renderProStageShell({ stageClasses, examiner, statusLabel, topRightHtml, lobbyHtml, sidePanelHtml: '', controlBarHtml, barState })}
         </div>
       `;
@@ -6028,7 +6416,7 @@
           <div class="ins-hdr-left">
             ${headerBrandHtml}
             <div class="ins-hdr-meta">
-              <div class="ins-hdr-title">${isExam ? `Test taker · Speaking Part ${part}` : `Speaking Studio · Luyện tập Part ${part}`}</div>
+              <div class="ins-hdr-title">${fullTestSession ? `Full Test · ${esc(fullTestSession.test.shortSource)} · Part ${part}` : (isExam ? `Test taker · Speaking Part ${part}` : `Speaking Studio · Luyện tập Part ${part}`)}</div>
               <div class="ins-hdr-timer" style="cursor:default;"><span id="sp-room-timer">${timerLabel}</span></div>
             </div>
           </div>
@@ -6045,12 +6433,14 @@
           </div>
         </header>
 
+        ${fullTestSession ? renderFullTestRibbonHtml(part) : ''}
+
         ${isExam ? `
           <div class="ins-part-banner">
             <strong>Part ${part}</strong>
             <span>${isP1
               ? 'Introduction & Interview — Answer 4 questions naturally (20–35 seconds each).'
-              : 'Two-Way Discussion — Discuss 4 abstract questions in depth (40–65 seconds each).'}</span>
+              : 'Two-Way Discussion — Discuss 6 abstract questions in depth (40–65 seconds each).'}</span>
           </div>
         ` : ''}
 
@@ -6089,21 +6479,22 @@
   function openSummaryModal() {
     ensureOverlays();
     const story = getStory();
-    const mStats = getStoryMasteryStats(story);
-    const done = getTaskDoneMap()[story?.id];
+    const hasStoryAccess = Boolean(story && (!window.AccessPolicy || window.AccessPolicy.can('speaking.story_mindmap')));
+    const mStats = hasStoryAccess ? getStoryMasteryStats(story) : { done: 0, total: 0 };
+    const done = hasStoryAccess ? getTaskDoneMap()[story?.id] : null;
     const hist = getPracHistory();
     const el = document.getElementById('sp-summary-card');
     if (!el) return;
-    const totalTopics = getPart1Topics().length + (story?.cueCards || []).length + getPart3Topics().length;
+    const totalTopics = getPart1Topics().length + getPart2CambridgeTopics().length + (hasStoryAccess ? (story?.cueCards || []).length : 0) + getPart3Topics().length + getFullSpeakingTests().length;
     el.innerHTML = `
       <div class="sp-modal-head">
-        <div class="sp-modal-title">Bảng Thống Kê · IELTS Speaking (Part 1 · 2 · 3)</div>
+        <div class="sp-modal-title">Bảng Thống Kê · IELTS Speaking (Part 1–3 &amp; Full Test)</div>
         <button type="button" class="btn" style="padding:5px 11px;" onclick="SpeakingStudio.closeSummaryModal()">Đóng ✕</button>
       </div>
       <div class="sp-metrics-grid">
-        <div class="sp-metric-box"><div class="sp-metric-val">${mStats.done}/${mStats.total}</div><div class="sp-metric-lbl">Thẻ đã thuộc</div></div>
-        <div class="sp-metric-box"><div class="sp-metric-val">${done?.completed ? '4/4' : `${done?.maxStage || 0}/4`}</div><div class="sp-metric-lbl">Task Story 01</div></div>
-        <div class="sp-metric-box"><div class="sp-metric-val">${new Set(hist.map((h) => h.cueId)).size}/${totalTopics}</div><div class="sp-metric-lbl">Chủ đề P1–P3</div></div>
+        ${hasStoryAccess ? `<div class="sp-metric-box"><div class="sp-metric-val">${mStats.done}/${mStats.total}</div><div class="sp-metric-lbl">Thẻ đã thuộc</div></div>` : ''}
+        ${hasStoryAccess ? `<div class="sp-metric-box"><div class="sp-metric-val">${done?.completed ? '4/4' : `${done?.maxStage || 0}/4`}</div><div class="sp-metric-lbl">Task Story 01</div></div>` : ''}
+        <div class="sp-metric-box"><div class="sp-metric-val">${new Set(hist.map((h) => h.cueId)).size}/${totalTopics}</div><div class="sp-metric-lbl">Đề &amp; Full Test</div></div>
         <div class="sp-metric-box"><div class="sp-metric-val">${hist.length}</div><div class="sp-metric-lbl">Tổng lượt nói</div></div>
       </div>
     `;
@@ -6115,15 +6506,16 @@
 
   function getOverallStats() {
     const story = getStory();
-    const mStats = story ? getStoryMasteryStats(story) : { done: 0, total: 0 };
-    const done = story ? getTaskDoneMap()[story.id] : null;
+    const hasStoryAccess = Boolean(story && (!window.AccessPolicy || window.AccessPolicy.can('speaking.story_mindmap')));
+    const mStats = hasStoryAccess ? getStoryMasteryStats(story) : { done: 0, total: 0 };
+    const done = hasStoryAccess ? getTaskDoneMap()[story.id] : null;
     const hist = getPracHistory();
-    const topicsTotal = getPart1Topics().length + ((story?.cueCards || []).length || 14) + getPart3Topics().length;
+    const topicsTotal = getPart1Topics().length + getPart2CambridgeTopics().length + (hasStoryAccess ? (story?.cueCards || []).length : 0) + getPart3Topics().length + getFullSpeakingTests().length;
     const topicsDone = new Set(hist.map((h) => h.cueId)).size;
     const masteredCards = mStats.done || 0;
     const totalCards = mStats.total || 0;
-    const tasksDone = (done?.completed ? 4 : (done?.maxStage || 0)) + topicsDone;
-    const tasksTotal = 4 + topicsTotal;
+    const tasksDone = (hasStoryAccess ? (done?.completed ? 4 : (done?.maxStage || 0)) : 0) + topicsDone;
+    const tasksTotal = (hasStoryAccess ? 4 : 0) + topicsTotal;
     return {
       masteredCards,
       totalCards,
@@ -6201,9 +6593,11 @@
     toggleT4Mic,
     submitT4Typed,
     launchCueCardFromTask,
-    // Practice hub & room (Part 1, Part 2, Part 3)
+    // Practice hub & room (Part 1, Part 2, Part 3, Full Test 14p)
     setPracticePart,
     openPracticePart,
+    startFullSpeakingTest,
+    advanceFullSpeakingTest,
     setPracticeCat,
     setPracticeQuery,
     resetPracticeFilters,

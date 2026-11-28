@@ -157,11 +157,11 @@
       const id = String(rawTaskId || '').trim();
       if (!id) return false;
       if (!this.isRestricted(user)) return true;
-      // Allow public Practice assignments (Cambridge / Volume / Actual / Writing Practice / Speaking Part 1 & 3)
-      if (/^(rp|rp_full|lp|lp_full|wp|wp_full|sp_p1_|sp_p3_|ptask_)/i.test(id)) return true;
+      // Allow public Practice assignments (Cambridge / Volume / Actual / Writing Practice / Speaking P1, P2 Cam, P3 & Full Test)
+      if (/^(rp|rp_full|lp|lp_full|wp|wp_full|sp_p1_|sp_p2_cam|sp_p3_|sp_full_|ptask_)/i.test(id)) return true;
       if (/^sp:/i.test(id)) {
         const inner = id.slice(3);
-        return /^sp_p[13]_/i.test(inner);
+        return /^(sp_p1_|sp_p2_cam|sp_p3_|sp_full_)/i.test(inner);
       }
       return false;
     }
