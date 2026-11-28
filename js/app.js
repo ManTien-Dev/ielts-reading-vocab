@@ -517,7 +517,7 @@
   let _idToLemmaCache = null;
 
   function ensureLemmaPeerIndex() {
-    if (_lemmaPeersCache && _idToLemmaCache) return;
+    if (_lemmaPeersCache && _idToLemmaCache && _idToLemmaCache.size > 0) return;
     _lemmaPeersCache = new Map();
     _idToLemmaCache = new Map();
     const lists = [APP_DATA?.file1_paraphrase_1500 || [], APP_DATA?.file2_families_3500 || []];
@@ -6413,6 +6413,8 @@
     if (window.AccessPolicy?.enforceForUser) {
       await window.AccessPolicy.enforceForUser(account);
       wordLookupCache = null;
+      _lemmaPeersCache = null;
+      _idToLemmaCache = null;
     }
 
     const gateEl = document.getElementById('auth-gate');
@@ -6527,6 +6529,8 @@
     initialCloudPullUid = '';
     resetInMemoryStudyState();
     wordLookupCache = null;
+    _lemmaPeersCache = null;
+    _idToLemmaCache = null;
     currentUser = null;
     window.AccessPolicy?.purgeProprietaryMemory?.();
     closeRecallModal(null, true);

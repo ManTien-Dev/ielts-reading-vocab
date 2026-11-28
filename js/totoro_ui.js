@@ -2849,6 +2849,19 @@
     closePopovers,
   };
 
+  window.addEventListener('app:curriculum-ready', () => {
+    try {
+      renderInlineTaskHub();
+      if (activeView === 'home') renderHomeDashboard();
+    } catch (_) {}
+  });
+  window.addEventListener('app:policy-applied', () => {
+    try {
+      renderInlineTaskHub();
+      if (activeView === 'home') renderHomeDashboard();
+    } catch (_) {}
+  });
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireUI);
   else wireUI();
 })();

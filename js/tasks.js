@@ -144,6 +144,16 @@
   ];
 
   let _generatedSuiteCache = null;
+  let _generatedSuiteF2Ref = null;
+  let _generatedSuiteParaRef = null;
+  let _generatedSuiteV2Ref = null;
+
+  function resetSuiteCache() {
+    _generatedSuiteCache = null;
+    _generatedSuiteF2Ref = null;
+    _generatedSuiteParaRef = null;
+    _generatedSuiteV2Ref = null;
+  }
   let activeStudentTaskTab = 'foundation';
   let activeTeacherTaskTab = 'foundation';
 
@@ -365,13 +375,28 @@
   }
 
   function ensureGeneratedSuites() {
-    if (_generatedSuiteCache) return _generatedSuiteCache;
-    const f2 = (window.APP_DATA && Array.isArray(window.APP_DATA.file2_families_3500))
+    const f2Ref = (window.APP_DATA && Array.isArray(window.APP_DATA.file2_families_3500))
       ? window.APP_DATA.file2_families_3500
-      : [];
+      : null;
+    const paraRef = (window.APP_TASKS_DATA && Array.isArray(window.APP_TASKS_DATA.tasks))
+      ? window.APP_TASKS_DATA.tasks
+      : null;
+    const v2Ref = window.APP_TASK_EXAM_V2_DATA || null;
+
+    if (
+      _generatedSuiteCache &&
+      _generatedSuiteF2Ref === f2Ref &&
+      _generatedSuiteParaRef === paraRef &&
+      _generatedSuiteV2Ref === v2Ref &&
+      (_generatedSuiteCache.foundation.length > 0 || _generatedSuiteCache.paraphrase.length > 0)
+    ) {
+      return _generatedSuiteCache;
+    }
+
+    const f2 = f2Ref || [];
     const examMap = window.APP_READING_TASKS_EXAM_DATA || {};
-    const paraRaw = (window.APP_TASKS_DATA && Array.isArray(window.APP_TASKS_DATA.tasks))
-      ? window.APP_TASKS_DATA.tasks.map((t, idx) => {
+    const paraRaw = paraRef
+      ? paraRef.map((t, idx) => {
           t.num = idx + 1;
           t.scopeKey = 'paraphrase';
           t.taskKind = 'paraphrase_full';
@@ -384,13 +409,21 @@
           return applyTaskV2Overlay(t);
         })
       : [];
-    _generatedSuiteCache = {
+    const built = {
       foundation: buildReadingSuiteTasks('foundation', 'fnd', 'Nền Tảng', 'Nền tảng Reading', f2.slice(0, 1500), 30),
       academic: buildReadingSuiteTasks('academic', 'acd', 'Học Thuật', 'Học thuật Reading', f2.slice(1500, 2500), 20),
       paraphrase: paraRaw,
       advanced: buildReadingSuiteTasks('advanced', 'adv', 'Chuyên Sâu', 'Chuyên sâu C1–C2', f2.slice(2500), 30),
     };
-    return _generatedSuiteCache;
+    if (built.foundation.length > 0 || built.paraphrase.length > 0) {
+      _generatedSuiteCache = built;
+      _generatedSuiteF2Ref = f2Ref;
+      _generatedSuiteParaRef = paraRef;
+      _generatedSuiteV2Ref = v2Ref;
+    } else {
+      resetSuiteCache();
+    }
+    return built;
   }
 
   function getTasksByScope(scopeKey) {
@@ -7376,6 +7409,7 @@
     getAllCatalogTasks,
     getTasksByScope,
     getTaskById,
+    resetSuiteCache,
     switchStudentTaskTab,
     switchTeacherTaskTab,
     openRecognitionTaskPreview,
@@ -7400,6 +7434,16 @@
       e.returnValue = msg;
       return msg;
     });
+  }
+
+  if (!window.__taskCurriculumSyncBound) {
+    window.__taskCurriculumSyncBound = true;
+    const onCurriculumSync = () => {
+      resetSuiteCache();
+      try { window.TotoroUI?.renderInlineTaskHub?.(); } catch (_) {}
+    };
+    window.addEventListener('app:curriculum-ready', onCurriculumSync);
+    window.addEventListener('app:policy-applied', onCurriculumSync);
   }
 
   // Run if app.js already restored auth session before tasks.js executed

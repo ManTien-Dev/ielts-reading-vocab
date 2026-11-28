@@ -163,14 +163,16 @@
     'patiance', 'paitence', 'wich', 'becuase', 'freind', 'sholder', 'whispred', 'mistaks'
   ]);
   let cachedLex = null;
+  let cachedLexStoryId = null;
   function getLexicon() {
-    if (cachedLex) return cachedLex;
+    const st = getStory();
+    const sid = st?.id || '';
+    if (cachedLex && cachedLexStoryId === sid) return cachedLex;
     const set = new Set();
     const add = (str) => {
       const m = String(str || '').match(/[A-Za-z'-]{3,}/g);
       if (m) m.forEach((w) => set.add(w.toLowerCase()));
     };
-    const st = getStory();
     if (st) {
       (st.storyMindmap || []).forEach((n) => { add(n.textEn); (n.keywords || []).forEach(add); });
       (st.storySections || []).forEach((s) => add(s.textEn));
@@ -184,6 +186,7 @@
     if (Array.isArray(window.RAW_VOCAB_DATA)) window.RAW_VOCAB_DATA.forEach((it) => { add(it.word); add(it.example); });
     add('grandfather grandmother retired maths math teacher seventies silver hair warm smile admire respect role model patience empathy nature gently voice parents worked morning till night afternoon dinner homework neighbour neighbor next door close friends grade mother fell ill hospital month missed school look after housework behind low marks insecure lost motivation dropping out found out called over listened calmly worries invited weekend broke hard problems simple steps explained clearly review notebook finished exercise quickly struggling basic calculation frustrated snapped hurry gently hand shoulder whispered take time stuck afraid making mistakes rushing panic confused heard felt guilty apologised apologized right away worked through guidance year caught regained confidence better kids brought notebooks help looking back hope follow example staying calm listening carefully skill experience teamwork collaborate secondary vividly owning judging');
     cachedLex = set;
+    cachedLexStoryId = sid;
     return set;
   }
   function editDist(a, b) {

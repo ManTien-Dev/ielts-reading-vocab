@@ -249,6 +249,7 @@
       try {
         document.querySelectorAll('script[data-proprietary-curriculum="1"]').forEach((el) => el.remove());
       } catch (_) {}
+      try { window.TasksModule?.resetSuiteCache?.(); } catch (_) {}
     }
 
     _injectScript(url) {
