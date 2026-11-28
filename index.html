@@ -42,7 +42,7 @@
   <link rel="stylesheet" href="css/style.css?v=20261127b">
   <link rel="stylesheet" href="css/motion.css?v=20261127b">
   <link rel="stylesheet" href="css/enhancements.css?v=20261128e">
-  <link rel="stylesheet" href="css/totoro_theme.css?v=20261128g">
+  <link rel="stylesheet" href="css/totoro_theme.css?v=20261128j">
   <link rel="stylesheet" href="css/writing.css?v=20261128g">
   <link rel="stylesheet" href="css/speaking.css?v=20261128j">
   <link rel="stylesheet" href="css/dictation.css?v=20261127e">
@@ -2345,18 +2345,26 @@
     </div>
   </div>
 
-  <script src="data/accounts.js?v=20261128k"></script>
-  <script src="data/vocab_data.js?v=20261119t"></script>
-  <script src="data/listening_vocab_data.js?v=20261124a"></script>
-  <script src="data/listening_paraphrase_bank.js?v=20261124y"></script>
-  <script src="data/tasks_data.js?v=20261119t"></script>
-  <script src="data/listening_tasks_data.js?v=20261124g"></script>
+  <style id="access-policy-rbac-css">
+    /* Hide proprietary Flow/Story Flashcard & Task tabs for restricted partner classes */
+    html[data-access-tier="partner_restricted"][data-skill="writing"] [data-tot-view="flashcard"],
+    html[data-access-tier="partner_restricted"][data-skill="writing"] [data-tot-view="task"],
+    html[data-access-tier="partner_restricted"][data-skill="speaking"] [data-tot-view="flashcard"],
+    html[data-access-tier="partner_restricted"][data-skill="speaking"] [data-tot-view="task"] {
+      display: none !important;
+    }
+  </style>
+  <script src="data/accounts.js?v=20261128n"></script>
+  <script src="data/demo_vocab_data.js?v=20261128n"></script>
+  <script src="data/writing_task2_public.js?v=20261128n"></script>
   <script src="data/ipa_dict.js?v=20261119t"></script>
   <script src="js/motion.js?v=20261121c"></script>
   <script src="js/core/EventBus.js?v=20261119t"></script>
   <script src="js/core/LazyDataLoader.js?v=20261127b"></script>
+  <script src="js/core/AccessPolicy.js?v=20261128n"></script>
   <script src="js/core/AudioEngine.js?v=20261125b"></script>
   <script src="js/core/MyVocabStore.js?v=20261127f"></script>
+  <script src="js/core/PersonalTaskEngine.js?v=20261128n"></script>
   <script src="js/core/AntiCheatGuard.js?v=20261124m"></script>
   <script src="js/core/BaseSkillMode.js?v=20261119t"></script>
   <script src="js/skills/reading/ReadingMode.js?v=20261119t"></script>
@@ -2365,7 +2373,7 @@
   <script src="js/recognition_test.js?v=20261127e"></script>
   <script src="js/speech_stt.js?v=20261123e"></script>
   <script src="js/voice_lab.js?v=20261123c"></script>
-  <script src="js/app.js?v=20261128k"></script>
+  <script src="js/app.js?v=20261128n"></script>
   <script src="data/reading_practice_data.js?v=20261124j"></script>
   <script src="data/reading_photo_map.js?v=20261125d"></script>
   <script src="js/live_room.js?v=20261127a"></script>
@@ -2379,14 +2387,12 @@
   <script src="js/dictation_studio.js?v=20261127f"></script>
   <script src="js/ielts_grader.js?v=20261128c"></script>
   <script src="data/writing_task1_data.js?v=20261128g"></script>
-  <script src="data/writing_data.js?v=20261127g"></script>
-  <script src="js/writing_studio.js?v=20261128h"></script>
-  <script src="data/speaking_data.js?v=20261126b"></script>
+  <script src="js/writing_studio.js?v=20261128n"></script>
   <script src="data/speaking_part13_data.js?v=20261128g"></script>
   <script src="js/speaking_vad_engine.js?v=20261128j"></script>
   <script src="js/speaking_examiner_cinema.js?v=20261128j"></script>
-  <script src="js/speaking_studio.js?v=20261128j"></script>
-  <script src="js/teacher_studio.js?v=20261128k"></script>
-  <script src="js/totoro_ui.js?v=20261128k"></script>
+  <script src="js/speaking_studio.js?v=20261128n"></script>
+  <script src="js/teacher_studio.js?v=20261128n"></script>
+  <script src="js/totoro_ui.js?v=20261128n"></script>
 </body>
 </html>

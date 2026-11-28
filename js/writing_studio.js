@@ -937,6 +937,18 @@
     ensureOverlays();
     const root = document.getElementById('writing-flashcard-root');
     if (!root) return;
+    if (window.AccessPolicy && !window.AccessPolicy.can('writing.flow_mindmap')) {
+      root.innerHTML = `
+        <div class="tot-section-shell" style="text-align:center;padding:34px 22px;display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <h3 style="margin:0;font-size:17px;color:var(--ink);">IELTS Writing Practice · Đề Thi Thật</h3>
+          <p style="margin:0;font-size:13.5px;color:var(--ink-2);max-width:520px;line-height:1.55;">
+            Lớp của bạn sử dụng giáo án độc lập. Hãy luyện trực tiếp với kho <strong>28 đề Task 1 Cambridge 14–20</strong>, <strong>57 đề Task 2</strong> &amp; <strong>16 Full Test 60 phút</strong> kèm chấm AI IELTS 4 tiêu chí!
+          </p>
+          <button type="button" class="btn btn-primary" style="padding:9px 18px;" onclick="window.TotoroUI?.enterSkillMode?.('Writing', 'practice')">Mở Luyện Đề Writing →</button>
+        </div>
+      `;
+      return;
+    }
     const mod = getActiveMod();
     if (!mod) {
       root.innerHTML = '<div style="padding:24px;text-align:center;color:var(--ink-2);">Chưa có dữ liệu Writing.</div>';
@@ -2154,6 +2166,23 @@
   /* ================= TASK HUB & ENTRY GATE (SPEED QUIZ + 100% MASTERY) ================= */
   function renderTaskHub(tabsEl, gridEl) {
     ensureOverlays();
+    if (window.AccessPolicy && !window.AccessPolicy.can('writing.flow_mindmap')) {
+      const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
+      if (titleEl) titleEl.textContent = 'IELTS Writing · Luyện Đề Thi Thật';
+      const subEl = document.getElementById('inline-task-sub');
+      if (subEl) subEl.textContent = 'Lớp của bạn không dùng bộ Flow Ideas riêng — mở ngay kho đề Writing Task 1, Task 2 & Full Test 60p.';
+      if (tabsEl) tabsEl.innerHTML = '';
+      if (gridEl) {
+        gridEl.innerHTML = `
+          <div style="grid-column:1 / -1;padding:28px 20px;border-radius:16px;border:1.5px dashed var(--border-strong);background:var(--surface-panel);text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
+            <strong style="font-size:15.5px;color:var(--ink);">Kho Đề Writing Thi Thật Sẵn Sàng</strong>
+            <div style="font-size:13px;color:var(--ink-2);max-width:500px;line-height:1.55;">28 đề Academic Task 1 Cambridge 14–20 (hình gốc) + 57 đề Task 2 + 16 Full Test 60 phút chuẩn CD-IELTS.</div>
+            <button type="button" class="btn btn-primary" style="padding:9px 18px;" onclick="window.TotoroUI?.enterSkillMode?.('Writing', 'practice')">Vào Kho Đề Writing →</button>
+          </div>
+        `;
+      }
+      return;
+    }
     const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
     if (titleEl) titleEl.textContent = 'Task bài tập · Writing';
 

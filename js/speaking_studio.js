@@ -633,8 +633,21 @@
   function renderFlashcardWorkspace() {
     ensureOverlays();
     const root = document.getElementById('speaking-flashcard-root');
+    if (!root) return;
+    if (window.AccessPolicy && !window.AccessPolicy.can('speaking.story_mindmap')) {
+      root.innerHTML = `
+        <div class="tot-section-shell" style="text-align:center;padding:34px 22px;display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <h3 style="margin:0;font-size:17px;color:var(--ink);">IELTS Speaking Practice · Cambridge 15–20</h3>
+          <p style="margin:0;font-size:13.5px;color:var(--ink-2);max-width:520px;line-height:1.55;">
+            Lớp của bạn sử dụng giáo án độc lập. Hãy luyện trực tiếp với kho <strong>24 đề Part 1 (96 câu)</strong> &amp; <strong>24 đề Part 3 (144 câu)</strong> thi thật Cambridge 15–20 kèm Giám khảo UK &amp; chấm AI 4 tiêu chí!
+          </p>
+          <button type="button" class="btn btn-primary" style="padding:9px 18px;" onclick="window.TotoroUI?.enterSkillMode?.('Speaking', 'practice')">Mở Luyện Đề Speaking →</button>
+        </div>
+      `;
+      return;
+    }
     const story = getStory();
-    if (!root || !story) return;
+    if (!story) return;
 
     const cards = getVisibleCards();
     if (state.cardIdx >= cards.length) state.cardIdx = 0;
@@ -1627,6 +1640,7 @@
   /* ================= FULLSCREEN INTERACTIVE MINDMAP BẺ LÁI (100% SOURCE HTML PARITY) ================= */
   function openMindmapModal(modeOrGroupId, e) {
     if (e) e.stopPropagation();
+    if (window.AccessPolicy && !window.AccessPolicy.can('speaking.story_mindmap')) return;
     ensureOverlays();
     const story = getStory();
     const groups = story?.mindmapGroups || [];
@@ -1922,6 +1936,23 @@
 
   /* ================= TAB 3: TASK HUB (1 STORY = 1 CLEAN EDITORIAL TASK CARD) ================= */
   function renderTaskHub(tabsEl, gridEl) {
+    if (window.AccessPolicy && !window.AccessPolicy.can('speaking.story_mindmap')) {
+      const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
+      const subEl = document.getElementById('inline-task-sub');
+      if (titleEl) titleEl.textContent = 'IELTS Speaking · Luyện Đề Thi Thật';
+      if (subEl) subEl.textContent = 'Lớp của bạn sử dụng giáo án độc lập — luyện ngay 24 đề Part 1 & 24 đề Part 3 thi thật Cambridge 15–20.';
+      if (tabsEl) tabsEl.innerHTML = '';
+      if (gridEl) {
+        gridEl.innerHTML = `
+          <div style="grid-column:1 / -1;padding:28px 20px;border-radius:16px;border:1.5px dashed var(--border-strong);background:var(--surface-panel);text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
+            <strong style="font-size:15.5px;color:var(--ink);">Phòng Phỏng Vấn Speaking Part 1 &amp; Part 3</strong>
+            <div style="font-size:13px;color:var(--ink-2);max-width:500px;line-height:1.55;">48 bộ đề thi thật Cambridge IELTS 15–20 (240 câu hỏi nguyên văn) với Giám khảo đọc UK, thu âm AI &amp; chấm 4 tiêu chí.</div>
+            <button type="button" class="btn btn-primary" style="padding:9px 18px;" onclick="window.TotoroUI?.enterSkillMode?.('Speaking', 'practice')">Vào Luyện Speaking →</button>
+          </div>
+        `;
+      }
+      return;
+    }
     const story = getStory();
     if (!story || !gridEl) return;
     const titleEl = document.querySelector('#screen-tasks-hub .tot-shell-title');
@@ -3317,13 +3348,18 @@
   function renderPracticeHub() {
     ensureOverlays();
     const root = document.getElementById('sp-app-root');
+    if (!root) return;
     const story = getStory();
-    if (!root || !story) return;
+    const hasStoryAccess = Boolean(story && (!window.AccessPolicy || window.AccessPolicy.can('speaking.story_mindmap')));
 
     const p1List = getPart1Topics();
-    const p2List = story.cueCards || [];
+    const p2List = hasStoryAccess ? (story.cueCards || []) : [];
     const p3List = getPart3Topics();
-    const activePart = [1, 2, 3].includes(Number(state.pracPart)) ? Number(state.pracPart) : 1;
+    let activePart = [1, 2, 3].includes(Number(state.pracPart)) ? Number(state.pracPart) : 1;
+    if (!hasStoryAccess && activePart === 2) {
+      activePart = 1;
+      state.pracPart = 1;
+    }
 
     const hist = getPracHistory();
     const lastById = {};
@@ -3343,10 +3379,12 @@
           <span class="sp-part-seg-top"><strong>Part 1 · Phỏng vấn</strong><span class="sp-part-seg-cnt tabular">${p1DoneCnt}/${p1List.length}</span></span>
           <span class="sp-part-seg-sub">4 câu hỏi quen thuộc · 20–35s/câu · Khung A.R.E.</span>
         </button>
+        ${hasStoryAccess ? `
         <button type="button" role="tab" aria-selected="${activePart === 2 ? 'true' : 'false'}" class="sp-part-seg-btn ${activePart === 2 ? 'active' : ''}" onclick="SpeakingStudio.setPracticePart(2)">
           <span class="sp-part-seg-top"><strong>Part 2 · Cue Card</strong><span class="sp-part-seg-cnt tabular">${p2DoneCnt}/${p2List.length}</span></span>
           <span class="sp-part-seg-sub">1 phút chuẩn bị · 2 phút nói · Story 01 Bẻ lái</span>
         </button>
+        ` : ''}
         <button type="button" role="tab" aria-selected="${activePart === 3 ? 'true' : 'false'}" class="sp-part-seg-btn ${activePart === 3 ? 'active' : ''}" onclick="SpeakingStudio.setPracticePart(3)">
           <span class="sp-part-seg-top"><strong>Part 3 · Thảo luận sâu</strong><span class="sp-part-seg-cnt tabular">${p3DoneCnt}/${p3List.length}</span></span>
           <span class="sp-part-seg-sub">6 câu đề thật Cambridge · 40–65s/câu · Khung P.E.E.C.</span>
@@ -3457,7 +3495,7 @@
                 <span class="ws-type-pill ${pillClsMap[tp.category] || 'is-cause'}">${esc(tp.catLabel || (isP1 ? 'Part 1' : 'Part 3'))}</span>
                 ${prev
                   ? `<span class="ws-pill ok tabular" style="margin-left:auto;">${prev.band ? `Band ${Number(prev.band).toFixed(1)} · ` : ''}${fmtMmSs(prev.durationSec)}</span>`
-                  : `<span class="ws-prac-sub-tag" style="margin-left:auto;">${tp.linkedStory ? '★ Nối Story 01' : `${qs.length} câu · ${esc(targetLbl)}`}</span>`}
+                  : `<span class="ws-prac-sub-tag" style="margin-left:auto;">${(tp.linkedStory && hasStoryAccess) ? '★ Nối Story 01' : `${qs.length} câu · ${esc(targetLbl)}`}</span>`}
               </div>
               <div class="sp-p13-card-title-grp">
                 <p class="ws-prac-prompt" style="margin:0;">${esc(tp.title)}</p>

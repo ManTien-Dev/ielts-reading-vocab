@@ -359,6 +359,7 @@
      1. UNIFIED 4-SKILL TASK CATALOG
      ========================================================= */
   function getReadingCatalog() {
+    if (window.AccessPolicy?.isRestricted?.()) return [];
     const raw = window.TasksModule?.getAllCatalogTasks?.() || [];
     return raw.map((t) => ({
       id: t.id,
@@ -374,6 +375,7 @@
   }
 
   function getListeningCatalog() {
+    if (window.AccessPolicy?.isRestricted?.()) return [];
     const raw = window.APP_LISTENING_TASKS?.tasks || [];
     return raw.map((t, idx) => {
       const shortTopic = window.ListeningTasksModule?.shortTopicTitle?.(t.theme) || t.theme || t.label;
@@ -394,6 +396,7 @@
   }
 
   function getWritingCatalog() {
+    if (window.AccessPolicy?.isRestricted?.()) return [];
     const mods = window.WRITING_STUDIO_DATA?.MODULES || [];
     const subMap = {};
     (window.WRITING_STUDIO_DATA?.SUBTOPICS || []).forEach((st) => { subMap[st.key] = st.shortTitle || st.title; });
@@ -417,6 +420,7 @@
   }
 
   function getSpeakingCatalog() {
+    if (window.AccessPolicy?.isRestricted?.()) return [];
     const raw = window.SPEAKING_TASKS_DATA?.tasks || [];
     if (raw.length) {
       return raw.map((t, idx) => ({
@@ -700,7 +704,8 @@
   }
 
   function getSuitesForSkill(skillKey) {
-    const weeklyOnly = state.composerTemplate === 'weekly';
+    const restricted = Boolean(window.AccessPolicy?.isRestricted?.());
+    const weeklyOnly = state.composerTemplate === 'weekly' || restricted;
     if (skillKey === 'reading') {
       return weeklyOnly
         ? READING_SUITES.filter((s) => s.key.startsWith('rp_'))
@@ -739,11 +744,10 @@
     }
     if (skillKey === 'speaking') {
       const p13 = window.SPEAKING_PART13_DATA || {};
-      const spTotal = (p13.PART1_TOPICS || []).length
-        + (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []).length
-        + (p13.PART3_TOPICS || []).length;
+      const p2Count = restricted ? 0 : (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []).length;
+      const spTotal = (p13.PART1_TOPICS || []).length + p2Count + (p13.PART3_TOPICS || []).length;
       if (weeklyOnly) {
-        return [{ key: 'sp_practice', label: `Đề Speaking P1·P2·P3 (${spTotal})` }];
+        return [{ key: 'sp_practice', label: restricted ? `Đề Speaking P1·P3 (${spTotal})` : `Đề Speaking P1·P2·P3 (${spTotal})` }];
       }
       return [
         { key: 'all', label: `Story Task (${getSpeakingCatalog().length})` },
@@ -3904,8 +3908,8 @@
         });
       }
       if (!rawList.length) return false;
-      // Only handle IDs that resolve to a real catalog or practice item
-      const validList = rawList.filter((id) => Boolean(getTaskById(id)));
+      // Only handle IDs that are authorized by AccessPolicy AND resolve to a real item
+      const validList = rawList.filter((id) => (window.AccessPolicy?.isTaskIdAuthorized?.(id) !== false) && Boolean(getTaskById(id)));
       if (!validList.length) return false;
 
       const dedupKey = `${curUser.id}|${window.location.search || ''}`;

@@ -5,8 +5,17 @@
 (() => {
   'use strict';
 
-  const APP_DATA = window.APP_DATA || {};
-  const IPA_DICT = window.IPA_DICT || {};
+  // Live Proxy over window.APP_DATA so AccessPolicy dynamic load & memory purge take effect immediately
+  const APP_DATA = new Proxy({}, {
+    get: (_t, prop) => (window.APP_DATA || {})[prop],
+    has: (_t, prop) => prop in (window.APP_DATA || {}),
+    ownKeys: () => Reflect.ownKeys(window.APP_DATA || {}),
+    getOwnPropertyDescriptor: (_t, prop) => Object.getOwnPropertyDescriptor(window.APP_DATA || {}, prop),
+  });
+  const IPA_DICT = new Proxy({}, {
+    get: (_t, prop) => (window.IPA_DICT || {})[prop],
+    has: (_t, prop) => prop in (window.IPA_DICT || {}),
+  });
   const AUTH_SESSION_KEY = 'ielts_reading_auth_session_v1';
   const AUTH_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
   const THEME_STORAGE_KEY = 'ielts_reading_theme_v1';
@@ -280,7 +289,21 @@
     });
   }
 
+  const DEMO_SCOPE = {
+    key: 'demo_starter',
+    name: 'Demo Từ Vựng IELTS (10 từ mẫu)',
+    isDemo: true,
+    getList: () => window.DEMO_VOCAB_DATA?.WORDS || [],
+  };
+
+  function isProprietaryVocabAllowed() {
+    return window.AccessPolicy ? window.AccessPolicy.can('vocab.proprietary') : true;
+  }
+
   function getAllScopes() {
+    if (!isProprietaryVocabAllowed()) {
+      return [DEMO_SCOPE];
+    }
     return [
       ...SCOPES,
       ...LISTENING_SCOPES,
@@ -2636,6 +2659,31 @@
   function populateScopeSelect() {
     const sel = document.getElementById('study-scope-select');
     if (!sel) return;
+    // Partner/Restricted class: remove ALL proprietary vocab lists -> keep ONLY MY LIST + 1 Demo starter list
+    if (!isProprietaryVocabAllowed()) {
+      let rHtml = '';
+      const mvDecks = (window.MyVocabStore && typeof window.MyVocabStore.getDecks === 'function')
+        ? (window.MyVocabStore.getDecks() || [])
+        : [];
+      if (mvDecks.length > 0) {
+        rHtml += `<optgroup label="MY LIST (Tự thêm từ Reading / Listening)">${mvDecks.map((d) => {
+          const sk = window.MyVocabStore.getScopeKey(d.id);
+          const cnt = Array.isArray(d.words) ? d.words.length : 0;
+          return `<option value="${escapeHtml(sk)}">${escapeHtml(d.name)} (${cnt} từ)</option>`;
+        }).join('')}</optgroup>`;
+      }
+      rHtml += `<optgroup label="Bộ Demo Trải Nghiệm"><option value="${DEMO_SCOPE.key}">${escapeHtml(DEMO_SCOPE.name)}</option></optgroup>`;
+      sel.innerHTML = rHtml;
+      if (Array.from(sel.options).some((o) => o.value === currentScopeKey)) {
+        sel.value = currentScopeKey;
+      } else {
+        const firstNonEmpty = mvDecks.find((d) => Array.isArray(d.words) && d.words.length > 0);
+        currentScopeKey = firstNonEmpty ? window.MyVocabStore.getScopeKey(firstNonEmpty.id) : DEMO_SCOPE.key;
+        sel.value = currentScopeKey;
+      }
+      window.TotoroUI?.syncScopeDropdown?.();
+      return;
+    }
     if (isListeningSkillActive() && window.APP_LISTENING_VOCAB) {
       let lHtml = LISTENING_SCOPES.map(it =>
         `<option value="${escapeHtml(it.key)}">${escapeHtml(it.name)}</option>`
@@ -6043,7 +6091,19 @@
     if (actionsEl) actionsEl.style.display = teacher ? 'flex' : 'none';
     const tPreviewBtn = document.getElementById('btn-teacher-preview');
     const tPreviewTxt = document.getElementById('btn-teacher-preview-text');
-    if (tPreviewBtn) tPreviewBtn.style.display = teacher ? 'inline-flex' : 'none';
+    document.body.classList.toggle('is-teacher-preview', Boolean(teacher && teacherPreviewStudy));
+    if (tPreviewBtn) {
+      tPreviewBtn.style.display = teacher ? 'inline-flex' : 'none';
+      tPreviewBtn.classList.toggle('is-preview-icon', Boolean(teacher && teacherPreviewStudy));
+      tPreviewBtn.title = teacherPreviewStudy ? 'Quay lại bảng Quản lý lớp học' : 'Xem trang học';
+      tPreviewBtn.setAttribute('aria-label', teacherPreviewStudy ? 'Quay lại Quản lý' : 'Xem trang học');
+      const ico = tPreviewBtn.querySelector('.hdr-btn-icon');
+      if (ico) {
+        ico.innerHTML = teacherPreviewStudy
+          ? '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>'
+          : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+      }
+    }
     if (tPreviewTxt) tPreviewTxt.textContent = teacherPreviewStudy ? 'Quay lại Quản lý' : 'Xem trang học';
     const tRefreshBtn = document.getElementById('btn-teacher-refresh');
     if (tRefreshBtn) tRefreshBtn.style.display = (teacher && !teacherPreviewStudy) ? 'inline-flex' : 'none';
@@ -6342,11 +6402,18 @@
     displayedStreak = null;
   }
 
-  function enterAppForUser(account, options = {}) {
+  async function enterAppForUser(account, options = {}) {
     resetInMemoryStudyState();
+    wordLookupCache = null;
     currentUser = account;
     initialCloudPullUid = '';
     initialCloudPullSettled = !getSyncUrl();
+
+    // Enforce RBAC & Tenant Curriculum Isolation BEFORE rendering any UI or reading curriculum globals
+    if (window.AccessPolicy?.enforceForUser) {
+      await window.AccessPolicy.enforceForUser(account);
+      wordLookupCache = null;
+    }
 
     const gateEl = document.getElementById('auth-gate');
     const shellEl = document.getElementById('app-shell');
@@ -6459,7 +6526,9 @@
     initialCloudPullSettled = false;
     initialCloudPullUid = '';
     resetInMemoryStudyState();
+    wordLookupCache = null;
     currentUser = null;
+    window.AccessPolicy?.purgeProprietaryMemory?.();
     closeRecallModal(null, true);
     closeCheatWarningModal();
     hideMultiTabBlockOverlay();

@@ -953,12 +953,29 @@
     const speakPct = Math.min(100, Math.round(((Number(spStats.cardPct) || 0) * 0.5) + ((Number(spStats.taskPct) || 0) * 0.5)));
     const overallPct = Math.min(100, Math.round((snap.masteryPct + readTaskPct + readPracPct + listenPct + writePct + speakPct) / 6));
 
+    const isRestricted = Boolean(window.AccessPolicy?.isRestricted?.());
+    const pTaskStats = window.PersonalTaskEngine?.getStats?.() || { total: 1, done: 0 };
+    const myVocabCnt = window.MyVocabStore?.getTotalWordCount?.() || 0;
+    const myTaskPct = Math.round((pTaskStats.done / Math.max(1, pTaskStats.total)) * 100);
+
     setTxt('home-monitor-overall-pct', `${overallPct}%`);
-    setTxt('home-monitor-summary', `${snap.mastered.toLocaleString('vi-VN')} từ Reading · ${listenVocabDone.toLocaleString('vi-VN')} từ Listening · ${wsStats.tasksDone}/${wsStats.tasksTotal} Writing · ${spStats.tasksDone}/${spStats.tasksTotal} Speaking`);
+    setTxt(
+      'home-monitor-summary',
+      isRestricted
+        ? `${myVocabCnt.toLocaleString('vi-VN')} từ MY LIST · ${pTaskStats.done}/${pTaskStats.total} Task tự tạo · ${rpStats.completedUnique} đề Reading · ${wsStats.practiceDone || 0} đề Writing`
+        : `${snap.mastered.toLocaleString('vi-VN')} từ Reading · ${listenVocabDone.toLocaleString('vi-VN')} từ Listening · ${wsStats.tasksDone}/${wsStats.tasksTotal} Writing · ${spStats.tasksDone}/${spStats.tasksTotal} Speaking`
+    );
 
     const barsEl = document.getElementById('home-monitor-bars');
     if (barsEl) {
-      const meters = [
+      const meters = isRestricted ? [
+        { label: 'MY LIST + Demo Vocab', val: `${myVocabCnt.toLocaleString('vi-VN')} từ cá nhân · 1 bộ Demo`, pct: Math.min(100, myVocabCnt * 2), cls: 'is-sage', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'flashcard')" },
+        { label: 'Task Tự Tạo (Từ MY LIST)', val: `${pTaskStats.done} / ${pTaskStats.total} Task`, pct: myTaskPct, cls: 'is-warm', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.3 2.3 4.8-5"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'task')" },
+        { label: 'Luyện đề Reading', val: rpStats.avgBand ? `${rpStats.completedUnique} bài · Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} bài đã nộp`, pct: readPracPct, cls: 'is-emerald', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'practice')" },
+        { label: 'Luyện đề Listening & Dictation', val: `133 Full Đề nghe · Dictation`, pct: listenPct, cls: 'is-indigo', tone: 'is-listening', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>', action: "window.TotoroUI?.enterSkillMode('Listening', 'practice')" },
+        { label: 'Luyện đề Writing (T1·T2·Full)', val: `${wsStats.practiceDone || 0} / ${(window.WRITING_TASK1_DATA?.TASK1_PROMPTS?.length || 28) + (wsStats.practiceTotal || 57)} đề`, pct: writePct, cls: 'is-sage', tone: 'is-writing', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', action: "window.TotoroUI?.enterSkillMode('Writing', 'practice')" },
+        { label: 'Luyện đề Speaking (Part 1 & 3)', val: `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24) + (window.SPEAKING_PART13_DATA?.PART3_TOPICS?.length || 24)} bộ Cam 15–20`, pct: speakPct, cls: 'is-warm', tone: 'is-speaking', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>', action: "window.TotoroUI?.enterSkillMode('Speaking', 'practice')" },
+      ] : [
         { label: 'Từ vựng Reading', val: `${snap.mastered.toLocaleString('vi-VN')} / ${snap.totalFamilies.toLocaleString('vi-VN')}`, pct: snap.masteryPct, cls: 'is-sage', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'flashcard')" },
         { label: 'Reading Tasks', val: `${snap.completedTasks.length} / 110 bài`, pct: readTaskPct, cls: 'is-warm', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.3 2.3 4.8-5"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'task')" },
         { label: 'Luyện đề Reading', val: rpStats.avgBand ? `${rpStats.completedUnique} bài · Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} bài đã nộp`, pct: readPracPct, cls: 'is-emerald', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'practice')" },
@@ -987,13 +1004,13 @@
           {
             key: 'reading',
             name: 'Reading',
-            sub: '4.489 từ · 110 Tasks',
-            metricA: `${snap.completedTasks.length}/110`,
-            lblA: 'Tasks',
+            sub: isRestricted ? 'MY LIST · Task tự tạo' : '4.489 từ · 110 Tasks',
+            metricA: isRestricted ? `${pTaskStats.done}/${pTaskStats.total}` : `${snap.completedTasks.length}/110`,
+            lblA: isRestricted ? 'Task tự tạo' : 'Tasks',
             metricB: rpStats.avgBand ? `Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} đề`,
             lblB: 'Practice',
-            ringTxt: rpStats.avgBand ? rpStats.avgBand.toFixed(1) : `${readCombinedPct}%`,
-            pct: readRingPct,
+            ringTxt: rpStats.avgBand ? rpStats.avgBand.toFixed(1) : `${isRestricted ? myTaskPct : readCombinedPct}%`,
+            pct: isRestricted ? myTaskPct : readRingPct,
             stroke: '#2F6E44',
             ico: `<svg viewBox="0 0 36 36" fill="none">
               <path d="M12.2 14.2L10.6 7.4L15 11.1C16.8 10.5 19.2 10.5 21 11.1L25.4 7.4L23.8 14.2C25.5 15.6 26.2 17.6 26.2 19.4H9.8C9.8 17.6 10.5 15.6 12.2 14.2Z" fill="#63665F" stroke="#363B35" stroke-width="1.2" stroke-linejoin="round"/>
@@ -1012,9 +1029,9 @@
           {
             key: 'listening',
             name: 'Listening',
-            sub: '139 Tasks · Dictation',
-            metricA: `${listenTasksDone}/${listenTasksTotal}`,
-            lblA: 'Tasks',
+            sub: isRestricted ? 'Dictation · 133 Đề nghe' : '139 Tasks · Dictation',
+            metricA: isRestricted ? `${pTaskStats.done}/${pTaskStats.total}` : `${listenTasksDone}/${listenTasksTotal}`,
+            lblA: isRestricted ? 'Task tự tạo' : 'Tasks',
             metricB: '133 Full',
             lblB: 'Đề nghe',
             ringTxt: `${listenPct}%`,
@@ -1037,10 +1054,10 @@
           {
             key: 'writing',
             name: 'Writing',
-            sub: '41 Flow · Task 1 & 2',
-            metricA: `${wsStats.tasksDone}/${wsStats.tasksTotal}`,
-            lblA: 'Flow',
-            metricB: `${wsStats.practiceDone || 0}/${(window.WRITING_TASK1_DATA?.TASK1_PROMPTS?.length || 12) + (wsStats.practiceTotal || 57)}`,
+            sub: isRestricted ? '28 Task 1 Cam · 57 Task 2' : '41 Flow · Task 1 & 2',
+            metricA: isRestricted ? `${window.WRITING_TASK1_DATA?.FULL_TESTS?.length || 16} Full` : `${wsStats.tasksDone}/${wsStats.tasksTotal}`,
+            lblA: isRestricted ? 'Đề 60p' : 'Flow',
+            metricB: `${wsStats.practiceDone || 0}/${(window.WRITING_TASK1_DATA?.TASK1_PROMPTS?.length || 28) + (wsStats.practiceTotal || 57)}`,
             lblB: 'Đề viết',
             ringTxt: `${writePct}%`,
             pct: writePct,
@@ -1056,17 +1073,19 @@
                 <circle cx="24" cy="25.5" r="0.8" fill="#5A340E"/>
               </g>
             </svg>`,
-            action: "window.TotoroUI?.enterSkillMode('Writing', 'home')",
+            action: isRestricted ? "window.TotoroUI?.enterSkillMode('Writing', 'practice')" : "window.TotoroUI?.enterSkillMode('Writing', 'home')",
             pracAction: "window.TotoroUI?.enterSkillMode('Writing', 'practice')"
           },
           {
             key: 'speaking',
             name: 'Speaking',
-            sub: 'Part 1–3 · Story 01',
-            metricA: `${spStats.tasksDone}/${spStats.tasksTotal}`,
-            lblA: 'Bước',
-            metricB: `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24) + (window.SPEAKING_STORY01_DATA?.stories?.[0]?.cueCards?.length || window.SPEAKING_STUDIO_DATA?.STORIES?.[0]?.cueCards?.length || 14) + (window.SPEAKING_PART13_DATA?.PART3_TOPICS?.length || 24)} Đề`,
-            lblB: 'Part 1–3',
+            sub: isRestricted ? 'Part 1 & 3 · Cam 15–20' : 'Part 1–3 · Story 01',
+            metricA: isRestricted ? `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24)} P1` : `${spStats.tasksDone}/${spStats.tasksTotal}`,
+            lblA: isRestricted ? 'Cam 15–20' : 'Bước',
+            metricB: isRestricted
+              ? `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24) + (window.SPEAKING_PART13_DATA?.PART3_TOPICS?.length || 24)} Đề`
+              : `${(window.SPEAKING_PART13_DATA?.PART1_TOPICS?.length || 24) + (window.SPEAKING_STORY01_DATA?.stories?.[0]?.cueCards?.length || window.SPEAKING_STUDIO_DATA?.STORIES?.[0]?.cueCards?.length || 14) + (window.SPEAKING_PART13_DATA?.PART3_TOPICS?.length || 24)} Đề`,
+            lblB: isRestricted ? 'Part 1 & 3' : 'Part 1–3',
             ringTxt: `${speakPct}%`,
             pct: speakPct,
             stroke: '#4A5B94',
@@ -1078,7 +1097,7 @@
               <path d="M6.8 12.2C5.6 13.6 5.6 16 6.8 17.4M29.2 12.2C30.4 13.6 30.4 16 29.2 17.4" stroke="#6B7EC0" stroke-width="1.7" stroke-linecap="round"/>
               <path d="M23.5 6.8C25.2 4.8 27.6 5.2 28.4 6.8C26.8 8 24.8 8 23.5 6.8Z" fill="#529B63" stroke="#2D6239" stroke-width="0.95" stroke-linejoin="round"/>
             </svg>`,
-            action: "window.TotoroUI?.enterSkillMode('Speaking', 'home')",
+            action: isRestricted ? "window.TotoroUI?.enterSkillMode('Speaking', 'practice')" : "window.TotoroUI?.enterSkillMode('Speaking', 'home')",
             pracAction: "window.TotoroUI?.enterSkillMode('Speaking', 'practice')"
           }
         ];
@@ -2004,6 +2023,34 @@
   function renderSkillHomeStub(scope) {
     const el = document.getElementById('home-scope-skill-stub');
     if (!el) return;
+    const isRestricted = Boolean(window.AccessPolicy?.isRestricted?.());
+    if (isRestricted && (scope === 'writing' || scope === 'speaking')) {
+      const cfg = scope === 'writing'
+        ? {
+            badge: 'IELTS Writing · Đề Thi Thật Cambridge 14–20',
+            name: 'IELTS Writing Practice',
+            desc: 'Trọn bộ 28 đề Academic Task 1 Cambridge 14–20 (biểu đồ gốc), 57 đề Task 2 thi thật & 16 Full Test 60 phút chuẩn CD-IELTS kèm AI chấm 4 tiêu chí.',
+            cta: `<button type="button" class="btn btn-primary" style="padding:9px 18px;" onclick="window.TotoroUI.enterSkillMode('Writing', 'practice')">Vào Luyện Đề Writing →</button>`
+          }
+        : {
+            badge: 'IELTS Speaking · Đề Thi Thật Cambridge 15–20',
+            name: 'IELTS Speaking Practice (Part 1 & Part 3)',
+            desc: 'Trọn bộ 48 bộ đề thi thật Cambridge IELTS 15–20 (96 câu Part 1 + 144 câu Part 3 nguyên văn) với Giám khảo UK, thu âm AI & chấm Band 4 tiêu chí.',
+            cta: `<button type="button" class="btn btn-primary" style="padding:9px 18px;" onclick="window.TotoroUI.enterSkillMode('Speaking', 'practice')">Vào Luyện Đề Speaking →</button>`
+          };
+      el.innerHTML = `
+        <div class="rh-stub-card ink-brackets">
+          <span class="rp-tag">${cfg.badge}</span>
+          <h2 class="rh-title" style="margin-top:10px;">${cfg.name}</h2>
+          <p class="rh-sub" style="max-width:560px;margin:6px auto 18px;">${cfg.desc}</p>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openGlobalHome()">← Về HOME</button>
+            ${cfg.cta}
+          </div>
+        </div>
+      `;
+      return;
+    }
     if (scope === 'listening') {
       renderListeningHomePanel(el);
       return;
@@ -2077,7 +2124,14 @@
     const gridEl = document.getElementById('inline-tasks-grid');
     if (!gridEl) return;
 
-    if (html.getAttribute('data-skill') === 'speaking' && typeof window.SpeakingStudio?.renderTaskHub === 'function') {
+    const curSk = html.getAttribute('data-skill') || 'reading';
+    // Restricted partner classes: Reading & Listening Task tabs auto-generate interactive Tasks from student MY LIST!
+    if (window.AccessPolicy?.isRestricted?.() && (curSk === 'reading' || curSk === 'listening')) {
+      window.PersonalTaskEngine?.renderHub?.(tabsEl, gridEl, curSk === 'listening' ? 'Listening' : 'Reading');
+      return;
+    }
+
+    if (curSk === 'speaking' && typeof window.SpeakingStudio?.renderTaskHub === 'function') {
       gridEl.classList.remove('is-listening-grid', 'is-writing-grid');
       gridEl.classList.add('is-speaking-grid');
       window.SpeakingStudio.renderTaskHub(tabsEl, gridEl);
@@ -2418,15 +2472,28 @@
       }
 
       if (!opts.silent) {
+        const isRes = Boolean(window.AccessPolicy?.isRestricted?.());
         if (next === 'Speaking') {
-          window.__VOCAB_BRIDGE__?.showToast?.('Đã chuyển sang IELTS Speaking — Story 01, 30 Spoken Chunks, Task 4 Bước & 14 Cue Cards!');
+          window.__VOCAB_BRIDGE__?.showToast?.(isRes
+            ? 'Đã chuyển sang IELTS Speaking — 48 bộ đề thi thật Cambridge 15–20 (Part 1 & Part 3)!'
+            : 'Đã chuyển sang IELTS Speaking — Story 01, 30 Spoken Chunks, Task 4 Bước & 14 Cue Cards!');
         } else if (next === 'Writing') {
-          window.__VOCAB_BRIDGE__?.showToast?.('Đã chuyển sang IELTS Writing — 41 Module Flow Ideas, Grammar & 57 đề Task 2!');
+          window.__VOCAB_BRIDGE__?.showToast?.(isRes
+            ? 'Đã chuyển sang IELTS Writing — 28 đề Task 1 Cambridge 14–20, 57 đề Task 2 & 16 Full Test!'
+            : 'Đã chuyển sang IELTS Writing — 41 Module Flow Ideas, Grammar & 57 đề Task 2!');
         } else if (next === 'Listening') {
-          window.__VOCAB_BRIDGE__?.showToast?.('Đã chuyển sang IELTS Listening — 3.864 từ & 131 Task thực chiến!');
+          window.__VOCAB_BRIDGE__?.showToast?.(isRes
+            ? 'Đã chuyển sang IELTS Listening — Kho 133 Full Đề nghe, Dictation & Task tự tạo!'
+            : 'Đã chuyển sang IELTS Listening — 3.864 từ & 131 Task thực chiến!');
         } else {
-          window.__VOCAB_BRIDGE__?.showToast?.('Đã chuyển sang IELTS Reading (Reading Home · Flashcard · Task · Practice)');
+          window.__VOCAB_BRIDGE__?.showToast?.(isRes
+            ? 'Đã chuyển sang IELTS Reading (MY LIST · Task tự tạo · Kho đề Practice)'
+            : 'Đã chuyển sang IELTS Reading (Reading Home · Flashcard · Task · Practice)');
         }
+      }
+      if (window.AccessPolicy?.isRestricted?.() && (next === 'Writing' || next === 'Speaking') && (activeView === 'flashcard' || activeView === 'task')) {
+        switchView('practice', { fromUser: false });
+        return;
       }
       if (activeView === 'flashcard' && next === 'Writing') window.WritingStudio?.renderFlashcardWorkspace?.();
       if (activeView === 'flashcard' && next === 'Speaking') window.SpeakingStudio?.renderFlashcardWorkspace?.();
