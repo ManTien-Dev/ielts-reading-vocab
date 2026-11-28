@@ -4047,7 +4047,79 @@
     else renderPracticeRoom();
   }
 
+  let lobbyMicTestStream = null;
+  let lobbyMicTestCtx = null;
+  let lobbyMicTestRaf = null;
+
+  function stopProLobbyMicTest() {
+    if (lobbyMicTestRaf) { cancelAnimationFrame(lobbyMicTestRaf); lobbyMicTestRaf = null; }
+    if (lobbyMicTestCtx) { try { lobbyMicTestCtx.close(); } catch (_) {} lobbyMicTestCtx = null; }
+    if (lobbyMicTestStream) { try { lobbyMicTestStream.getTracks().forEach((t) => t.stop()); } catch (_) {} lobbyMicTestStream = null; }
+    const fill = document.getElementById('sp-lobby-mic-fill');
+    const lbl = document.getElementById('sp-lobby-mic-txt');
+    const btn = document.getElementById('sp-lobby-mic-btn');
+    if (fill) fill.style.width = '0%';
+    if (lbl) lbl.textContent = 'Bấm "Thử Micro" để kiểm tra độ nhạy trước khi vào phòng thi';
+    if (btn) { btn.textContent = 'Thử Micro'; btn.classList.remove('is-active'); }
+  }
+
+  async function toggleProLobbyMicTest() {
+    if (lobbyMicTestStream) {
+      stopProLobbyMicTest();
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast('Trình duyệt chưa hỗ trợ kiểm tra Micro.');
+      return;
+    }
+    const btn = document.getElementById('sp-lobby-mic-btn');
+    const lbl = document.getElementById('sp-lobby-mic-txt');
+    if (btn) btn.textContent = 'Đang mở...';
+    try {
+      lobbyMicTestStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: true, channelCount: 1 },
+      });
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      lobbyMicTestCtx = new Ctx();
+      if (lobbyMicTestCtx.state === 'suspended') lobbyMicTestCtx.resume().catch(() => {});
+      const src = lobbyMicTestCtx.createMediaStreamSource(lobbyMicTestStream);
+      const analyser = lobbyMicTestCtx.createAnalyser();
+      analyser.fftSize = 256;
+      src.connect(analyser);
+      const buf = new Uint8Array(analyser.fftSize);
+      if (btn) { btn.textContent = 'Dừng thử'; btn.classList.add('is-active'); }
+      if (lbl) lbl.textContent = 'Hãy nói thử: "Hello, my name is..."';
+
+      let peakHold = 0;
+      const tick = () => {
+        if (!lobbyMicTestStream) return;
+        analyser.getByteTimeDomainData(buf);
+        let sq = 0;
+        for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sq += v * v; }
+        const rms = Math.sqrt(sq / buf.length);
+        const pct = Math.min(100, Math.round(rms * 420));
+        peakHold = Math.max(peakHold * 0.96, pct);
+        const fill = document.getElementById('sp-lobby-mic-fill');
+        const txt = document.getElementById('sp-lobby-mic-txt');
+        if (fill) {
+          fill.style.width = `${pct}%`;
+          fill.classList.toggle('is-good', pct >= 18);
+        }
+        if (txt) {
+          if (peakHold >= 24) txt.textContent = 'Micro bắt giọng rất rõ ✓ — Sẵn sàng vào phòng thi!';
+          else if (peakHold >= 8) txt.textContent = 'Tín hiệu hơi nhỏ — hãy nói rõ hơn hoặc đặt mic gần hơn chút';
+        }
+        lobbyMicTestRaf = requestAnimationFrame(tick);
+      };
+      lobbyMicTestRaf = requestAnimationFrame(tick);
+    } catch (_) {
+      stopProLobbyMicTest();
+      toast('Chưa cấp quyền Micro — bấm biểu tượng ổ khóa trên thanh địa chỉ để cho phép Micro.');
+    }
+  }
+
   function cleanupProEngines() {
+    stopProLobbyMicTest();
     window.SpeakingGeminiLive?.closeSession?.();
     window.SpeakingVADEngine?.closeSession?.();
     window.SpeakingExaminerCinema?.destroy?.();
@@ -4340,19 +4412,26 @@
     }
   }
 
-  /* Update Part 1/3 question counter & "Chấm sớm" button IN PLACE without destroying Veo 3.1 videos! */
+  /* Update Part 1/3 question progress dots & "Chấm sớm" button IN PLACE without destroying Veo 3.1 videos! */
   function updateProQuestionChrome(ref) {
     if (!ref || ref.kind !== 'interview') return;
     const total = (ref.turns || []).length || (ref.topic?.questions || []).length || 1;
     const answered = (ref.turns || []).filter((t) => countWords(t.text) > 0).length;
     const badge = document.getElementById('sp-pro-q-badge');
-    if (badge) badge.textContent = `Part ${ref.part} · Câu ${ref.qIdx + 1}/${total}`;
+    if (badge) {
+      const dots = Array.from({ length: total }).map((_, i) => {
+        const done = countWords(ref.turns?.[i]?.text) > 0 && i < ref.qIdx;
+        const cur = i === ref.qIdx;
+        return `<span class="sp-pro-q-dot ${cur ? 'is-active' : ''} ${done ? 'is-done' : ''}" title="Câu ${i + 1}">${done ? '✓' : (i + 1)}</span>`;
+      }).join('');
+      badge.innerHTML = `<span class="sp-pro-q-part">Part ${ref.part}</span><span class="sp-pro-q-dots">${dots}</span>`;
+    }
     const timer = document.getElementById('sp-room-timer');
     if (timer) timer.textContent = `Câu ${ref.qIdx + 1}/${total} · ${fmtMmSs(ref.totalElapsedSec || 0)}`;
     const earlyBtn = document.getElementById('sp-pro-finish-early-btn');
     if (earlyBtn) {
       earlyBtn.style.display = answered >= 1 ? '' : 'none';
-      earlyBtn.textContent = `Chấm sớm (${answered}/${total})`;
+      earlyBtn.textContent = `Chấm bài (${answered}/${total})`;
     }
   }
 
@@ -4716,10 +4795,82 @@
     updateProQuestionChrome(ref);
   }
 
+  /* Refine Gemini Live per-question audio slices via Whisper-large-v3 for 99% word-accurate transcripts & real WPM! */
+  async function refineLiveTurnsWithWhisper(ref, blobsByIdx) {
+    const stt = window.TotoroSpeechSTT;
+    if (!ref || !blobsByIdx || !stt?.transcribeRawBlob) return;
+    const keys = Object.keys(blobsByIdx).filter((k) => Array.isArray(blobsByIdx[k]) && blobsByIdx[k].length > 0);
+    if (!keys.length) return;
+    updateProStatusDom('Đang chuẩn hóa bản ghi giọng nói bằng Whisper v3...', 'processing');
+
+    await Promise.all(keys.map(async (k) => {
+      const idx = Number(k);
+      const blobs = blobsByIdx[k];
+      const merged = blobs.length === 1 ? blobs[0] : new Blob(blobs, { type: blobs[0]?.type || 'audio/webm' });
+      if (!merged || merged.size < 1200) return;
+      try {
+        const res = await stt.transcribeRawBlob(merged, { mode: 'speaking', durationSec: ref.turns?.[idx]?.durationSec || 0 });
+        const cleanTxt = String(res?.text || '').trim();
+        if (ref.kind === 'part2') {
+          if (cleanTxt && countWords(cleanTxt) >= countWords(ref.p2LiveTranscript || '') * 0.6) {
+            ref.p2LiveTranscript = cleanTxt;
+          }
+          ref.p2LiveAudioUrl = res?.audioUrl || ref.p2LiveAudioUrl || '';
+          ref.p2LiveWords = res?.words || [];
+          ref.p2LiveSegs = res?.segments || [];
+          return;
+        }
+        const qObj = ref.topic?.questions?.[idx];
+        const prev = ref.turns?.[idx] || {};
+        const finalTxt = cleanTxt || prev.text || '';
+        const durSec = Math.max(1, Math.round(res?.durationSec || prev.durationSec || 5));
+        const words = countWords(finalTxt);
+        const wpm = durSec > 0 ? Math.round((words / durSec) * 60) : 0;
+        const low = finalTxt.toLowerCase();
+        const usedChunks = (qObj?.chunks || []).filter((ch) => {
+          const c = String(ch || '').toLowerCase().trim();
+          return c.length >= 3 && low.includes(c);
+        });
+        ref.turns[idx] = {
+          qId: qObj?.id || `q${idx + 1}`,
+          q: qObj?.q || '',
+          text: finalTxt,
+          durationSec: durSec,
+          audioUrl: res?.audioUrl || prev.audioUrl || '',
+          acoustic: {
+            hasAudio: Boolean(res?.audioUrl || prev.audioUrl),
+            audioUrl: res?.audioUrl || prev.audioUrl || '',
+            durationSec: durSec,
+            words: res?.words || [],
+            segments: res?.segments || [],
+          },
+          words,
+          wpm,
+          usedChunks,
+        };
+      } catch (_) {}
+    }));
+  }
+
+  async function finishProInterviewEarly() {
+    const ref = roomState;
+    if (!ref) return;
+    if (ref.geminiLiveActive && window.SpeakingGeminiLive?.collectRecordedBlobs) {
+      ref.geminiLiveActive = false;
+      const blobs = await window.SpeakingGeminiLive.collectRecordedBlobs();
+      window.SpeakingGeminiLive.closeSession();
+      await refineLiveTurnsWithWhisper(ref, blobs);
+    }
+    cleanupProEngines();
+    finishInterview();
+  }
+
   async function tryStartGeminiLiveSession(ref) {
     if (!window.SpeakingGeminiLive?.startSession) return { ok: false, fallback: true };
     const exId = getProExaminerId();
     ref.liveTurnStartedAt = Date.now();
+    // Optional non-blocking Simli real-time lip-sync activation (if configured in Cloudflare Pages)
+    window.SpeakingExaminerCinema?.connectSimliIfConfigured?.(exId)?.catch?.(() => {});
     const liveRes = await window.SpeakingGeminiLive.startSession({
       examinerId: exId,
       part: ref.kind === 'part2' ? 2 : ref.part,
@@ -4733,12 +4884,16 @@
         ref.proVadState = speaking ? 'paused' : 'listening';
         if (speaking) {
           window.SpeakingExaminerCinema?.setMode?.('speaking');
-          updateProStatusDom('⚡ Gemini Live · Giám khảo đang nói...', 'examiner');
+          updateProStatusDom('Giám khảo đang nói...', 'examiner');
         } else {
           ref.liveTurnStartedAt = Date.now();
           window.SpeakingExaminerCinema?.setMode?.('listening');
-          updateProStatusDom('⚡ Gemini Live · Micro đang mở — Trò chuyện tự nhiên', 'listening');
+          updateProStatusDom('Micro đang mở — Mời bạn trả lời tự nhiên', 'listening');
         }
+      },
+      onExaminerAudioLevel: (rms) => {
+        if (roomState !== ref) return;
+        window.SpeakingExaminerCinema?.feedExaminerLevel?.(rms);
       },
       onLevel: ({ bars, isSpeaking, elapsedMs }) => {
         if (roomState !== ref) return;
@@ -4764,25 +4919,17 @@
           updateProQuestionChrome(ref);
         }
       },
-      onExamFinish: (audioUrl) => {
+      onExamFinish: async (blobsByIdx) => {
         if (roomState !== ref) return;
         ref.geminiLiveActive = false;
+        await refineLiveTurnsWithWhisper(ref, blobsByIdx);
+        if (roomState !== ref) return;
         cleanupProEngines();
         if (ref.kind === 'interview') {
-          if (audioUrl) {
-            const lastAnswered = [...ref.turns].reverse().find((t) => countWords(t.text) > 0);
-            if (lastAnswered) {
-              lastAnswered.audioUrl = audioUrl;
-              if (lastAnswered.acoustic) {
-                lastAnswered.acoustic.hasAudio = true;
-                lastAnswered.acoustic.audioUrl = audioUrl;
-              }
-            }
-          }
           const hasAny = ref.turns.some((t) => countWords(t.text) > 0);
           if (hasAny) finishInterview();
           else {
-            toast('Chưa ghi nhận câu trả lời nào trong phiên thi Live.');
+            toast('Chưa ghi nhận câu trả lời nào trong phiên thi.');
             ref.proStarted = false;
             rerenderActiveRoom();
           }
@@ -4790,12 +4937,12 @@
           const fullTxt = String(ref.p2LiveTranscript || '').trim();
           const totalDur = Math.max(15, 120 - Math.max(0, ref.secsLeft || 0));
           if (countWords(fullTxt) >= 5) {
-            finalizeRoomAttempt(fullTxt, totalDur, audioUrl || '', {
-              hasAudio: Boolean(audioUrl),
-              audioUrl: audioUrl || '',
+            finalizeRoomAttempt(fullTxt, totalDur, ref.p2LiveAudioUrl || '', {
+              hasAudio: Boolean(ref.p2LiveAudioUrl),
+              audioUrl: ref.p2LiveAudioUrl || '',
               durationSec: totalDur,
-              words: [],
-              segments: [],
+              words: ref.p2LiveWords || [],
+              segments: ref.p2LiveSegs || [],
             });
           } else {
             toast('Chưa thu được đủ lời nói Part 2 — bạn có thể bắt đầu lại phiên thi.');
@@ -4809,11 +4956,16 @@
       onUnexpectedClose: () => {
         if (roomState !== ref || !ref.geminiLiveActive) return;
         ref.geminiLiveActive = false;
-        toast('Kết nối Gemini Live tạm ngắt — bạn có thể bấm Chấm sớm hoặc vào lại phiên thi.');
+        toast('Kết nối Live tạm ngắt — bấm Chấm bài để xem điểm các câu đã trả lời.');
       },
     });
     if (liveRes?.ok && roomState === ref) {
       ref.geminiLiveActive = true;
+      const livePill = document.getElementById('sp-pro-engine-pill');
+      if (livePill) {
+        livePill.textContent = 'LIVE · 0.3s';
+        livePill.classList.add('is-gemini');
+      }
       return { ok: true };
     }
     return liveRes || { ok: false, fallback: true };
@@ -4822,6 +4974,7 @@
   async function startProExamSession() {
     const ref = roomState;
     if (!ref) return;
+    stopProLobbyMicTest();
 
     ref.geminiLiveActive = false;
     ref.p2LiveTranscript = '';
@@ -4972,23 +5125,52 @@
   }
 
   function renderProLobbyHtml(partNum, topicTitle, examinerId) {
+    const cl = PRO_EXAMINERS.claire;
+    const ol = PRO_EXAMINERS.oliver;
     return `
       <div class="sp-pro-lobby" id="sp-pro-lobby">
-        <div class="sp-pro-lobby-card">
-          <span class="sp-pro-lobby-badge">● Phòng Thi Thật 100% · Part ${partNum}</span>
-          <div class="sp-pro-lobby-title">${esc(topicTitle)}</div>
-          <p class="sp-pro-lobby-desc">Mô phỏng chuẩn phòng thi Video-Call British Council: <strong>không hiện câu hỏi, không gợi ý</strong>, Micro mở liên tục suốt phiên thi.</p>
-          <div class="sp-pro-lobby-rules">
-            <div class="sp-pro-lobby-rule"><strong>🎙 Nói liên tục rảnh tay</strong>Chỉ bật Micro 1 lần — nói xong ngưng ~2.5s Giám khảo tự phản hồi.</div>
-            <div class="sp-pro-lobby-rule"><strong>🗣 Nghe không rõ? Hỏi thẳng!</strong>Nói <em>"Could you repeat that?"</em> (hoặc xin giải thích ở Part 3) ngay vào Mic.</div>
+        <div class="sp-pro-lobby-card is-studio">
+          <div class="sp-pro-lobby-top">
+            <span class="sp-pro-lobby-badge"><span class="sp-pro-badge-dot"></span>IELTS Video-Call Simulator · Part ${partNum}</span>
+            <div class="sp-pro-lobby-title">${esc(topicTitle)}</div>
+            <p class="sp-pro-lobby-desc">Phòng thi chuẩn British Council: <strong>không hiện câu hỏi, không gợi ý</strong>, trao đổi giọng nói thời gian thực &amp; chấm điểm bằng Whisper v3.</p>
           </div>
-          <div class="sp-pro-lobby-ex-row" role="group" aria-label="Chọn Giám khảo">
-            <button type="button" class="sp-pro-lobby-ex-btn ${examinerId === 'claire' ? 'is-active' : ''}" onclick="SpeakingStudio.setProExaminer('claire')">Ms. Claire (UK · Nữ)</button>
-            <button type="button" class="sp-pro-lobby-ex-btn ${examinerId === 'oliver' ? 'is-active' : ''}" onclick="SpeakingStudio.setProExaminer('oliver')">Mr. Oliver (UK · Nam)</button>
+
+          <div class="sp-pro-ex-grid" role="group" aria-label="Chọn Giám khảo">
+            <button type="button" class="sp-pro-ex-card ${examinerId === 'claire' ? 'is-active' : ''}" onclick="SpeakingStudio.setProExaminer('claire')">
+              <img class="sp-pro-ex-ava" src="${esc(cl.speakImg)}" alt="Ms. Claire" draggable="false" />
+              <div class="sp-pro-ex-info">
+                <strong>Ms. Claire</strong>
+                <span>British RP · Nữ</span>
+              </div>
+              <span class="sp-pro-ex-chk" aria-hidden="true">${examinerId === 'claire' ? '✓' : ''}</span>
+            </button>
+            <button type="button" class="sp-pro-ex-card ${examinerId === 'oliver' ? 'is-active' : ''}" onclick="SpeakingStudio.setProExaminer('oliver')">
+              <img class="sp-pro-ex-ava" src="${esc(ol.speakImg)}" alt="Mr. Oliver" draggable="false" />
+              <div class="sp-pro-ex-info">
+                <strong>Mr. Oliver</strong>
+                <span>British RP · Nam</span>
+              </div>
+              <span class="sp-pro-ex-chk" aria-hidden="true">${examinerId === 'oliver' ? '✓' : ''}</span>
+            </button>
           </div>
+
+          <div class="sp-lobby-mic-box">
+            <div class="sp-lobby-mic-head">
+              <span id="sp-lobby-mic-txt">Bấm "Thử Micro" để kiểm tra độ nhạy trước khi vào phòng thi</span>
+              <button type="button" class="sp-lobby-mic-btn" id="sp-lobby-mic-btn" onclick="SpeakingStudio.toggleProLobbyMicTest()">Thử Micro</button>
+            </div>
+            <div class="sp-lobby-mic-track"><span class="sp-lobby-mic-fill" id="sp-lobby-mic-fill"></span></div>
+          </div>
+
+          <div class="sp-pro-lobby-tips">
+            <span>🎙 Tự nhiên ngưng nghỉ ~1.8s để suy nghĩ không bị ngắt lời</span>
+            <span>🗣 Nghe không rõ? Nói <em>"Could you repeat that?"</em> bất cứ lúc nào</span>
+          </div>
+
           <button type="button" class="sp-pro-lobby-start" onclick="SpeakingStudio.startProExamSession()">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-            <span>Bắt đầu phiên thi (Bật Micro liên tục)</span>
+            <span>Vào phòng thi trực tiếp</span>
           </button>
           <button type="button" class="sp-pro-lobby-alt" onclick="SpeakingStudio.setRoomViewMode('standard')">Muốn luyện tập có gợi ý &amp; từ vựng? Chuyển sang chế độ Chuẩn</button>
         </div>
@@ -4999,6 +5181,7 @@
   function renderProStageShell({ stageClasses, examiner, statusLabel, topRightHtml, lobbyHtml, sidePanelHtml, controlBarHtml, barState }) {
     const cand = getCandidateDisplay();
     const camOn = Boolean(window.SpeakingExaminerCinema?.isWebcamActive?.());
+    const liveOn = Boolean(roomState?.geminiLiveActive);
     const barClass = barState === 'listening' || barState === 'speaking'
       ? 'is-live-mic'
       : (barState === 'examiner' ? 'is-examiner-speaking' : (barState === 'processing' ? 'is-processing' : ''));
@@ -5022,6 +5205,7 @@
                   <span class="sp-pro-live-dot" aria-hidden="true"></span>
                   <span id="sp-pro-status-lbl">${esc(statusLabel)}</span>
                 </div>
+                <span class="sp-pro-engine-pill ${liveOn ? 'is-gemini' : ''}" id="sp-pro-engine-pill">${liveOn ? 'LIVE · 0.3s' : 'HD 720p'}</span>
               </div>
               <div class="sp-vc-top-right">
                 ${topRightHtml || ''}
@@ -5030,7 +5214,7 @@
 
             <div class="sp-vc-bottom-row">
               <div class="sp-vc-nameplate">
-                <span class="sp-vc-ex-wave" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="sp-vc-ex-wave" id="sp-vc-ex-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
                 <span>${esc(examiner.name)}</span>
                 <span class="sp-vc-nameplate-role">· British IELTS Examiner</span>
               </div>
@@ -6821,9 +7005,14 @@
         ? `Chờ bắt đầu phiên thi Part ${part}`
         : (roomState.proStatusText || `Part ${part} · Đang thi trực tiếp`);
 
-      // Pure Real IELTS Exam UI: ZERO question text, ZERO hints, ZERO Q-jump buttons, ZERO typing!
+      // Pure Real IELTS Exam UI: Minimalist progress dots — ZERO question text, ZERO hints!
+      const qDotsHtml = turns.map((t, i) => {
+        const done = countWords(t.text) > 0 && i < qIdx;
+        const cur = i === qIdx;
+        return `<span class="sp-pro-q-dot ${cur ? 'is-active' : ''} ${done ? 'is-done' : ''}" title="Câu ${i + 1}">${done ? '✓' : (i + 1)}</span>`;
+      }).join('');
       const topRightHtml = `
-        <div class="sp-pro-glass-pill tabular" id="sp-pro-q-badge">Part ${part} · Câu ${qIdx + 1}/${turns.length}</div>
+        <div class="sp-pro-glass-pill sp-pro-q-pill tabular" id="sp-pro-q-badge"><span class="sp-pro-q-part">Part ${part}</span><span class="sp-pro-q-dots">${qDotsHtml}</span></div>
       `;
 
       const lobbyHtml = !roomState.proStarted
@@ -6846,7 +7035,7 @@
         <div class="sp-pro-dock-right">
           ${roomState.proStarted ? `
             <button type="button" class="sp-pro-sec-btn" id="sp-pro-done-turn-btn" style="${(barState === 'listening' || barState === 'speaking') ? '' : 'display:none;'}" onclick="SpeakingStudio.finishProTurnManual()" title="Phím tắt: Space">Xong lượt (Space)</button>
-            <button type="button" class="sp-pro-sec-btn is-primary" id="sp-pro-finish-early-btn" style="${answeredCount >= 1 ? '' : 'display:none;'}" onclick="SpeakingStudio.finishInterview()">Chấm sớm (${answeredCount}/${turns.length})</button>
+            <button type="button" class="sp-pro-sec-btn is-primary" id="sp-pro-finish-early-btn" style="${answeredCount >= 1 ? '' : 'display:none;'}" onclick="SpeakingStudio.finishProInterviewEarly()">Chấm bài (${answeredCount}/${turns.length})</button>
           ` : ''}
         </div>
       `;
@@ -7110,6 +7299,8 @@
     toggleProDrawer,
     speakPart2Prompt,
     startProExamSession,
-    finishProTurnManual
+    finishProTurnManual,
+    finishProInterviewEarly,
+    toggleProLobbyMicTest
   };
 })();

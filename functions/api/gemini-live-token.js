@@ -167,7 +167,7 @@ export async function onRequestPost(context) {
           wsUrl: minted.wsUrl,
           model: models[0],
           fallbackModels: models.slice(1),
-          voiceName: examinerId === 'oliver' ? 'Charon' : 'Aoede',
+          voiceName: examinerId === 'oliver' ? 'Charon' : 'Kore',
           examinerId,
         },
         200,

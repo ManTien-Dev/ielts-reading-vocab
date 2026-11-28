@@ -61,9 +61,11 @@
   let webcamActive = false;
   let nodTimer = null;
   let speakRewindTimer = null;
+  let speakShowTimer = null;
   let lastNodAt = 0;
   let listenEnteredAt = 0;
   let micSmooth = 0;
+  let exVoiceSmooth = 0;
   let boundParallaxEl = null;
   let boundMoveFn = null;
   let boundLeaveFn = null;
@@ -397,18 +399,31 @@
     const sv = document.getElementById('sp-cinema-speak-vid');
     if (currentMode === 'speaking') {
       if (speakRewindTimer) { clearTimeout(speakRewindTimer); speakRewindTimer = null; }
-      if (sv) {
-        sv.playbackRate = 0.90;
-        sv.play?.().catch(() => {});
-      }
-    } else if (prevMode === 'speaking' && sv) {
-      // Wait until 650ms opacity fade-out completes BEFORE rewinding to frame 0 (zero seek stutter!)
-      if (speakRewindTimer) clearTimeout(speakRewindTimer);
-      speakRewindTimer = setTimeout(() => {
-        if (currentMode !== 'speaking') {
-          try { sv.pause(); sv.currentTime = 0; } catch (_) {}
+      // Avoid ghostly double-exposure on ultra-brief 0.4s "Mm-hmm" / "Thank you":
+      // Wait 340ms of active speaking before fading in hand-gesture speak.mp4!
+      if (speakShowTimer) clearTimeout(speakShowTimer);
+      stage.classList.remove('is-speak-gesture');
+      speakShowTimer = setTimeout(() => {
+        if (currentMode === 'speaking') {
+          document.getElementById('sp-pro-stage')?.classList.add('is-speak-gesture');
+          if (sv) {
+            sv.playbackRate = 0.90;
+            sv.play?.().catch(() => {});
+          }
         }
-      }, 720);
+      }, 340);
+    } else if (prevMode === 'speaking') {
+      if (speakShowTimer) { clearTimeout(speakShowTimer); speakShowTimer = null; }
+      stage.classList.remove('is-speak-gesture');
+      if (sv) {
+        // Wait until 650ms opacity fade-out completes BEFORE rewinding to frame 0 (zero seek stutter!)
+        if (speakRewindTimer) clearTimeout(speakRewindTimer);
+        speakRewindTimer = setTimeout(() => {
+          if (currentMode !== 'speaking') {
+            try { sv.pause(); sv.currentTime = 0; } catch (_) {}
+          }
+        }, 720);
+      }
     }
 
     if (currentMode === 'listening' && prevMode !== 'listening') {
@@ -448,6 +463,39 @@
     nodTimer = setTimeout(() => {
       document.getElementById('sp-pro-stage')?.classList.remove('is-nodding');
     }, 1100);
+  }
+
+  function pushLivePcm16k(uint8Pcm16k) {
+    if (!simliReady || !simliClient || typeof simliClient.sendAudioData !== 'function') return false;
+    try {
+      simliClient.sendAudioData(uint8Pcm16k);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function feedExaminerLevel(rms) {
+    const raw = Math.max(0, Math.min(1, Number(rms || 0) * 5.2));
+    exVoiceSmooth = exVoiceSmooth * 0.58 + raw * 0.42;
+
+    // Drive real-time 5-bar Broadcast Voice Equalizer on Nameplate
+    const wave = document.getElementById('sp-vc-ex-wave');
+    if (wave) {
+      const bars = wave.querySelectorAll('i');
+      const weights = [0.65, 1.0, 0.85, 0.95, 0.58];
+      bars.forEach((el, idx) => {
+        const h = Math.max(0.22, Math.min(1, exVoiceSmooth * (weights[idx] || 0.8) + (exVoiceSmooth > 0.05 ? 0.14 : 0)));
+        el.style.transform = `scaleY(${h.toFixed(2)})`;
+      });
+    }
+
+    // Subtly breathe Veo 3.1 speak.mp4 speed with live speech energy (calmer during breaths, natural during speech)
+    const sv = document.getElementById('sp-cinema-speak-vid');
+    if (sv && !sv.paused && currentMode === 'speaking') {
+      const targetRate = exVoiceSmooth > 0.08 ? 0.94 : 0.78;
+      if (Math.abs(sv.playbackRate - targetRate) > 0.05) sv.playbackRate = targetRate;
+    }
   }
 
   function feedMicLevel(bars) {
@@ -811,6 +859,10 @@
       clearTimeout(speakRewindTimer);
       speakRewindTimer = null;
     }
+    if (speakShowTimer) {
+      clearTimeout(speakShowTimer);
+      speakShowTimer = null;
+    }
     if (boundParallaxEl && boundMoveFn) boundParallaxEl.removeEventListener('mousemove', boundMoveFn);
     if (boundParallaxEl && boundLeaveFn) boundParallaxEl.removeEventListener('mouseleave', boundLeaveFn);
     boundParallaxEl = null;
@@ -827,6 +879,8 @@
     speak,
     stopSpeaking,
     feedMicLevel,
+    feedExaminerLevel,
+    pushLivePcm16k,
     triggerBriefNod,
     toggleCandidateCam,
     attachCandidateCam,
