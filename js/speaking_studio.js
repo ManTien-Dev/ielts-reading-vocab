@@ -2283,7 +2283,7 @@
         gridEl.innerHTML = `
           <div style="grid-column:1 / -1;padding:28px 20px;border-radius:16px;border:1.5px dashed var(--border-strong);background:var(--surface-panel);text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
             <strong style="font-size:15.5px;color:var(--ink);">Phòng Phỏng Vấn Speaking Part 1 &amp; Part 3</strong>
-            <div style="font-size:13px;color:var(--ink-2);max-width:500px;line-height:1.55;">48 bộ đề thi thật Cambridge IELTS 15–20 (240 câu hỏi nguyên văn) với Giám khảo đọc UK, thu âm AI &amp; chấm 4 tiêu chí.</div>
+            <div style="font-size:13px;color:var(--ink-2);max-width:500px;line-height:1.55;">96 đề thi thật Cambridge IELTS 15–20 (Part 1, Part 2 Cue Card, Part 3 &amp; 24 Full Test 14p) với Giám khảo đọc UK, thu âm AI &amp; chấm 4 tiêu chí.</div>
             <button type="button" class="btn btn-primary" style="padding:9px 18px;" onclick="window.TotoroUI?.enterSkillMode?.('Speaking', 'practice')">Vào Luyện Speaking →</button>
           </div>
         `;

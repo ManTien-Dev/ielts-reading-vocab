@@ -2519,8 +2519,8 @@
         const isRes = Boolean(window.AccessPolicy?.isRestricted?.());
         if (next === 'Speaking') {
           window.__VOCAB_BRIDGE__?.showToast?.(isRes
-            ? 'Đã chuyển sang IELTS Speaking — 48 bộ đề thi thật Cambridge 15–20 (Part 1 & Part 3)!'
-            : 'Đã chuyển sang IELTS Speaking — Story 01, 30 Spoken Chunks, Task 4 Bước & 14 Cue Cards!');
+            ? 'Đã chuyển sang IELTS Speaking — 96 đề thi thật Cambridge 15–20 (Part 1–3 & Full Test 14p)!'
+            : 'Đã chuyển sang IELTS Speaking — Story 01, 30 Spoken Chunks, Part 1–3 & 24 Full Test 14p!');
         } else if (next === 'Writing') {
           window.__VOCAB_BRIDGE__?.showToast?.(isRes
             ? 'Đã chuyển sang IELTS Writing — 28 đề Task 1 Cambridge 14–20, 57 đề Task 2 & 16 Full Test!'
