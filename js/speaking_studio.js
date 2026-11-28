@@ -28,7 +28,46 @@
   const MASTERY_KEY_BASE = 'totoro_speaking_mastery_v1_';
   const TASK_DONE_KEY_BASE = 'totoro_speaking_task_done_v1_';
   const PRAC_HIST_KEY_BASE = 'totoro_speaking_prac_hist_v1_';
+  const PRO_MODE_KEY = 'totoro_sp_pro3d_mode_v1';
+  const EXAMINER_KEY = 'totoro_sp_examiner_v1';
   const COOLDOWN_SEC = 18;
+
+  const PRO_EXAMINERS = {
+    claire: {
+      id: 'claire',
+      name: 'Ms. Claire',
+      role: 'British Examiner',
+      speakImg: 'assets/images/examiner_claire_speak.webp',
+      listenImg: 'assets/images/examiner_claire_listen.webp'
+    },
+    oliver: {
+      id: 'oliver',
+      name: 'Mr. Oliver',
+      role: 'British Examiner',
+      speakImg: 'assets/images/examiner_oliver_speak.webp',
+      listenImg: 'assets/images/examiner_oliver_listen.webp'
+    }
+  };
+
+  function getRoomViewMode() {
+    try {
+      const saved = localStorage.getItem(PRO_MODE_KEY);
+      return saved === 'standard' ? 'standard' : 'pro3d';
+    } catch (_) {
+      return 'pro3d';
+    }
+  }
+  function getProExaminerId() {
+    try {
+      const saved = localStorage.getItem(EXAMINER_KEY);
+      return PRO_EXAMINERS[saved] ? saved : 'claire';
+    } catch (_) {
+      return 'claire';
+    }
+  }
+  function getProExaminer() {
+    return PRO_EXAMINERS[getProExaminerId()] || PRO_EXAMINERS.claire;
+  }
 
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -3310,7 +3349,7 @@
         </button>
         <button type="button" role="tab" aria-selected="${activePart === 3 ? 'true' : 'false'}" class="sp-part-seg-btn ${activePart === 3 ? 'active' : ''}" onclick="SpeakingStudio.setPracticePart(3)">
           <span class="sp-part-seg-top"><strong>Part 3 · Thảo luận sâu</strong><span class="sp-part-seg-cnt tabular">${p3DoneCnt}/${p3List.length}</span></span>
-          <span class="sp-part-seg-sub">4 câu phân tích xã hội · 40–65s/câu · Khung P.E.E.C.</span>
+          <span class="sp-part-seg-sub">6 câu đề thật Cambridge · 40–65s/câu · Khung P.E.E.C.</span>
         </button>
       </div>
     `;
@@ -3372,32 +3411,33 @@
       const isP1 = activePart === 1;
       const list = isP1 ? p1List : p3List;
       shellTitle = isP1 ? 'Luyện đề IELTS Speaking Part 1' : 'Luyện đề IELTS Speaking Part 3';
+      const totalQsInPart = list.reduce((acc, t) => acc + ((t.questions || []).length), 0);
       shellSub = isP1
-        ? `Ngân hàng ${p1List.length} chủ đề phỏng vấn tủ 2025–2026 (${p1List.length * 4} câu hỏi) · Giám khảo đọc câu hỏi UK, trả lời tự nhiên <strong>20–35s/câu</strong> theo khung <strong>A.R.E.</strong>`
-        : `Ngân hàng ${p3List.length} chủ đề thảo luận học thuật (${p3List.length * 4} câu hỏi) · Phân tích sâu <strong>40–65s/câu</strong> theo khung <strong>P.E.E.C.</strong> chuẩn Band 7.5–8.5.`;
+        ? `Ngân hàng ${p1List.length} bộ đề thi thật Cambridge IELTS 15–20 (${totalQsInPart} câu hỏi nguyên văn) · Giám khảo đọc UK, trả lời tự nhiên <strong>20–35s/câu</strong> theo khung <strong>A.R.E.</strong>`
+        : `Ngân hàng ${p3List.length} bộ đề thi thật Cambridge IELTS 15–20 (${totalQsInPart} câu hỏi thảo luận nguyên văn) · Phân tích sâu <strong>40–65s/câu</strong> theo khung <strong>P.E.E.C.</strong> chuẩn Band 7.5–8.5.`;
       doneCount = isP1 ? p1DoneCnt : p3DoneCnt;
       totalCount = list.length;
       filterTabs = isP1
         ? [
             { key: 'all', label: 'Tất cả' },
-            { key: 'core', label: 'Bắt buộc · Core' },
+            { key: 'core', label: 'Bản thân · Học & Làm' },
             { key: 'daily', label: 'Đời sống' },
-            { key: 'hobby', label: 'Sở thích' },
-            { key: 'tech', label: 'Công nghệ' },
-            { key: 'social', label: 'Xã hội' }
+            { key: 'hobby', label: 'Sở thích & Du lịch' },
+            { key: 'tech', label: 'Mua sắm & Bản đồ' },
+            { key: 'social', label: 'Văn hóa & Xã hội' }
           ]
         : [
             { key: 'all', label: 'Tất cả' },
-            { key: 'society', label: 'Xã hội & Thế hệ' },
+            { key: 'society', label: 'Xã hội & Văn hóa' },
             { key: 'education', label: 'Giáo dục & Nghề nghiệp' },
             { key: 'tech', label: 'Công nghệ & Truyền thông' },
-            { key: 'lifestyle', label: 'Đô thị & Đời sống' }
+            { key: 'lifestyle', label: 'Đô thị & Du lịch' }
           ];
       const pillClsMap = { core: 'is-cause', daily: 'is-adv', hobby: 'is-opinion', tech: 'is-adv', social: 'is-cause', society: 'is-cause', education: 'is-opinion', lifestyle: 'is-adv' };
       const filtered = list.filter((tp) => {
         if (state.pracCat !== 'all' && tp.category !== state.pracCat) return false;
         if (q) {
-          const hay = `${tp.title} ${tp.titleVi || ''} ${tp.catLabel || ''} ${(tp.questions || []).map((x) => x.q).join(' ')}`.toLowerCase();
+          const hay = `${tp.title} ${tp.titleVi || ''} ${tp.catLabel || ''} ${tp.source || ''} ${(tp.questions || []).map((x) => x.q).join(' ')}`.toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;
@@ -3406,23 +3446,27 @@
       cardsHtml = filtered.map((tp) => {
         const prev = lastById[tp.id];
         const qs = tp.questions || [];
+        const previewQs = qs.slice(0, 4);
+        const extraCnt = Math.max(0, qs.length - previewQs.length);
         const targetLbl = getTopicTargetLabel(tp);
         return `
           <article class="ws-prac-card sp-cue-card sp-p13-card ${prev ? 'is-done' : ''}">
             <div style="display:flex;flex-direction:column;gap:9px;flex:1;">
               <div class="ws-prac-head">
+                ${tp.source ? `<span class="ws-pill warm">${esc(tp.source.replace('Cambridge IELTS ', 'Cam '))}</span>` : ''}
                 <span class="ws-type-pill ${pillClsMap[tp.category] || 'is-cause'}">${esc(tp.catLabel || (isP1 ? 'Part 1' : 'Part 3'))}</span>
                 ${prev
-                  ? `<span class="ws-pill ok tabular">${prev.band ? `Band ${Number(prev.band).toFixed(1)} · ` : ''}${fmtMmSs(prev.durationSec)}</span>`
-                  : `<span class="ws-prac-sub-tag">${tp.linkedStory ? '★ Nối Story 01' : `${qs.length} câu · ${esc(targetLbl)}`}</span>`}
+                  ? `<span class="ws-pill ok tabular" style="margin-left:auto;">${prev.band ? `Band ${Number(prev.band).toFixed(1)} · ` : ''}${fmtMmSs(prev.durationSec)}</span>`
+                  : `<span class="ws-prac-sub-tag" style="margin-left:auto;">${tp.linkedStory ? '★ Nối Story 01' : `${qs.length} câu · ${esc(targetLbl)}`}</span>`}
               </div>
               <div class="sp-p13-card-title-grp">
                 <p class="ws-prac-prompt" style="margin:0;">${esc(tp.title)}</p>
                 <div class="sp-p13-card-sub">${esc(tp.titleVi || '')}</div>
               </div>
               <ol class="sp-p13-q-preview">
-                ${qs.map((item) => `<li>${esc(item.q)}</li>`).join('')}
+                ${previewQs.map((item) => `<li>${esc(item.q)}</li>`).join('')}
               </ol>
+              ${extraCnt > 0 ? `<div style="font-size:11.5px;color:var(--ink-3);font-weight:600;margin-top:-4px;">+ ${extraCnt} câu hỏi thảo luận sâu trong phòng thi…</div>` : ''}
             </div>
             <div class="ws-prac-foot">
               <div class="ws-prac-btns">
@@ -3444,7 +3488,10 @@
             <p class="tot-shell-sub">${shellSub}</p>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openRandomTopic('practice')" title="Bốc ngẫu nhiên 1 đề chưa luyện trong Part ${activePart}">🎲 Bốc đề ngẫu nhiên</button>
+            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;" onclick="SpeakingStudio.openRandomTopic('practice')" title="Bốc ngẫu nhiên 1 đề chưa luyện trong Part ${activePart}">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+              <span>Bốc đề ngẫu nhiên</span>
+            </button>
             ${activePart === 2 ? `<button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="SpeakingStudio.openMindmapModal('master')">Mindmap</button>` : ''}
             <span class="ws-pill tabular">${doneCount} / ${totalCount} đề đã luyện</span>
           </div>
@@ -3504,6 +3551,711 @@
     openRandomTopic(mode);
   }
 
+  /* ================= 3D PRO — 100% AUTHENTIC IELTS EXAM SIMULATOR (CINEMA + HANDS-FREE VAD + 11 SCENARIOS) ================= */
+  let boundProKeyHandler = null;
+
+  function rerenderActiveRoom() {
+    if (!roomState) return;
+    if (roomState.kind === 'interview') renderInterviewRoom();
+    else renderPracticeRoom();
+  }
+
+  function cleanupProEngines() {
+    window.SpeakingVADEngine?.closeSession?.();
+    window.SpeakingExaminerCinema?.destroy?.();
+    if (boundProKeyHandler) {
+      window.removeEventListener('keydown', boundProKeyHandler);
+      boundProKeyHandler = null;
+    }
+  }
+
+  function getCandidateDisplay() {
+    const u = B()?.getCurrentUser?.();
+    const rawName = String(u?.name || u?.fullName || u?.id || 'Thí sinh').trim();
+    const parts = rawName.split(/\s+/).filter(Boolean);
+    const initials = parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : rawName.slice(0, 2).toUpperCase();
+    return { name: rawName, initials: initials || 'HV' };
+  }
+
+  function updateProStatusDom(text, barState) {
+    if (roomState && text) roomState.proStatusText = text;
+    const lbl = document.getElementById('sp-pro-status-lbl');
+    if (lbl && text) lbl.textContent = text;
+    const micLbl = document.getElementById('sp-pro-mic-lbl');
+    if (micLbl && text) micLbl.textContent = text;
+    const bar = document.getElementById('sp-pro-v2-bar');
+    if (bar && barState) {
+      bar.classList.toggle('is-live-mic', barState === 'listening' || barState === 'speaking');
+      bar.classList.toggle('is-examiner-speaking', barState === 'examiner');
+      bar.classList.toggle('is-processing', barState === 'processing');
+    }
+    const doneBtn = document.getElementById('sp-pro-done-turn-btn');
+    if (doneBtn && barState) {
+      doneBtn.style.display = (barState === 'listening' || barState === 'speaking') ? '' : 'none';
+    }
+  }
+
+  function clearExaminerSpeaking() {
+    if (!roomState) return;
+    if (roomState.examinerSpeakTimer) {
+      clearTimeout(roomState.examinerSpeakTimer);
+      roomState.examinerSpeakTimer = null;
+    }
+    roomState.examinerSpeaking = false;
+    window.SpeakingExaminerCinema?.stopSpeaking?.();
+  }
+
+  function triggerExaminerSpeaking(text) {
+    if (!roomState || roomState.recording || roomState.processing) return;
+    roomState.examinerSpeaking = true;
+    const words = Math.max(4, countWords(text || ''));
+    const ms = Math.min(9500, Math.max(2200, words * 360));
+    const ref = roomState;
+    roomState.examinerSpeakTimer = setTimeout(() => {
+      if (roomState === ref) clearExaminerSpeaking();
+    }, ms);
+  }
+
+  function setRoomViewMode(mode) {
+    const clean = mode === 'standard' ? 'standard' : 'pro3d';
+    try { localStorage.setItem(PRO_MODE_KEY, clean); } catch (_) {}
+    cleanupProEngines();
+    if (!roomState) return;
+    roomState.proStarted = false;
+    roomState.proVadState = 'paused';
+    roomState.recording = false;
+    roomState.processing = false;
+    if (clean === 'standard' && roomState.kind === 'part2' && roomState.phase === 'prep' && !roomState.notes.sheet && roomState.mode !== 'exam') {
+      roomState.notes.sheet = '1. Mở bài (B1–B3):\n- \n\n2. Cốt truyện chính (B4):\n- \n\n3. Kết bài chốt đề (B5):\n- ';
+    }
+    if (clean === 'pro3d' && roomState.kind === 'part2' && roomState.phase === 'prep') {
+      roomState.notes.sheet = '';
+    }
+    rerenderActiveRoom();
+  }
+
+  function setProExaminer(exId) {
+    if (!PRO_EXAMINERS[exId]) return;
+    try { localStorage.setItem(EXAMINER_KEY, exId); } catch (_) {}
+    if (!roomState) return;
+    rerenderActiveRoom();
+  }
+
+  function toggleProBlindCaptions() {}
+  function toggleProDrawer() {}
+
+  function speakPart2Prompt() {
+    if (!roomState || roomState.kind !== 'part2') return;
+    const cue = roomState.cue;
+    if (!cue?.title) return;
+    speakText(`${cue.title}. You should say: ${(cue.bullets || []).join(', ')}.`, 'en-GB');
+  }
+
+  /* Client-side Official Cambridge Fallback (used if /api/examiner-turn is offline or file://) */
+  function fallbackExaminerTurnDecision(payload) {
+    const { part, currentQuestion, nextQuestion, candidateText, durationSec, wordCount, repeatCount, probeCount, isPart2RoundingOff } = payload;
+    const low = String(candidateText || '').toLowerCase().trim();
+    const isRepeat = /\b(repeat|pardon|again|catch that|hear that|sorry\??$|excuse me|say that again|didn't hear|did not hear)\b/i.test(low) && wordCount <= 14;
+    const isExplain = /\b(explain|rephrase|mean by|what does .* mean|don't understand|do not understand|clarify)\b/i.test(low) && wordCount <= 16;
+
+    if (isRepeat && repeatCount < 2) {
+      return {
+        action: 'repeat',
+        examinerSpeech: `Sure, of course. ${currentQuestion}`,
+        shouldAdvance: false,
+        countAsAnswer: false,
+        followUpQuestion: '',
+      };
+    }
+    if (isExplain && repeatCount < 2) {
+      if (part === 1) {
+        return {
+          action: 'repeat',
+          examinerSpeech: `Of course, let me repeat the question. ${currentQuestion}`,
+          shouldAdvance: false,
+          countAsAnswer: false,
+          followUpQuestion: '',
+        };
+      }
+      return {
+        action: 'rephrase',
+        examinerSpeech: `Sure. In simpler terms, what is your general view on this: ${currentQuestion}`,
+        shouldAdvance: false,
+        countAsAnswer: false,
+        followUpQuestion: '',
+      };
+    }
+    if (part === 2 && !isPart2RoundingOff) {
+      if (durationSec < 75 && probeCount < 1) {
+        return {
+          action: 'prompt_more',
+          examinerSpeech: 'Would you like to add anything else?',
+          shouldAdvance: false,
+          countAsAnswer: true,
+          followUpQuestion: 'Would you like to add anything else?',
+        };
+      }
+      return {
+        action: 'rounding_off',
+        examinerSpeech: 'Thank you. Do you still think about this person or experience often today?',
+        shouldAdvance: false,
+        countAsAnswer: true,
+        followUpQuestion: 'Do you still think about this person or experience often today?',
+      };
+    }
+    if (part === 2 && isPart2RoundingOff) {
+      return {
+        action: 'end_part',
+        examinerSpeech: 'Thank you. That is the end of Part 2.',
+        shouldAdvance: true,
+        countAsAnswer: true,
+        followUpQuestion: '',
+      };
+    }
+    if (part === 1 && wordCount < 11 && probeCount < 1) {
+      return {
+        action: 'probe_short',
+        examinerSpeech: 'Why do you say that?',
+        shouldAdvance: false,
+        countAsAnswer: true,
+        followUpQuestion: 'Why do you say that?',
+      };
+    }
+    if (part === 3 && wordCount >= 12 && probeCount < 1) {
+      return {
+        action: 'followup_deep',
+        examinerSpeech: "That's an interesting point. Could you give me a specific example from everyday life to illustrate that?",
+        shouldAdvance: false,
+        countAsAnswer: true,
+        followUpQuestion: 'Could you give me a specific example from everyday life to illustrate that?',
+      };
+    }
+    const acks = ['Thank you.', 'Right, I see.', 'Interesting, thank you.', 'Mm-hmm, thank you.'];
+    const ack = acks[Math.floor(Math.random() * acks.length)];
+    if (nextQuestion) {
+      return {
+        action: 'next_question',
+        examinerSpeech: `${ack} ${nextQuestion}`,
+        shouldAdvance: true,
+        countAsAnswer: true,
+        followUpQuestion: '',
+      };
+    }
+    return {
+      action: 'end_part',
+      examinerSpeech: `Thank you. That is the end of Part ${part}.`,
+      shouldAdvance: true,
+      countAsAnswer: true,
+      followUpQuestion: '',
+    };
+  }
+
+  async function callExaminerBrain(payload) {
+    const apiUrl = STT()?.getApiUrl ? STT().getApiUrl('/api/examiner-turn') : '/api/examiner-turn';
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 6500);
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data?.ok && data.examinerSpeech) return data;
+    } catch (_) {}
+    return fallbackExaminerTurnDecision(payload);
+  }
+
+  /* Speak as British Examiner -> automatically arm Hands-Free Continuous VAD right when done! */
+  function proExaminerSpeakAndListen(speechText, listenCfg, speakRate) {
+    const ref = roomState;
+    if (!ref || !ref.proStarted) return;
+    window.SpeakingVADEngine?.pauseForExaminer?.();
+    ref.examinerSpeaking = true;
+    ref.proVadState = 'paused';
+    updateProStatusDom('Giám khảo đang nói...', 'examiner');
+
+    window.SpeakingExaminerCinema?.speak?.(speechText, {
+      rate: speakRate || 0.96,
+      onDone: () => {
+        if (roomState !== ref || !ref.proStarted || ref.phase === 'review') return;
+        ref.examinerSpeaking = false;
+        if (listenCfg === null) return;
+        ref.proVadState = 'listening';
+        ref.recStartedAt = Date.now();
+        ref.recElapsedSec = 0;
+        window.SpeakingExaminerCinema?.setMode?.('listening');
+        updateProStatusDom('Micro đang mở — Mời bạn trả lời', 'listening');
+        window.SpeakingVADEngine?.armListening?.(listenCfg);
+      },
+    });
+  }
+
+  function getProTurnListenConfig() {
+    if (!roomState) return { silenceMs: 2600, minSpeechMs: 700, maxTurnMs: 42000, noSpeechMs: 7500 };
+    if (roomState.kind === 'part2') {
+      if (roomState.p2RoundingOff) {
+        return { silenceMs: 2400, minSpeechMs: 600, maxTurnMs: 25000, noSpeechMs: 7500 };
+      }
+      const remMs = Math.max(12000, (roomState.secsLeft || 120) * 1000);
+      return { silenceMs: 4500, minSpeechMs: 2000, maxTurnMs: remMs, noSpeechMs: 9000 };
+    }
+    const isP1 = roomState.part === 1;
+    return {
+      silenceMs: isP1 ? 2500 : 3000,
+      minSpeechMs: isP1 ? 650 : 900,
+      maxTurnMs: isP1 ? 40000 : 75000,
+      noSpeechMs: 7200,
+    };
+  }
+
+  async function handleProNoSpeech() {
+    const ref = roomState;
+    if (!ref || !ref.proStarted || ref.phase === 'review') return;
+    ref.noSpeechNudges = (ref.noSpeechNudges || 0) + 1;
+
+    if (ref.kind === 'part2' && !ref.p2RoundingOff) {
+      if (ref.noSpeechNudges <= 1) {
+        proExaminerSpeakAndListen('Whenever you are ready, please begin talking about your topic.', getProTurnListenConfig(), 0.94);
+      } else {
+        proExaminerSpeakAndListen('Would you like to add anything else?', getProTurnListenConfig(), 0.94);
+      }
+      return;
+    }
+
+    if (ref.noSpeechNudges <= 1) {
+      proExaminerSpeakAndListen('Take your time. Would you like me to repeat the question?', getProTurnListenConfig(), 0.94);
+      return;
+    }
+
+    // After 2 silent nudges, politely advance like a real timed exam
+    if (ref.kind === 'interview') {
+      const nextQ = ref.topic?.questions?.[ref.qIdx + 1]?.q || null;
+      if (nextQ) {
+        ref.qIdx++;
+        ref.probeCount = 0;
+        ref.repeatCount = 0;
+        ref.noSpeechNudges = 0;
+        rerenderActiveRoom();
+        proExaminerSpeakAndListen(`Alright, let's move on. ${nextQ}`, getProTurnListenConfig(), 0.96);
+      } else {
+        concludeProExamSession(`Thank you. That is the end of Part ${ref.part}.`);
+      }
+    } else {
+      concludeProExamSession('Thank you. That is the end of Part 2.');
+    }
+  }
+
+  function concludeProExamSession(closingLine) {
+    const ref = roomState;
+    if (!ref) return;
+    window.SpeakingVADEngine?.pauseForExaminer?.();
+    updateProStatusDom('Giám khảo đang kết thúc phần thi...', 'examiner');
+    window.SpeakingExaminerCinema?.speak?.(closingLine, {
+      rate: 0.96,
+      onDone: () => {
+        if (roomState !== ref) return;
+        cleanupProEngines();
+        if (ref.kind === 'interview') {
+          const hasAny = ref.turns.some((t) => countWords(t.text) > 0);
+          if (hasAny) finishInterview();
+          else {
+            toast('Chưa ghi nhận câu trả lời nào trong phiên thi.');
+            ref.proStarted = false;
+            rerenderActiveRoom();
+          }
+        } else {
+          const fullTxt = (ref.p2SpeechParts || []).map((p) => p.text).filter(Boolean).join(' ').trim();
+          const totalDur = (ref.p2SpeechParts || []).reduce((a, b) => a + (b.durationSec || 0), 0);
+          const lastAudio = (ref.p2SpeechParts || []).find((p) => p.audioUrl)?.audioUrl || '';
+          const mergedWords = (ref.p2SpeechParts || []).flatMap((p) => p.words || []);
+          const mergedSegs = (ref.p2SpeechParts || []).flatMap((p) => p.segments || []);
+          if (countWords(fullTxt) >= 5) {
+            finalizeRoomAttempt(fullTxt, Math.max(15, totalDur), lastAudio, {
+              hasAudio: Boolean(lastAudio),
+              audioUrl: lastAudio,
+              durationSec: Math.max(15, totalDur),
+              words: mergedWords,
+              segments: mergedSegs,
+            });
+          } else {
+            toast('Chưa thu được bài nói Part 2 — bạn có thể bắt đầu lại phiên thi.');
+            ref.proStarted = false;
+            ref.phase = 'prep';
+            ref.secsLeft = 60;
+            rerenderActiveRoom();
+          }
+        }
+      },
+    });
+  }
+
+  async function handleProVadTurnResult(res) {
+    const ref = roomState;
+    if (!ref || !ref.proStarted || ref.phase === 'review') return;
+
+    if (res.silent || !res.text) {
+      if (res.reason === 'time_limit') {
+        if (ref.kind === 'part2' && !ref.p2RoundingOff) {
+          // Move to rounding off even if last slice was quiet
+          await triggerPart2RoundingOff();
+          return;
+        }
+      }
+      handleProNoSpeech();
+      return;
+    }
+
+    ref.noSpeechNudges = 0;
+    window.SpeakingExaminerCinema?.setMode?.('processing');
+    updateProStatusDom('Giám khảo đang lắng nghe & phản hồi...', 'processing');
+
+    if (ref.kind === 'part2') {
+      const spokenText = res.text;
+      if (!ref.p2RoundingOff) {
+        ref.p2SpeechParts = ref.p2SpeechParts || [];
+        ref.p2SpeechParts.push({
+          text: spokenText,
+          durationSec: res.durationSec || 10,
+          audioUrl: res.audioUrl || '',
+          words: res.words || [],
+          segments: res.segments || [],
+        });
+        const totalDur = ref.p2SpeechParts.reduce((a, b) => a + (b.durationSec || 0), 0);
+        const combined = ref.p2SpeechParts.map((p) => p.text).join(' ').trim();
+
+        // Scenario 10: Stopped early (< 75s) -> Cambridge prompt "Would you like to add anything else?"
+        if (res.reason !== 'time_limit' && totalDur < 75 && (ref.probeCount || 0) < 1 && ref.secsLeft > 15) {
+          ref.probeCount = (ref.probeCount || 0) + 1;
+          proExaminerSpeakAndListen('Would you like to add anything else?', getProTurnListenConfig(), 0.94);
+          return;
+        }
+
+        // Scenario 11: Time up (2:00) or solid talk (>= 75s) -> Take back Cue Card & ask Rounding-off Question!
+        await triggerPart2RoundingOff(combined, totalDur);
+        return;
+      }
+
+      // Candidate just answered the Part 2 Rounding-off Question!
+      ref.p2SpeechParts.push({
+        text: spokenText,
+        durationSec: res.durationSec || 5,
+        audioUrl: res.audioUrl || '',
+        words: res.words || [],
+        segments: res.segments || [],
+      });
+      concludeProExamSession('Thank you. That is the end of Part 2.');
+      return;
+    }
+
+    // PART 1 & PART 3 REAL EXAMINER BRAIN
+    const curQObj = ref.topic?.questions?.[ref.qIdx];
+    const nextQObj = ref.topic?.questions?.[ref.qIdx + 1] || null;
+    const wc = countWords(res.text);
+
+    // Scenario 6: Official Time Limit Interrupt (40s P1 / 75s P3)
+    if (res.reason === 'time_limit') {
+      appendProInterviewAnswer(ref, ref.qIdx, res);
+      if (nextQObj) {
+        ref.qIdx++;
+        ref.probeCount = 0;
+        ref.repeatCount = 0;
+        rerenderActiveRoom();
+        proExaminerSpeakAndListen(`Thank you. Let's move on to the next question. ${nextQObj.q}`, getProTurnListenConfig(), 0.96);
+      } else {
+        concludeProExamSession(`Thank you. That is the end of Part ${ref.part}.`);
+      }
+      return;
+    }
+
+    const decision = await callExaminerBrain({
+      part: ref.part,
+      topicTitle: ref.topic?.title || '',
+      currentQuestion: curQObj?.q || '',
+      nextQuestion: nextQObj?.q || null,
+      candidateText: res.text,
+      durationSec: res.durationSec || 5,
+      wordCount: wc,
+      repeatCount: ref.repeatCount || 0,
+      probeCount: ref.probeCount || 0,
+      isPart2RoundingOff: false,
+      history: ref.turns.slice(0, ref.qIdx).map((t) => ({ q: t.q, a: t.text })),
+    });
+    if (roomState !== ref || !ref.proStarted) return;
+
+    if (decision.countAsAnswer !== false) {
+      appendProInterviewAnswer(ref, ref.qIdx, res);
+    }
+
+    if (decision.action === 'repeat' || decision.action === 'rephrase') {
+      ref.repeatCount = (ref.repeatCount || 0) + 1;
+      proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.88);
+      return;
+    }
+
+    if (!decision.shouldAdvance && (decision.action === 'probe_short' || decision.action === 'followup_deep' || decision.action === 'redirect_offtopic')) {
+      ref.probeCount = (ref.probeCount || 0) + 1;
+      proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.96);
+      return;
+    }
+
+    // Advance cleanly to next question or conclude exam
+    if (decision.action === 'end_part' || !nextQObj) {
+      concludeProExamSession(decision.examinerSpeech || `Thank you. That is the end of Part ${ref.part}.`);
+      return;
+    }
+
+    ref.qIdx++;
+    ref.probeCount = 0;
+    ref.repeatCount = 0;
+    rerenderActiveRoom();
+    proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.96);
+  }
+
+  async function triggerPart2RoundingOff(combinedText, totalDur) {
+    const ref = roomState;
+    if (!ref || ref.kind !== 'part2') return;
+    clearInterval(ref.timerId);
+    ref.p2RoundingOff = true;
+    rerenderActiveRoom(); // Takes back Cue Card from desk like real IELTS!
+    const text = combinedText || (ref.p2SpeechParts || []).map((p) => p.text).join(' ').trim();
+    const dec = await callExaminerBrain({
+      part: 2,
+      topicTitle: ref.cue?.title || '',
+      currentQuestion: ref.cue?.title || '',
+      nextQuestion: null,
+      candidateText: text,
+      durationSec: totalDur || 90,
+      wordCount: countWords(text),
+      repeatCount: 0,
+      probeCount: 1,
+      isPart2RoundingOff: true,
+      history: [],
+    });
+    if (roomState !== ref || !ref.proStarted) return;
+    proExaminerSpeakAndListen(dec.examinerSpeech || 'Thank you. Do you still think about that often today?', getProTurnListenConfig(), 0.95);
+  }
+
+  function appendProInterviewAnswer(ref, idx, res) {
+    const qObj = ref.topic?.questions?.[idx];
+    const prev = ref.turns[idx] || {};
+    const combinedText = [prev.text || '', res.text || ''].filter(Boolean).join(' ').trim();
+    const totalDur = (prev.durationSec || 0) + (res.durationSec || 0);
+    const words = countWords(combinedText);
+    const wpm = totalDur > 0 ? Math.round((words / totalDur) * 60) : 0;
+    const low = combinedText.toLowerCase();
+    const usedChunks = (qObj?.chunks || []).filter((ch) => {
+      const k = String(ch || '').toLowerCase().trim();
+      return k.length >= 3 && low.includes(k);
+    });
+    const prevWords = prev.acoustic?.words || [];
+    const prevSegs = prev.acoustic?.segments || [];
+    ref.turns[idx] = {
+      qId: qObj?.id || `q${idx + 1}`,
+      q: qObj?.q || '',
+      text: combinedText,
+      durationSec: totalDur,
+      audioUrl: res.audioUrl || prev.audioUrl || '',
+      acoustic: {
+        hasAudio: true,
+        audioUrl: res.audioUrl || prev.audioUrl || '',
+        durationSec: totalDur,
+        words: [...prevWords, ...(res.words || [])],
+        segments: [...prevSegs, ...(res.segments || [])],
+      },
+      words,
+      wpm,
+      usedChunks,
+    };
+  }
+
+  async function startProExamSession() {
+    const ref = roomState;
+    if (!ref) return;
+    const ok = await window.SpeakingVADEngine?.openSession?.({
+      onLevel: ({ bars, isSpeaking, elapsedMs }) => {
+        updateWaveBars('room', bars);
+        window.SpeakingExaminerCinema?.feedMicLevel?.(bars);
+        if (isSpeaking && roomState === ref) {
+          ref.recElapsedSec = Math.round(elapsedMs / 1000);
+          const clock = document.getElementById('sp-int-rec-time');
+          if (clock && ref.kind === 'interview') clock.textContent = fmtMmSs(ref.recElapsedSec);
+        }
+      },
+      onStateChange: (st) => {
+        if (roomState !== ref) return;
+        ref.proVadState = st;
+        if (st === 'speaking') {
+          updateProStatusDom('Giám khảo đang lắng nghe bạn...', 'speaking');
+        } else if (st === 'listening') {
+          updateProStatusDom('Micro đang mở — Mời bạn trả lời', 'listening');
+        } else if (st === 'processing') {
+          updateProStatusDom('Đang xử lý câu trả lời...', 'processing');
+        }
+      },
+      onTurnResult: (res) => handleProVadTurnResult(res),
+      onNoSpeech: () => handleProNoSpeech(),
+      onError: (msg) => {
+        toast(String(msg || 'Lỗi Micro liên tục.'));
+      },
+    });
+    if (!ok || roomState !== ref) return;
+
+    ref.proStarted = true;
+    ref.repeatCount = 0;
+    ref.probeCount = 0;
+    ref.noSpeechNudges = 0;
+    ref.p2RoundingOff = false;
+    ref.p2SpeechParts = [];
+
+    if (boundProKeyHandler) window.removeEventListener('keydown', boundProKeyHandler);
+    boundProKeyHandler = (e) => {
+      if (e.code === 'Space' && roomState?.proStarted && getRoomViewMode() === 'pro3d') {
+        const tag = String(document.activeElement?.tagName || '').toLowerCase();
+        if (tag === 'textarea' || tag === 'input') return;
+        e.preventDefault();
+        window.SpeakingVADEngine?.finishTurnNow?.();
+      }
+    };
+    window.addEventListener('keydown', boundProKeyHandler);
+
+    rerenderActiveRoom();
+
+    if (ref.kind === 'interview') {
+      const q1 = ref.topic?.questions?.[0]?.q || '';
+      const intro = ref.part === 1
+        ? `Good afternoon. In this first part, I'd like to ask you some questions about ${ref.topic?.title || 'this topic'}. ${q1}`
+        : `Now, let's discuss some more general questions related to ${ref.topic?.title || 'this topic'}. ${q1}`;
+      proExaminerSpeakAndListen(intro, getProTurnListenConfig(), 0.96);
+    } else {
+      // Part 2 Official Cambridge 60s Prep Intro
+      startRoomTimer();
+      window.SpeakingExaminerCinema?.setMode?.('prep');
+      proExaminerSpeakAndListen(
+        "Now, I'm going to give you a topic, and I'd like you to talk about it for one to two minutes. Before you talk, you'll have one minute to think about what you're going to say, and you can make some notes if you wish.",
+        null,
+        0.96
+      );
+      setTimeout(() => {
+        if (roomState === ref && ref.phase === 'prep') {
+          window.SpeakingExaminerCinema?.setMode?.('prep');
+          updateProStatusDom('Chuẩn bị 1 phút · Ghi chú trên giấy nháp trắng', 'paused');
+        }
+      }, 9000);
+    }
+  }
+
+  function finishProTurnManual() {
+    window.SpeakingVADEngine?.finishTurnNow?.();
+  }
+
+  function renderModeSwitchHtml() {
+    const isPro = getRoomViewMode() === 'pro3d';
+    return `
+      <div class="sp-mode-switch" role="group" aria-label="Chế độ giao diện phòng thi" onclick="event.stopPropagation()">
+        <button type="button" class="sp-mode-btn ${!isPro ? 'is-active' : ''}" onclick="SpeakingStudio.setRoomViewMode('standard')" title="Chế độ luyện tập 2 cột có gợi ý">Chuẩn</button>
+        <button type="button" class="sp-mode-btn ${isPro ? 'is-active' : ''}" onclick="SpeakingStudio.setRoomViewMode('pro3d')" title="Phòng thi thật 100% — Không gợi ý · Micro liên tục">
+          <span class="sp-mode-pro-dot" aria-hidden="true"></span><span>3D Pro</span>
+        </button>
+      </div>
+    `;
+  }
+
+  function renderProLobbyHtml(partNum, topicTitle, examinerId) {
+    return `
+      <div class="sp-pro-lobby" id="sp-pro-lobby">
+        <div class="sp-pro-lobby-card">
+          <span class="sp-pro-lobby-badge">● Phòng Thi Thật 100% · Part ${partNum}</span>
+          <div class="sp-pro-lobby-title">${esc(topicTitle)}</div>
+          <p class="sp-pro-lobby-desc">Mô phỏng chuẩn phòng thi Video-Call British Council: <strong>không hiện câu hỏi, không gợi ý</strong>, Micro mở liên tục suốt phiên thi.</p>
+          <div class="sp-pro-lobby-rules">
+            <div class="sp-pro-lobby-rule"><strong>🎙 Nói liên tục rảnh tay</strong>Chỉ bật Micro 1 lần — nói xong ngưng ~2.5s Giám khảo tự phản hồi.</div>
+            <div class="sp-pro-lobby-rule"><strong>🗣 Nghe không rõ? Hỏi thẳng!</strong>Nói <em>"Could you repeat that?"</em> (hoặc xin giải thích ở Part 3) ngay vào Mic.</div>
+          </div>
+          <div class="sp-pro-lobby-ex-row" role="group" aria-label="Chọn Giám khảo">
+            <button type="button" class="sp-pro-lobby-ex-btn ${examinerId === 'claire' ? 'is-active' : ''}" onclick="SpeakingStudio.setProExaminer('claire')">Ms. Claire (UK · Nữ)</button>
+            <button type="button" class="sp-pro-lobby-ex-btn ${examinerId === 'oliver' ? 'is-active' : ''}" onclick="SpeakingStudio.setProExaminer('oliver')">Mr. Oliver (UK · Nam)</button>
+          </div>
+          <button type="button" class="sp-pro-lobby-start" onclick="SpeakingStudio.startProExamSession()">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            <span>Bắt đầu phiên thi (Bật Micro liên tục)</span>
+          </button>
+          <button type="button" class="sp-pro-lobby-alt" onclick="SpeakingStudio.setRoomViewMode('standard')">Muốn luyện tập có gợi ý &amp; từ vựng? Chuyển sang chế độ Chuẩn</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderProStageShell({ stageClasses, examiner, statusLabel, topRightHtml, lobbyHtml, sidePanelHtml, controlBarHtml, barState }) {
+    const cand = getCandidateDisplay();
+    const camOn = Boolean(window.SpeakingExaminerCinema?.isWebcamActive?.());
+    const barClass = barState === 'listening' || barState === 'speaking'
+      ? 'is-live-mic'
+      : (barState === 'examiner' ? 'is-examiner-speaking' : (barState === 'processing' ? 'is-processing' : ''));
+    return `
+      <div class="sp-pro-v2-shell">
+        <div class="sp-pro-v2-main">
+          <div class="sp-pro-stage ${stageClasses}" id="sp-pro-stage">
+            <div class="sp-cinema-camera" id="sp-cinema-camera">
+              <div class="sp-cinema-rig">
+                <img class="sp-cinema-img is-speak-layer" src="${esc(examiner.speakImg)}" alt="${esc(examiner.name)}" draggable="false" />
+                <img class="sp-cinema-img is-listen-layer" src="${esc(examiner.listenImg)}" alt="${esc(examiner.name)} đang lắng nghe" draggable="false" />
+                <div class="sp-cinema-video-wrap" id="sp-cinema-video-wrap"></div>
+              </div>
+            </div>
+
+            ${lobbyHtml || ''}
+
+            <div class="sp-vc-top-bar">
+              <div class="sp-vc-top-left">
+                <div class="sp-pro-glass-pill">
+                  <span class="sp-pro-live-dot" aria-hidden="true"></span>
+                  <span id="sp-pro-status-lbl">${esc(statusLabel)}</span>
+                </div>
+              </div>
+              <div class="sp-vc-top-right">
+                ${topRightHtml || ''}
+              </div>
+            </div>
+
+            <div class="sp-vc-bottom-row">
+              <div class="sp-vc-nameplate">
+                <span class="sp-vc-ex-wave" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span>${esc(examiner.name)}</span>
+                <span class="sp-vc-nameplate-role">· British IELTS Examiner</span>
+              </div>
+
+              <div class="sp-vc-pip ${camOn ? 'is-cam-on' : ''}" id="sp-pro-pip" title="Khung thí sinh (Webcam xử lý 100% trên máy bạn)">
+                <video class="sp-vc-pip-video" id="sp-pro-pip-video" autoplay muted playsinline></video>
+                <div class="sp-vc-pip-avatar" aria-hidden="true">${esc(cand.initials)}</div>
+                <div class="sp-vc-pip-foot">
+                  <span class="sp-vc-pip-name">${esc(cand.name)}</span>
+                  <button type="button" class="sp-vc-pip-cam-btn ${camOn ? 'is-active' : ''}" id="sp-pro-cam-btn" onclick="window.SpeakingExaminerCinema?.toggleCandidateCam()">${camOn ? 'Tắt Cam' : 'Bật Cam'}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          ${sidePanelHtml || ''}
+        </div>
+
+        <div class="sp-pro-v2-bar ${barClass}" id="sp-pro-v2-bar">
+          ${controlBarHtml || ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function commitProCinemaDom(root, html, examinerId, activeMode) {
+    root.innerHTML = html;
+    window.SpeakingExaminerCinema?.mount?.(examinerId, activeMode);
+  }
+
   /* --- Speaking Part 2 Room (1-Min Prep -> 2-Min Speaking -> Review & Pivot Model) --- */
   function openPracticeRoom(cueId, mode) {
     const p13 = getPart13Topic(cueId);
@@ -3545,7 +4297,7 @@
       phase: 'prep',
       secsLeft: 60,
       timerId: null,
-      notes: { sheet: mode === 'exam' ? '' : DEFAULT_SP_PLAN },
+      notes: { sheet: (mode === 'exam' || getRoomViewMode() === 'pro3d') ? '' : DEFAULT_SP_PLAN },
       checkedBullets: {},
       recording: false,
       processing: false,
@@ -3556,6 +4308,18 @@
       metrics: null,
       showFullB4: false,
       showPrepHint: false,
+      proStarted: false,
+      proVadState: 'paused',
+      proStatusText: 'Chờ bắt đầu phiên thi Part 2',
+      repeatCount: 0,
+      probeCount: 0,
+      noSpeechNudges: 0,
+      p2RoundingOff: false,
+      p2SpeechParts: [],
+      proDrawerOpen: true,
+      blindCaptions: false,
+      examinerSpeaking: false,
+      examinerSpeakTimer: null,
       strikes: 0,
       contrast: initContrast,
       textSize: 'regular'
@@ -3563,7 +4327,7 @@
 
     const el = document.getElementById('sp-practice-room');
     el.className = `sp-exam-room open ins-shell ins-contrast-${initContrast} ins-size-regular ${roomState.mode === 'exam' ? 'is-exam ins-mode-exam' : 'is-practice'}`;
-    startRoomTimer();
+    if (getRoomViewMode() !== 'pro3d') startRoomTimer();
     renderPracticeRoom();
   }
 
@@ -3602,6 +4366,8 @@
 
   function closePracticeRoom() {
     clearInterval(roomState?.timerId);
+    clearExaminerSpeaking();
+    cleanupProEngines();
     STT()?.abort?.();
     roomState = null;
     const el = document.getElementById('sp-practice-room');
@@ -3682,6 +4448,10 @@
           ringArc.setAttribute('stroke', roomState.secsLeft <= 10 ? 'var(--danger)' : (roomState.secsLeft <= 20 ? '#c47a1b' : 'var(--accent)'));
         }
       }
+      if (roomState.phase === 'prep') {
+        const pFill = document.getElementById('sp-prep-zone-fill');
+        if (pFill) pFill.style.width = `${Math.min(100, Math.max(0, Math.round(((60 - roomState.secsLeft) / 60) * 100)))}%`;
+      }
       if (roomState.phase === 'prep' && roomState.secsLeft === 10) playRoomChime('warn');
       if (roomState.phase === 'speak') {
         const elapsed = Math.max(0, 120 - roomState.secsLeft);
@@ -3701,8 +4471,13 @@
           beginRoomSpeaking(roomState.mode === 'exam');
         } else if (roomState.phase === 'speak') {
           clearInterval(roomState.timerId);
-          if (roomState.recording) toggleRoomMic();
-          else toast('Hết 2 phút nói — hãy bấm Nộp bài để xem đối chiếu!');
+          if (getRoomViewMode() === 'pro3d' && roomState.proStarted) {
+            window.SpeakingVADEngine?.finishTurnNow?.();
+          } else if (roomState.recording) {
+            toggleRoomMic();
+          } else {
+            toast('Hết 2 phút nói — hãy bấm Nộp bài để xem đối chiếu!');
+          }
         }
       }
     }, 1000);
@@ -3725,6 +4500,14 @@
     roomState.secsLeft = 120;
     startRoomTimer();
     renderPracticeRoom();
+    if (getRoomViewMode() === 'pro3d' && roomState.proStarted) {
+      proExaminerSpeakAndListen(
+        "Alright? Remember you have one to two minutes for this, so don't worry if I stop you. I'll tell you when the time is up. Can you start speaking now, please?",
+        getProTurnListenConfig(),
+        0.96
+      );
+      return;
+    }
     if (autoStartMic && STT()?.isSupported?.()) {
       toggleRoomMic();
     }
@@ -3753,6 +4536,7 @@
       return;
     }
     stt.abort();
+    clearExaminerSpeaking();
     roomState.recording = true;
     roomState.processing = false;
     roomState.recStartedAt = Date.now();
@@ -3761,7 +4545,7 @@
       mode: 'speaking',
       autoStopOnSilence: false,
       maxDurationMs: 125000,
-      onLevel: ({ bars }) => updateWaveBars('room', bars),
+      onLevel: ({ bars }) => { updateWaveBars('room', bars); window.SpeakingExaminerCinema?.feedMicLevel?.(bars); },
       onProcessing: () => { if (roomState) { roomState.recording = false; roomState.processing = true; renderPracticeRoom(); } },
       onResult: (res) => {
         if (!roomState) return;
@@ -4099,6 +4883,124 @@
       `;
 
     const noteText = String(notes.sheet || '').trim();
+    const isProMode = getRoomViewMode() === 'pro3d' && phase !== 'review';
+
+    if (phase === 'review') {
+      cleanupProEngines();
+    }
+
+    if (isProMode) {
+      const examiner = getProExaminer();
+      const vadSt = roomState.proVadState || 'paused';
+      const activeMode = !roomState.proStarted
+        ? 'idle'
+        : (roomState.examinerSpeaking
+          ? 'speaking'
+          : (vadSt === 'processing'
+            ? 'processing'
+            : (phase === 'prep' ? 'prep' : 'listening')));
+      const stageClasses = [
+        activeMode === 'speaking' ? 'is-speaking' : '',
+        activeMode === 'listening' ? 'is-listening' : '',
+        activeMode === 'prep' ? 'is-prep' : '',
+        activeMode === 'processing' ? 'is-processing' : ''
+      ].filter(Boolean).join(' ');
+      const barState = !roomState.proStarted
+        ? 'paused'
+        : (roomState.examinerSpeaking ? 'examiner' : vadSt);
+      const statusLabel = !roomState.proStarted
+        ? 'Chờ bắt đầu phiên thi Part 2'
+        : (roomState.proStatusText || (phase === 'prep' ? 'Chuẩn bị 1 phút · Giấy nháp trắng' : (roomState.p2RoundingOff ? 'Câu hỏi đóng chủ đề (Rounding-off)' : 'Đang trình bày Part 2')));
+
+      const topRightHtml = `
+        <div class="sp-pro-glass-pill">Part 2 · ${roomState.p2RoundingOff ? 'Rounding-off' : (phase === 'prep' ? 'Chuẩn bị 1 phút' : 'Trình bày 2 phút')}</div>
+      `;
+
+      const lobbyHtml = !roomState.proStarted
+        ? renderProLobbyHtml(2, cue.title, examiner.id)
+        : '';
+
+      // Official IELTS Part 2: ONLY Cue Card + BLANK Note Sheet during Prep & Speak (NO B1-B5 template, NO Bẻ Lái hints!)
+      // During Rounding-off: Examiner takes back the Cue Card!
+      const sidePanelHtml = (roomState.proStarted && !roomState.p2RoundingOff) ? `
+        <aside class="sp-pro-side-panel" aria-label="Cue Card và Giấy nháp thi thật Part 2">
+          <div class="sp-pro-side-head">
+            <span class="sp-pro-side-title">Part 2 · Candidate Task Card</span>
+          </div>
+          <div class="sp-pro-side-body">
+            <div class="sp-ins-cue-card">
+              <div class="sp-ins-cue-title">${esc(cue.title)}</div>
+              <div class="sp-ins-cue-sub">You should say:</div>
+              <ul class="sp-ins-cue-list">
+                ${(cue.bullets || []).map((b) => `<li><span>${esc(b)}</span></li>`).join('')}
+              </ul>
+            </div>
+            ${phase === 'prep' ? `
+              <div class="sp-pro-drawer-sec-lbl"><span>Giấy nháp (1 phút chuẩn bị)</span></div>
+              <textarea class="sp-pro-p2-notes" id="sp-room-plan-ta" spellcheck="false"
+                placeholder="Ghi chú nhanh bằng từ khóa..."
+                oninput="SpeakingStudio.saveRoomNote('sheet', this.value)">${esc(notes.sheet || '')}</textarea>
+            ` : (noteText ? `
+              <div class="sp-pro-drawer-sec-lbl"><span>Ghi chú của bạn</span></div>
+              <div class="sp-ins-notes-body" style="white-space:pre-wrap;font-size:13px;line-height:1.5;background:#fff;border:1px solid rgba(31,37,32,0.12);border-radius:10px;padding:10px 12px;">${esc(noteText)}</div>
+            ` : '')}
+          </div>
+        </aside>
+      ` : '';
+
+      const controlBarHtml = `
+        <div class="sp-pro-dock-left">
+          <div class="sp-pro-dock-clock tabular" id="sp-room-ring-time">${fmtMmSs(secsLeft)}</div>
+          <span class="sp-pro-mic-status-pill">
+            <span class="sp-pro-mic-dot" aria-hidden="true"></span>
+            <span id="sp-pro-mic-lbl">${esc(statusLabel)}</span>
+          </span>
+        </div>
+
+        <div class="sp-pro-dock-center">
+          <div class="sp-pro-dock-wave">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="room"></span>`).join('')}</div>
+        </div>
+
+        <div class="sp-pro-dock-right">
+          ${roomState.proStarted && phase === 'prep' ? `
+            <button type="button" class="sp-pro-sec-btn is-primary" onclick="SpeakingStudio.beginRoomSpeaking(false)">Bắt đầu nói ngay →</button>
+          ` : ''}
+          ${roomState.proStarted && phase === 'speak' ? `
+            <button type="button" class="sp-pro-sec-btn" id="sp-pro-done-turn-btn" style="${(barState === 'listening' || barState === 'speaking') ? '' : 'display:none;'}" onclick="SpeakingStudio.finishProTurnManual()" title="Phím tắt: Space">Xong lượt (Space)</button>
+          ` : ''}
+        </div>
+      `;
+
+      const html = `
+        <div class="ins-main-col" onclick="SpeakingStudio.toggleRoomOptions(false)">
+          <header class="ins-header ${isExam ? '' : 'ws-prac-custom-hdr'}">
+            <div class="ins-hdr-left">
+              ${headerBrandHtml}
+              <div class="ins-hdr-meta">
+                <div class="ins-hdr-title">Speaking Studio · Phòng Thi Thật 3D Pro · Part 2</div>
+                <div class="ins-hdr-timer" style="cursor:default;"><span id="sp-room-timer">${timerLabel}</span></div>
+              </div>
+            </div>
+            <div class="ins-hdr-right">
+              ${renderModeSwitchHtml()}
+              ${acChipHtml}
+              <div class="ws-ins-opt-wrap" onclick="event.stopPropagation()">
+                <button type="button" class="ins-hdr-ico" id="sp-prac-opt-btn" onclick="SpeakingStudio.toggleRoomOptions()" title="Màu sắc &amp; Cỡ chữ" aria-label="Options">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <div class="ws-ins-opt-pop" id="sp-prac-opt-pop">${roomOptHtml}</div>
+              </div>
+              <button type="button" class="ins-hdr-exit" onclick="SpeakingStudio.closePracticeRoom()">Thoát</button>
+            </div>
+          </header>
+
+          ${renderProStageShell({ stageClasses, examiner, statusLabel, topRightHtml, lobbyHtml, sidePanelHtml, controlBarHtml, barState })}
+        </div>
+      `;
+      commitProCinemaDom(root, html, examiner.id, activeMode);
+      return;
+    }
+
     root.innerHTML = `
       <div class="ins-main-col" onclick="SpeakingStudio.toggleRoomOptions(false)">
         <header class="ins-header ${isExam ? '' : 'ws-prac-custom-hdr'}">
@@ -4110,6 +5012,7 @@
             </div>
           </div>
           <div class="ins-hdr-right">
+            ${phase !== 'review' ? renderModeSwitchHtml() : ''}
             ${acChipHtml}
             <div class="ws-ins-opt-wrap" onclick="event.stopPropagation()">
               <button type="button" class="ins-hdr-ico" id="sp-prac-opt-btn" onclick="SpeakingStudio.toggleRoomOptions()" title="Màu sắc &amp; Cỡ chữ" aria-label="Options">
@@ -4186,7 +5089,7 @@
                     ${roomState.showFullB4 ? 'Ẩn cốt truyện nguyên văn' : 'Xem cốt truyện chính (~220 từ)'}
                   </button>
                   <button type="button" class="btn" style="padding:4px 10px;font-size:12px;" onclick="SpeakingStudio.openMindmapModal('master')">Mở Mindmap</button>
-                  ${getPart3Topics().length ? `<button type="button" class="btn btn-primary" style="padding:4px 12px;font-size:12px;" onclick="SpeakingStudio.openInterviewRoom('sp_p3_older_gen', '${esc(mode)}')">Tiếp tục thảo luận Part 3 →</button>` : ''}
+                  ${getPart3Topics().length ? `<button type="button" class="btn btn-primary" style="padding:4px 12px;font-size:12px;" onclick="SpeakingStudio.openInterviewRoom('${esc((getPart3Topics().find((t) => t.linkedStory) || getPart3Topics()[0]).id)}', '${esc(mode)}')">Tiếp tục thảo luận Part 3 →</button>` : ''}
                 </div>
                 ${roomState.showFullB4 ? `<div style="font-size:13.2px;line-height:1.62;color:var(--ink-2);padding-top:8px;border-top:1px solid var(--border);">${esc((fs.en || []).slice(1).join(' '))}</div>` : ''}
               </div>
@@ -4262,6 +5165,16 @@
       timerId: null,
       showGuide: cleanMode !== 'exam',
       showModel: false,
+      proStarted: false,
+      proVadState: 'paused',
+      proStatusText: `Chờ bắt đầu phiên thi Part ${topic.part}`,
+      repeatCount: 0,
+      probeCount: 0,
+      noSpeechNudges: 0,
+      proDrawerOpen: false,
+      blindCaptions: false,
+      examinerSpeaking: false,
+      examinerSpeakTimer: null,
       strikes: 0,
       contrast: initContrast,
       textSize: 'regular',
@@ -4275,13 +5188,16 @@
     el.className = `sp-exam-room open ins-shell ins-contrast-${initContrast} ins-size-regular ${cleanMode === 'exam' ? 'is-exam ins-mode-exam' : 'is-practice'}`;
     startInterviewTimer();
     renderInterviewRoom();
-    setTimeout(() => speakInterviewQuestion(), 220);
+    if (getRoomViewMode() !== 'pro3d') {
+      setTimeout(() => speakInterviewQuestion(), 220);
+    }
   }
 
   function startInterviewTimer() {
     clearInterval(roomState?.timerId);
     roomState.timerId = setInterval(() => {
       if (!roomState || roomState.kind !== 'interview' || roomState.phase === 'review') return;
+      if (getRoomViewMode() === 'pro3d' && !roomState.proStarted) return;
       roomState.totalElapsedSec++;
       const hdrTimer = document.getElementById('sp-room-timer');
       if (hdrTimer) {
@@ -4321,7 +5237,9 @@
     if (!roomState || roomState.kind !== 'interview') return;
     const idx = typeof idxOverride === 'number' ? idxOverride : roomState.qIdx;
     const qObj = roomState.topic?.questions?.[idx];
-    if (qObj?.q) speakText(qObj.q, 'en-GB');
+    if (!qObj?.q) return;
+    speakText(qObj.q, 'en-GB');
+    triggerExaminerSpeaking(qObj.q);
   }
 
   function toggleInterviewGuide() {
@@ -4363,6 +5281,7 @@
       return;
     }
     stt.abort();
+    clearExaminerSpeaking();
     const targetQIdx = roomState.qIdx;
     roomState.recording = true;
     roomState.processing = false;
@@ -4373,7 +5292,7 @@
       mode: 'speaking',
       autoStopOnSilence: false,
       maxDurationMs: roomState.part === 1 ? 55000 : 85000,
-      onLevel: ({ bars }) => updateWaveBars('room', bars),
+      onLevel: ({ bars }) => { updateWaveBars('room', bars); window.SpeakingExaminerCinema?.feedMicLevel?.(bars); },
       onProcessing: () => {
         if (roomState && roomState.kind === 'interview') {
           roomState.recording = false;
@@ -4937,6 +5856,92 @@
           ? `Câu tiếp (${qIdx + 2}/${turns.length}) →`
           : (typeMode && !isExam ? `Lưu Câu ${qIdx + 1} ✓` : (recording ? `Dừng & Lưu Q${qIdx + 1}` : `Bắt đầu trả lời Q${qIdx + 1}`))));
 
+    const isProMode = getRoomViewMode() === 'pro3d' && phase === 'interview';
+    if (phase === 'review') {
+      cleanupProEngines();
+    }
+    if (isProMode) {
+      const examiner = getProExaminer();
+      const vadSt = roomState.proVadState || 'paused';
+      const activeMode = !roomState.proStarted
+        ? 'idle'
+        : (roomState.examinerSpeaking
+          ? 'speaking'
+          : (vadSt === 'processing' ? 'processing' : 'listening'));
+      const stageClasses = [
+        activeMode === 'speaking' ? 'is-speaking' : '',
+        activeMode === 'listening' ? 'is-listening' : '',
+        activeMode === 'processing' ? 'is-processing' : ''
+      ].filter(Boolean).join(' ');
+      const barState = !roomState.proStarted
+        ? 'paused'
+        : (roomState.examinerSpeaking ? 'examiner' : vadSt);
+      const statusLabel = !roomState.proStarted
+        ? `Chờ bắt đầu phiên thi Part ${part}`
+        : (roomState.proStatusText || `Part ${part} · Đang thi trực tiếp`);
+
+      // Pure Real IELTS Exam UI: ZERO question text, ZERO hints, ZERO Q-jump buttons, ZERO typing!
+      const topRightHtml = `
+        <div class="sp-pro-glass-pill tabular">Part ${part} · Câu ${qIdx + 1}/${turns.length}</div>
+      `;
+
+      const lobbyHtml = !roomState.proStarted
+        ? renderProLobbyHtml(part, topic.title, examiner.id)
+        : '';
+
+      const controlBarHtml = `
+        <div class="sp-pro-dock-left">
+          <div class="sp-pro-dock-clock tabular" id="sp-int-rec-time">${fmtMmSs(recElapsedSec || 0)}</div>
+          <span class="sp-pro-mic-status-pill">
+            <span class="sp-pro-mic-dot" aria-hidden="true"></span>
+            <span id="sp-pro-mic-lbl">${esc(statusLabel)}</span>
+          </span>
+        </div>
+
+        <div class="sp-pro-dock-center">
+          <div class="sp-pro-dock-wave">${Array.from({ length: 12 }).map(() => `<span class="sp-wave-bar" data-wave="room"></span>`).join('')}</div>
+        </div>
+
+        <div class="sp-pro-dock-right">
+          ${roomState.proStarted ? `
+            <button type="button" class="sp-pro-sec-btn" id="sp-pro-done-turn-btn" style="${(barState === 'listening' || barState === 'speaking') ? '' : 'display:none;'}" onclick="SpeakingStudio.finishProTurnManual()" title="Phím tắt: Space">Xong lượt (Space)</button>
+          ` : ''}
+          ${roomState.proStarted && answeredCount >= 1 ? `
+            <button type="button" class="sp-pro-sec-btn is-primary" onclick="SpeakingStudio.finishInterview()">Chấm sớm (${answeredCount}/${turns.length})</button>
+          ` : ''}
+        </div>
+      `;
+
+      const html = `
+        <div class="ins-main-col" onclick="SpeakingStudio.toggleRoomOptions(false)">
+          <header class="ins-header ${isExam ? '' : 'ws-prac-custom-hdr'}">
+            <div class="ins-hdr-left">
+              ${headerBrandHtml}
+              <div class="ins-hdr-meta">
+                <div class="ins-hdr-title">Speaking Studio · Phòng Thi Thật 3D Pro · Part ${part}</div>
+                <div class="ins-hdr-timer" style="cursor:default;"><span id="sp-room-timer">${timerLabel}</span></div>
+              </div>
+            </div>
+            <div class="ins-hdr-right">
+              ${renderModeSwitchHtml()}
+              ${acChipHtml}
+              <div class="ws-ins-opt-wrap" onclick="event.stopPropagation()">
+                <button type="button" class="ins-hdr-ico" id="sp-prac-opt-btn" onclick="SpeakingStudio.toggleRoomOptions()" title="Màu sắc &amp; Cỡ chữ" aria-label="Options">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <div class="ws-ins-opt-pop" id="sp-prac-opt-pop">${roomOptHtml}</div>
+              </div>
+              <button type="button" class="ins-hdr-exit" onclick="SpeakingStudio.closePracticeRoom()">Thoát</button>
+            </div>
+          </header>
+
+          ${renderProStageShell({ stageClasses, examiner, statusLabel, topRightHtml, lobbyHtml, sidePanelHtml: '', controlBarHtml, barState })}
+        </div>
+      `;
+      commitProCinemaDom(root, html, examiner.id, activeMode);
+      return;
+    }
+
     root.innerHTML = `
       <div class="ins-main-col" onclick="SpeakingStudio.toggleRoomOptions(false)">
         <header class="ins-header ${isExam ? '' : 'ws-prac-custom-hdr'}">
@@ -4948,6 +5953,7 @@
             </div>
           </div>
           <div class="ins-hdr-right">
+            ${phase !== 'review' ? renderModeSwitchHtml() : ''}
             ${acChipHtml}
             <div class="ws-ins-opt-wrap" onclick="event.stopPropagation()">
               <button type="button" class="ins-hdr-ico" id="sp-prac-opt-btn" onclick="SpeakingStudio.toggleRoomOptions()" title="Màu sắc &amp; Cỡ chữ" aria-label="Options">
@@ -5147,6 +6153,14 @@
     submitInterviewTyped,
     nextInterviewQ,
     jumpInterviewQ,
-    finishInterview
+    finishInterview,
+    // 3D Examiner Pro Mode controls
+    setRoomViewMode,
+    setProExaminer,
+    toggleProBlindCaptions,
+    toggleProDrawer,
+    speakPart2Prompt,
+    startProExamSession,
+    finishProTurnManual
   };
 })();

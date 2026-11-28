@@ -977,6 +977,54 @@
     return true;
   }
 
+  async function transcribeRawBlob(rawBlob, opts) {
+    const mode = opts?.mode || 'speaking';
+    const engine = opts?.engine || 'auto';
+    const skipDsp = Boolean(opts?.skipDsp);
+    const recDurationSec = Number(opts?.durationSec || 0);
+    const recMime = rawBlob?.type || 'audio/webm';
+    let uploadBlob = rawBlob;
+    let filename = /mp4|m4a|aac/i.test(recMime) ? 'speech.m4a' : /ogg/i.test(recMime) ? 'speech.ogg' : 'speech.webm';
+    let boosted = false;
+    let gainApplied = 1;
+    let durationSec = recDurationSec;
+
+    if (!skipDsp) {
+      const processed = await processBlobToNormalizedWav(rawBlob, mode === 'word');
+      if (processed.silent) {
+        return {
+          ok: true,
+          silent: true,
+          text: '',
+          engine: '',
+          durationSec,
+          audioUrl: URL.createObjectURL(rawBlob),
+        };
+      }
+      uploadBlob = processed.blob;
+      filename = processed.filename;
+      boosted = processed.boosted;
+      gainApplied = processed.gainApplied;
+      durationSec = processed.durationSec || recDurationSec;
+    }
+
+    const audioUrl = URL.createObjectURL(uploadBlob);
+    const stt = await transcribeBlob(uploadBlob, filename, mode, engine);
+    return {
+      ok: true,
+      silent: false,
+      text: stt.text || '',
+      words: stt.words || [],
+      segments: stt.segments || [],
+      engine: stt.engine || '',
+      latencyMs: stt.clientLatencyMs || stt.latencyMs || 0,
+      boosted,
+      gainApplied,
+      durationSec,
+      audioUrl,
+    };
+  }
+
   async function checkHealth() {
     const res = await fetch(getApiUrl('/api/health'));
     return res.json();
@@ -989,6 +1037,7 @@
     startRecording,
     stop,
     abort,
+    transcribeRawBlob,
     matchSpokenTarget,
     compareSentence,
     getDefaultThreshold,
