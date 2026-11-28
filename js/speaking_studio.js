@@ -3639,6 +3639,7 @@
   function setProExaminer(exId) {
     if (!PRO_EXAMINERS[exId]) return;
     try { localStorage.setItem(EXAMINER_KEY, exId); } catch (_) {}
+    window.SpeakingExaminerCinema?.disconnectSimli?.();
     if (!roomState) return;
     rerenderActiveRoom();
   }
@@ -3771,8 +3772,30 @@
     return fallbackExaminerTurnDecision(payload);
   }
 
+  /* Preload upcoming lip-sync clip while candidate is answering (zero-latency next turn) */
+  function preloadNextProClip(ref) {
+    if (!ref || !window.SpeakingExaminerCinema?.preloadClip) return;
+    const exId = getProExaminerId();
+    if (ref.kind === 'interview') {
+      const nextQ = ref.topic?.questions?.[ref.qIdx + 1];
+      if (nextQ?.id) {
+        window.SpeakingExaminerCinema.preloadClip(exId, nextQ.id);
+      } else {
+        window.SpeakingExaminerCinema.preloadClip(exId, `sys_end_p${ref.part}`);
+      }
+    } else if (ref.kind === 'part2') {
+      if (ref.phase === 'prep') {
+        window.SpeakingExaminerCinema.preloadClip(exId, 'sys_p2_start_speak');
+      } else if (!ref.p2RoundingOff) {
+        window.SpeakingExaminerCinema.preloadClip(exId, 'sys_p2_add_more');
+      } else {
+        window.SpeakingExaminerCinema.preloadClip(exId, 'sys_end_p2');
+      }
+    }
+  }
+
   /* Speak as British Examiner -> automatically arm Hands-Free Continuous VAD right when done! */
-  function proExaminerSpeakAndListen(speechText, listenCfg, speakRate) {
+  function proExaminerSpeakAndListen(speechText, listenCfg, speakRate, clipId) {
     const ref = roomState;
     if (!ref || !ref.proStarted) return;
     window.SpeakingVADEngine?.pauseForExaminer?.();
@@ -3781,10 +3804,13 @@
     updateProStatusDom('Giám khảo đang nói...', 'examiner');
 
     window.SpeakingExaminerCinema?.speak?.(speechText, {
+      examinerId: getProExaminerId(),
+      clipId: clipId || '',
       rate: speakRate || 0.96,
       onDone: () => {
         if (roomState !== ref || !ref.proStarted || ref.phase === 'review') return;
         ref.examinerSpeaking = false;
+        preloadNextProClip(ref);
         if (listenCfg === null) return;
         ref.proVadState = 'listening';
         ref.recStartedAt = Date.now();
@@ -3821,42 +3847,45 @@
 
     if (ref.kind === 'part2' && !ref.p2RoundingOff) {
       if (ref.noSpeechNudges <= 1) {
-        proExaminerSpeakAndListen('Whenever you are ready, please begin talking about your topic.', getProTurnListenConfig(), 0.94);
+        proExaminerSpeakAndListen('Whenever you are ready, please begin talking about your topic.', getProTurnListenConfig(), 0.94, 'sys_p2_ready');
       } else {
-        proExaminerSpeakAndListen('Would you like to add anything else?', getProTurnListenConfig(), 0.94);
+        proExaminerSpeakAndListen('Would you like to add anything else?', getProTurnListenConfig(), 0.94, 'sys_p2_add_more');
       }
       return;
     }
 
     if (ref.noSpeechNudges <= 1) {
-      proExaminerSpeakAndListen('Take your time. Would you like me to repeat the question?', getProTurnListenConfig(), 0.94);
+      proExaminerSpeakAndListen('Take your time. Would you like me to repeat the question?', getProTurnListenConfig(), 0.94, 'sys_no_speech');
       return;
     }
 
     // After 2 silent nudges, politely advance like a real timed exam
     if (ref.kind === 'interview') {
-      const nextQ = ref.topic?.questions?.[ref.qIdx + 1]?.q || null;
-      if (nextQ) {
+      const nextQObj = ref.topic?.questions?.[ref.qIdx + 1] || null;
+      if (nextQObj?.q) {
         ref.qIdx++;
         ref.probeCount = 0;
         ref.repeatCount = 0;
         ref.noSpeechNudges = 0;
         rerenderActiveRoom();
-        proExaminerSpeakAndListen(`Alright, let's move on. ${nextQ}`, getProTurnListenConfig(), 0.96);
+        proExaminerSpeakAndListen(`Alright, let's move on. ${nextQObj.q}`, getProTurnListenConfig(), 0.96, nextQObj.id || '');
       } else {
-        concludeProExamSession(`Thank you. That is the end of Part ${ref.part}.`);
+        concludeProExamSession(`Thank you. That is the end of Part ${ref.part}.`, `sys_end_p${ref.part}`);
       }
     } else {
-      concludeProExamSession('Thank you. That is the end of Part 2.');
+      concludeProExamSession('Thank you. That is the end of Part 2.', 'sys_end_p2');
     }
   }
 
-  function concludeProExamSession(closingLine) {
+  function concludeProExamSession(closingLine, clipId) {
     const ref = roomState;
     if (!ref) return;
     window.SpeakingVADEngine?.pauseForExaminer?.();
     updateProStatusDom('Giám khảo đang kết thúc phần thi...', 'examiner');
+    const resolvedClipId = clipId || (ref.kind === 'part2' ? 'sys_end_p2' : `sys_end_p${ref.part}`);
     window.SpeakingExaminerCinema?.speak?.(closingLine, {
+      examinerId: getProExaminerId(),
+      clipId: resolvedClipId,
       rate: 0.96,
       onDone: () => {
         if (roomState !== ref) return;
@@ -3932,7 +3961,7 @@
         // Scenario 10: Stopped early (< 75s) -> Cambridge prompt "Would you like to add anything else?"
         if (res.reason !== 'time_limit' && totalDur < 75 && (ref.probeCount || 0) < 1 && ref.secsLeft > 15) {
           ref.probeCount = (ref.probeCount || 0) + 1;
-          proExaminerSpeakAndListen('Would you like to add anything else?', getProTurnListenConfig(), 0.94);
+          proExaminerSpeakAndListen('Would you like to add anything else?', getProTurnListenConfig(), 0.94, 'sys_p2_add_more');
           return;
         }
 
@@ -3949,7 +3978,7 @@
         words: res.words || [],
         segments: res.segments || [],
       });
-      concludeProExamSession('Thank you. That is the end of Part 2.');
+      concludeProExamSession('Thank you. That is the end of Part 2.', 'sys_end_p2');
       return;
     }
 
@@ -3966,9 +3995,9 @@
         ref.probeCount = 0;
         ref.repeatCount = 0;
         rerenderActiveRoom();
-        proExaminerSpeakAndListen(`Thank you. Let's move on to the next question. ${nextQObj.q}`, getProTurnListenConfig(), 0.96);
+        proExaminerSpeakAndListen(`Thank you. Let's move on to the next question. ${nextQObj.q}`, getProTurnListenConfig(), 0.96, nextQObj.id || '');
       } else {
-        concludeProExamSession(`Thank you. That is the end of Part ${ref.part}.`);
+        concludeProExamSession(`Thank you. That is the end of Part ${ref.part}.`, `sys_end_p${ref.part}`);
       }
       return;
     }
@@ -3994,19 +4023,21 @@
 
     if (decision.action === 'repeat' || decision.action === 'rephrase') {
       ref.repeatCount = (ref.repeatCount || 0) + 1;
-      proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.88);
+      const repeatClipId = decision.action === 'repeat' ? (curQObj?.id || '') : '';
+      proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.88, repeatClipId);
       return;
     }
 
     if (!decision.shouldAdvance && (decision.action === 'probe_short' || decision.action === 'followup_deep' || decision.action === 'redirect_offtopic')) {
       ref.probeCount = (ref.probeCount || 0) + 1;
-      proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.96);
+      const probeClipId = decision.action === 'probe_short' ? 'sys_probe_why' : '';
+      proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.96, probeClipId);
       return;
     }
 
     // Advance cleanly to next question or conclude exam
     if (decision.action === 'end_part' || !nextQObj) {
-      concludeProExamSession(decision.examinerSpeech || `Thank you. That is the end of Part ${ref.part}.`);
+      concludeProExamSession(decision.examinerSpeech || `Thank you. That is the end of Part ${ref.part}.`, `sys_end_p${ref.part}`);
       return;
     }
 
@@ -4014,7 +4045,7 @@
     ref.probeCount = 0;
     ref.repeatCount = 0;
     rerenderActiveRoom();
-    proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.96);
+    proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.96, nextQObj.id || '');
   }
 
   async function triggerPart2RoundingOff(combinedText, totalDur) {
@@ -4126,20 +4157,30 @@
 
     rerenderActiveRoom();
 
+    // Non-blocking optional Tier 2 Simli WebRTC activation (auto-skips cleanly if unconfigured)
+    const exId = getProExaminerId();
+    window.SpeakingExaminerCinema?.connectSimliIfConfigured?.(exId)?.catch?.(() => {});
+
     if (ref.kind === 'interview') {
-      const q1 = ref.topic?.questions?.[0]?.q || '';
+      const q1Obj = ref.topic?.questions?.[0];
+      const q2Obj = ref.topic?.questions?.[1];
+      const q1 = q1Obj?.q || '';
+      if (q1Obj?.id) window.SpeakingExaminerCinema?.preloadClip?.(exId, q1Obj.id);
+      if (q2Obj?.id) window.SpeakingExaminerCinema?.preloadClip?.(exId, q2Obj.id);
       const intro = ref.part === 1
         ? `Good afternoon. In this first part, I'd like to ask you some questions about ${ref.topic?.title || 'this topic'}. ${q1}`
         : `Now, let's discuss some more general questions related to ${ref.topic?.title || 'this topic'}. ${q1}`;
-      proExaminerSpeakAndListen(intro, getProTurnListenConfig(), 0.96);
+      proExaminerSpeakAndListen(intro, getProTurnListenConfig(), 0.96, q1Obj?.id || '');
     } else {
       // Part 2 Official Cambridge 60s Prep Intro
       startRoomTimer();
       window.SpeakingExaminerCinema?.setMode?.('prep');
+      window.SpeakingExaminerCinema?.preloadClip?.(exId, 'sys_p2_start_speak');
       proExaminerSpeakAndListen(
         "Now, I'm going to give you a topic, and I'd like you to talk about it for one to two minutes. Before you talk, you'll have one minute to think about what you're going to say, and you can make some notes if you wish.",
         null,
-        0.96
+        0.96,
+        'sys_p2_prep_intro'
       );
       setTimeout(() => {
         if (roomState === ref && ref.phase === 'prep') {
@@ -4504,7 +4545,8 @@
       proExaminerSpeakAndListen(
         "Alright? Remember you have one to two minutes for this, so don't worry if I stop you. I'll tell you when the time is up. Can you start speaking now, please?",
         getProTurnListenConfig(),
-        0.96
+        0.96,
+        'sys_p2_start_speak'
       );
       return;
     }

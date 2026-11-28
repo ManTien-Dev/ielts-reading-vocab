@@ -4241,6 +4241,24 @@ html[data-theme="dark"] .sp-tr-leg.is-err, html[data-theme="dark"] mark.sp-tr-er
 .sp-pro-stage.has-cinema-video.is-prep .sp-cinema-vid.is-layer-notes,
 .sp-pro-stage.has-cinema-video.is-processing .sp-cinema-vid.is-layer-notes { opacity: 1; z-index: 4; }
 
+/* Exact Pre-Rendered Lip-Sync Clip Overlay & Optional Simli WebRTC Stream */
+.sp-cinema-clip-vid,
+.sp-cinema-webrtc-vid {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 14%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sp-cinema-clip-vid.is-playing { opacity: 1; z-index: 6; }
+.sp-pro-stage.has-simli-live .sp-cinema-webrtc-vid { opacity: 1; z-index: 7; }
+.sp-pro-stage.has-simli-live .sp-cinema-img,
+.sp-pro-stage.has-simli-live .sp-cinema-vid { opacity: 0 !important; }
+
 /* Pre-Exam Authentic Entry Lobby Overlay (1-Click Continuous Mic Permission) */
 .sp-pro-lobby {
   position: absolute;

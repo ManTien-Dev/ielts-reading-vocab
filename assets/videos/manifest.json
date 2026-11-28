@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "baseUrl": "./assets/videos/",
+  "simliAutoConnect": true,
+  "examiners": {
+    "claire": {
+      "baseLoops": {
+        "idle": "",
+        "speak": "",
+        "nod": "",
+        "notes": ""
+      },
+      "clips": {}
+    },
+    "oliver": {
+      "baseLoops": {
+        "idle": "",
+        "speak": "",
+        "nod": "",
+        "notes": ""
+      },
+      "clips": {}
+    }
+  }
+}
