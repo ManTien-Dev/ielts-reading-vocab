@@ -29,5 +29,9 @@ window.APP_ACCOUNTS = [
   { id: 'ngocdieu',  password: 'dieu06', name: 'Le Ngoc Dieu',      role: 'student' },
   { id: 'hongnhung', password: 'nhung07',name: 'Nguyen Le Hong Nhung', role: 'student' },
   { id: 'baongoc',   password: 'ngoc08', name: 'Nguyen Van Bao Ngoc',  role: 'student' },
+  { id: 'nhatanh',   password: 'anh09',  name: 'Nguyễn Nhật Ánh',      role: 'student' },
+  { id: 'myngoc',    password: 'ngoc10', name: 'Lê Trần Mỹ Ngọc',      role: 'student' },
+  { id: 'anhnhu',    password: 'nhu11',  name: 'Cao Thị Ánh Như',      role: 'student' },
+  { id: 'ductung',   password: 'tung12', name: 'Trần Đức Tùng',        role: 'student' },
   { id: 'giaovien',  password: 'admin123', name: 'Giáo viên',       role: 'teacher' }
 ];
