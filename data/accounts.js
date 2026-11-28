@@ -33,5 +33,6 @@ window.APP_ACCOUNTS = [
   { id: 'myngoc',    password: 'ngoc10', name: 'Lê Trần Mỹ Ngọc',      role: 'student' },
   { id: 'anhnhu',    password: 'nhu11',  name: 'Cao Thị Ánh Như',      role: 'student' },
   { id: 'ductung',   password: 'tung12', name: 'Trần Đức Tùng',        role: 'student' },
+  { id: 'tranbinh',  password: 'binh13', name: 'Trần Bình',            role: 'student' },
   { id: 'giaovien',  password: 'admin123', name: 'Giáo viên',       role: 'teacher' }
 ];
