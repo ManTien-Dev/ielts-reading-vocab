@@ -183,6 +183,33 @@
     return Array.isArray(window.APP_ACCOUNTS) ? window.APP_ACCOUNTS : [];
   }
 
+  function getClassesList() {
+    return Array.isArray(window.APP_CLASSES) ? window.APP_CLASSES : [];
+  }
+
+  function getActiveClassId() {
+    return String(currentUser?.classId || '').trim();
+  }
+
+  function getActiveClassInfo() {
+    const cid = getActiveClassId();
+    if (!cid) return null;
+    return getClassesList().find((c) => c.id === cid) || { id: cid, name: cid };
+  }
+
+  function getLiveDeadlinesStorageKey(classId = getActiveClassId()) {
+    const cid = String(classId || '').trim();
+    if (!cid || cid === 'lop_thay_man') return 'ielts_teacher_live_deadlines_v1';
+    return `ielts_teacher_live_deadlines_v1__${cid}`;
+  }
+
+  function getScopedStudentAccounts() {
+    const students = getAccountsList().filter((a) => a.role !== 'teacher');
+    const cid = getActiveClassId();
+    if (!cid) return students;
+    return students.filter((a) => !a.classId || a.classId === cid);
+  }
+
   function getScopedUid(uid) {
     const raw = (uid || currentUser?.id || 'guest').toString().trim().toLowerCase();
     return raw || 'guest';
@@ -1475,9 +1502,10 @@
       });
       cloudClassCache = nextCache;
 
-      // Sync teacher live task deadlines (extend / end early / reopen) into localStorage for all clients
+      // Sync teacher live task deadlines (extend / end early / reopen) STRICTLY per classId
       try {
-        const LIVE_DL_KEY = 'ielts_teacher_live_deadlines_v1';
+        const activeCid = getActiveClassId();
+        const LIVE_DL_KEY = getLiveDeadlinesStorageKey(activeCid);
         let liveMap = {};
         try { liveMap = JSON.parse(localStorage.getItem(LIVE_DL_KEY) || '{}') || {}; } catch (_) {}
         let liveChanged = false;
@@ -1492,7 +1520,15 @@
             }
           });
         };
-        data.students.forEach((st) => mergeDlSource(st?.syncData?.teacherTaskDeadlines));
+        const accById = {};
+        getAccountsList().forEach((a) => { accById[getScopedUid(a.id)] = a; });
+        data.students.forEach((st) => {
+          if (!st?.syncData?.teacherTaskDeadlines) return;
+          const stUid = getScopedUid(st.id);
+          const srcCid = String(st?.syncData?.classId || accById[stUid]?.classId || (stUid === 'giaovien' ? 'lop_thay_man' : '')).trim();
+          if (activeCid && srcCid && srcCid !== activeCid) return;
+          mergeDlSource(st.syncData.teacherTaskDeadlines);
+        });
         if (liveChanged) {
           localStorage.setItem(LIVE_DL_KEY, JSON.stringify(liveMap));
         }
@@ -1556,6 +1592,7 @@
       streak: 0,
       syncData: {
         resetEpoch: CLASS_RESET_EPOCH,
+        classId: getActiveClassId(),
         teacherTaskDeadlines: deadlinesMap,
       },
     };
@@ -7184,7 +7221,11 @@
     recheckMultiTabLock,
     bindNoPasteGuards,
     getCloudClassCache: () => cloudClassCache,
-    getStudentAccounts: () => getAccountsList().filter((a) => a.role !== 'teacher'),
+    getStudentAccounts: getScopedStudentAccounts,
+    getAllStudentAccounts: () => getAccountsList().filter((a) => a.role !== 'teacher'),
+    getActiveClassId,
+    getActiveClassInfo,
+    getLiveDeadlinesStorageKey,
     getClassRankedEntries,
     computeConsecutiveStreakForUser,
     getLastCloudSyncTime: () => lastCloudSyncTime,

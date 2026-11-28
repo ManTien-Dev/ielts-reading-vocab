@@ -784,16 +784,21 @@
   /* =========================================================
      2. UNIFIED 4-SKILL PROGRESS & GRANULAR LOCK STATE READER
      ========================================================= */
-  function loadLiveDeadlines() { return readJson(LIVE_DL_KEY, {}); }
-  function loadSentMap() { return readJson(SENT_KEY, {}); }
-  function loadDismissedMap() { return readJson(DISMISSED_KEY, {}); }
+  function scopedClassKey(baseKey) {
+    const cid = String(B()?.getActiveClassId?.() || '').trim();
+    if (!cid || cid === 'lop_thay_man') return baseKey;
+    return `${baseKey}__${cid}`;
+  }
+  function loadLiveDeadlines() { return readJson(scopedClassKey(LIVE_DL_KEY), {}); }
+  function loadSentMap() { return readJson(scopedClassKey(SENT_KEY), {}); }
+  function loadDismissedMap() { return readJson(scopedClassKey(DISMISSED_KEY), {}); }
 
   function saveSentTasks(ids) {
     if (!Array.isArray(ids) || !ids.length) return;
     const m = loadSentMap();
     const now = Date.now();
     ids.forEach((id) => { m[normalizeAnyTaskId(id)] = now; });
-    writeJson(SENT_KEY, m);
+    writeJson(scopedClassKey(SENT_KEY), m);
   }
 
   function updateLiveDeadlines(ids, newDeadlineAt, toastMsg = '') {
@@ -805,7 +810,7 @@
     cleanIds.forEach((tid) => {
       map[tid] = { deadlineAt: dl, issuedAt: nowTs };
     });
-    writeJson(LIVE_DL_KEY, map);
+    writeJson(scopedClassKey(LIVE_DL_KEY), map);
     B()?.broadcastTeacherTaskDeadlines?.(map);
     if (toastMsg) B()?.showToast?.(toastMsg);
     renderDashboard();
@@ -1389,7 +1394,9 @@
       btn.setAttribute('aria-selected', act ? 'true' : 'false');
     });
 
-    const ranked = bridge.getClassRankedEntries?.(viewMode === 'month' ? 'month' : 'week') || [];
+    const allowedIdSet = new Set((bridge.getStudentAccounts?.() || []).map((s) => String(s.id || '').trim().toLowerCase()));
+    const ranked = (bridge.getClassRankedEntries?.(viewMode === 'month' ? 'month' : 'week') || [])
+      .filter((item) => !allowedIdSet.size || allowedIdSet.has(String(item.id || '').trim().toLowerCase()));
     const nowDate = new Date(nowMs);
     const todayKey = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
     const curYear = nowDate.getFullYear();
@@ -2641,7 +2648,7 @@
   }
 
   function loadWeeklyBatches() {
-    return readJson(WEEKLY_BATCHES_KEY, {});
+    return readJson(scopedClassKey(WEEKLY_BATCHES_KEY), {});
   }
 
   function computeWeekKeyFromDate(dateObj) {
@@ -2668,7 +2675,7 @@
       taskIds: mergedIds,
       updatedAt: nowTs,
     };
-    writeJson(WEEKLY_BATCHES_KEY, batches);
+    writeJson(scopedClassKey(WEEKLY_BATCHES_KEY), batches);
   }
 
   function copySelectedLink() {
@@ -2846,7 +2853,7 @@
     if (!tid) return;
     const map = loadDismissedMap();
     map[tid] = Date.now();
-    writeJson(DISMISSED_KEY, map);
+    writeJson(scopedClassKey(DISMISSED_KEY), map);
     renderDashboard();
     B()?.showToast?.('Đã ẩn bài khỏi danh sách theo dõi.');
   }
@@ -3502,6 +3509,11 @@
 
   function renderDashboard() {
     if (!B()?.isTeacherUser?.()) return;
+    const clsInfo = B()?.getActiveClassInfo?.();
+    const titleEl = document.querySelector('#screen-teacher .ts-cmd-title');
+    if (titleEl) {
+      titleEl.textContent = clsInfo?.name ? `Quản Lý · ${clsInfo.name}` : 'Quản Lý Lớp Học';
+    }
     const nowMs = Date.now();
     const buckets = getMonitorBuckets(nowMs);
     renderRosterSection(nowMs, buckets.activeList);
@@ -3907,7 +3919,7 @@
         validList.forEach((tid) => {
           if (!live[tid] || iss > Number(live[tid].issuedAt || 0)) live[tid] = { deadlineAt: dl, issuedAt: iss };
         });
-        writeJson(LIVE_DL_KEY, live);
+        writeJson(scopedClassKey(LIVE_DL_KEY), live);
       }
 
       const isTeacher = Boolean(B()?.isTeacherUser?.());

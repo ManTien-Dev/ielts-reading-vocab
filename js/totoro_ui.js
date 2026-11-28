@@ -621,7 +621,9 @@
     setTxt('hdr-acc-av', initials);
     setTxt('pop-acc-av', initials);
     setTxt('pop-acc-name', u.name || upperId);
-    setTxt('pop-acc-id', `Mã ID: ${upperId} · ${u.role === 'teacher' ? 'Giáo viên' : 'Học viên'}`);
+    const clsInfo = B?.getActiveClassInfo?.();
+    const clsSuffix = clsInfo?.name ? ` · ${clsInfo.name}` : '';
+    setTxt('pop-acc-id', `Mã ID: ${upperId} · ${u.role === 'teacher' ? 'Giáo viên' : 'Học viên'}${clsSuffix}`);
     setTxt('hdr-streak-days', `${snap.streak} ngày`);
     setTxt('pop-stat-streak', `${snap.streak} ngày`);
     setTxt('pop-stat-rank', snap.meWeek ? `#${snap.meWeek.rank}` : '—');
