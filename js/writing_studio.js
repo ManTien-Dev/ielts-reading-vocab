@@ -492,10 +492,10 @@
       <div class="ws-modal-overlay" id="ws-ac-modal">
         <div class="ws-modal-card" id="ws-ac-card" onclick="event.stopPropagation()"></div>
       </div>
-      <div class="ws-modal-overlay" id="ws-chart-zoom-modal" onclick="WritingStudio.closeTask1ChartZoom()">
+      <div class="ws-exam-room" id="ws-practice-room"></div>
+      <div class="ws-modal-overlay" id="ws-chart-zoom-modal" style="z-index:12000;" onclick="WritingStudio.closeTask1ChartZoom()">
         <div class="ws-modal-card is-wide ws-chart-zoom-card" id="ws-chart-zoom-body" onclick="event.stopPropagation()"></div>
       </div>
-      <div class="ws-exam-room" id="ws-practice-room"></div>
     `;
     document.body.appendChild(wrap);
 
@@ -3251,11 +3251,16 @@
     }
   }
 
-  /* ================= TASK 1 ACADEMIC SVG VISUAL RENDERER (6 TYPES, 100% OFFLINE) ================= */
+  /* ================= TASK 1 ACADEMIC VISUAL RENDERER (REAL CAMBRIDGE CHARTS + SVG FALLBACK) ================= */
   function renderTask1VisualHtml(p, isThumb = false) {
-    if (!p || !p.chartData) return '';
-    const d = p.chartData;
+    if (!p) return '';
     const cls = isThumb ? 'wt1-vis is-thumb' : 'wt1-vis is-full';
+
+    if (p.imageUrl) {
+      return `<div class="${cls} wt1-img-wrap"><img src="${esc(p.imageUrl)}" alt="${esc(p.title || 'Cambridge IELTS Writing Task 1 Chart')}" class="wt1-real-img" loading="${isThumb ? 'lazy' : 'eager'}" decoding="async"/></div>`;
+    }
+    if (!p.chartData) return '';
+    const d = p.chartData;
 
     if (p.chartType === 'line') {
       const W = 520, H = 248, padL = 44, padR = 24, padT = 22, padB = 36;
@@ -3518,7 +3523,7 @@
     body.innerHTML = `
       <div class="ws-modal-head" style="margin-bottom:10px;">
         <div>
-          <div class="ws-modal-title">${esc(p.type)} · ${esc(p.title)}</div>
+          <div class="ws-modal-title">${p.source ? `${esc(p.source)} · ` : ''}${esc(p.type)} · ${esc(p.title)}</div>
           <div style="font-size:12.5px;color:var(--ink-2);margin-top:2px;">${esc(p.prompt)}</div>
         </div>
         <button type="button" class="btn" style="padding:5px 11px;font-size:12px;" onclick="WritingStudio.closeTask1ChartZoom()">Đóng ✕</button>
@@ -3581,7 +3586,9 @@
     const t1Done = t1Prompts.filter((p) => doneSet.has(p.id)).length;
     const t2Done = t2Prompts.filter((p) => doneSet.has(p.id)).length;
     const fullDone = fullTests.filter((f) => doneSet.has(f.id)).length;
-    const view = state.pracView || 'portal';
+    const view = ['portal', 'task1', 'task2', 'full'].includes(state.pracView) ? state.pracView : 'portal';
+    const randIcoSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>';
+    const zoomIcoSvg = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>';
 
     const topNavHtml = `
       <div class="wp-view-tabs" role="tablist" aria-label="Chọn khu luyện đề Writing">
@@ -3632,11 +3639,11 @@
                     <rect x="142" y="31" width="11" height="27" rx="2" fill="#89B4D8"/>
                   </svg>
                 </div>
-                <div class="wp-cover-title">Writing Task 1<br><span>${t1Prompts.length} Đề · 7 Dạng Biểu Đồ</span></div>
+                <div class="wp-cover-title">Writing Task 1<br><span>${t1Prompts.length} Đề Thi Thật Cambridge</span></div>
               </div>
               <div class="wp-portal-body">
-                <h3>IELTS Academic Task 1</h3>
-                <p>Line, Bar, Pie, Table, Process (nhân tạo &amp; tự nhiên), Map (quá khứ &amp; tương lai) và Mixed Chart vẽ SVG sắc nét kèm bài mẫu Band 8.0+.</p>
+                <h3>IELTS Academic Task 1 · Cambridge 14–20</h3>
+                <p>Trọn bộ ${t1Prompts.length} đề thi thật Cambridge IELTS 14–20 đủ 7 dạng Line, Bar, Pie, Table, Process, Map &amp; Mixed Chart với hình gốc sắc nét + bài mẫu Band 8.0+.</p>
                 <div class="wp-portal-foot">
                   <span class="wp-portal-meta">20 phút · 150+ từ · Chấm TA</span>
                   <span class="btn btn-primary wp-portal-cta">Mở Task 1 →</span>
@@ -3764,11 +3771,11 @@
         <div class="tot-section-shell ink-brackets">
           <div class="tot-shell-head">
             <div>
-              <h2 class="tot-shell-title">IELTS Writing Task 1 · Academic Charts</h2>
-              <p class="tot-shell-sub">${t1Prompts.length} đề chuẩn 7 dạng biểu đồ Cambridge vẽ SVG sắc nét — kèm Overview mẫu, bài mẫu Band 8.0+ &amp; chấm Task Achievement (TA) chuẩn 150+ từ.</p>
+              <h2 class="tot-shell-title">IELTS Writing Task 1 · Đề Thi Thật Cambridge 14–20</h2>
+              <p class="tot-shell-sub">${t1Prompts.length} đề thi thật Cambridge IELTS 14–20 đầy đủ 7 dạng biểu đồ/bản đồ/quy trình gốc — kèm Overview mẫu, bài mẫu Band 8.0+ &amp; chấm Task Achievement (TA) chuẩn 150+ từ.</p>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="WritingStudio.openRandomWritingPrompt('task1')" title="Bốc ngẫu nhiên 1 đề Task 1 chưa luyện">🎲 Bốc đề ngẫu nhiên</button>
+              <button type="button" class="btn" style="padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;" onclick="WritingStudio.openRandomWritingPrompt('task1')" title="Bốc ngẫu nhiên 1 đề Task 1 chưa luyện">${randIcoSvg}<span>Bốc đề ngẫu nhiên</span></button>
               <span class="ws-pill tabular">${t1Done} / ${t1Prompts.length} bài đã luyện</span>
             </div>
           </div>
@@ -3793,14 +3800,15 @@
               return `
                 <article class="wt1-card ${isDone ? 'is-done' : ''}">
                   <div class="wt1-card-head">
+                    ${p.source ? `<span class="ws-pill warm">${esc(p.source.replace(/^Cambridge IELTS /i, 'Cam '))}</span>` : ''}
                     <span class="ws-type-pill is-discuss">${esc(p.type)}</span>
                     <span class="ws-prac-sub-tag">${esc(p.topic)}</span>
-                    ${bestB ? `<span class="ws-pill ok tabular" style="margin-left:auto;">Band ${bestB.toFixed(1)}</span>` : `<span class="ws-prac-sub-tag" style="margin-left:auto;">${esc(p.difficulty)}</span>`}
+                    ${bestB ? `<span class="ws-pill ok tabular" style="margin-left:auto;">Band ${bestB.toFixed(1)}</span>` : ''}
                   </div>
                   <h3 class="wt1-card-title">${esc(p.title)}</h3>
                   <div class="wt1-thumb-box" onclick="WritingStudio.openTask1ChartZoom('${esc(p.id)}')" title="Bấm để phóng to biểu đồ">
                     ${renderTask1VisualHtml(p, true)}
-                    <span class="wt1-thumb-zoom">🔍 Phóng to</span>
+                    <span class="wt1-thumb-zoom" style="display:inline-flex;align-items:center;gap:4px;">${zoomIcoSvg}<span>Phóng to</span></span>
                   </div>
                   <p class="ws-prac-review">${esc(p.review)}</p>
                   <div class="ws-prac-foot">
@@ -3833,7 +3841,7 @@
               <p class="tot-shell-sub">${fullTests.length} đề thi đầy đủ ghép trọn vẹn Part 1 (Task 1 · 150+ từ · 1/3 điểm) và Part 2 (Task 2 · 250+ từ · 2/3 điểm) chuẩn phòng thi máy CD-IELTS.</p>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="WritingStudio.openRandomWritingPrompt('full')" title="Bốc ngẫu nhiên 1 đề Full Test 60 phút">🎲 Bốc đề ngẫu nhiên</button>
+              <button type="button" class="btn" style="padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;" onclick="WritingStudio.openRandomWritingPrompt('full')" title="Bốc ngẫu nhiên 1 đề Full Test 60 phút">${randIcoSvg}<span>Bốc đề ngẫu nhiên</span></button>
               <span class="ws-pill tabular">${fullDone} / ${fullTests.length} đề đã hoàn thành</span>
             </div>
           </div>
@@ -3905,7 +3913,7 @@
             <p class="tot-shell-sub">Ngân hàng ${t2Prompts.length} đề thi thật giai đoạn 2020–2026 liên kết trực tiếp với ${(DATA().MODULES || []).length} Module Flow Idea.</p>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;" onclick="WritingStudio.openRandomWritingPrompt('task2')" title="Bốc ngẫu nhiên 1 đề Task 2 chưa luyện">🎲 Bốc đề ngẫu nhiên</button>
+            <button type="button" class="btn" style="padding:6px 12px;font-size:12px;display:inline-flex;align-items:center;gap:6px;" onclick="WritingStudio.openRandomWritingPrompt('task2')" title="Bốc ngẫu nhiên 1 đề Task 2 chưa luyện">${randIcoSvg}<span>Bốc đề ngẫu nhiên</span></button>
             <span class="ws-pill tabular">${t2Done} / ${t2Prompts.length} đề đã luyện</span>
           </div>
         </div>
@@ -3996,7 +4004,7 @@
     }
   }
 
-  function setPracView(v) { state.pracView = v || 'portal'; renderPracticeHub(); }
+  function setPracView(v) { state.pracView = ['portal', 'task1', 'task2', 'full'].includes(v) ? v : 'portal'; renderPracticeHub(); }
   function setPracT1Type(v) { state.pracT1Type = v || 'all'; renderPracticeHub(); }
   function togglePracOutline(id) { state.pracOutlineOpen[id] = !state.pracOutlineOpen[id]; renderPracticeHub(); }
   function setPracSubtopic(v) { state.pracSubtopic = v; renderPracticeHub(); }
@@ -4479,7 +4487,7 @@
     const task1ChartBlockHtml = isTask1 ? `
       <div class="wt1-room-chart-card">
         <div class="wt1-room-chart-head">
-          <strong>${esc(p.type)} · ${esc(p.title)}</strong>
+          <strong>${p.source ? `${esc(p.source)} · ` : ''}${esc(p.type)} · ${esc(p.title)}</strong>
           <button type="button" class="ws-ins-plan-btn" onclick="WritingStudio.openTask1ChartZoom('${esc(p.id)}')">🔍 Phóng to biểu đồ</button>
         </div>
         ${renderTask1VisualHtml(p, false)}
