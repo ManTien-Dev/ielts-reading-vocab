@@ -4048,6 +4048,7 @@
   }
 
   function cleanupProEngines() {
+    window.SpeakingGeminiLive?.closeSession?.();
     window.SpeakingVADEngine?.closeSession?.();
     window.SpeakingExaminerCinema?.destroy?.();
     if (boundProKeyHandler) {
@@ -4143,21 +4144,33 @@
 
   /* Client-side Official Cambridge Fallback (used if /api/examiner-turn is offline or file://) */
   function fallbackExaminerTurnDecision(payload) {
-    const { part, currentQuestion, nextQuestion, candidateText, durationSec, wordCount, repeatCount, probeCount, isPart2RoundingOff } = payload;
+    const { part, currentQuestion, lastExaminerSpeech, currentTurnSoFar, nextQuestion, candidateText, durationSec, wordCount, repeatCount, probeCount, isPart2RoundingOff } = payload;
     const low = String(candidateText || '').toLowerCase().trim();
     const isRepeat = /\b(repeat|pardon|again|catch that|hear that|sorry\??$|excuse me|say that again|didn't hear|did not hear)\b/i.test(low) && wordCount <= 14;
-    const isExplain = /\b(explain|rephrase|mean by|what does .* mean|don't understand|do not understand|clarify)\b/i.test(low) && wordCount <= 16;
+    const isExplain = /\b(explain|rephrase|mean by|what do you mean|what does .* mean|what kind of|like what|don't understand|do not understand|clarify|what information|more specific)\b/i.test(low) && wordCount <= 18;
+    const isAskExaminer = /\b(what about you|how about you|and you\??$|do you (like|think|walk|use|prefer|have)|what do you think)\b/i.test(low) && wordCount <= 16;
+    const isDecline = /\b(nothing else|that'?s all|no more|i don'?t know|no idea|not really|that is all)\b/i.test(low) && wordCount <= 10;
 
     if (isRepeat && repeatCount < 2) {
+      const toRepeat = probeCount >= 1 && lastExaminerSpeech ? lastExaminerSpeech : currentQuestion;
       return {
         action: 'repeat',
-        examinerSpeech: `Sure, of course. ${currentQuestion}`,
+        examinerSpeech: `Sure, of course. ${toRepeat}`,
         shouldAdvance: false,
         countAsAnswer: false,
         followUpQuestion: '',
       };
     }
     if (isExplain && repeatCount < 2) {
+      if (probeCount >= 1) {
+        return {
+          action: 'rephrase',
+          examinerSpeech: 'Sure — for example, you could mention why you feel that way, how often it happens, or a quick everyday example.',
+          shouldAdvance: false,
+          countAsAnswer: false,
+          followUpQuestion: '',
+        };
+      }
       if (part === 1) {
         return {
           action: 'repeat',
@@ -4171,6 +4184,52 @@
         action: 'rephrase',
         examinerSpeech: `Sure. In simpler terms, what is your general view on this: ${currentQuestion}`,
         shouldAdvance: false,
+        countAsAnswer: false,
+        followUpQuestion: '',
+      };
+    }
+    if (isAskExaminer) {
+      const priorWords = countWords(currentTurnSoFar || '');
+      if (priorWords < 14 && repeatCount < 2) {
+        return {
+          action: 'rephrase',
+          examinerSpeech: "Well, today I'm here to hear about your views! Could you tell me a bit more about your own experience?",
+          shouldAdvance: false,
+          countAsAnswer: false,
+          followUpQuestion: '',
+        };
+      }
+      if (nextQuestion) {
+        return {
+          action: 'next_question',
+          examinerSpeech: `Well, today it's all about your views, thank you. ${nextQuestion}`,
+          shouldAdvance: true,
+          countAsAnswer: false,
+          followUpQuestion: '',
+        };
+      }
+      return {
+        action: 'end_part',
+        examinerSpeech: `Well, today it's all about your views. Thank you, that is the end of Part ${part}.`,
+        shouldAdvance: true,
+        countAsAnswer: false,
+        followUpQuestion: '',
+      };
+    }
+    if (isDecline && probeCount >= 1) {
+      if (nextQuestion) {
+        return {
+          action: 'next_question',
+          examinerSpeech: `No problem at all, thank you. ${nextQuestion}`,
+          shouldAdvance: true,
+          countAsAnswer: false,
+          followUpQuestion: '',
+        };
+      }
+      return {
+        action: 'end_part',
+        examinerSpeech: `No problem at all. Thank you, that is the end of Part ${part}.`,
+        shouldAdvance: true,
         countAsAnswer: false,
         followUpQuestion: '',
       };
@@ -4281,6 +4340,22 @@
     }
   }
 
+  /* Update Part 1/3 question counter & "Chấm sớm" button IN PLACE without destroying Veo 3.1 videos! */
+  function updateProQuestionChrome(ref) {
+    if (!ref || ref.kind !== 'interview') return;
+    const total = (ref.turns || []).length || (ref.topic?.questions || []).length || 1;
+    const answered = (ref.turns || []).filter((t) => countWords(t.text) > 0).length;
+    const badge = document.getElementById('sp-pro-q-badge');
+    if (badge) badge.textContent = `Part ${ref.part} · Câu ${ref.qIdx + 1}/${total}`;
+    const timer = document.getElementById('sp-room-timer');
+    if (timer) timer.textContent = `Câu ${ref.qIdx + 1}/${total} · ${fmtMmSs(ref.totalElapsedSec || 0)}`;
+    const earlyBtn = document.getElementById('sp-pro-finish-early-btn');
+    if (earlyBtn) {
+      earlyBtn.style.display = answered >= 1 ? '' : 'none';
+      earlyBtn.textContent = `Chấm sớm (${answered}/${total})`;
+    }
+  }
+
   /* Speak as British Examiner -> automatically arm Hands-Free Continuous VAD right when done! */
   function proExaminerSpeakAndListen(speechText, listenCfg, speakRate, clipId) {
     const ref = roomState;
@@ -4288,6 +4363,7 @@
     window.SpeakingVADEngine?.pauseForExaminer?.();
     ref.examinerSpeaking = true;
     ref.proVadState = 'paused';
+    ref.lastExaminerSpeech = String(speechText || '').trim();
     updateProStatusDom('Giám khảo đang nói...', 'examiner');
 
     window.SpeakingExaminerCinema?.speak?.(speechText, {
@@ -4354,7 +4430,8 @@
         ref.probeCount = 0;
         ref.repeatCount = 0;
         ref.noSpeechNudges = 0;
-        rerenderActiveRoom();
+        ref.lastExaminerSpeech = '';
+        updateProQuestionChrome(ref);
         proExaminerSpeakAndListen(`Alright, let's move on. ${nextQObj.q}`, getProTurnListenConfig(), 0.96, nextQObj.id || '');
       } else {
         concludeProExamSession(`Thank you. That is the end of Part ${ref.part}.`, `sys_end_p${ref.part}`);
@@ -4485,7 +4562,8 @@
         ref.qIdx++;
         ref.probeCount = 0;
         ref.repeatCount = 0;
-        rerenderActiveRoom();
+        ref.lastExaminerSpeech = '';
+        updateProQuestionChrome(ref);
         proExaminerSpeakAndListen(`Thank you. Let's move on to the next question. ${nextQObj.q}`, getProTurnListenConfig(), 0.96, nextQObj.id || '');
       } else {
         concludeProExamSession(`Thank you. That is the end of Part ${ref.part}.`, `sys_end_p${ref.part}`);
@@ -4497,6 +4575,8 @@
       part: ref.part,
       topicTitle: ref.topic?.title || '',
       currentQuestion: curQObj?.q || '',
+      lastExaminerSpeech: ref.lastExaminerSpeech || curQObj?.q || '',
+      currentTurnSoFar: ref.turns?.[ref.qIdx]?.text || '',
       nextQuestion: nextQObj?.q || null,
       candidateText: res.text,
       durationSec: res.durationSec || 5,
@@ -4514,7 +4594,7 @@
 
     if (decision.action === 'repeat' || decision.action === 'rephrase') {
       ref.repeatCount = (ref.repeatCount || 0) + 1;
-      const repeatClipId = decision.action === 'repeat' ? (curQObj?.id || '') : '';
+      const repeatClipId = (decision.action === 'repeat' && !ref.probeCount) ? (curQObj?.id || '') : '';
       proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.88, repeatClipId);
       return;
     }
@@ -4526,7 +4606,7 @@
       return;
     }
 
-    // Advance cleanly to next question or conclude exam
+    // Advance cleanly to next question or conclude exam (WITHOUT tearing down live Veo 3.1 video!)
     if (decision.action === 'end_part' || !nextQObj) {
       concludeProExamSession(decision.examinerSpeech || `Thank you. That is the end of Part ${ref.part}.`, `sys_end_p${ref.part}`);
       return;
@@ -4535,7 +4615,8 @@
     ref.qIdx++;
     ref.probeCount = 0;
     ref.repeatCount = 0;
-    rerenderActiveRoom();
+    ref.lastExaminerSpeech = '';
+    updateProQuestionChrome(ref);
     proExaminerSpeakAndListen(decision.examinerSpeech, getProTurnListenConfig(), 0.96, nextQObj.id || '');
   }
 
@@ -4596,9 +4677,191 @@
     };
   }
 
+  function appendLiveTranscriptChunk(ref, chunk) {
+    const clean = String(chunk || '').trim();
+    if (!clean || !ref) return;
+    if (ref.kind === 'part2') {
+      ref.p2LiveTranscript = [ref.p2LiveTranscript || '', clean].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      return;
+    }
+    const idx = Math.max(0, Math.min((ref.topic?.questions?.length || 1) - 1, ref.qIdx || 0));
+    const qObj = ref.topic?.questions?.[idx];
+    const prev = ref.turns[idx] || {};
+    const combinedText = [prev.text || '', clean].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    const nowSec = Math.max(prev.durationSec || 0, Math.max(2, Math.round((Date.now() - (ref.liveTurnStartedAt || Date.now())) / 1000)));
+    const words = countWords(combinedText);
+    const wpm = nowSec > 0 ? Math.round((words / nowSec) * 60) : 0;
+    const low = combinedText.toLowerCase();
+    const usedChunks = (qObj?.chunks || []).filter((ch) => {
+      const k = String(ch || '').toLowerCase().trim();
+      return k.length >= 3 && low.includes(k);
+    });
+    ref.turns[idx] = {
+      qId: qObj?.id || `q${idx + 1}`,
+      q: qObj?.q || '',
+      text: combinedText,
+      durationSec: nowSec,
+      audioUrl: prev.audioUrl || '',
+      acoustic: {
+        hasAudio: Boolean(prev.audioUrl),
+        audioUrl: prev.audioUrl || '',
+        durationSec: nowSec,
+        words: [],
+        segments: [],
+      },
+      words,
+      wpm,
+      usedChunks,
+    };
+    updateProQuestionChrome(ref);
+  }
+
+  async function tryStartGeminiLiveSession(ref) {
+    if (!window.SpeakingGeminiLive?.startSession) return { ok: false, fallback: true };
+    const exId = getProExaminerId();
+    ref.liveTurnStartedAt = Date.now();
+    const liveRes = await window.SpeakingGeminiLive.startSession({
+      examinerId: exId,
+      part: ref.kind === 'part2' ? 2 : ref.part,
+      topicTitle: ref.kind === 'part2' ? (ref.cue?.title || '') : (ref.topic?.title || ''),
+      cueTitle: ref.cue?.title || '',
+      cueBullets: ref.cue?.bullets || [],
+      questions: ref.topic?.questions || [],
+      onExaminerSpeakingChange: (speaking) => {
+        if (roomState !== ref || !ref.proStarted || ref.phase === 'review') return;
+        ref.examinerSpeaking = speaking;
+        ref.proVadState = speaking ? 'paused' : 'listening';
+        if (speaking) {
+          window.SpeakingExaminerCinema?.setMode?.('speaking');
+          updateProStatusDom('⚡ Gemini Live · Giám khảo đang nói...', 'examiner');
+        } else {
+          ref.liveTurnStartedAt = Date.now();
+          window.SpeakingExaminerCinema?.setMode?.('listening');
+          updateProStatusDom('⚡ Gemini Live · Micro đang mở — Trò chuyện tự nhiên', 'listening');
+        }
+      },
+      onLevel: ({ bars, isSpeaking, elapsedMs }) => {
+        if (roomState !== ref) return;
+        updateWaveBars('room', bars);
+        window.SpeakingExaminerCinema?.feedMicLevel?.(bars);
+        if (isSpeaking && ref.kind === 'interview') {
+          ref.recElapsedSec = Math.round(elapsedMs / 1000);
+          const clock = document.getElementById('sp-int-rec-time');
+          if (clock) clock.textContent = fmtMmSs(ref.recElapsedSec);
+        }
+      },
+      onCandidateTranscript: (chunk) => {
+        if (roomState !== ref) return;
+        appendLiveTranscriptChunk(ref, chunk);
+      },
+      onAdvanceQuestion: (newIdx) => {
+        if (roomState !== ref || ref.kind !== 'interview') return;
+        const maxIdx = Math.max(0, (ref.topic?.questions?.length || 1) - 1);
+        const clamped = Math.max(0, Math.min(maxIdx, Number(newIdx) || 0));
+        if (clamped !== ref.qIdx) {
+          ref.qIdx = clamped;
+          ref.liveTurnStartedAt = Date.now();
+          updateProQuestionChrome(ref);
+        }
+      },
+      onExamFinish: (audioUrl) => {
+        if (roomState !== ref) return;
+        ref.geminiLiveActive = false;
+        cleanupProEngines();
+        if (ref.kind === 'interview') {
+          if (audioUrl) {
+            const lastAnswered = [...ref.turns].reverse().find((t) => countWords(t.text) > 0);
+            if (lastAnswered) {
+              lastAnswered.audioUrl = audioUrl;
+              if (lastAnswered.acoustic) {
+                lastAnswered.acoustic.hasAudio = true;
+                lastAnswered.acoustic.audioUrl = audioUrl;
+              }
+            }
+          }
+          const hasAny = ref.turns.some((t) => countWords(t.text) > 0);
+          if (hasAny) finishInterview();
+          else {
+            toast('Chưa ghi nhận câu trả lời nào trong phiên thi Live.');
+            ref.proStarted = false;
+            rerenderActiveRoom();
+          }
+        } else {
+          const fullTxt = String(ref.p2LiveTranscript || '').trim();
+          const totalDur = Math.max(15, 120 - Math.max(0, ref.secsLeft || 0));
+          if (countWords(fullTxt) >= 5) {
+            finalizeRoomAttempt(fullTxt, totalDur, audioUrl || '', {
+              hasAudio: Boolean(audioUrl),
+              audioUrl: audioUrl || '',
+              durationSec: totalDur,
+              words: [],
+              segments: [],
+            });
+          } else {
+            toast('Chưa thu được đủ lời nói Part 2 — bạn có thể bắt đầu lại phiên thi.');
+            ref.proStarted = false;
+            ref.phase = 'prep';
+            ref.secsLeft = 60;
+            rerenderActiveRoom();
+          }
+        }
+      },
+      onUnexpectedClose: () => {
+        if (roomState !== ref || !ref.geminiLiveActive) return;
+        ref.geminiLiveActive = false;
+        toast('Kết nối Gemini Live tạm ngắt — bạn có thể bấm Chấm sớm hoặc vào lại phiên thi.');
+      },
+    });
+    if (liveRes?.ok && roomState === ref) {
+      ref.geminiLiveActive = true;
+      return { ok: true };
+    }
+    return liveRes || { ok: false, fallback: true };
+  }
+
   async function startProExamSession() {
     const ref = roomState;
     if (!ref) return;
+
+    ref.geminiLiveActive = false;
+    ref.p2LiveTranscript = '';
+    ref.repeatCount = 0;
+    ref.probeCount = 0;
+    ref.noSpeechNudges = 0;
+    ref.p2RoundingOff = false;
+    ref.p2SpeechParts = [];
+
+    let stageAlreadyLive = false;
+    // Try Tier 1: Gemini Live Native Audio (~0.3s real-time speech-to-speech) for Part 1 & Part 3!
+    if (ref.kind === 'interview') {
+      ref.proStarted = true;
+      stageAlreadyLive = true;
+      rerenderActiveRoom();
+      updateProStatusDom('Đang kết nối phòng thi trực tiếp...', 'processing');
+      const liveAttempt = await tryStartGeminiLiveSession(ref);
+      if (roomState !== ref) return;
+      if (liveAttempt.ok) {
+        if (boundProKeyHandler) window.removeEventListener('keydown', boundProKeyHandler);
+        boundProKeyHandler = (e) => {
+          if (e.code === 'Space' && roomState?.proStarted && getRoomViewMode() === 'pro3d') {
+            const tag = String(document.activeElement?.tagName || '').toLowerCase();
+            if (tag === 'textarea' || tag === 'input') return;
+            e.preventDefault();
+            finishProTurnManual();
+          }
+        };
+        window.addEventListener('keydown', boundProKeyHandler);
+        updateProStatusDom('⚡ Gemini Live · Giám khảo đang bắt đầu...', 'examiner');
+        return;
+      }
+      if (!liveAttempt.fallback && liveAttempt.error) {
+        ref.proStarted = false;
+        rerenderActiveRoom();
+        toast(liveAttempt.error);
+        return;
+      }
+    }
+
     const ok = await window.SpeakingVADEngine?.openSession?.({
       onLevel: ({ bars, isSpeaking, elapsedMs }) => {
         updateWaveBars('room', bars);
@@ -4626,7 +4889,13 @@
         toast(String(msg || 'Lỗi Micro liên tục.'));
       },
     });
-    if (!ok || roomState !== ref) return;
+    if (!ok || roomState !== ref) {
+      if (roomState === ref && stageAlreadyLive) {
+        ref.proStarted = false;
+        rerenderActiveRoom();
+      }
+      return;
+    }
 
     ref.proStarted = true;
     ref.repeatCount = 0;
@@ -4641,12 +4910,12 @@
         const tag = String(document.activeElement?.tagName || '').toLowerCase();
         if (tag === 'textarea' || tag === 'input') return;
         e.preventDefault();
-        window.SpeakingVADEngine?.finishTurnNow?.();
+        finishProTurnManual();
       }
     };
     window.addEventListener('keydown', boundProKeyHandler);
 
-    rerenderActiveRoom();
+    if (!stageAlreadyLive) rerenderActiveRoom();
 
     // Non-blocking optional Tier 2 Simli WebRTC activation (auto-skips cleanly if unconfigured)
     const exId = getProExaminerId();
@@ -4683,6 +4952,10 @@
   }
 
   function finishProTurnManual() {
+    if (roomState?.geminiLiveActive && window.SpeakingGeminiLive?.isActive?.()) {
+      window.SpeakingGeminiLive.sendClientText('[The candidate has finished their turn. Please respond naturally as the IELTS examiner now.]');
+      return;
+    }
     window.SpeakingVADEngine?.finishTurnNow?.();
   }
 
@@ -5025,7 +5298,11 @@
         } else if (roomState.phase === 'speak') {
           clearInterval(roomState.timerId);
           if (getRoomViewMode() === 'pro3d' && roomState.proStarted) {
-            window.SpeakingVADEngine?.finishTurnNow?.();
+            if (roomState.geminiLiveActive && window.SpeakingGeminiLive?.isActive?.()) {
+              window.SpeakingGeminiLive.sendClientText('[Two minutes are up. Politely stop the candidate now, say Thank you, and ask ONE brief rounding-off question.]');
+            } else {
+              window.SpeakingVADEngine?.finishTurnNow?.();
+            }
           } else if (roomState.recording) {
             toggleRoomMic();
           } else {
@@ -5052,13 +5329,34 @@
     if (ta) ta.value = roomState.notes.sheet;
   }
 
-  function beginRoomSpeaking(autoStartMic) {
+  async function beginRoomSpeaking(autoStartMic) {
     if (!roomState) return;
-    roomState.phase = 'speak';
-    roomState.secsLeft = 120;
+    const ref = roomState;
+    ref.phase = 'speak';
+    ref.secsLeft = 120;
     startRoomTimer();
     renderPracticeRoom();
-    if (getRoomViewMode() === 'pro3d' && roomState.proStarted) {
+    if (getRoomViewMode() === 'pro3d' && ref.proStarted) {
+      // Try Gemini Live Native Audio for real-time Part 2 Long Turn + Rounding-off!
+      window.SpeakingVADEngine?.closeSession?.();
+      const liveAttempt = await tryStartGeminiLiveSession(ref);
+      if (roomState !== ref) return;
+      if (liveAttempt.ok) return;
+      // Fallback seamlessly to 0 VND/month VAD + British Neural TTS
+      await window.SpeakingVADEngine?.openSession?.({
+        onLevel: ({ bars }) => { updateWaveBars('room', bars); window.SpeakingExaminerCinema?.feedMicLevel?.(bars); },
+        onStateChange: (st) => {
+          if (roomState !== ref) return;
+          ref.proVadState = st;
+          if (st === 'speaking') updateProStatusDom('Giám khảo đang lắng nghe bạn...', 'speaking');
+          else if (st === 'listening') updateProStatusDom('Micro đang mở — Mời bạn trình bày Part 2', 'listening');
+          else if (st === 'processing') updateProStatusDom('Đang xử lý câu trả lời...', 'processing');
+        },
+        onTurnResult: (res) => handleProVadTurnResult(res),
+        onNoSpeech: () => handleProNoSpeech(),
+        onError: (msg) => toast(String(msg || 'Lỗi Micro liên tục.')),
+      });
+      if (roomState !== ref) return;
       proExaminerSpeakAndListen(
         "Alright? Remember you have one to two minutes for this, so don't worry if I stop you. I'll tell you when the time is up. Can you start speaking now, please?",
         getProTurnListenConfig(),
@@ -6525,7 +6823,7 @@
 
       // Pure Real IELTS Exam UI: ZERO question text, ZERO hints, ZERO Q-jump buttons, ZERO typing!
       const topRightHtml = `
-        <div class="sp-pro-glass-pill tabular">Part ${part} · Câu ${qIdx + 1}/${turns.length}</div>
+        <div class="sp-pro-glass-pill tabular" id="sp-pro-q-badge">Part ${part} · Câu ${qIdx + 1}/${turns.length}</div>
       `;
 
       const lobbyHtml = !roomState.proStarted
@@ -6548,9 +6846,7 @@
         <div class="sp-pro-dock-right">
           ${roomState.proStarted ? `
             <button type="button" class="sp-pro-sec-btn" id="sp-pro-done-turn-btn" style="${(barState === 'listening' || barState === 'speaking') ? '' : 'display:none;'}" onclick="SpeakingStudio.finishProTurnManual()" title="Phím tắt: Space">Xong lượt (Space)</button>
-          ` : ''}
-          ${roomState.proStarted && answeredCount >= 1 ? `
-            <button type="button" class="sp-pro-sec-btn is-primary" onclick="SpeakingStudio.finishInterview()">Chấm sớm (${answeredCount}/${turns.length})</button>
+            <button type="button" class="sp-pro-sec-btn is-primary" id="sp-pro-finish-early-btn" style="${answeredCount >= 1 ? '' : 'display:none;'}" onclick="SpeakingStudio.finishInterview()">Chấm sớm (${answeredCount}/${turns.length})</button>
           ` : ''}
         </div>
       `;
