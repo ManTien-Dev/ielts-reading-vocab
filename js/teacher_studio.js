@@ -597,9 +597,10 @@
   }
 
   function getSpeakingPracticeCatalog() {
+    const restricted = Boolean(window.AccessPolicy?.isRestricted?.());
     const p13 = window.SPEAKING_PART13_DATA || {};
     const p1List = p13.PART1_TOPICS || [];
-    const p2List = (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []);
+    const p2List = restricted ? [] : (window.SPEAKING_STUDIO_DATA?.STORIES || []).flatMap((st) => st.cueCards || []);
     const p3List = p13.PART3_TOPICS || [];
     const mode = state.pickerPracticeMode === 'exam' ? 'exam' : 'practice';
     const modeTag = mode === 'exam' ? 'Thi thật' : 'Luyện tập';
@@ -1928,8 +1929,10 @@
         (STRICT: NO "chưa làm / đang học / chưa ai làm" on cards!)
      ========================================================= */
   function renderPickerSection(nowMs) {
+    const restricted = Boolean(window.AccessPolicy?.isRestricted?.());
     const isWeeklyMode = state.composerTemplate === 'weekly';
-    // Ensure active suite is valid for current mode (Weekly = Practice ONLY, no Tasks!)
+    const practiceOnly = isWeeklyMode || restricted;
+    // Ensure active suite is valid for current mode (Weekly or Restricted Class = Practice ONLY, no proprietary Tasks!)
     const activeSuitesInit = getSuitesForSkill(state.pickerSkill);
     const curActiveSuite = state.pickerSuite[state.pickerSkill];
     if (activeSuitesInit.length && !activeSuitesInit.some((s) => s.key === curActiveSuite)) {
@@ -1943,12 +1946,12 @@
       tabsEl.innerHTML = SKILLS.map((sk) => {
         const selCnt = [...state.selectedIds].filter((tid) => detectSkillByTaskId(tid) === sk.key).length;
         let countText = '';
-        if (isWeeklyMode) {
+        if (practiceOnly) {
           if (sk.key === 'writing') {
-            countText = `${(window.WRITING_STUDIO_DATA?.PRACTICE_PROMPTS || []).length} đề Practice`;
+            countText = `${getWritingPracticeCatalog().length} đề T1·T2·Full`;
           } else if (sk.key === 'speaking') {
             const spCnt = getSpeakingPracticeCatalog().length;
-            countText = spCnt ? `${spCnt} Cue Card` : 'Đề Practice';
+            countText = spCnt ? (restricted ? `${spCnt} đề P1·P3` : `${spCnt} đề P1–P3`) : 'Đề Practice';
           } else {
             countText = 'Đề Practice';
           }
@@ -1991,7 +1994,9 @@
       if (!selArr.length) {
         basketEl.innerHTML = isWeekly
           ? '<span class="ts-basket-empty">Tick các đề Practice Nghe / Nói / Đọc / Viết bên trái — bài tập tuần chỉ gồm đề Practice (không lẫn Task).</span>'
-          : '<span class="ts-basket-empty">Tick 1–4 bài ở bất kỳ kỹ năng nào bên trái để gom vào cùng 1 mẫu giao bài trong ngày.</span>';
+          : (restricted
+            ? '<span class="ts-basket-empty">Tick 1–4 đề Practice (Reading / Listening / Writing / Speaking) bên trái để gom vào link giao bài trong ngày.</span>'
+            : '<span class="ts-basket-empty">Tick 1–4 bài ở bất kỳ kỹ năng nào bên trái để gom vào cùng 1 mẫu giao bài trong ngày.</span>');
       } else {
         basketEl.innerHTML = selArr.map((tid) => {
           const t = getTaskById(tid);
@@ -2048,7 +2053,7 @@
       return;
     }
 
-    if (state.pickerSkill === 'speaking' && !isWeeklyMode && !getSpeakingCatalog().length) {
+    if (state.pickerSkill === 'speaking' && !practiceOnly && !isPracticeSuite && !getSpeakingCatalog().length) {
       gridEl.className = 'ts-picker-grid';
       gridEl.innerHTML = `
         <div class="ts-speaking-soon">
@@ -2063,7 +2068,7 @@
     const q = state.pickerQuery.trim().toLowerCase();
     const liveMap = loadLiveDeadlines();
     const catalog = getCatalogBySkill(state.pickerSkill).filter((t) => {
-      if (isWeeklyMode && !t.isPractice) return false;
+      if (practiceOnly && !t.isPractice) return false;
       if (curSuite !== 'all' && t.suite !== curSuite) return false;
       if (state.pickerHideFull && t.practiceMeta?.isFull) return false;
       if (q && !t.code.toLowerCase().includes(q) && !t.theme.toLowerCase().includes(q) && !t.id.toLowerCase().includes(q)) return false;
@@ -2426,17 +2431,31 @@
     return orderedList[targetIdx] || null;
   }
 
-  function autoPickDailyBundle() {
+  async function autoPickDailyBundle() {
     const nowMs = Date.now();
     const sentMap = loadSentMap();
     const liveMap = loadLiveDeadlines();
     const offset = state.dailyAutoOffset;
     state.dailyAutoOffset += 1;
 
-    const pickedRead = pickSequentialNextTask(getOrderedTasksBySkill('reading'), offset, sentMap, liveMap, nowMs);
-    const pickedListen = pickSequentialNextTask(getOrderedTasksBySkill('listening'), offset, sentMap, liveMap, nowMs);
-    const pickedWrite = pickSequentialNextTask(getOrderedTasksBySkill('writing'), offset, sentMap, liveMap, nowMs);
-    const pickedSpeak = pickSequentialNextTask(getOrderedTasksBySkill('speaking'), offset, sentMap, liveMap, nowMs);
+    let pickedRead, pickedListen, pickedWrite, pickedSpeak;
+    if (window.AccessPolicy?.isRestricted?.()) {
+      const loaders = [];
+      if (window.ReadingPracticeApp?.ensureSourceBankLoaded) loaders.push(window.ReadingPracticeApp.ensureSourceBankLoaded('cambridge').catch(() => {}));
+      if (window.ListeningPracticeApp?.ensureSourceBankLoaded) loaders.push(window.ListeningPracticeApp.ensureSourceBankLoaded('cambridge').catch(() => {}));
+      if (loaders.length) await Promise.all(loaders);
+      const readList = getReadingPracticeCatalog('cambridge').filter((it) => !it.practiceMeta?.isFull);
+      const listenList = getListeningPracticeCatalog('cambridge').filter((it) => !it.practiceMeta?.isFull);
+      pickedRead = pickNextCandidate(readList, offset, sentMap, liveMap, nowMs);
+      pickedListen = pickNextCandidate(listenList, offset, sentMap, liveMap, nowMs);
+      pickedWrite = pickNextCandidate(getWritingPracticeCatalog(), offset, sentMap, liveMap, nowMs);
+      pickedSpeak = pickNextCandidate(getSpeakingPracticeCatalog(), offset, sentMap, liveMap, nowMs);
+    } else {
+      pickedRead = pickSequentialNextTask(getOrderedTasksBySkill('reading'), offset, sentMap, liveMap, nowMs);
+      pickedListen = pickSequentialNextTask(getOrderedTasksBySkill('listening'), offset, sentMap, liveMap, nowMs);
+      pickedWrite = pickSequentialNextTask(getOrderedTasksBySkill('writing'), offset, sentMap, liveMap, nowMs);
+      pickedSpeak = pickSequentialNextTask(getOrderedTasksBySkill('speaking'), offset, sentMap, liveMap, nowMs);
+    }
 
     state.composerTemplate = 'daily';
     try { localStorage.setItem(COMPOSER_TPL_KEY, 'daily'); } catch (_) {}
