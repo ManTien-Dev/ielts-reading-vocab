@@ -2627,7 +2627,16 @@
     return w;
   }
 
-  let syncPackPromise = null;
+  const syncPackPromises = {};
+  const SYNC_PACK_SHARDS = [
+    { key: 'cam15_20', re: /^lcam_(1[5-9]|20)_/i, src: 'data/listening_sync_cam15_20.js?v=20261128f' },
+    { key: 'cam10_14', re: /^lcam_1[0-4]_/i, src: 'data/listening_sync_cam10_14.js?v=20261128g' }
+  ];
+  function getSyncShardForPart(partId) {
+    if (!partId) return null;
+    const idStr = String(partId);
+    return SYNC_PACK_SHARDS.find((s) => s.re.test(idStr)) || null;
+  }
   function getRealSyncCuesForPart(partId) {
     if (!partId) return null;
     const raw = window.__LISTENING_SYNC__?.[partId];
@@ -2636,17 +2645,18 @@
 
   function ensureListeningSyncPackLoaded(partId) {
     if (!partId || getRealSyncCuesForPart(partId)) return Promise.resolve(true);
-    if (!/^lcam_(1[5-9]|20)_/i.test(String(partId))) return Promise.resolve(false);
-    if (syncPackPromise) return syncPackPromise;
-    syncPackPromise = new Promise((resolve) => {
+    const shard = getSyncShardForPart(partId);
+    if (!shard) return Promise.resolve(false);
+    if (syncPackPromises[shard.key]) return syncPackPromises[shard.key];
+    syncPackPromises[shard.key] = new Promise((resolve) => {
       const sc = document.createElement('script');
-      sc.src = 'data/listening_sync_cam15_20.js?v=20261128f';
+      sc.src = shard.src;
       sc.async = true;
       sc.onload = () => resolve(Boolean(getRealSyncCuesForPart(partId)));
       sc.onerror = () => resolve(false);
       document.head.appendChild(sc);
     });
-    return syncPackPromise;
+    return syncPackPromises[shard.key];
   }
 
   function buildReviewTimelineFromSyncCues(syncCues) {
@@ -3234,7 +3244,7 @@
     reviewActiveTurnIdx = -1;
     reviewTimeline = syncValid ? buildReviewTimelineFromSyncCues(rawSyncCues) : null;
 
-    if (!syncValid && activePart?.id && /^lcam_(1[5-9]|20)_/i.test(activePart.id) && !window.__LISTENING_SYNC__?.[activePart.id]) {
+    if (!syncValid && activePart?.id && getSyncShardForPart(activePart.id) && !window.__LISTENING_SYNC__?.[activePart.id]) {
       const targetPid = activePart.id;
       ensureListeningSyncPackLoaded(targetPid).then((loaded) => {
         if (loaded && state.view === 'review' && state.lastReview === rev) {
