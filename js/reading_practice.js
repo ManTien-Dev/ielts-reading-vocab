@@ -238,12 +238,34 @@
       st.history.unshift(entry);
       if (st.history.length > 80) st.history = st.history.slice(0, 80);
       if (st.inProgress && st.inProgress.itemId === entry.itemId) st.inProgress = null;
+      if (st.drafts && entry.itemId && st.drafts[entry.itemId]) delete st.drafts[entry.itemId];
       this.save(st);
     },
 
-    saveInProgress() {
-      // Disabled: students complete the test or end & grade immediately (no resumable drafts).
-      this.clearInProgress();
+    saveInProgress(snapshot) {
+      if (!snapshot || !snapshot.itemId) return;
+      const st = this.load();
+      if (!st.drafts || typeof st.drafts !== 'object') st.drafts = {};
+      st.drafts[snapshot.itemId] = snapshot;
+      st.inProgress = snapshot;
+      this.save(st);
+    },
+
+    getDraftForItem(itemId) {
+      if (!itemId) return null;
+      const st = this.load();
+      if (st.drafts && st.drafts[itemId]) return st.drafts[itemId];
+      if (st.inProgress && st.inProgress.itemId === itemId) return st.inProgress;
+      return null;
+    },
+
+    clearDraftForItem(itemId) {
+      if (!itemId) return;
+      const st = this.load();
+      let changed = false;
+      if (st.drafts && st.drafts[itemId]) { delete st.drafts[itemId]; changed = true; }
+      if (st.inProgress && st.inProgress.itemId === itemId) { st.inProgress = null; changed = true; }
+      if (changed) this.save(st);
     },
 
     clearInProgress() {
@@ -254,7 +276,10 @@
       }
     },
 
-    getInProgress() { return null; },
+    getInProgress() {
+      const st = this.load();
+      return st.inProgress || null;
+    },
     getHistory() { return this.load().history; },
 
     _lockKey() { return `${LOCKOUT_KEY_BASE}${getUid()}`; },
@@ -860,7 +885,8 @@
     const cleanReason = reason || 'Chuyển tab khi đang làm bài';
     s.antiCheatStrikes = strikeNum;
     if (strikeNum === 1) {
-      s.antiCheatNotice = `Cảnh cáo chống gian lận (1/2 — ${cleanReason}): Vi phạm thêm 1 lần nữa sẽ kết thúc, chấm điểm ngay và khóa 30 phút.`;
+      s.antiCheatNotice = `Cảnh cáo chống gian lận (1/2 — ${cleanReason}): Vi phạm thêm 1 lần nữa phòng làm bài sẽ tạm khóa 30 phút (tiến trình bài làm vẫn được giữ nguyên).`;
+      persistDraft();
       renderExamWorkspace();
       showAntiCheatModal({
         level: 'warn',
@@ -870,35 +896,20 @@
         ctaLabel: 'Tôi đã hiểu · Quay lại làm bài'
       });
     } else {
-      // Strike 2: DO NOT reset/wipe answers! End & grade immediately with current answers, then lock for 30 minutes.
-      const res = computeReviewResult();
-      const isMastered = res.total > 0 && res.score === res.total;
+      // Strike 2: PRESERVE 100% of student answers/highlights/notes/timer so they can resume after unlock/cooldown!
       const itemTitle = s.title;
+      const itemId = s.itemId;
+      s.antiCheatStrikes = 0;
+      s.antiCheatNotice = '';
+      persistDraft();
 
       stopTimer();
       stopReadingAntiCheat();
-      ReadingPracticeStore.clearInProgress();
-
-      ReadingPracticeStore.recordAttempt({
-        itemId: s.itemId,
-        title: s.title,
-        source: s.source,
-        isFull: s.isFull,
-        score: res.score,
-        total: res.total,
-        band: res.band,
-        elapsedSec: res.elapsedSec,
-        mastered: isMastered,
-        terminatedByAntiCheat: true,
-        completedAt: Date.now()
-      });
 
       const lockInfo = ReadingPracticeStore.setLockout(ANTI_CHEAT_LOCKOUT_MINS, {
         reason: cleanReason,
-        score: res.score,
-        total: res.total,
-        band: res.band,
-        title: itemTitle
+        title: itemTitle,
+        itemId
       });
 
       state.pendingSelection = null;
@@ -909,12 +920,9 @@
 
       showAntiCheatModal({
         level: 'lock',
-        badge: 'VI PHẠM 2/2 · KHÓA 30 PHÚT',
-        title: 'Bài làm đã kết thúc · Khóa 30 phút',
-        reason: cleanReason,
-        score: res.score,
-        total: res.total,
-        band: res.band,
+        badge: 'VI PHẠM 2/2 · TẠM KHÓA 30 PHÚT',
+        title: 'Đã lưu tiến trình & Tạm khóa 30 phút',
+        reason: `${cleanReason} — Toàn bộ đáp án và ghi chú của bạn đã được lưu nguyên vẹn. Sau khi hết 30 phút hoặc được Giáo viên mở khóa, hãy vào lại đề này để làm tiếp!`,
         until: lockInfo.until,
         remainingMs: ANTI_CHEAT_LOCKOUT_MINS * 60 * 1000,
         ctaLabel: 'Đã hiểu'
@@ -2350,6 +2358,17 @@
     const practiceContrast = ['totoro', 'cd', 'sepia'].includes(rawPracContrast) ? rawPracContrast : 'totoro';
     const defaultContrast = isPractice ? practiceContrast : 'cd';
 
+    const savedDraft = !config.openInReview
+      ? ReadingPracticeStore.getDraftForItem(config.itemId)
+      : null;
+    const hasSavedDraft = Boolean(
+      savedDraft &&
+      (Object.keys(savedDraft.answers || {}).length > 0 ||
+        Object.keys(savedDraft.highlights || {}).length > 0 ||
+        (Array.isArray(savedDraft.notes) && savedDraft.notes.length > 0) ||
+        Number(savedDraft.elapsedSec || 0) > 0)
+    );
+
     state.session = {
       itemId: config.itemId,
       title: config.title,
@@ -2360,16 +2379,18 @@
       activePenColor: config.activePenColor || 'yellow',
       brushAuto: false,
       showTimer: config.showTimer !== false,
-      attemptCount: Number(config.attemptCount) || 0,
-      firstAttemptResult: config.firstAttemptResult || null,
-      lockedCorrect: config.lockedCorrect ? { ...config.lockedCorrect } : {},
-      wrongSet: config.wrongSet ? { ...config.wrongSet } : {},
-      antiCheatStrikes: Number(config.antiCheatStrikes) || 0,
+      attemptCount: Number(hasSavedDraft ? savedDraft.attemptCount : config.attemptCount) || 0,
+      firstAttemptResult: (hasSavedDraft ? savedDraft.firstAttemptResult : config.firstAttemptResult) || null,
+      lockedCorrect: hasSavedDraft && savedDraft.lockedCorrect ? { ...savedDraft.lockedCorrect } : (config.lockedCorrect ? { ...config.lockedCorrect } : {}),
+      wrongSet: hasSavedDraft && savedDraft.wrongSet ? { ...savedDraft.wrongSet } : (config.wrongSet ? { ...config.wrongSet } : {}),
+      antiCheatStrikes: 0,
       antiCheatNotice: '',
-      highlights: config.highlights ? JSON.parse(JSON.stringify(config.highlights)) : {},
+      highlights: hasSavedDraft && savedDraft.highlights
+        ? JSON.parse(JSON.stringify(savedDraft.highlights))
+        : (config.highlights ? JSON.parse(JSON.stringify(config.highlights)) : {}),
       deckDefaultName: config.deckDefaultName || config.title,
       passageIds: config.passageIds,
-      activePassageIdx: 0,
+      activePassageIdx: hasSavedDraft ? Math.min(config.passageIds.length - 1, Math.max(0, Number(savedDraft.activePassageIdx) || 0)) : 0,
       mode: config.openInReview ? 'review' : 'exam',
       // Exam mode ALWAYS locks to official bright CD-IELTS ('cd'); Practice mode allows custom theme/contrast
       contrast: defaultContrast,          // 'cd' | 'totoro' | 'dark' | 'yellow'
@@ -2378,18 +2399,21 @@
       optionsOpen: false,
       showBilingual: !!config.openInReview && isNews,
       totalSec,
-      remainingSec: config.remainingSec ?? totalSec,
-      elapsedSec: config.elapsedSec ?? 0,
+      remainingSec: hasSavedDraft && Number.isFinite(Number(savedDraft.remainingSec)) ? Number(savedDraft.remainingSec) : (config.remainingSec ?? totalSec),
+      elapsedSec: hasSavedDraft && Number.isFinite(Number(savedDraft.elapsedSec)) ? Number(savedDraft.elapsedSec) : (config.elapsedSec ?? 0),
       paused: false,
-      answers: config.answers ? { ...config.answers } : {},
-      flagged: config.flagged ? { ...config.flagged } : {},
-      struck: config.struck ? { ...config.struck } : {},
-      notes: Array.isArray(config.notes) ? config.notes.slice() : [],
+      answers: hasSavedDraft && savedDraft.answers ? { ...savedDraft.answers } : (config.answers ? { ...config.answers } : {}),
+      flagged: hasSavedDraft && savedDraft.flagged ? { ...savedDraft.flagged } : (config.flagged ? { ...config.flagged } : {}),
+      struck: hasSavedDraft && savedDraft.struck ? { ...savedDraft.struck } : (config.struck ? { ...config.struck } : {}),
+      notes: hasSavedDraft && Array.isArray(savedDraft.notes) ? savedDraft.notes.slice() : (Array.isArray(config.notes) ? config.notes.slice() : []),
       notesOpen: false,
       activeQid: null,
       activeEvidenceId: null,
       reviewResult: null
     };
+    if (hasSavedDraft) {
+      setTimeout(() => window.__VOCAB_BRIDGE__?.showToast?.('Đã khôi phục tiến trình bài làm trước đó — tiếp tục làm bài nhé!'), 120);
+    }
     state.view = 'exam';
     state.mobilePane = 'passage';
     state.dictTarget = null;
@@ -2427,7 +2451,28 @@
   }
 
   function persistDraft() {
-    // No resumable drafts: students finish the attempt or end & grade immediately on exit.
+    const s = state.session;
+    if (!s || s.mode !== 'exam' || s.liveRoomId || !s.itemId) return;
+    ReadingPracticeStore.saveInProgress({
+      itemId: s.itemId,
+      title: s.title,
+      source: s.source,
+      isFull: !!s.isFull,
+      studyMode: s.studyMode || 'exam',
+      activePassageIdx: Number(s.activePassageIdx || 0),
+      remainingSec: Number(s.remainingSec || 0),
+      elapsedSec: Number(s.elapsedSec || 0),
+      attemptCount: Number(s.attemptCount || 0),
+      firstAttemptResult: s.firstAttemptResult || null,
+      lockedCorrect: s.lockedCorrect ? { ...s.lockedCorrect } : {},
+      wrongSet: s.wrongSet ? { ...s.wrongSet } : {},
+      answers: s.answers ? { ...s.answers } : {},
+      flagged: s.flagged ? { ...s.flagged } : {},
+      struck: s.struck ? { ...s.struck } : {},
+      highlights: s.highlights ? JSON.parse(JSON.stringify(s.highlights)) : {},
+      notes: Array.isArray(s.notes) ? s.notes.slice() : [],
+      updatedAt: Date.now()
+    });
   }
 
   /* ---------- PERSISTENT TEXT-OFFSET PASTEL HIGHLIGHT ENGINE ---------- */
@@ -5260,7 +5305,9 @@
         itemId: p.id, title: p.title, source: p.source, isFull: false,
         studyMode: opts.studyMode || (p.source === 'news' ? 'practice' : 'exam'),
         suggestedMins: p.suggestedMins || 20, deckDefaultName: p.deckDefaultName || p.title,
-        passageIds: [p.id], openInReview: !!opts.openInReview
+        passageIds: [p.id], openInReview: !!opts.openInReview,
+        answers: opts.answers || undefined,
+        elapsedSec: opts.elapsedSec
       });
     },
 
@@ -5271,8 +5318,27 @@
         itemId: ft.id, title: ft.title, source: ft.source, isFull: true,
         studyMode: opts.studyMode || 'exam',
         suggestedMins: ft.suggestedMins || 60, deckDefaultName: ft.deckDefaultName || ft.title,
-        passageIds: ft.passageIds.slice(), openInReview: !!opts.openInReview
+        passageIds: ft.passageIds.slice(), openInReview: !!opts.openInReview,
+        answers: opts.answers || undefined,
+        elapsedSec: opts.elapsedSec
       });
+    },
+
+    async openHistoryReview(attemptIdx) {
+      const hist = ReadingPracticeStore.getHistory();
+      const h = hist[Number(attemptIdx) || 0];
+      if (!h || !h.itemId) return;
+      const src = h.source || (/^vol/i.test(h.itemId) ? 'volume' : (/^act/i.test(h.itemId) ? 'actual' : (/^news/i.test(h.itemId) ? 'news' : 'cambridge')));
+      window.TotoroUI?.enterSkillMode?.('Reading', 'practice');
+      await ensureSourceBankLoaded(src);
+      const opts = {
+        openInReview: true,
+        studyMode: h.studyMode || 'practice',
+        answers: h.answers || {},
+        elapsedSec: Number(h.elapsedSec || 0)
+      };
+      if (h.isFull) this.startFullTest(h.itemId, opts);
+      else this.startPassage(h.itemId, opts);
     },
 
     resumeDraft() {
@@ -5301,12 +5367,28 @@
       }
       stopTimer();
       stopReadingAntiCheat();
-      ReadingPracticeStore.clearInProgress();
+      if (s && s.mode === 'exam' && !s.isNews) persistDraft();
       state.pendingSelection = null;
       document.body.classList.remove('rp-exam-fullscreen');
       state.view = 'source';
       state.session = null;
       renderHub();
+    },
+
+    saveAndExitToHub() {
+      if (state.session && state.session.mode === 'exam') {
+        persistDraft();
+      }
+      const modal = document.getElementById('rp-presubmit-modal');
+      if (modal) modal.classList.remove('open');
+      stopTimer();
+      stopReadingAntiCheat();
+      state.pendingSelection = null;
+      document.body.classList.remove('rp-exam-fullscreen');
+      state.view = 'source';
+      state.session = null;
+      renderHub();
+      window.__VOCAB_BRIDGE__?.showToast?.('Đã lưu nguyên tiến trình bài làm — bạn vào lại đề này để làm tiếp nhé!');
     },
 
     openExitConfirmModal() {
@@ -5334,11 +5416,12 @@
             </div>
           </div>
           <p class="rp-exit-note">
-            Rời khỏi lúc này sẽ <strong>kết thúc lượt làm và chấm điểm ngay</strong> theo các câu bạn đã điền.
+            Bạn có thể <strong>Lưu tiến trình &amp; Thoát</strong> để làm tiếp sau (không mất đáp án), hoặc <strong>Nộp &amp; Chấm điểm ngay</strong>.
           </p>
         </div>
         <div class="rp-ps-foot rp-exit-foot">
-          <button type="button" class="rp-btn-exit-confirm" id="rp-btn-confirm-exit-grade" onclick="ReadingPracticeApp.confirmFinishAndExit()">Kết thúc &amp; Chấm điểm</button>
+          <button type="button" class="btn btn-subtle" onclick="ReadingPracticeApp.saveAndExitToHub()">Lưu &amp; Thoát</button>
+          <button type="button" class="rp-btn-exit-confirm" id="rp-btn-confirm-exit-grade" onclick="ReadingPracticeApp.confirmFinishAndExit()">Nộp &amp; Chấm điểm</button>
           <button type="button" class="btn btn-primary rp-btn-stay" onclick="ReadingPracticeApp.closePreSubmitModal()">Ở lại làm tiếp</button>
         </div>
       `;
@@ -5354,7 +5437,7 @@
 
       stopTimer();
       stopReadingAntiCheat();
-      ReadingPracticeStore.clearInProgress();
+      ReadingPracticeStore.clearDraftForItem(s.itemId);
 
       ReadingPracticeStore.recordAttempt({
         itemId: s.itemId,
@@ -5898,13 +5981,15 @@
         s.lockedCorrect = nextLocked;
         s.wrongSet = nextWrong;
 
-        // Record first-attempt score in history (NOT yet mastered — cannot peek Solution!)
+        // Record first-attempt score in history with submitted answers so student can review their attempt
         if (s.attemptCount === 1) {
           ReadingPracticeStore.recordAttempt({
             itemId: s.itemId, title: s.title, source: s.source,
-            isFull: s.isFull, score: res.score, total: res.total,
+            isFull: s.isFull, studyMode: s.studyMode || 'practice',
+            score: res.score, total: res.total,
             band: res.band, elapsedSec: res.elapsedSec,
-            mastered: false, completedAt: Date.now()
+            answers: { ...(s.answers || {}) },
+            mastered: false, submittedAt: Date.now(), completedAt: Date.now()
           });
         }
 
@@ -5929,9 +6014,11 @@
       const first = s.firstAttemptResult || res;
       ReadingPracticeStore.recordAttempt({
         itemId: s.itemId, title: s.title, source: s.source,
-        isFull: s.isFull, score: first.score, total: res.total,
+        isFull: s.isFull, studyMode: s.studyMode || 'practice',
+        score: first.score, total: res.total,
         band: first.band, elapsedSec: res.elapsedSec,
-        mastered: true, attempts: s.attemptCount, completedAt: Date.now()
+        answers: { ...(s.answers || {}) },
+        mastered: true, attempts: s.attemptCount, submittedAt: Date.now(), completedAt: Date.now()
       });
 
       renderExamWorkspace();

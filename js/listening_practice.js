@@ -97,19 +97,27 @@
       try { localStorage.setItem(this._key(), JSON.stringify(obj)); } catch (_) {}
       try { window.dispatchEvent(new CustomEvent('listening-practice-updated')); } catch (_) {}
     },
+    getHistory() { return this.load().history; },
     recordAttempt(entry) {
       const store = this.load();
+      const now = Date.now();
       store.history.unshift({
         itemId: entry.itemId,
+        title: entry.title || entry.itemId,
+        source: entry.source || (/^lvol/i.test(String(entry.itemId || '')) ? 'volume' : (/^l?act/i.test(String(entry.itemId || '')) ? 'actual' : 'cambridge')),
+        partIds: Array.isArray(entry.partIds) ? entry.partIds.slice() : [],
         isFull: !!entry.isFull,
         mode: entry.mode || 'practice',
         score: Number(entry.score || 0),
         total: Number(entry.total || 10),
         band: Number(entry.band || 0),
         elapsedSec: Number(entry.elapsedSec || 0),
-        ts: Date.now()
+        answers: entry.answers && typeof entry.answers === 'object' ? { ...entry.answers } : {},
+        submittedAt: now,
+        completedAt: now,
+        ts: now
       });
-      if (store.history.length > 250) store.history.length = 250;
+      if (store.history.length > 150) store.history.length = 150;
       this.save(store);
     },
     getItemProgress(itemObj) {
@@ -3503,6 +3511,16 @@
     const firstPartObj = d.PARTS?.[partIds[0]];
     const firstQ = firstPartObj?.answers?.[0]?.num || 1;
 
+    function lpDraftKey() {
+      const uid = window.__VOCAB_BRIDGE__?.getScopedUid?.() || 'guest';
+      return `ielts_lp_drafts_v1_${uid}`;
+    }
+    let savedLpDraft = null;
+    try {
+      const map = JSON.parse(localStorage.getItem(lpDraftKey()) || '{}') || {};
+      if (map[itemId] && typeof map[itemId] === 'object') savedLpDraft = map[itemId];
+    } catch (_) {}
+
     stopExamTimer();
     stopActiveAudio();
     state.session = {
@@ -3511,24 +3529,27 @@
       mode: useMode,
       title,
       partIds,
-      activePartIdx: 0,
-      activeQNum: firstQ,
+      activePartIdx: savedLpDraft ? Math.min(partIds.length - 1, Math.max(0, Number(savedLpDraft.activePartIdx || 0))) : 0,
+      activeQNum: savedLpDraft?.activeQNum || firstQ,
       contrast: useMode === 'practice' ? 'totoro' : 'cd',
       textSize: 'regular',
       activePenColor: 'yellow',
       showTimer: true,
       optionsOpen: false,
       notesOpen: false,
-      notes: [],
+      notes: Array.isArray(savedLpDraft?.notes) ? savedLpDraft.notes.slice() : [],
       pendingQuote: '',
       paused: false,
-      answers: {},
+      answers: savedLpDraft?.answers ? { ...savedLpDraft.answers } : {},
       durationSec: durationMin * 60,
-      remainingSec: durationMin * 60,
+      remainingSec: savedLpDraft && Number(savedLpDraft.remainingSec) > 10 ? Number(savedLpDraft.remainingSec) : durationMin * 60,
       startedAt: Date.now()
     };
     state.view = 'exam';
     render();
+    if (savedLpDraft && Object.keys(savedLpDraft.answers || {}).length > 0) {
+      window.__VOCAB_BRIDGE__?.showToast?.('Đã khôi phục tiến trình bài nghe trước đó — tiếp tục làm bài nhé!');
+    }
   }
 
   function switchExamPart(idx, autoPlay) {
@@ -3714,22 +3735,103 @@
     }
     stopExamTimer();
     stopActiveAudio();
+    try {
+      const uid = window.__VOCAB_BRIDGE__?.getScopedUid?.() || 'guest';
+      const k = `ielts_lp_drafts_v1_${uid}`;
+      const map = JSON.parse(localStorage.getItem(k) || '{}') || {};
+      if (state.session?.itemId && map[state.session.itemId]) {
+        delete map[state.session.itemId];
+        localStorage.setItem(k, JSON.stringify(map));
+      }
+    } catch (_) {}
+    const savedAnswers = { ...(state.session.answers || {}) };
     const result = gradeSession(state.session);
-    ListeningPracticeStore.recordAttempt(result);
+    const inferredSrc = state.source || (/^lvol/i.test(String(result.itemId || '')) ? 'volume' : (/^l?act/i.test(String(result.itemId || '')) ? 'actual' : 'cambridge'));
+    ListeningPracticeStore.recordAttempt({ ...result, answers: savedAnswers, source: inferredSrc });
     state.lastReview = result;
     state.session = null;
     state.view = 'review';
     render();
   }
 
+  async function openHistoryReview(attemptIdx) {
+    const hist = ListeningPracticeStore.getHistory();
+    const h = hist[Number(attemptIdx) || 0];
+    if (!h || !h.itemId) return;
+    const src = h.source || (/^lvol/i.test(h.itemId) ? 'volume' : (/^l?act/i.test(h.itemId) ? 'actual' : 'cambridge'));
+    window.TotoroUI?.setListeningPracticeSub?.('exams');
+    window.TotoroUI?.enterSkillMode?.('Listening', 'practice');
+    await ensureSourceBankLoaded(src);
+    const d = DATA();
+    let partIds = Array.isArray(h.partIds) && h.partIds.length ? h.partIds.filter((pid) => !!d.PARTS?.[pid]) : [];
+    let title = h.title || '';
+    if (!partIds.length) {
+      if (h.isFull) {
+        const ft = (d.FULL_TESTS || []).find((x) => x.id === h.itemId);
+        if (ft && Array.isArray(ft.partIds)) {
+          partIds = ft.partIds.filter((pid) => !!d.PARTS?.[pid]);
+          title = title || ft.title || 'IELTS Listening FULL TEST';
+        }
+      } else if (d.PARTS?.[h.itemId]) {
+        partIds = [h.itemId];
+        title = title || d.PARTS[h.itemId].title || `Part ${d.PARTS[h.itemId].partNum || 1}`;
+      }
+    }
+    if (!partIds.length) {
+      toast('Không tìm thấy dữ liệu đề nghe của lượt làm bài này.');
+      return;
+    }
+    stopExamTimer();
+    stopActiveAudio();
+    const savedSession = {
+      itemId: h.itemId,
+      isFull: !!h.isFull,
+      mode: h.mode || 'practice',
+      title: title || h.itemId,
+      partIds,
+      activePartIdx: 0,
+      activeQNum: d.PARTS?.[partIds[0]]?.answers?.[0]?.num || 1,
+      answers: h.answers && typeof h.answers === 'object' ? { ...h.answers } : {},
+      startedAt: Date.now() - (Math.max(1, Number(h.elapsedSec || 0)) * 1000),
+      durationSec: 1800,
+      remainingSec: 0
+    };
+    const result = gradeSession(savedSession);
+    result.elapsedSec = Number(h.elapsedSec || result.elapsedSec || 0);
+    result.rightTab = 'summary';
+    state.lastReview = result;
+    state.session = null;
+    state.view = 'review';
+    document.body.classList.add('lp-exam-fullscreen');
+    render();
+  }
+
+  function saveListeningDraftNow() {
+    if (!state.session || !state.session.itemId) return;
+    try {
+      const uid = window.__VOCAB_BRIDGE__?.getScopedUid?.() || 'guest';
+      const k = `ielts_lp_drafts_v1_${uid}`;
+      const map = JSON.parse(localStorage.getItem(k) || '{}') || {};
+      map[state.session.itemId] = {
+        itemId: state.session.itemId,
+        activePartIdx: Number(state.session.activePartIdx || 0),
+        activeQNum: state.session.activeQNum,
+        answers: state.session.answers ? { ...state.session.answers } : {},
+        notes: Array.isArray(state.session.notes) ? state.session.notes.slice() : [],
+        remainingSec: Number(state.session.remainingSec || 0),
+        updatedAt: Date.now()
+      };
+      localStorage.setItem(k, JSON.stringify(map));
+    } catch (_) {}
+  }
+
   function exitExam() {
+    let hadAns = false;
     if (state.session) {
       const parts = getSessionParts();
       const answeredQ = parts.reduce((acc, p) => acc + getPartAnsweredCount(p), 0);
-      if (answeredQ > 0) {
-        const ok = window.confirm('Thoát khỏi bài thi hiện tại? Các câu bạn đang điền sẽ không được lưu.');
-        if (!ok) return;
-      }
+      hadAns = answeredQ > 0 || (state.session.notes && state.session.notes.length > 0);
+      if (hadAns) saveListeningDraftNow();
     }
     stopExamTimer();
     stopActiveAudio();
@@ -3737,6 +3839,9 @@
     state.session = null;
     state.view = 'source';
     render();
+    if (hadAns) {
+      window.__VOCAB_BRIDGE__?.showToast?.('Đã lưu nguyên tiến trình bài nghe — vào lại đề này để làm tiếp nhé!');
+    }
   }
 
   function switchReviewPart(idx) {
@@ -3807,6 +3912,7 @@
     }
   });
 
+  window.ListeningPracticeStore = ListeningPracticeStore;
   window.ListeningPracticeApp = {
     render,
     openPortal,
@@ -3848,6 +3954,8 @@
     addNoteFromSelection,
     openTeacherReview,
     openTeacherReviewFromExam,
+    openHistoryReview,
+    getHistory: () => ListeningPracticeStore.getHistory(),
     submitExam,
     exitExam,
     switchReviewPart,

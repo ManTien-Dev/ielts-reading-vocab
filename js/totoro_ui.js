@@ -1323,17 +1323,16 @@
       const allEntries = [];
 
       // 1. Reading Practice & Reading Tasks
-      (window.ReadingPracticeStore?.getHistory?.() || []).forEach((h) => {
+      (window.ReadingPracticeStore?.getHistory?.() || []).forEach((h, idx) => {
+        const tsVal = Number(h.submittedAt || h.completedAt || 0);
         allEntries.push({
           skill: 'reading',
           skillLbl: 'Reading',
-          ts: Number(h.submittedAt || 0),
+          ts: tsVal,
           title: h.title || 'Reading Practice',
-          sub: `${h.source === 'cambridge' ? 'Cambridge' : (h.source === 'volume' ? 'Volume' : (h.source === 'actual' ? 'Actual' : 'Reading'))} · ${h.submittedAt ? new Date(h.submittedAt).toLocaleDateString('vi-VN') : 'Đã nộp'}`,
+          sub: `${h.source === 'cambridge' ? 'Cambridge' : (h.source === 'volume' ? 'Volume' : (h.source === 'actual' ? 'Actual' : 'Reading'))} · ${tsVal ? new Date(tsVal).toLocaleDateString('vi-VN') : 'Đã nộp'}`,
           badge: `${h.score}/${h.total} câu`,
-          action: h.isFull
-            ? `window.TotoroUI.enterSkillMode('Reading', 'practice'); window.ReadingPracticeApp?.startFullTest('${esc(h.itemId)}', { openInReview: true });`
-            : `window.TotoroUI.enterSkillMode('Reading', 'practice'); window.ReadingPracticeApp?.startPassage('${esc(h.itemId)}', { openInReview: true });`,
+          action: `window.ReadingPracticeApp?.openHistoryReview?.(${idx})`,
         });
       });
       snap.completedTasks.forEach(([tid, info]) => {
@@ -1352,15 +1351,16 @@
       // 2. Listening Practice & Dictation Studio
       try {
         const lpRaw = JSON.parse(localStorage.getItem(`ielts_listening_practice_v1_${uid}`) || 'null');
-        (lpRaw?.history || []).slice(0, 12).forEach((h) => {
+        (lpRaw?.history || []).slice(0, 12).forEach((h, idx) => {
+          const tsVal = Number(h.ts || h.completedAt || h.submittedAt || 0);
           allEntries.push({
             skill: 'listening',
             skillLbl: 'Listening',
-            ts: Number(h.ts || 0),
-            title: h.itemId ? `Listening · ${String(h.itemId).toUpperCase()}` : 'Listening Practice',
-            sub: `${h.mode === 'exam' ? 'Thi thật' : 'Luyện tập'} · ${h.ts ? new Date(h.ts).toLocaleDateString('vi-VN') : 'Đã nộp'}`,
+            ts: tsVal,
+            title: h.title || (h.itemId ? `Listening · ${String(h.itemId).toUpperCase()}` : 'Listening Practice'),
+            sub: `${h.mode === 'exam' ? 'Thi thật' : 'Luyện tập'} · ${h.score || 0}/${h.total || 10} câu · ${tsVal ? new Date(tsVal).toLocaleDateString('vi-VN') : 'Đã nộp'}`,
             badge: h.band ? `Band ${Number(h.band).toFixed(1)}` : `${h.score || 0}/${h.total || 10}`,
-            action: "window.TotoroUI?.enterSkillMode('Listening', 'practice')",
+            action: `window.ListeningPracticeApp?.openHistoryReview?.(${idx})`,
           });
         });
       } catch (_) {}
@@ -1385,7 +1385,7 @@
       } catch (_) {}
 
       // 3. Writing Practice (Task 1 · Task 2 · Full Test)
-      (window.WritingStudio?.getPracticeHistory?.() || []).slice(0, 15).forEach((h) => {
+      (window.WritingStudio?.getPracticeHistory?.() || []).slice(0, 15).forEach((h, idx) => {
         allEntries.push({
           skill: 'writing',
           skillLbl: 'Writing',
@@ -1393,22 +1393,22 @@
           title: String(h.prompt || 'Writing Practice').slice(0, 68),
           sub: `${h.type || 'Task 2'} · ${h.wordCount || 0}w · ${h.completedAt ? new Date(h.completedAt).toLocaleDateString('vi-VN') : 'Đã nộp'}`,
           badge: h.band ? `Band ${Number(h.band).toFixed(1)}` : `${h.wordCount || 0}w`,
-          action: "window.TotoroUI?.enterSkillMode('Writing', 'practice')",
+          action: `window.WritingStudio?.openHistoryReview?.(${idx})`,
         });
       });
 
-      // 4. Speaking Practice (Part 2 Cue Cards)
+      // 4. Speaking Practice (Part 1 · Part 2 · Part 3 · Full Test)
       try {
         const spHist = JSON.parse(localStorage.getItem(`totoro_speaking_prac_hist_v1_${uid}`) || '[]');
-        (Array.isArray(spHist) ? spHist : []).slice(0, 12).forEach((h) => {
+        (Array.isArray(spHist) ? spHist : []).slice(0, 12).forEach((h, idx) => {
           allEntries.push({
             skill: 'speaking',
             skillLbl: 'Speaking',
             ts: Number(h.at || 0),
-            title: h.cueTitle || 'Speaking Part 2',
+            title: h.cueTitle || 'Speaking Practice',
             sub: `${h.wpm ? h.wpm + ' WPM · ' : ''}${h.at ? new Date(h.at).toLocaleDateString('vi-VN') : 'Đã nộp'}`,
             badge: h.band ? `Band ${Number(h.band).toFixed(1)}` : `${h.words || 0}w`,
-            action: "window.TotoroUI?.enterSkillMode('Speaking', 'practice')",
+            action: `window.SpeakingStudio?.openHistoryReview?.(${idx})`,
           });
         });
       } catch (_) {}
@@ -1536,45 +1536,55 @@
     const mvDecks = window.MyVocabStore?.getDecks?.() || [];
     const mvTotalWords = mvDecks.reduce((sum, d) => sum + (d.words?.length || 0), 0);
 
-    // 4 official Reading decks breakdown
+    const isRestricted = Boolean(window.AccessPolicy?.isRestricted?.());
+    const pTaskStats = window.PersonalTaskEngine?.getStats?.() || { total: 1, done: 0 };
+    const demoWords = window.DEMO_VOCAB_DATA?.items || [];
     const assessments = B?.getAssessmentsMap?.() || {};
     const f1 = window.APP_DATA?.file1_paraphrase_1500 || [];
     const f2 = window.APP_DATA?.file2_families_3500 || [];
-    const deckGroups = [
-      { key: 'paraphrase', label: 'Paraphrase 1.500', list: f1 },
-      { key: 'foundation', label: 'Nền tảng', list: f2.filter((w) => (w.tier || w.level) === 'foundation' || (w.rank || 0) <= 1000) },
-      { key: 'academic', label: 'Học thuật', list: f2.filter((w) => (w.tier || w.level) === 'academic' || ((w.rank || 0) > 1000 && (w.rank || 0) <= 2200)) },
-      { key: 'advanced', label: 'Chuyên sâu', list: f2.filter((w) => (w.tier || w.level) === 'advanced' || (w.rank || 0) > 2200) }
-    ];
+    const deckGroups = isRestricted
+      ? [
+          { key: 'demo', label: 'Bộ từ mẫu (Demo)', done: demoWords.filter((w) => assessments[w.id] === 3).length, total: demoWords.length || 12 },
+          { key: 'mylist', label: 'Từ cá nhân (MY LIST)', done: mvTotalWords, total: Math.max(mvTotalWords, 30) },
+          { key: 'ptask', label: 'Task tự tạo', done: pTaskStats.done || 0, total: Math.max(1, pTaskStats.total || 1) },
+          { key: 'practice', label: 'Bài luyện đề đã làm', done: rpStats.completedUnique || 0, total: 30 }
+        ]
+      : [
+          { key: 'paraphrase', label: 'Paraphrase 1.500', list: f1 },
+          { key: 'foundation', label: 'Nền tảng', list: f2.filter((w) => (w.tier || w.level) === 'foundation' || (w.rank || 0) <= 1000) },
+          { key: 'academic', label: 'Học thuật', list: f2.filter((w) => (w.tier || w.level) === 'academic' || ((w.rank || 0) > 1000 && (w.rank || 0) <= 2200)) },
+          { key: 'advanced', label: 'Chuyên sâu', list: f2.filter((w) => (w.tier || w.level) === 'advanced' || (w.rank || 0) > 2200) }
+        ];
     const deckBarsHtml = deckGroups.map((dg) => {
-      const total = dg.list.length || 1;
-      const done = dg.list.filter((w) => assessments[w.id] === 3).length;
+      const total = dg.list ? (dg.list.length || 1) : (dg.total || 1);
+      const done = dg.list ? dg.list.filter((w) => assessments[w.id] === 3).length : (dg.done || 0);
+      const totalDisp = dg.list ? dg.list.length : dg.total;
       const pct = Math.min(100, Math.round((done / total) * 100));
       return `
         <div class="rh-deck-row">
-          <div class="rh-deck-meta"><span>${esc(dg.label)}</span><strong class="tabular">${done}/${dg.list.length}</strong></div>
+          <div class="rh-deck-meta"><span>${esc(dg.label)}</span><strong class="tabular">${done}/${totalDisp}</strong></div>
           <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:${pct}%"></div></div>
         </div>
       `;
     }).join('');
 
-    const rpHistHtml = rpStats.recent.length
-      ? rpStats.recent.slice(0, 5).map((h) => {
-          const dt = h.completedAt ? new Date(h.completedAt).toLocaleDateString('vi-VN') : '';
+    const allRpHist = window.ReadingPracticeStore?.getHistory?.() || [];
+    const rpHistHtml = allRpHist.length
+      ? allRpHist.slice(0, 10).map((h, idx) => {
+          const tsVal = h.submittedAt || h.completedAt || 0;
+          const dt = tsVal ? new Date(tsVal).toLocaleDateString('vi-VN') : '';
           const srcLabel = h.source === 'cambridge' ? 'Cambridge' : h.source === 'volume' ? 'Volume' : h.source === 'actual' ? 'Actual' : 'News';
           const isMastered = !!(h.mastered || (h.total > 0 && h.score === h.total));
-          const openCall = h.isFull
-            ? `window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.startFullTest('${esc(h.itemId)}', { ${isMastered ? 'openInReview: true' : "studyMode: 'practice'"} });`
-            : `window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.startPassage('${esc(h.itemId)}', { ${isMastered ? 'openInReview: true' : "studyMode: 'practice'"} });`;
+          const reviewCall = `window.ReadingPracticeApp?.openHistoryReview?.(${idx})`;
           return `
-            <div class="rh-hist-row">
-              <div style="min-width:0;">
+            <div class="rh-hist-row lh-flat-row" onclick="${reviewCall}" role="button" tabindex="0">
+              <div style="min-width:0;flex:1;">
                 <div class="rh-hist-title">${esc(h.title)}</div>
-                <div class="rh-hist-meta">${esc(srcLabel)} · ${h.score}/${h.total} câu đúng · ${dt}</div>
+                <div class="rh-hist-meta">${esc(srcLabel)} · ${h.score}/${h.total} câu đúng${h.band ? ` · Band ${Number(h.band).toFixed(1)}` : ''}${dt ? ` · ${dt}` : ''}</div>
               </div>
               <div class="rh-hist-right">
-                <span class="rh-band-pill tabular">${h.score}/${h.total}</span>
-                <button type="button" class="tot-foot-btn" onclick="${openCall}">${isMastered ? 'Xem giải' : 'Làm lại'}</button>
+                <span class="rh-band-pill tabular">${h.band ? `B${Number(h.band).toFixed(1)}` : `${h.score}/${h.total}`}</span>
+                <button type="button" class="tot-foot-btn" onclick="event.stopPropagation(); ${reviewCall}">${isMastered ? 'Xem giải' : 'Xem bài'}</button>
               </div>
             </div>
           `;
@@ -1656,14 +1666,16 @@
                 </span>
                 <div>
                   <h2 class="tot-shell-title" style="margin:0;">IELTS Reading</h2>
-                  <div class="tot-shell-sub tabular">${(snap.mastered || 0).toLocaleString('vi-VN')} / ${(snap.totalFamilies || 4489).toLocaleString('vi-VN')} từ · ${snap.completedTasks.length}/110 Tasks · ${mvTotalWords} từ cá nhân</div>
+                  <div class="tot-shell-sub tabular">${isRestricted
+                    ? `1 Bộ Demo · ${mvTotalWords} từ MY LIST · ${pTaskStats.done}/${pTaskStats.total} Task tự tạo · ${rpStats.attemptsCount} lượt luyện đề`
+                    : `${(snap.mastered || 0).toLocaleString('vi-VN')} / ${(snap.totalFamilies || 4489).toLocaleString('vi-VN')} từ · ${snap.completedTasks.length}/110 Tasks · ${mvTotalWords} từ cá nhân`}</div>
                 </div>
               </div>
               <div class="rh-decks-grid-4">${deckBarsHtml}</div>
               <div class="rh-hero-actions" style="margin-top:14px;">
                 <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.switchView('practice')">Vào kho đề Practice →</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('flashcard')">Flashcard</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('task')">110 Tasks</button>
+                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.switchView('task')">${isRestricted ? 'Task tự tạo' : '110 Tasks'}</button>
                 <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">MY LIST</button>
               </div>
             </div>
@@ -1701,7 +1713,7 @@
               </div>
             </div>
             <div class="tot-panel-foot" style="margin-top:auto;padding-top:10px;">
-              <span class="tot-foot-meta">Tiến độ Task <strong class="tabular">${snap.completedTasks.length}/110</strong></span>
+              <span class="tot-foot-meta">${isRestricted ? `Task tự tạo <strong class="tabular">${pTaskStats.done}/${pTaskStats.total}</strong>` : `Tiến độ Task <strong class="tabular">${snap.completedTasks.length}/110</strong>`}</span>
               <span class="tot-foot-meta">MY LIST <strong class="tabular">${mvTotalWords} từ</strong></span>
             </div>
           </div>
@@ -1810,12 +1822,13 @@
 
   function renderListeningHomePanel(el) {
     const B = window.__VOCAB_BRIDGE__;
+    const isRestricted = Boolean(window.AccessPolicy?.isRestricted?.());
     const assess = B?.getAssessmentsMap?.() || {};
-    const lv = window.APP_LISTENING_VOCAB || {};
-    const lt = window.APP_LISTENING_TASKS || { tasks: [] };
-    const prog = window.ListeningTasksModule?.getProgressMap?.() || {};
+    const lv = isRestricted ? {} : (window.APP_LISTENING_VOCAB || {});
+    const lt = isRestricted ? { tasks: [] } : (window.APP_LISTENING_TASKS || { tasks: [] });
+    const prog = isRestricted ? {} : (window.ListeningTasksModule?.getProgressMap?.() || {});
     const allTasks = lt.tasks || [];
-    const totalTasks = allTasks.length || 139;
+    const totalTasks = allTasks.length || (isRestricted ? 0 : 139);
     const doneTasks = Object.values(prog).filter((p) => p && p.completed).length;
 
     // Read real Listening Practice attempts for current user
@@ -1831,6 +1844,32 @@
     const lpAvgBand = lpBands.length ? (lpBands.reduce((a, b) => a + b, 0) / lpBands.length) : 0;
     const lpTotalMins = Math.round(lpHist.reduce((a, h) => a + Number(h.elapsedSec || 0), 0) / 60);
 
+    const lpHistHtml = lpHist.length
+      ? lpHist.slice(0, 10).map((h, idx) => {
+          const tsVal = h.ts || h.completedAt || h.submittedAt || 0;
+          const dt = tsVal ? new Date(tsVal).toLocaleDateString('vi-VN') : '';
+          const srcLbl = h.source === 'volume' ? 'Volume' : (h.source === 'actual' ? 'Actual' : 'Cambridge');
+          const title = h.title || (h.itemId ? `Listening · ${String(h.itemId).toUpperCase()}` : 'Listening Practice');
+          return `
+            <div class="rh-hist-row lh-flat-row" onclick="window.ListeningPracticeApp?.openHistoryReview?.(${idx})" role="button" tabindex="0">
+              <div style="min-width:0;flex:1;">
+                <div class="rh-hist-title">${esc(title)}</div>
+                <div class="rh-hist-meta">${esc(srcLbl)} · ${h.score || 0}/${h.total || 10} câu đúng · ${h.mode === 'exam' ? 'Thi thật' : 'Luyện tập'}${dt ? ` · ${dt}` : ''}</div>
+              </div>
+              <div class="rh-hist-right">
+                <span class="rh-band-pill tabular">${h.band ? `B${Number(h.band).toFixed(1)}` : `${h.score || 0}/${h.total || 10}`}</span>
+                <button type="button" class="tot-foot-btn" onclick="event.stopPropagation(); window.ListeningPracticeApp?.openHistoryReview?.(${idx})">Xem bài</button>
+              </div>
+            </div>`;
+        }).join('')
+      : `<div class="tot-empty-illustrated is-compact">
+           <img class="tot-empty-mascot" src="assets/images/totoro_sitting_branch.webp" alt="" loading="lazy" decoding="async" draggable="false">
+           <div class="tot-empty-copy">
+             <strong>Chưa có bài Listening nào được nộp</strong>
+             <span>Chọn một đề Cambridge 1–20, Volume 1–10 hoặc Actual để làm bài và lưu lịch sử chấm điểm nhé.</span>
+           </div>
+         </div>`;
+
     const parts = [
       { label: 'Giao Tiếp & Dịch Vụ', list: lv.part1 || [] },
       { label: 'Bản Đồ & Địa Điểm', list: lv.part2 || [] },
@@ -1839,18 +1878,34 @@
     ];
     const allVocab = [...(lv.target_all || []), ...(lv.foundation || [])];
     const masteredTotal = allVocab.filter((w) => assess[w.id] === 3).length;
-    const totalVocab = allVocab.length || 3864;
-    const pctTotal = Math.round((masteredTotal / Math.max(1, totalVocab)) * 100);
+    const totalVocab = allVocab.length || (isRestricted ? 0 : 3864);
+    const pctTotal = isRestricted
+      ? Math.min(100, Math.round((lpUnique / 30) * 100))
+      : Math.round((masteredTotal / Math.max(1, totalVocab)) * 100);
 
-    const barsHtml = parts.map((p) => {
-      const m = p.list.filter((w) => assess[w.id] === 3).length;
-      const pct = Math.round((m / Math.max(1, p.list.length)) * 100);
-      return `
-        <div class="rh-deck-row">
-          <div class="rh-deck-meta"><span>${p.label}</span><strong class="tabular">${m}/${p.list.length}</strong></div>
-          <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:${pct}%"></div></div>
-        </div>`;
-    }).join('');
+    const barsHtml = isRestricted
+      ? [
+          { label: 'Cambridge 1–20', done: new Set(lpHist.filter((h) => !h.source || h.source === 'cambridge').map((h) => h.itemId)).size, total: 80 },
+          { label: 'Real Volume 1–10', done: new Set(lpHist.filter((h) => h.source === 'volume').map((h) => h.itemId)).size, total: 40 },
+          { label: 'Recent Actual', done: new Set(lpHist.filter((h) => h.source === 'actual').map((h) => h.itemId)).size, total: 52 },
+          { label: 'Dictation Studio', done: window.DictationStudio?.getCompletedCount?.() || 0, total: (window.DICTATION_STUDIO_DATA?.LESSONS || []).length || 20 }
+        ].map((p) => {
+          const pct = Math.min(100, Math.round((p.done / Math.max(1, p.total)) * 100));
+          return `
+            <div class="rh-deck-row">
+              <div class="rh-deck-meta"><span>${p.label}</span><strong class="tabular">${p.done}/${p.total}</strong></div>
+              <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:${pct}%"></div></div>
+            </div>`;
+        }).join('')
+      : parts.map((p) => {
+          const m = p.list.filter((w) => assess[w.id] === 3).length;
+          const pct = Math.round((m / Math.max(1, p.list.length)) * 100);
+          return `
+            <div class="rh-deck-row">
+              <div class="rh-deck-meta"><span>${p.label}</span><strong class="tabular">${m}/${p.list.length}</strong></div>
+              <div class="tot-mastery-bar"><div class="tot-seg-ok" style="width:${pct}%"></div></div>
+            </div>`;
+        }).join('');
 
     const featuredExams = [
       ...allTasks.filter((t) => t.isMapTask).slice(0, 3),
@@ -1934,15 +1989,19 @@
                 </span>
                 <div>
                   <h2 class="tot-shell-title" style="margin:0;">IELTS Listening</h2>
-                  <div class="tot-shell-sub tabular">${masteredTotal.toLocaleString('vi-VN')} / ${totalVocab.toLocaleString('vi-VN')} từ · ${doneTasks} / ${totalTasks} Tasks · 133 Full Tests</div>
+                  <div class="tot-shell-sub tabular">${isRestricted
+                    ? `133 Full Tests Cambridge · Volume · Actual · Dictation Studio · ${lpHist.length} lượt đã nộp`
+                    : `${masteredTotal.toLocaleString('vi-VN')} / ${totalVocab.toLocaleString('vi-VN')} từ · ${doneTasks} / ${totalTasks} Tasks · 133 Full Tests`}</div>
                 </div>
               </div>
               <div class="rh-decks-grid-4">${barsHtml}</div>
               <div class="rh-hero-actions" style="margin-top:14px;">
                 <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice')">Kho đề Practice →</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openDictationStudio()">Dictation Studio</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Flashcard</button>
-                <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">${totalTasks} Tasks</button>
+                ${!isRestricted ? `
+                  <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Flashcard</button>
+                  <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">${totalTasks} Tasks</button>
+                ` : ''}
               </div>
             </div>
             <div class="rh-hero-mascot-stage" aria-hidden="true">
@@ -1970,8 +2029,8 @@
                 <span class="rh-kpi-lbl">Bài luyện đề</span>
               </div>
               <div class="rh-kpi-cell">
-                <span class="rh-kpi-num">${doneTasks}</span>
-                <span class="rh-kpi-lbl">Tasks xong</span>
+                <span class="rh-kpi-num">${isRestricted ? lpHist.length : doneTasks}</span>
+                <span class="rh-kpi-lbl">${isRestricted ? 'Lượt nộp' : 'Tasks xong'}</span>
               </div>
               <div class="rh-kpi-cell">
                 <span class="rh-kpi-num">${lpTotalMins}p</span>
@@ -1979,7 +2038,7 @@
               </div>
             </div>
             <div class="tot-panel-foot" style="margin-top:auto;padding-top:10px;">
-              <span class="tot-foot-meta">Đã thuộc <strong class="tabular">${masteredTotal.toLocaleString('vi-VN')} từ</strong></span>
+              <span class="tot-foot-meta">${isRestricted ? `Band TB <strong class="tabular">${lpAvgBand ? lpAvgBand.toFixed(1) : '—'}</strong>` : `Đã thuộc <strong class="tabular">${masteredTotal.toLocaleString('vi-VN')} từ</strong>`}</span>
               <span class="tot-foot-meta">Lượt nộp <strong class="tabular">${lpHist.length}</strong></span>
             </div>
           </div>
@@ -1993,29 +2052,42 @@
           <div class="rh-quick-grid">${quickBanksHtml}</div>
         </section>
 
-        <div class="rh-bottom-asym">
-          <div class="tot-home-panel">
-            <div class="tot-panel-head">
-              <div>
-                <div class="tot-panel-title">Đề bổ trợ nổi bật</div>
-                <div class="tot-panel-sub">Map Labelling Part 2 &amp; Note Completion 3 Test</div>
-              </div>
-              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">Tất cả Tasks →</button>
+        <div class="tot-home-panel">
+          <div class="tot-panel-head">
+            <div>
+              <div class="tot-panel-title">Lịch sử làm bài Listening</div>
+              <div class="tot-panel-sub">Bấm vào từng bài nghe đã nộp để xem lại đáp án, transcript karaoke &amp; audio</div>
             </div>
-            <div class="rh-hist-list is-flat">${featuredHtml}</div>
+            <span class="ws-pill tabular">${lpHist.length} lượt đã lưu</span>
           </div>
-
-          <div class="tot-home-panel">
-            <div class="tot-panel-head">
-              <div>
-                <div class="tot-panel-title">Lộ trình Bộ từ Listening</div>
-                <div class="tot-panel-sub">7 bộ từ chia theo ngữ cảnh thực tế từ dễ đến học thuật</div>
-              </div>
-              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Flashcard →</button>
-            </div>
-            <div class="rh-hist-list is-flat lh-deck-scroll">${deckListHtml}</div>
-          </div>
+          <div class="rh-hist-list is-flat">${lpHistHtml}</div>
         </div>
+
+        ${!isRestricted ? `
+          <div class="rh-bottom-asym">
+            <div class="tot-home-panel">
+              <div class="tot-panel-head">
+                <div>
+                  <div class="tot-panel-title">Đề bổ trợ nổi bật</div>
+                  <div class="tot-panel-sub">Map Labelling Part 2 &amp; Note Completion 3 Test</div>
+                </div>
+                <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">Tất cả Tasks →</button>
+              </div>
+              <div class="rh-hist-list is-flat">${featuredHtml}</div>
+            </div>
+
+            <div class="tot-home-panel">
+              <div class="tot-panel-head">
+                <div>
+                  <div class="tot-panel-title">Lộ trình Bộ từ Listening</div>
+                  <div class="tot-panel-sub">7 bộ từ chia theo ngữ cảnh thực tế từ dễ đến học thuật</div>
+                </div>
+                <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Flashcard →</button>
+              </div>
+              <div class="rh-hist-list is-flat lh-deck-scroll">${deckListHtml}</div>
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -2023,34 +2095,6 @@
   function renderSkillHomeStub(scope) {
     const el = document.getElementById('home-scope-skill-stub');
     if (!el) return;
-    const isRestricted = Boolean(window.AccessPolicy?.isRestricted?.());
-    if (isRestricted && (scope === 'writing' || scope === 'speaking')) {
-      const cfg = scope === 'writing'
-        ? {
-            badge: 'IELTS Writing · Đề Thi Thật Cambridge 14–20',
-            name: 'IELTS Writing Practice',
-            desc: 'Trọn bộ 28 đề Academic Task 1 Cambridge 14–20 (biểu đồ gốc), 57 đề Task 2 thi thật & 16 Full Test 60 phút chuẩn CD-IELTS kèm AI chấm 4 tiêu chí.',
-            cta: `<button type="button" class="btn btn-primary" style="padding:9px 18px;" onclick="window.TotoroUI.enterSkillMode('Writing', 'practice')">Vào Luyện Đề Writing →</button>`
-          }
-        : {
-            badge: 'IELTS Speaking · Đề Thi Thật Cambridge 15–20',
-            name: 'IELTS Speaking Practice (Part 1 & Part 3)',
-            desc: 'Trọn bộ 48 bộ đề thi thật Cambridge IELTS 15–20 (96 câu Part 1 + 144 câu Part 3 nguyên văn) với Giám khảo UK, thu âm AI & chấm Band 4 tiêu chí.',
-            cta: `<button type="button" class="btn btn-primary" style="padding:9px 18px;" onclick="window.TotoroUI.enterSkillMode('Speaking', 'practice')">Vào Luyện Đề Speaking →</button>`
-          };
-      el.innerHTML = `
-        <div class="rh-stub-card ink-brackets">
-          <span class="rp-tag">${cfg.badge}</span>
-          <h2 class="rh-title" style="margin-top:10px;">${cfg.name}</h2>
-          <p class="rh-sub" style="max-width:560px;margin:6px auto 18px;">${cfg.desc}</p>
-          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-            <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openGlobalHome()">← Về HOME</button>
-            ${cfg.cta}
-          </div>
-        </div>
-      `;
-      return;
-    }
     if (scope === 'listening') {
       renderListeningHomePanel(el);
       return;

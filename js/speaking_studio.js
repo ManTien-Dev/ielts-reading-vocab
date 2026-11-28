@@ -123,7 +123,15 @@
   function getTaskDoneMap() { return loadJson(TASK_DONE_KEY_BASE + getUid(), {}); }
   function saveTaskDoneMap(m) { saveJson(TASK_DONE_KEY_BASE + getUid(), m); }
   function getPracHistory() { return loadJson(PRAC_HIST_KEY_BASE + getUid(), []); }
-  function savePracHistory(list) { saveJson(PRAC_HIST_KEY_BASE + getUid(), list); }
+  function savePracHistory(list) {
+    const trimmed = (list || []).slice(0, 80).map((item, idx) => {
+      if (idx < 30) return item;
+      const copy = { ...item };
+      delete copy.report;
+      return copy;
+    });
+    saveJson(PRAC_HIST_KEY_BASE + getUid(), trimmed);
+  }
 
   function getStory() {
     return (DATA().STORIES || [])[0] || null;
@@ -453,6 +461,11 @@
         words: totalWords,
         chunksCount: totalChunks,
         fillerCount: totalFillers,
+        partResults: {
+          p1: fullTestSession.results.p1 ? { band: fullTestSession.results.p1.band, words: fullTestSession.results.p1.words, durationSec: fullTestSession.results.p1.durationSec, turns: fullTestSession.results.p1.turns || [], transcript: fullTestSession.results.p1.transcript || '' } : null,
+          p2: fullTestSession.results.p2 ? { band: fullTestSession.results.p2.band, words: fullTestSession.results.p2.words, durationSec: fullTestSession.results.p2.durationSec, cueTitle: fullTestSession.results.p2.cueTitle || '', transcript: fullTestSession.results.p2.transcript || '' } : null,
+          p3: fullTestSession.results.p3 ? { band: fullTestSession.results.p3.band, words: fullTestSession.results.p3.words, durationSec: fullTestSession.results.p3.durationSec, turns: fullTestSession.results.p3.turns || [], transcript: fullTestSession.results.p3.transcript || '' } : null
+        },
         at: Date.now()
       });
       savePracHistory(hist.slice(0, 80));
@@ -570,29 +583,150 @@
     });
   }
 
-  /* ================= TAB 1: SPEAKING HOME (1:1 WRITING/READING TOTORO PARITY) ================= */
+  /* ================= TAB 1: SPEAKING HOME & ATTEMPT HISTORY REVIEW ================= */
+  function closeHistoryReview() {
+    const el = document.getElementById('sp-hist-review-modal');
+    if (el) el.remove();
+  }
+
+  function openHistoryReview(idx) {
+    const hist = getPracHistory();
+    const h = hist[Number(idx) || 0];
+    if (!h) return;
+    closeHistoryReview();
+    const dt = h.at ? new Date(h.at).toLocaleString('vi-VN') : '';
+    const modeLbl = h.mode === 'exam' ? 'Thi thật' : 'Luyện tập';
+    const partLbl = h.part === 'full' ? 'Full Test · 14p' : (h.part === 1 ? 'Part 1' : (h.part === 3 ? 'Part 3' : 'Part 2'));
+    const critHtml = h.criteria ? `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+        <span class="ws-pill tabular">FC ${Number(h.criteria.fc || 0).toFixed(1)}</span>
+        <span class="ws-pill tabular">LR ${Number(h.criteria.lr || 0).toFixed(1)}</span>
+        <span class="ws-pill tabular">GRA ${Number(h.criteria.gra || 0).toFixed(1)}</span>
+        <span class="ws-pill tabular">PR ${Number(h.criteria.pr || 0).toFixed(1)}</span>
+      </div>` : '';
+
+    let bodyHtml = '';
+    if (h.part === 'full' && h.partResults) {
+      const pr = h.partResults;
+      const renderTurns = (turns, fallback) => {
+        if (Array.isArray(turns) && turns.length) {
+          return turns.map((t, i) => `
+            <div style="padding:8px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border);margin-top:6px;">
+              <div style="font-size:12px;font-weight:750;color:var(--ink);">Q${i + 1}: ${esc(t.q || '')}</div>
+              <div style="font-size:13.2px;line-height:1.6;color:var(--ink-2);margin-top:4px;white-space:pre-wrap;">${esc(t.text || '')}</div>
+            </div>`).join('');
+        }
+        return fallback ? `<div style="font-size:13.2px;line-height:1.62;white-space:pre-wrap;margin-top:6px;">${esc(fallback)}</div>` : '<div style="font-size:12.5px;color:var(--ink-3);margin-top:4px;">Không có bản ghi câu trả lời.</div>';
+      };
+      bodyHtml = `
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface-item);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <strong>Part 1 · Phỏng vấn</strong>
+              <span class="ws-pill ok tabular">${pr.p1?.band ? `Band ${Number(pr.p1.band).toFixed(1)}` : `${pr.p1?.words || 0}w`}</span>
+            </div>
+            ${renderTurns(pr.p1?.turns, pr.p1?.transcript)}
+          </div>
+          <div style="padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface-item);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <strong>Part 2 · Cue Card${pr.p2?.cueTitle ? ` — ${esc(pr.p2.cueTitle)}` : ''}</strong>
+              <span class="ws-pill ok tabular">${pr.p2?.band ? `Band ${Number(pr.p2.band).toFixed(1)}` : `${pr.p2?.words || 0}w`}</span>
+            </div>
+            <div style="font-size:13.4px;line-height:1.65;white-space:pre-wrap;margin-top:6px;">${pr.p2?.transcript ? esc(pr.p2.transcript) : '<em style="color:var(--ink-3);">Không có bản ghi bài nói Part 2.</em>'}</div>
+          </div>
+          <div style="padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface-item);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <strong>Part 3 · Thảo luận</strong>
+              <span class="ws-pill ok tabular">${pr.p3?.band ? `Band ${Number(pr.p3.band).toFixed(1)}` : `${pr.p3?.words || 0}w`}</span>
+            </div>
+            ${renderTurns(pr.p3?.turns, pr.p3?.transcript)}
+          </div>
+        </div>`;
+    } else if (Array.isArray(h.turns) && h.turns.length) {
+      bodyHtml = `
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          ${h.turns.map((t, i) => `
+            <div style="padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface-item);">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px;">
+                <strong style="font-size:13px;color:var(--ink);">Q${i + 1}: ${esc(t.q || '')}</strong>
+                <span class="ws-pill tabular">${t.words || 0}w · ${t.durationSec || 0}s</span>
+              </div>
+              <div style="font-size:13.5px;line-height:1.65;color:var(--ink-2);white-space:pre-wrap;">${esc(t.text || '')}</div>
+            </div>`).join('')}
+          ${h.report && window.IeltsGrader?.renderExaminerReportHtml ? window.IeltsGrader.renderExaminerReportHtml(h.report, { title: `Nhận xét AI · Speaking Part ${h.part || ''}` }) : ''}
+        </div>`;
+    } else {
+      bodyHtml = `
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface-item);">
+            <div style="font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--accent);margin-bottom:6px;">Bản ghi bài nói của bạn (${h.words || 0} từ · ${fmtMmSs(h.durationSec || 0)} · ${h.wpm || 0} WPM)</div>
+            <div style="white-space:pre-wrap;font-size:13.8px;line-height:1.72;color:var(--ink);">${h.transcript ? esc(h.transcript) : '<em style="color:var(--ink-3);">Lượt nộp cũ trước khi nâng cấp lưu bản ghi chi tiết — các bài nói mới từ nay sẽ lưu đầy đủ transcript &amp; nhận xét AI.</em>'}</div>
+            ${Array.isArray(h.usedChunks) && h.usedChunks.length ? `<div class="sp-kw-row" style="margin-top:10px;">${h.usedChunks.map((c) => `<span class="sp-kw-chip hit">✓ ${esc(c)}</span>`).join('')}</div>` : ''}
+          </div>
+          ${h.report && window.IeltsGrader?.renderExaminerReportHtml ? window.IeltsGrader.renderExaminerReportHtml(h.report, { title: 'Nhận xét AI · IELTS Speaking' }) : ''}
+        </div>`;
+    }
+
+    const retryCall = h.part === 'full'
+      ? `SpeakingStudio.closeHistoryReview(); window.TotoroUI?.enterSkillMode?.('Speaking', 'practice'); SpeakingStudio.startFullSpeakingTest('${esc(h.cueId)}', '${esc(h.mode || 'practice')}');`
+      : `SpeakingStudio.closeHistoryReview(); window.TotoroUI?.enterSkillMode?.('Speaking', 'practice'); SpeakingStudio.openPracticeRoom('${esc(h.cueId)}', '${esc(h.mode || 'practice')}');`;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'sp-hist-review-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(18,24,20,0.52);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:18px;';
+    overlay.onclick = (e) => { if (e.target === overlay) closeHistoryReview(); };
+    overlay.innerHTML = `
+      <div style="width:min(860px,96vw);max-height:88vh;background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 64px rgba(0,0,0,0.22);display:flex;flex-direction:column;overflow:hidden;">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:14px;">
+          <div style="min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+              <span class="ws-pill warm">${partLbl}</span>
+              <span class="ws-pill ok tabular">${h.band ? `Band ${Number(h.band).toFixed(1)}` : `${h.words || 0} từ`}</span>
+              <span style="font-size:12px;color:var(--ink-3);">${modeLbl} · ${fmtMmSs(h.durationSec || 0)} · ${h.wpm || 0} WPM${dt ? ` · ${dt}` : ''}</span>
+            </div>
+            <div style="font-size:15.5px;font-weight:800;color:var(--ink);line-height:1.4;">${esc(h.cueTitle || 'Bài nói IELTS Speaking')}</div>
+            ${critHtml}
+          </div>
+          <button type="button" class="btn" style="padding:6px 12px;flex-shrink:0;" onclick="SpeakingStudio.closeHistoryReview()">Đóng ✕</button>
+        </div>
+        <div style="padding:18px 20px;overflow-y:auto;flex:1;">${bodyHtml}</div>
+        <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface-item);">
+          <button type="button" class="btn" onclick="SpeakingStudio.closeHistoryReview()">Quay lại</button>
+          <button type="button" class="btn btn-primary" onclick="${retryCall}">Luyện lại đề này →</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
   function renderSpeakingHomePanel(el) {
     if (!el) return;
     const story = getStory();
-    if (!story) return;
-    const mStats = getStoryMasteryStats(story);
-    const taskDone = getTaskDoneMap()[story.id] || null;
-    const tasksDoneCnt = taskDone?.completed ? 4 : (taskDone?.maxStage || 0);
+    const hasStoryAccess = Boolean(story && (!window.AccessPolicy || window.AccessPolicy.can('speaking.story_mindmap')));
+    const mStats = hasStoryAccess ? getStoryMasteryStats(story) : { done: 0, total: 0, pct: 0 };
+    const taskDone = hasStoryAccess ? (getTaskDoneMap()[story.id] || null) : null;
+    const tasksDoneCnt = hasStoryAccess ? (taskDone?.completed ? 4 : (taskDone?.maxStage || 0)) : 0;
     const hist = getPracHistory();
     const practicedIds = new Set(hist.map((h) => h.cueId));
     const p1Topics = getPart1Topics();
-    const allCues = story.cueCards || [];
+    const p2Cam = getPart2CambridgeTopics();
+    const allCues = hasStoryAccess ? [...p2Cam, ...(story.cueCards || [])] : p2Cam;
     const p3Topics = getPart3Topics();
-    const totalAllTopics = p1Topics.length + allCues.length + p3Topics.length;
+    const fullTests = getFullSpeakingTests();
+    const totalAllTopics = p1Topics.length + allCues.length + p3Topics.length + fullTests.length;
     const p1Done = p1Topics.filter((t) => practicedIds.has(t.id)).length;
     const p2Done = allCues.filter((c) => practicedIds.has(c.id)).length;
     const p3Done = p3Topics.filter((t) => practicedIds.has(t.id)).length;
-    const totalDoneTopics = p1Done + p2Done + p3Done;
+    const fullDone = fullTests.filter((f) => practicedIds.has(f.id)).length;
+    const totalDoneTopics = p1Done + p2Done + p3Done + fullDone;
+    const pracPct = Math.round((totalDoneTopics / Math.max(1, totalAllTopics)) * 100);
+    const scoredHist = hist.filter((h) => Number(h.band) > 0);
+    const avgBand = scoredHist.length ? (scoredHist.reduce((a, b) => a + Number(b.band), 0) / scoredHist.length) : 0;
 
     const partBars = [
       { label: 'Part 1 · Phỏng vấn', done: p1Done, total: p1Topics.length, part: 1 },
       { label: 'Part 2 · Cue Card', done: p2Done, total: allCues.length, part: 2 },
-      { label: 'Part 3 · Thảo luận sâu', done: p3Done, total: p3Topics.length, part: 3 }
+      { label: 'Part 3 · Thảo luận', done: p3Done, total: p3Topics.length, part: 3 },
+      { label: 'Full Test · 14p', done: fullDone, total: fullTests.length, part: "'full'" }
     ];
     const barsHtml = partBars.map((g) => {
       const pct = Math.round((g.done / Math.max(1, g.total)) * 100);
@@ -604,24 +738,37 @@
       `;
     }).join('');
 
-    const histHtml = hist.length
-      ? hist.slice(0, 2).map((h) => `
-          <div class="rh-hist-row">
-            <div style="flex:1;min-width:0;">
-              <div class="rh-hist-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(h.cueTitle)}</div>
-              <div class="rh-hist-meta">${h.mode === 'exam' ? 'Thi thật' : 'Luyện tập'} · ${fmtMmSs(h.durationSec)} · ${h.wpm || 0} WPM</div>
+    const fullHistHtml = hist.length
+      ? hist.slice(0, 10).map((h, idx) => {
+          const dt = h.at ? new Date(h.at).toLocaleDateString('vi-VN') : '';
+          const pTag = h.part === 'full' ? 'Full Test' : (h.part === 1 ? 'Part 1' : (h.part === 3 ? 'Part 3' : 'Part 2'));
+          return `
+            <div class="rh-hist-row lh-flat-row" onclick="SpeakingStudio.openHistoryReview(${idx})" role="button" tabindex="0">
+              <div style="flex:1;min-width:0;">
+                <div class="rh-hist-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(h.cueTitle)}</div>
+                <div class="rh-hist-meta">${pTag} · ${h.mode === 'exam' ? 'Thi thật' : 'Luyện tập'} · ${fmtMmSs(h.durationSec)} · ${h.wpm || 0} WPM${dt ? ` · ${dt}` : ''}</div>
+              </div>
+              <div class="rh-hist-right">
+                <span class="tot-hist-badge tabular">${h.band ? `B${Number(h.band).toFixed(1)}` : `${h.words || 0}w`}</span>
+                <button type="button" class="tot-foot-btn" onclick="event.stopPropagation(); SpeakingStudio.openHistoryReview(${idx})">Xem bài</button>
+              </div>
             </div>
-            <span class="tot-hist-badge tabular">${h.band ? `B${Number(h.band).toFixed(1)}` : `${h.words || 0}w`}</span>
-          </div>
-        `).join('')
-      : '';
+          `;
+        }).join('')
+      : `<div class="tot-empty-illustrated is-compact">
+           <img class="tot-empty-mascot" src="assets/images/totoro_sitting_branch.webp" alt="" loading="lazy" decoding="async" draggable="false">
+           <div class="tot-empty-copy">
+             <strong>Chưa có bài Speaking nào được nộp</strong>
+             <span>Thử 1 bộ Part 1 (4 câu), 1 Cue Card Part 2 hoặc Full Test 14 phút Cambridge 15–20 nhé.</span>
+           </div>
+         </div>`;
 
     const storyPct = Math.round((tasksDoneCnt / 4) * 100);
     const quickTiles = [
-      { name: `Part 1 · Phỏng vấn (${p1Topics.length})`, meta: '48 câu hỏi quen thuộc · Khung A.R.E.', tag: 'Part 1', tone: 'is-sage', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', act: 'SpeakingStudio.openPracticePart(1)' },
-      { name: `Part 2 · Cue Card (${allCues.length})`, meta: '1p chuẩn bị · 2p nói · Story 01 Bẻ lái', tag: 'Part 2', tone: 'is-teal', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>', act: 'SpeakingStudio.openPracticePart(2)' },
-      { name: `Part 3 · Thảo luận (${p3Topics.length})`, meta: '40 câu phân tích sâu · Khung P.E.E.C.', tag: 'Part 3', tone: 'is-indigo', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M9.6 10.2 6.6 7.4M14.4 10.2 17.4 7.4M9.6 13.8 6.6 16.6M14.4 13.8 17.4 16.6"/></svg>', act: 'SpeakingStudio.openPracticePart(3)' },
-      { name: `Sách Tranh & Mindmap`, meta: `${(story?.pictureBook || []).length || 10} cảnh Story 01 · Ghi nhớ trực quan`, tag: 'Cốt lõi', tone: 'is-warm', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.5"/><path d="m21 16-5-5-4 4-2-2-5 5"/></svg>', act: "SpeakingStudio.openPictureBook(0)" }
+      { name: `Part 1 · Phỏng vấn (${p1Topics.length})`, meta: '96 câu thi thật Cam 15–20 · Khung A.R.E.', tag: 'Part 1', tone: 'is-sage', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', act: 'SpeakingStudio.openPracticePart(1)' },
+      { name: `Part 2 · Cue Card (${allCues.length})`, meta: hasStoryAccess ? `24 Cam 15–20 + ${(story?.cueCards || []).length} Story 01 Bẻ lái` : '24 Cue Card Cam 15–20 · 1p chuẩn bị + 2p nói', tag: 'Part 2', tone: 'is-teal', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>', act: 'SpeakingStudio.openPracticePart(2)' },
+      { name: `Part 3 · Thảo luận (${p3Topics.length})`, meta: '144 câu thảo luận Cam 15–20 · Khung P.E.E.C.', tag: 'Part 3', tone: 'is-indigo', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M9.6 10.2 6.6 7.4M14.4 10.2 17.4 7.4M9.6 13.8 6.6 16.6M14.4 13.8 17.4 16.6"/></svg>', act: 'SpeakingStudio.openPracticePart(3)' },
+      { name: `Full Test · 14p (${fullTests.length})`, meta: 'Thi trọn bộ Part 1 → Part 2 → Part 3 · Cam 15–20', tag: 'Full 14p', tone: 'is-warm', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>', act: "SpeakingStudio.openPracticePart('full')" }
     ];
     const quickTilesHtml = quickTiles.map((q) => `
       <button type="button" class="rh-quick-tile is-visual ${q.tone}" onclick="${q.act}">
@@ -637,7 +784,8 @@
       </button>
     `).join('');
 
-    const spRingOff = (176 * (1 - (mStats.pct || 0) / 100)).toFixed(1);
+    const ringValPct = hasStoryAccess ? (mStats.pct || 0) : pracPct;
+    const spRingOff = (176 * (1 - ringValPct / 100)).toFixed(1);
 
     el.innerHTML = `
       <div class="rh-layout rh-clean">
@@ -650,10 +798,12 @@
                 </span>
                 <div>
                   <h2 class="tot-shell-title" style="margin:0;">IELTS Speaking · Full 3 Parts</h2>
-                  <div class="tot-shell-sub tabular">${mStats.done} / ${mStats.total} thẻ · ${tasksDoneCnt} / 4 Bước Task · ${totalDoneTopics} / ${totalAllTopics} Chủ đề (P1 · P2 · P3)</div>
+                  <div class="tot-shell-sub tabular">${hasStoryAccess
+                    ? `${mStats.done} / ${mStats.total} thẻ · ${tasksDoneCnt} / 4 Bước Task · ${totalDoneTopics} / ${totalAllTopics} Đề &amp; Full Test`
+                    : `Cambridge IELTS 15–20 · ${totalDoneTopics} / ${totalAllTopics} Đề P1–P3 &amp; Full Test 14p`}</div>
                 </div>
               </div>
-              <div class="rh-decks-grid-4 sp-home-cat-grid">${barsHtml}</div>
+              <div class="rh-decks-grid-4">${barsHtml}</div>
               <div class="sp-home-flow-strip" aria-label="Cấu trúc thi IELTS Speaking">
                 <span>Part 1 (4–5p)</span><span aria-hidden="true">→</span>
                 <span>Part 2 (1p+2p)</span><span aria-hidden="true">→</span>
@@ -661,9 +811,10 @@
                 <span>Chấm 4 tiêu chí AI</span>
               </div>
               <div class="rh-hero-actions" style="margin-top:12px;">
-                <button type="button" class="btn btn-primary tot-demo-btn" onclick="SpeakingStudio.openPracticePart(1)">Luyện Part 1 →</button>
+                <button type="button" class="btn btn-primary tot-demo-btn" onclick="SpeakingStudio.openPracticePart('full')">Thi Full Test 14p →</button>
+                <button type="button" class="tot-demo-btn" onclick="SpeakingStudio.openPracticePart(1)">Part 1</button>
                 <button type="button" class="tot-demo-btn" onclick="SpeakingStudio.openPracticePart(2)">Part 2 Cue Card</button>
-                <button type="button" class="tot-demo-btn" onclick="SpeakingStudio.openPracticePart(3)">Part 3 Thảo luận</button>
+                <button type="button" class="tot-demo-btn" onclick="SpeakingStudio.openPracticePart(3)">Part 3</button>
               </div>
             </div>
             <div class="rh-hero-mascot-stage" aria-hidden="true">
@@ -675,33 +826,29 @@
             <div class="tot-panel-head" style="margin-bottom:10px;">
               <div>
                 <div class="tot-panel-title">Tiến độ Speaking</div>
-                <div class="tot-panel-sub tabular">${tasksDoneCnt} / 4 bước Task · ${totalDoneTopics} / ${totalAllTopics} đề P1–P3</div>
+                <div class="tot-panel-sub tabular">${hasStoryAccess ? `${tasksDoneCnt} / 4 bước Task · ${totalDoneTopics} / ${totalAllTopics} đề` : `${totalDoneTopics} / ${totalAllTopics} đề Cambridge 15–20`}</div>
               </div>
               <div class="rh-ring-wrap is-indigo" aria-label="Tiến độ Speaking">
                 <svg viewBox="0 0 64 64">
                   <circle cx="32" cy="32" r="28" fill="none" stroke="var(--bg-subtle)" stroke-width="5.5"/>
                   <circle cx="32" cy="32" r="28" fill="none" stroke="#4D5C8C" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="176" stroke-dashoffset="${spRingOff}" transform="rotate(-90 32 32)"/>
                 </svg>
-                <span class="rh-ring-val tabular">${mStats.pct}%</span>
+                <span class="rh-ring-val tabular">${avgBand > 0 && !hasStoryAccess ? avgBand.toFixed(1) : `${ringValPct}%`}</span>
               </div>
             </div>
             <div class="rh-kpi-strip tabular">
-              <div class="rh-kpi-cell">
-                <span class="rh-kpi-num">${mStats.done}/${mStats.total}</span>
-                <span class="rh-kpi-lbl">Thẻ thuộc</span>
-              </div>
-              <div class="rh-kpi-cell">
-                <span class="rh-kpi-num">${tasksDoneCnt}/4</span>
-                <span class="rh-kpi-lbl">Bước Task</span>
-              </div>
-              <div class="rh-kpi-cell">
-                <span class="rh-kpi-num">${totalDoneTopics}/${totalAllTopics}</span>
-                <span class="rh-kpi-lbl">Đề P1–P3</span>
-              </div>
+              ${hasStoryAccess ? `
+                <div class="rh-kpi-cell"><span class="rh-kpi-num">${mStats.done}/${mStats.total}</span><span class="rh-kpi-lbl">Thẻ thuộc</span></div>
+                <div class="rh-kpi-cell"><span class="rh-kpi-num">${tasksDoneCnt}/4</span><span class="rh-kpi-lbl">Bước Task</span></div>
+                <div class="rh-kpi-cell"><span class="rh-kpi-num">${hist.length}</span><span class="rh-kpi-lbl">Lượt nói</span></div>
+              ` : `
+                <div class="rh-kpi-cell"><span class="rh-kpi-num">${p1Done + p2Done + p3Done}</span><span class="rh-kpi-lbl">Đề P1–P3</span></div>
+                <div class="rh-kpi-cell"><span class="rh-kpi-num">${fullDone}/${fullTests.length}</span><span class="rh-kpi-lbl">Full Test</span></div>
+                <div class="rh-kpi-cell"><span class="rh-kpi-num">${hist.length}</span><span class="rh-kpi-lbl">Lượt nộp</span></div>
+              `}
             </div>
-            ${histHtml ? `<div class="rh-hist-list is-flat" style="margin-top:8px;">${histHtml}</div>` : ''}
             <div class="tot-panel-foot" style="margin-top:auto;padding-top:10px;">
-              <span class="tot-foot-meta">P1 (${p1Topics.length}) · P2 (${allCues.length}) · P3 (${p3Topics.length})</span>
+              <span class="tot-foot-meta">P1 (${p1Topics.length}) · P2 (${allCues.length}) · P3 (${p3Topics.length}) · Full (${fullTests.length})</span>
               <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'practice')">Kho đề →</button>
             </div>
           </div>
@@ -710,31 +857,47 @@
         <section class="rh-quick-section" aria-label="Mở nhanh Speaking Studio">
           <div class="rh-quick-head">
             <h3 class="rh-section-lbl">Mở nhanh Speaking Studio</h3>
-            <button type="button" class="rh-text-link" onclick="window.TotoroUI.enterSkillMode('Speaking', 'task')">Vào Task 4 Bước →</button>
+            ${hasStoryAccess
+              ? `<button type="button" class="rh-text-link" onclick="window.TotoroUI.enterSkillMode('Speaking', 'task')">Vào Task 4 Bước →</button>`
+              : `<button type="button" class="rh-text-link" onclick="window.TotoroUI.enterSkillMode('Speaking', 'practice')">Xem tất cả 96 đề →</button>`}
           </div>
           <div class="rh-quick-grid">${quickTilesHtml}</div>
         </section>
 
-        <section class="sp-home-story-card" onclick="window.TotoroUI.enterSkillMode('Speaking', 'flashcard')" role="button" tabindex="0">
-          <div class="sp-home-story-thumb">
-            <img src="assets/speaking/story1/scene_01.webp" alt="${esc(story.title)}" loading="lazy">
-          </div>
-          <div class="ws-home-st-main">
-            <div class="sp-home-story-kicker">Lộ trình Story 01 · IELTS Speaking Part 2</div>
-            <div class="ws-home-st-title">${esc(story.title)}</div>
-            <div class="ws-home-st-desc">${esc(story.subtitle)}</div>
-          </div>
-          <div class="ws-home-st-right" onclick="event.stopPropagation()">
-            <div class="ws-home-st-prog">
-              <span class="ws-pill tabular">${tasksDoneCnt} / 4 bước</span>
-              <div class="ws-home-st-bar"><span style="width:${storyPct}%"></span></div>
+        <div class="tot-home-panel">
+          <div class="tot-panel-head">
+            <div>
+              <div class="tot-panel-title">Lịch sử làm bài Speaking</div>
+              <div class="tot-panel-sub">Bấm vào từng lượt nói đã nộp để đọc lại transcript, điểm 4 tiêu chí &amp; nhận xét AI</div>
             </div>
-            <div class="sp-home-story-acts">
-              <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'task')">Làm Task</button>
-              <button type="button" class="btn btn-primary tot-demo-btn" style="height:34px;min-height:34px;padding:0 14px;font-size:12.5px;" onclick="window.TotoroUI.enterSkillMode('Speaking', 'flashcard')">Học ngay →</button>
-            </div>
+            <span class="ws-pill tabular">${hist.length} lượt đã lưu</span>
           </div>
-        </section>
+          <div class="rh-hist-list is-flat">${fullHistHtml}</div>
+        </div>
+
+        ${hasStoryAccess ? `
+          <section class="sp-home-story-card" onclick="window.TotoroUI.enterSkillMode('Speaking', 'flashcard')" role="button" tabindex="0">
+            <div class="sp-home-story-thumb">
+              <img src="assets/speaking/story1/scene_01.webp" alt="${esc(story.title)}" loading="lazy">
+            </div>
+            <div class="ws-home-st-main">
+              <div class="sp-home-story-kicker">Lộ trình Story 01 · IELTS Speaking Part 2</div>
+              <div class="ws-home-st-title">${esc(story.title)}</div>
+              <div class="ws-home-st-desc">${esc(story.subtitle)}</div>
+            </div>
+            <div class="ws-home-st-right" onclick="event.stopPropagation()">
+              <div class="ws-home-st-prog">
+                <span class="ws-pill tabular">${tasksDoneCnt} / 4 bước</span>
+                <div class="ws-home-st-bar"><span style="width:${storyPct}%"></span></div>
+              </div>
+              <div class="sp-home-story-acts">
+                <button type="button" class="tot-foot-btn" onclick="SpeakingStudio.openPictureBook(0)">Sách tranh</button>
+                <button type="button" class="tot-foot-btn" onclick="window.TotoroUI.enterSkillMode('Speaking', 'task')">Làm Task</button>
+                <button type="button" class="btn btn-primary tot-demo-btn" style="height:34px;min-height:34px;padding:0 14px;font-size:12.5px;" onclick="window.TotoroUI.enterSkillMode('Speaking', 'flashcard')">Học ngay →</button>
+              </div>
+            </div>
+          </section>
+        ` : ''}
       </div>
     `;
   }
@@ -5027,7 +5190,10 @@
       wpm: activeRoomRef.metrics.wpm,
       words: activeRoomRef.metrics.words,
       chunksCount: activeRoomRef.metrics.usedChunks.length,
+      usedChunks: activeRoomRef.metrics.usedChunks || [],
       fillerCount: activeRoomRef.metrics.fillerCount,
+      transcript: text,
+      report: report || null,
       at: Date.now()
     };
 
@@ -5952,7 +6118,11 @@
       wpm,
       words: totalWords,
       chunksCount: usedChunks.length,
+      usedChunks,
       fillerCount,
+      transcript: combinedText,
+      turns: answered.map((t) => ({ q: t.q, text: t.text, words: t.words, durationSec: t.durationSec })),
+      report: report || null,
       at: Date.now()
     };
 
@@ -6533,6 +6703,8 @@
   window.SpeakingStudio = {
     getOverallStats,
     renderSpeakingHomePanel,
+    openHistoryReview,
+    closeHistoryReview,
     renderFlashcardWorkspace,
     renderTaskHub,
     renderPracticeHub,
