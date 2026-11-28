@@ -17915,3 +17915,133 @@ html[data-theme="dark"] .tot-sk-stage.is-ghibli-scene .tot-sk-pill {
 @media (prefers-reduced-motion: reduce) {
   .tot-sk-scene-img { transition: none !important; }
 }
+
+/* ==========================================================================
+   ZERO-OVERFLOW HEADER GUARD (TEACHER PREVIEW + LAPTOP 1024px–1520px + MOBILE)
+   Prevents right-edge clipping of .tot-account-trigger when #btn-teacher-preview
+   ("Quay lại Quản lý") and 4 skill nav tabs are shown simultaneously.
+   ========================================================================== */
+header.app-header {
+  box-sizing: border-box !important;
+  max-width: min(1440px, 100%) !important;
+}
+header.app-header .header-left,
+header.app-header .header-actions {
+  min-width: 0;
+}
+
+/* When Teacher Preview ("Quay lại Quản lý") is visible on desktop/laptop <= 1520px */
+@media (max-width: 1520px) {
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    gap: 8px !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .header-left {
+    gap: 8px !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .header-actions {
+    gap: 6px !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .brand-mark-svg {
+    width: 36px;
+    height: 36px;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .brand-name-txt {
+    font-size: 14.5px;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-skill-trigger {
+    height: 35px;
+    padding: 0 10px;
+    font-size: 12.5px;
+    gap: 5px;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-nav-tab {
+    height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 13.5px !important;
+    gap: 6px !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-nav-tab .tot-ico {
+    width: 16px;
+    height: 16px;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #hdr-streak-pill {
+    display: none !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-hdr-btn span.hdr-lbl-hide-sm {
+    display: none !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #btn-appearance-pop {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #btn-teacher-preview {
+    height: 36px !important;
+    padding: 0 11px !important;
+    font-size: 12.5px !important;
+    white-space: nowrap !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-account-trigger {
+    height: 36px;
+    padding: 0 9px 0 5px;
+    gap: 6px;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-account-trigger #header-user-id {
+    max-width: 82px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Standard & Teacher Preview tighter laptops (<= 1280px) */
+@media (max-width: 1280px) {
+  header.app-header .tot-hdr-btn span.hdr-lbl-hide-sm {
+    display: none !important;
+  }
+  header.app-header #btn-appearance-pop {
+    width: 36px !important;
+    min-width: 36px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .brand-name-txt {
+    display: none !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-nav-tab {
+    padding: 0 10px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* Narrow tablet landscape / split-screen desktop (768px–1080px) with Teacher Preview */
+@media (max-width: 1080px) {
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-account-trigger #header-user-id {
+    display: none !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-nav-tab {
+    padding: 0 8px !important;
+    font-size: 12.5px !important;
+    gap: 4px !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #btn-teacher-preview {
+    padding: 0 8px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 900px) and (min-width: 768px) {
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #btn-teacher-preview-text {
+    display: none !important;
+  }
+  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #btn-teacher-preview {
+    width: 36px !important;
+    min-width: 36px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+}
