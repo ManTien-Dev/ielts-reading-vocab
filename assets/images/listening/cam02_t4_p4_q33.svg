@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 215" role="img" aria-label="Three pie charts A, B and C comparing the proportion of men and women respondents">
+  <rect width="480" height="215" rx="10" fill="#fbf9f4" stroke="#d8d2c5" stroke-width="1.2"/>
+  <text x="240" y="25" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#1f2421">Proportion of Men and Women Respondents</text>
+  <!-- Legend -->
+  <rect x="158" y="36" width="12" height="12" rx="2" fill="#2f663d"/>
+  <text x="175" y="46" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#1f2421">Women</text>
+  <rect x="246" y="36" width="12" height="12" rx="2" fill="#d9cfb9" stroke="#8a8170" stroke-width="0.9"/>
+  <text x="263" y="46" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="600" fill="#1f2421">Men</text>
+
+  <!-- Pie A: Women 53% (slightly in majority), Men 47% -->
+  <g transform="translate(88, 122)">
+    <circle r="52" fill="#d9cfb9" stroke="#7d7567" stroke-width="1.2"/>
+    <!-- 53% = 190.8 deg clockwise from top (0,-52) to (-9.7, 51.1) -->
+    <path d="M 0,0 L 0,-52 A 52,52 0 1,1 -9.7,51.1 Z" fill="#2f663d" stroke="#fbf9f4" stroke-width="1.4"/>
+    <text x="0" y="74" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#1f2421">Pie chart A</text>
+  </g>
+
+  <!-- Pie B: Women 46%, Men 54% (slightly more men) -->
+  <g transform="translate(240, 122)">
+    <circle r="52" fill="#d9cfb9" stroke="#7d7567" stroke-width="1.2"/>
+    <!-- 46% = 165.6 deg clockwise from top (0,-52) to (12.9, 50.4) -->
+    <path d="M 0,0 L 0,-52 A 52,52 0 0,1 12.9,50.4 Z" fill="#2f663d" stroke="#fbf9f4" stroke-width="1.4"/>
+    <text x="0" y="74" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#1f2421">Pie chart B</text>
+  </g>
+
+  <!-- Pie C: Women 75%, Men 25% -->
+  <g transform="translate(392, 122)">
+    <circle r="52" fill="#d9cfb9" stroke="#7d7567" stroke-width="1.2"/>
+    <!-- 75% = 270 deg clockwise from top (0,-52) to (-52, 0) -->
+    <path d="M 0,0 L 0,-52 A 52,52 0 1,1 -52,0 Z" fill="#2f663d" stroke="#fbf9f4" stroke-width="1.4"/>
+    <text x="0" y="74" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#1f2421">Pie chart C</text>
+  </g>
+</svg>
