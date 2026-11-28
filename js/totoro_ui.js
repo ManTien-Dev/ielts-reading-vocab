@@ -873,6 +873,8 @@
         pct: Math.min(100, Math.round((todayWords / Math.max(1, plan.dailyWords)) * 100)),
         done: todayWords >= plan.dailyWords,
         action: vocabAction,
+        tone: 'is-vocab',
+        ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
       },
       {
         title: 'Tập trung thực học',
@@ -880,6 +882,8 @@
         pct: Math.min(100, Math.round((snap.todayMins / Math.max(1, plan.dailyMins)) * 100)),
         done: snap.todayMins >= plan.dailyMins,
         action: "window.TotoroUI?.enterSkillMode(window.TotoroUI?.getActiveSkill?.() || 'Reading', 'flashcard')",
+        tone: 'is-focus',
+        ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5"/><path d="M9 2h6"/></svg>',
       },
       {
         title: exTitle,
@@ -887,6 +891,8 @@
         pct: todayExercises >= 1 ? 100 : 0,
         done: todayExercises >= 1,
         action: exAction,
+        tone: 'is-practice',
+        ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>',
       },
     ];
     const doneCnt = items.filter((it) => it.done).length;
@@ -899,19 +905,27 @@
     if (listEl) {
       listEl.innerHTML = items.map((it) => `
         <button type="button" class="tot-plan-row ${it.done ? 'is-done' : ''}" onclick="${it.action}">
-          <span class="tot-plan-chk" aria-hidden="true">${it.done ? '✓' : ''}</span>
+          <span class="tot-plan-ico ${it.tone}" aria-hidden="true">${it.ico}</span>
           <span class="tot-plan-row-body">
             <span class="tot-plan-row-top">
               <span class="tot-plan-row-title">${esc(it.title)}</span>
               <span class="tot-plan-row-right">
                 <strong class="tot-plan-row-meta tabular">${esc(it.meta)}</strong>
-                <span class="tot-plan-arrow" aria-hidden="true">→</span>
+                <span class="tot-plan-chk" aria-hidden="true">${it.done ? '✓' : '→'}</span>
               </span>
             </span>
             <span class="tot-plan-mini-bar"><span style="width:${it.pct}%"></span></span>
           </span>
         </button>
       `).join('');
+    }
+
+    // Sync Target Band Semicircular SVG Gauge
+    const arcEl = document.getElementById('home-target-arc');
+    if (arcEl) {
+      const targetBarW = parseFloat(document.getElementById('home-target-bar')?.style?.width || '0') || 0;
+      const visualPct = Math.max(12, Math.min(100, targetBarW || Math.round((Number(plan.targetBand || 7.5) / 9) * 100 * 0.25)));
+      arcEl.setAttribute('stroke-dashoffset', (163.4 * (1 - visualPct / 100)).toFixed(1));
     }
 
     // Return true today goal percentage synced 1:1 with the 3 checklist items!
@@ -943,22 +957,164 @@
     const barsEl = document.getElementById('home-monitor-bars');
     if (barsEl) {
       const meters = [
-        { label: 'Từ vựng Reading', val: `${snap.mastered.toLocaleString('vi-VN')} / ${snap.totalFamilies.toLocaleString('vi-VN')}`, pct: snap.masteryPct, cls: 'is-sage', action: "window.TotoroUI?.enterSkillMode('Reading', 'flashcard')" },
-        { label: 'Reading Tasks', val: `${snap.completedTasks.length} / 110 bài`, pct: readTaskPct, cls: 'is-warm', action: "window.TotoroUI?.enterSkillMode('Reading', 'task')" },
-        { label: 'Luyện đề Reading', val: rpStats.avgBand ? `${rpStats.completedUnique} bài · Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} bài đã nộp`, pct: readPracPct, cls: 'is-emerald', action: "window.TotoroUI?.enterSkillMode('Reading', 'practice')" },
-        { label: 'Listening & Dictation', val: `${listenVocabDone.toLocaleString('vi-VN')} từ · ${listenTasksDone}/${listenTasksTotal} Task`, pct: listenPct, cls: 'is-indigo', action: "window.TotoroUI?.enterSkillMode('Listening', 'home')" },
-        { label: 'Writing & Flow Ideas', val: `${wsStats.masteredCards} thẻ · ${wsStats.tasksDone}/${wsStats.tasksTotal} Task`, pct: writePct, cls: 'is-sage', action: "window.TotoroUI?.enterSkillMode('Writing', 'home')" },
-        { label: 'Speaking & Mindmap', val: `${spStats.masteredCards} cụm · ${spStats.tasksDone}/${spStats.tasksTotal} Task`, pct: speakPct, cls: 'is-warm', action: "window.TotoroUI?.enterSkillMode('Speaking', 'home')" },
+        { label: 'Từ vựng Reading', val: `${snap.mastered.toLocaleString('vi-VN')} / ${snap.totalFamilies.toLocaleString('vi-VN')}`, pct: snap.masteryPct, cls: 'is-sage', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'flashcard')" },
+        { label: 'Reading Tasks', val: `${snap.completedTasks.length} / 110 bài`, pct: readTaskPct, cls: 'is-warm', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.3 2.3 4.8-5"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'task')" },
+        { label: 'Luyện đề Reading', val: rpStats.avgBand ? `${rpStats.completedUnique} bài · Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} bài đã nộp`, pct: readPracPct, cls: 'is-emerald', tone: 'is-reading', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg>', action: "window.TotoroUI?.enterSkillMode('Reading', 'practice')" },
+        { label: 'Listening & Dictation', val: `${listenVocabDone.toLocaleString('vi-VN')} từ · ${listenTasksDone}/${listenTasksTotal} Task`, pct: listenPct, cls: 'is-indigo', tone: 'is-listening', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>', action: "window.TotoroUI?.enterSkillMode('Listening', 'home')" },
+        { label: 'Writing & Flow Ideas', val: `${wsStats.masteredCards} thẻ · ${wsStats.tasksDone}/${wsStats.tasksTotal} Task`, pct: writePct, cls: 'is-sage', tone: 'is-writing', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>', action: "window.TotoroUI?.enterSkillMode('Writing', 'home')" },
+        { label: 'Speaking & Mindmap', val: `${spStats.masteredCards} cụm · ${spStats.tasksDone}/${spStats.tasksTotal} Task`, pct: speakPct, cls: 'is-warm', tone: 'is-speaking', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>', action: "window.TotoroUI?.enterSkillMode('Speaking', 'home')" },
       ];
       barsEl.innerHTML = meters.map((m) => `
         <button type="button" class="tot-mon-meter tot-mon-meter-btn" onclick="${m.action}">
-          <div class="tot-mon-meter-head">
-            <span>${esc(m.label)}</span>
-            <strong class="tabular">${esc(m.val)}</strong>
-          </div>
-          <div class="tot-mastery-bar"><div class="tot-mon-fill ${m.cls}" style="width:${Math.max(m.pct > 0 ? 3 : 0, m.pct)}%"></div></div>
+          <span class="tot-mon-ico ${m.tone}" aria-hidden="true">${m.ico}</span>
+          <span class="tot-mon-body">
+            <span class="tot-mon-meter-head">
+              <span>${esc(m.label)}</span>
+              <strong class="tabular">${esc(m.val)}</strong>
+            </span>
+            <span class="tot-mastery-bar"><span class="tot-mon-fill ${m.cls}" style="width:${Math.max(m.pct > 0 ? 3 : 0, m.pct)}%"></span></span>
+          </span>
         </button>
       `).join('');
+
+      const showcaseEl = document.getElementById('home-skills-showcase');
+      if (showcaseEl) {
+        const readCombinedPct = Math.round((snap.masteryPct + readTaskPct) / 2);
+        const readRingPct = rpStats.avgBand ? Math.min(100, Math.round((rpStats.avgBand / 9) * 100)) : readCombinedPct;
+        const cards = [
+          {
+            key: 'reading',
+            name: 'Reading',
+            sub: '4.489 từ · 110 Tasks',
+            metricA: `${snap.completedTasks.length}/110`,
+            lblA: 'Tasks',
+            metricB: rpStats.avgBand ? `Band ${rpStats.avgBand.toFixed(1)}` : `${rpStats.completedUnique} đề`,
+            lblB: 'Practice',
+            ringTxt: rpStats.avgBand ? rpStats.avgBand.toFixed(1) : `${readCombinedPct}%`,
+            pct: readRingPct,
+            stroke: '#2F6E44',
+            ico: `<svg viewBox="0 0 36 36" fill="none">
+              <path d="M12.2 14.2L10.6 7.4L15 11.1C16.8 10.5 19.2 10.5 21 11.1L25.4 7.4L23.8 14.2C25.5 15.6 26.2 17.6 26.2 19.4H9.8C9.8 17.6 10.5 15.6 12.2 14.2Z" fill="#63665F" stroke="#363B35" stroke-width="1.2" stroke-linejoin="round"/>
+              <path d="M16.2 10.5C17.8 7.6 21.2 7.5 22.8 9.6C20.8 11.3 18 11.5 16.2 10.5Z" fill="#4E965F" stroke="#2A5E37" stroke-width="1" stroke-linejoin="round"/>
+              <circle cx="14.8" cy="14.7" r="1.95" fill="#FFFFFF"/><circle cx="15" cy="14.7" r="0.95" fill="#181A1F"/>
+              <circle cx="21.2" cy="14.7" r="1.95" fill="#FFFFFF"/><circle cx="21" cy="14.7" r="0.95" fill="#181A1F"/>
+              <ellipse cx="18" cy="15.8" rx="1.2" ry="0.65" fill="#23221F"/>
+              <path d="M5.5 19.6C5.5 18.4 6.6 17.7 7.8 17.9L18 19.7L28.2 17.9C29.4 17.7 30.5 18.4 30.5 19.6V28.4C30.5 29.3 29.6 30 28.7 29.8L18 28L7.3 29.8C6.4 30 5.5 29.3 5.5 28.4V19.6Z" fill="#FFFDF6" stroke="#2D663E" stroke-width="1.7" stroke-linejoin="round"/>
+              <path d="M18 19.7V28" stroke="#2D663E" stroke-width="1.5"/>
+              <path d="M9.2 22.4H14.6M9.2 25.2H13.8M21.4 22.4H26.8M21.4 25.2H25.8" stroke="#80A489" stroke-width="1.4" stroke-linecap="round"/>
+              <path d="M23.5 18.7V23.8L25.2 22.5L26.9 23.8V18.2Z" fill="#D28B3A"/>
+            </svg>`,
+            action: "window.TotoroUI?.enterSkillMode('Reading', 'home')",
+            pracAction: "window.TotoroUI?.enterSkillMode('Reading', 'practice')"
+          },
+          {
+            key: 'listening',
+            name: 'Listening',
+            sub: '139 Tasks · Dictation',
+            metricA: `${listenTasksDone}/${listenTasksTotal}`,
+            lblA: 'Tasks',
+            metricB: '133 Full',
+            lblB: 'Đề nghe',
+            ringTxt: `${listenPct}%`,
+            pct: listenPct,
+            stroke: '#216E7C',
+            ico: `<svg viewBox="0 0 36 36" fill="none">
+              <path d="M8.2 19.5V17.5C8.2 11.8 12.6 7.4 18 7.4C23.4 7.4 27.8 11.8 27.8 17.5V19.5" stroke="#206B78" stroke-width="2.6" stroke-linecap="round"/>
+              <path d="M10.4 17.6C10.4 13.1 13.8 9.7 18 9.7C22.2 9.7 25.6 13.1 25.6 17.6" stroke="#7AC2CE" stroke-width="1.3" stroke-linecap="round"/>
+              <path d="M14.2 15.2L13 10.6L16.2 13.2C17.3 12.8 18.7 12.8 19.8 13.2L23 10.6L21.8 15.2C23.6 16.8 24.4 19.2 24.2 22.2C24 26.2 21.4 28.4 18 28.4C14.6 28.4 12 26.2 11.8 22.2C11.6 19.2 12.4 16.8 14.2 15.2Z" fill="#636866" stroke="#31393A" stroke-width="1.15" stroke-linejoin="round"/>
+              <ellipse cx="18" cy="23.8" rx="4.4" ry="3.3" fill="#FBF6E8"/>
+              <path d="M15.4 17.6C15.9 17 16.7 17 17.2 17.6M18.8 17.6C19.3 17 20.1 17 20.6 17.6" stroke="#1E2526" stroke-width="1.35" stroke-linecap="round"/>
+              <rect x="5.4" y="17.8" width="5.2" height="9.4" rx="2.6" fill="#2A7A88" stroke="#184C56" stroke-width="1.35"/>
+              <rect x="25.4" y="17.8" width="5.2" height="9.4" rx="2.6" fill="#2A7A88" stroke="#184C56" stroke-width="1.35"/>
+              <rect x="9.6" y="19.2" width="2" height="6.6" rx="1" fill="#E8B968"/>
+              <rect x="24.4" y="19.2" width="2" height="6.6" rx="1" fill="#E8B968"/>
+            </svg>`,
+            action: "window.TotoroUI?.enterSkillMode('Listening', 'home')",
+            pracAction: "window.TotoroUI?.enterSkillMode('Listening', 'practice')"
+          },
+          {
+            key: 'writing',
+            name: 'Writing',
+            sub: '41 Flow · Task 1 & 2',
+            metricA: `${wsStats.tasksDone}/${wsStats.tasksTotal}`,
+            lblA: 'Flow',
+            metricB: `${wsStats.practiceDone || 0}/63`,
+            lblB: 'Đề viết',
+            ringTxt: `${writePct}%`,
+            pct: writePct,
+            stroke: '#B27229',
+            ico: `<svg viewBox="0 0 36 36" fill="none">
+              <rect x="7" y="6.5" width="18" height="23" rx="3.4" fill="#FFFDF6" stroke="#8C5921" stroke-width="1.6"/>
+              <path d="M11 12.2H20.8M11 16.2H18.5M11 20.2H16.2" stroke="#C5A37B" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M11 24.4C13.5 23.2 15.2 25.2 17.6 24" stroke="#4D885B" stroke-width="1.6" stroke-linecap="round"/>
+              <g transform="rotate(-42 24 20)">
+                <rect x="21.2" y="9" width="5.6" height="14.5" rx="2.2" fill="#A66524" stroke="#5A340E" stroke-width="1.35"/>
+                <rect x="21.2" y="19.6" width="5.6" height="2.4" fill="#E8BE67"/>
+                <path d="M21.6 23.5L24 29.2L26.4 23.5Z" fill="#F2D07D" stroke="#5A340E" stroke-width="1.2" stroke-linejoin="round"/>
+                <circle cx="24" cy="25.5" r="0.8" fill="#5A340E"/>
+              </g>
+            </svg>`,
+            action: "window.TotoroUI?.enterSkillMode('Writing', 'home')",
+            pracAction: "window.TotoroUI?.enterSkillMode('Writing', 'practice')"
+          },
+          {
+            key: 'speaking',
+            name: 'Speaking',
+            sub: 'Story 01 · Mindmap',
+            metricA: `${spStats.tasksDone}/${spStats.tasksTotal}`,
+            lblA: 'Bước',
+            metricB: 'Part 2',
+            lblB: 'Luyện nói',
+            ringTxt: `${speakPct}%`,
+            pct: speakPct,
+            stroke: '#4A5B94',
+            ico: `<svg viewBox="0 0 36 36" fill="none">
+              <rect x="13" y="6.2" width="10" height="14.6" rx="5" fill="#E3B963" stroke="#39446E" stroke-width="1.6"/>
+              <path d="M13.6 10.6H22.4M13.6 13.5H22.4M13.6 16.4H22.4" stroke="#9D7428" stroke-width="1.2" stroke-linecap="round"/>
+              <path d="M10 16.4V17.4C10 21.8 13.6 25.2 18 25.2C22.4 25.2 26 21.8 26 17.4V16.4" stroke="#3E4E84" stroke-width="2" stroke-linecap="round"/>
+              <path d="M18 25.2V29.5M13.6 29.5H22.4" stroke="#3E4E84" stroke-width="2" stroke-linecap="round"/>
+              <path d="M6.8 12.2C5.6 13.6 5.6 16 6.8 17.4M29.2 12.2C30.4 13.6 30.4 16 29.2 17.4" stroke="#6B7EC0" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M23.5 6.8C25.2 4.8 27.6 5.2 28.4 6.8C26.8 8 24.8 8 23.5 6.8Z" fill="#529B63" stroke="#2D6239" stroke-width="0.95" stroke-linejoin="round"/>
+            </svg>`,
+            action: "window.TotoroUI?.enterSkillMode('Speaking', 'home')",
+            pracAction: "window.TotoroUI?.enterSkillMode('Speaking', 'practice')"
+          }
+        ];
+        showcaseEl.innerHTML = cards.map((c) => {
+          const dashOff = (131.95 * (1 - Math.max(0, Math.min(100, c.pct)) / 100)).toFixed(1);
+          return `
+            <article class="tot-sk-card is-pro is-${c.key}" onclick="${c.action}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${c.action}}">
+              <div class="tot-sk-pro-top">
+                <div class="tot-sk-pro-id">
+                  <span class="tot-sk-pro-ico" aria-hidden="true">${c.ico}</span>
+                  <div class="tot-sk-pro-titles">
+                    <h3 class="tot-sk-title">${esc(c.name)}</h3>
+                    <p class="tot-sk-stat">${esc(c.sub)}</p>
+                  </div>
+                </div>
+                <div class="tot-sk-pro-ring" aria-label="Tiến độ ${esc(c.name)} ${esc(c.ringTxt)}">
+                  <svg viewBox="0 0 50 50" aria-hidden="true">
+                    <circle cx="25" cy="25" r="21" fill="none" stroke="var(--bg-subtle)" stroke-width="4.2"/>
+                    <circle cx="25" cy="25" r="21" fill="none" stroke="${c.stroke}" stroke-opacity="${c.pct > 0 ? 1 : 0}" stroke-width="4.2" stroke-linecap="round" stroke-dasharray="131.95" stroke-dashoffset="${dashOff}" transform="rotate(-90 25 25)"/>
+                  </svg>
+                  <span class="tot-sk-pro-ring-val tabular">${esc(c.ringTxt)}</span>
+                </div>
+              </div>
+              <div class="tot-sk-pro-foot">
+                <div class="tot-sk-pro-kpis tabular">
+                  <span><strong>${esc(c.metricA)}</strong> ${esc(c.lblA)}</span>
+                  <span class="tot-sk-pro-dot" aria-hidden="true">·</span>
+                  <span><strong>${esc(c.metricB)}</strong> ${esc(c.lblB)}</span>
+                </div>
+                <button type="button" class="tot-sk-pro-go" onclick="event.stopPropagation(); ${c.pracAction}" title="Vào thẳng phòng Luyện đề ${esc(c.name)}">
+                  <span>Luyện đề</span>
+                  <span class="tot-sk-pro-arr" aria-hidden="true">→</span>
+                </button>
+              </div>
+            </article>
+          `;
+        }).join('');
+      }
     }
     return trueGoalPct;
   }
@@ -1067,30 +1223,75 @@
       `).join('');
     }
 
-    // Class Leaderboard (Exact demo_v3: Medal Badges m1/m2/m3 + Circular Initials Avatar!)
+    // Class Leaderboard (Visual Top-3 Podium Stage + Hairline Ranks #4-#5!)
     const lbEl = document.getElementById('home-lb-list');
     if (lbEl) {
       const entries = window.__VOCAB_BRIDGE__?.getClassRankedEntries?.(activeHomeLbPeriod) || [];
       const top5 = entries.slice(0, 5);
-      lbEl.innerHTML = top5.length
-        ? top5.map((r, i) => {
-            const isMe = String(r.id).toLowerCase() === snap.uid;
-            const rankNum = r.rank || (i + 1);
-            const mCls = rankNum === 1 ? 'm1' : (rankNum === 2 ? 'm2' : (rankNum === 3 ? 'm3' : ''));
-            const parts = String(r.name || r.id || 'HV').trim().split(/\s+/);
-            const av = ((parts[0]?.[0] || '') + (parts[parts.length - 1]?.[0] || parts[0]?.[1] || '')).toUpperCase().slice(0, 2) || 'HV';
-            return `
-              <div class="tot-lb-row ${isMe ? 'me' : ''}">
-                <span style="display:inline-flex;align-items:center;gap:8px;min-width:0;">
-                  <span class="tot-medal-badge ${mCls}">${rankNum}</span>
-                  <span class="tot-lb-av">${esc(av)}</span>
-                  <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.name)}</span>
-                </span>
-                <span class="tabular tot-lb-pts" style="color:var(--accent);font-weight:800;font-size:13px;white-space:nowrap;display:inline-flex;align-items:center;">${(r.score || 0).toLocaleString('vi-VN')}${getChestnutUnitHtml()}</span>
-              </div>
-            `;
-          }).join('')
-        : '<div style="font-size:12.5px;color:var(--ink-3);padding:12px 0;">Chưa có dữ liệu bảng thi đua tuần này.</div>';
+      const getInit = (r) => {
+        const parts = String(r.name || r.id || 'HV').trim().split(/\s+/);
+        return ((parts[0]?.[0] || '') + (parts[parts.length - 1]?.[0] || parts[0]?.[1] || '')).toUpperCase().slice(0, 2) || 'HV';
+      };
+      const shortName = (r) => {
+        const parts = String(r.name || r.id || 'HV').trim().split(/\s+/);
+        return parts.length >= 2 ? parts.slice(-2).join(' ') : parts[0];
+      };
+      if (top5.length >= 3) {
+        const podOrder = [
+          { r: top5[1], slot: 'is-p2', num: 2 },
+          { r: top5[0], slot: 'is-p1', num: 1 },
+          { r: top5[2], slot: 'is-p3', num: 3 }
+        ];
+        const podiumHtml = `
+          <div class="tot-lb-podium-stage">
+            ${podOrder.map(({ r, slot, num }) => {
+              const isMe = String(r.id).toLowerCase() === snap.uid;
+              return `
+                <div class="tot-pod-col ${slot} ${isMe ? 'is-me' : ''}">
+                  ${num === 1 ? '<svg class="tot-pod-crown" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 18h16l1.5-9.5-5 3.5L12 5l-4.5 7-5-3.5L4 18z"/></svg>' : ''}
+                  <span class="tot-pod-av">${esc(getInit(r))}</span>
+                  <span class="tot-pod-name" title="${esc(r.name)}">${esc(shortName(r))}</span>
+                  <span class="tot-pod-pts tabular">${(r.score || 0).toLocaleString('vi-VN')}${getChestnutUnitHtml()}</span>
+                  <span class="tot-pod-base">${num}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+        const restHtml = top5.slice(3).map((r, i) => {
+          const isMe = String(r.id).toLowerCase() === snap.uid;
+          const rankNum = r.rank || (i + 4);
+          return `
+            <div class="tot-lb-row ${isMe ? 'me' : ''}">
+              <span style="display:inline-flex;align-items:center;gap:8px;min-width:0;">
+                <span class="tot-medal-badge">${rankNum}</span>
+                <span class="tot-lb-av">${esc(getInit(r))}</span>
+                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.name)}</span>
+              </span>
+              <span class="tabular tot-lb-pts" style="color:var(--accent);font-weight:800;font-size:13px;white-space:nowrap;display:inline-flex;align-items:center;">${(r.score || 0).toLocaleString('vi-VN')}${getChestnutUnitHtml()}</span>
+            </div>
+          `;
+        }).join('');
+        lbEl.innerHTML = podiumHtml + restHtml;
+      } else {
+        lbEl.innerHTML = top5.length
+          ? top5.map((r, i) => {
+              const isMe = String(r.id).toLowerCase() === snap.uid;
+              const rankNum = r.rank || (i + 1);
+              const mCls = rankNum === 1 ? 'm1' : (rankNum === 2 ? 'm2' : (rankNum === 3 ? 'm3' : ''));
+              return `
+                <div class="tot-lb-row ${isMe ? 'me' : ''}">
+                  <span style="display:inline-flex;align-items:center;gap:8px;min-width:0;">
+                    <span class="tot-medal-badge ${mCls}">${rankNum}</span>
+                    <span class="tot-lb-av">${esc(getInit(r))}</span>
+                    <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(r.name)}</span>
+                  </span>
+                  <span class="tabular tot-lb-pts" style="color:var(--accent);font-weight:800;font-size:13px;white-space:nowrap;display:inline-flex;align-items:center;">${(r.score || 0).toLocaleString('vi-VN')}${getChestnutUnitHtml()}</span>
+                </div>
+              `;
+            }).join('')
+          : '<div style="font-size:12.5px;color:var(--ink-3);padding:12px 0;">Chưa có dữ liệu bảng thi đua tuần này.</div>';
+      }
       setTxt('home-lb-myrank', snap.meWeek ? `#${snap.meWeek.rank} / ${entries.length || 1}` : 'Chưa xếp hạng');
     }
 
@@ -1212,7 +1413,14 @@
               <span class="tot-hist-badge tabular">${esc(row.badge)}</span>
             </button>
           `).join('')
-        : `<div class="tot-empty-inline"><span>Chưa có bài nộp nào ở mục này.</span><button type="button" class="tot-foot-btn" onclick="window.TotoroUI?.enterSkillMode('${filterSk === 'all' ? 'Reading' : filterSk.charAt(0).toUpperCase() + filterSk.slice(1)}', 'practice')">Mở Practice →</button></div>`;
+        : `<div class="tot-empty-illustrated">
+             <img class="tot-empty-mascot" src="assets/images/totoro_sitting_branch.webp" alt="" loading="lazy" decoding="async" draggable="false">
+             <div class="tot-empty-copy">
+               <strong>Chưa có bài nộp ở mục này</strong>
+               <span>Thử làm 1 đề ngắn 15–20 phút để lưu Band &amp; tiến độ đầu tiên nhé.</span>
+             </div>
+             <button type="button" class="tot-foot-btn" onclick="window.TotoroUI?.enterSkillMode('${filterSk === 'all' ? 'Reading' : filterSk.charAt(0).toUpperCase() + filterSk.slice(1)}', 'practice')">Mở Practice →</button>
+           </div>`;
       setTxt('home-history-total', `${allEntries.length} bài (4 kỹ năng)`);
     }
 
@@ -1350,7 +1558,13 @@
             </div>
           `;
         }).join('')
-      : `<div class="rh-empty-clean">Chưa có bài luyện đề nào. Chọn một kho đề phía trên để bắt đầu ngay.</div>`;
+      : `<div class="tot-empty-illustrated">
+           <img class="tot-empty-mascot" src="assets/images/totoro_sitting_branch.webp" alt="" loading="lazy" decoding="async" draggable="false">
+           <div class="tot-empty-copy">
+             <strong>Chưa có bài luyện đề nào</strong>
+             <span>Chọn một kho đề Cambridge, Volume hoặc Actual phía trên để bắt đầu ngay.</span>
+           </div>
+         </div>`;
 
     const recentTasks = snap.completedTasks
       .slice()
@@ -1387,26 +1601,33 @@
       : `<div class="rh-empty-clean">Chưa có từ cá nhân. Vào Solutions sau khi làm bài để lưu từ vựng.</div>`;
 
     const quickBanks = [
-      { id: 'cambridge', name: 'Cambridge 1–20', meta: '194 bài · 71 Full Tests', tag: 'Chuẩn đề' },
-      { id: 'volume', name: 'Real Volume 1–10', meta: '114 bài · 38 Full Tests', tag: 'Thực chiến' },
-      { id: 'actual', name: 'Recent Actual', meta: '270 bài · Lọc theo dạng', tag: 'Thi thật' },
-      { id: 'news', name: 'Academic News', meta: 'Song ngữ · Tra & lưu từ', tag: 'Đọc báo' }
+      { id: 'cambridge', name: 'Cambridge 1–20', meta: '194 bài · 71 Full Tests', tag: 'Chuẩn đề', tone: 'is-sage', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>' },
+      { id: 'volume', name: 'Real Volume 1–10', meta: '114 bài · 38 Full Tests', tag: 'Thực chiến', tone: 'is-teal', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4.5-9 4.5-9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg>' },
+      { id: 'actual', name: 'Recent Actual', meta: '270 bài · Lọc theo dạng', tag: 'Thi thật', tone: 'is-warm', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' },
+      { id: 'news', name: 'Academic News', meta: 'Song ngữ · Tra & lưu từ', tag: 'Đọc báo', tone: 'is-indigo', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>' }
     ];
 
     const quickBanksHtml = quickBanks.map((bk) => `
-      <button type="button" class="rh-quick-tile" onclick="window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.openSource('${bk.id}', '${bk.id === 'actual' ? 'p1' : 'all'}')">
-        <div class="rh-quick-top">
-          <span class="rh-quick-name">${esc(bk.name)}</span>
+      <button type="button" class="rh-quick-tile is-visual ${bk.tone}" onclick="window.TotoroUI.switchView('practice'); window.ReadingPracticeApp?.openSource('${bk.id}', '${bk.id === 'actual' ? 'p1' : 'all'}')">
+        <div class="rh-quick-head-row">
+          <span class="rh-quick-ico ${bk.tone}" aria-hidden="true">${bk.ico}</span>
           <span class="rh-quick-tag">${esc(bk.tag)}</span>
         </div>
-        <div class="rh-quick-meta">${esc(bk.meta)}</div>
+        <div class="rh-quick-name">${esc(bk.name)}</div>
+        <div class="rh-quick-meta-row">
+          <span class="rh-quick-meta">${esc(bk.meta)}</span>
+          <span class="rh-quick-arr" aria-hidden="true">→</span>
+        </div>
       </button>
     `).join('');
+
+    const rRingPct = rpStats.avgBand ? Math.min(100, Math.round((rpStats.avgBand / 9) * 100)) : Math.min(100, Math.round((snap.completedTasks.length / 110) * 100));
+    const rRingOff = (176 * (1 - rRingPct / 100)).toFixed(1);
 
     el.innerHTML = `
       <div class="rh-layout rh-clean">
         <div class="rh-top-asym">
-          <div class="tot-hero-card rh-main-hero">
+          <div class="tot-hero-card rh-main-hero has-mascot is-reading">
             <div class="rh-hero-copy">
               <div class="rh-head-row">
                 <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
@@ -1425,6 +1646,9 @@
                 <button type="button" class="tot-demo-btn" onclick="window.MyVocabUI?.openModal()">MY LIST</button>
               </div>
             </div>
+            <div class="rh-hero-mascot-stage" aria-hidden="true">
+              <img class="rh-hero-mascot-img" src="assets/images/totoro_reading_mascot.webp" alt="" decoding="async" draggable="false">
+            </div>
           </div>
 
           <div class="tot-home-panel rh-band-panel">
@@ -1433,7 +1657,13 @@
                 <div class="tot-panel-title">Kết quả Luyện đề</div>
                 <div class="tot-panel-sub">Thống kê từ các lượt đã nộp</div>
               </div>
-              <span class="rh-band-big tabular">${rpStats.avgBand ? `Band ${rpStats.avgBand.toFixed(1)}` : '—'}</span>
+              <div class="rh-ring-wrap" aria-label="Tỷ lệ hoàn thành">
+                <svg viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="var(--bg-subtle)" stroke-width="5.5"/>
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="var(--accent)" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="176" stroke-dashoffset="${rRingOff}" transform="rotate(-90 32 32)"/>
+                </svg>
+                <span class="rh-ring-val tabular">${rpStats.avgBand ? rpStats.avgBand.toFixed(1) : `${rRingPct}%`}</span>
+              </div>
             </div>
             <div class="rh-kpi-strip tabular">
               <div class="rh-kpi-cell">
@@ -1650,25 +1880,32 @@
     }).join('');
 
     const quickBanks = [
-      { id: 'cambridge', name: 'Cambridge 1–20', meta: '20 cuốn · 80 Tests chuẩn đề', tag: 'Chuẩn đề', act: "window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice'); window.ListeningPracticeApp?.openSource('cambridge')" },
-      { id: 'volume', name: 'Real Volume 1–10', meta: '10 tập · 40 Tests luyện bẫy', tag: 'Thực chiến', act: "window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice'); window.ListeningPracticeApp?.openSource('volume')" },
-      { id: 'actual', name: 'Recent Actual', meta: '52 bài nghe · 13 Full Tests', tag: 'Thi thật', act: "window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice'); window.ListeningPracticeApp?.openSource('actual', 'p1')" },
-      { id: 'dictation', name: 'Dictation Studio', meta: 'Chép chính tả · YouTube & Audio', tag: 'Nghe sâu', act: "window.TotoroUI.openDictationStudio()" }
+      { id: 'cambridge', name: 'Cambridge 1–20', meta: '20 cuốn · 80 Tests chuẩn đề', tag: 'Chuẩn đề', tone: 'is-sage', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>', act: "window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice'); window.ListeningPracticeApp?.openSource('cambridge')" },
+      { id: 'volume', name: 'Real Volume 1–10', meta: '10 tập · 40 Tests luyện bẫy', tag: 'Thực chiến', tone: 'is-teal', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>', act: "window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice'); window.ListeningPracticeApp?.openSource('volume')" },
+      { id: 'actual', name: 'Recent Actual', meta: '52 bài nghe · 13 Full Tests', tag: 'Thi thật', tone: 'is-warm', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>', act: "window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice'); window.ListeningPracticeApp?.openSource('actual', 'p1')" },
+      { id: 'dictation', name: 'Dictation Studio', meta: 'Chép chính tả · YouTube & Audio', tag: 'Nghe sâu', tone: 'is-indigo', ico: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><polygon points="10 9 15 12 10 15 10 9" fill="currentColor" stroke="none"/></svg>', act: "window.TotoroUI.openDictationStudio()" }
     ];
     const quickBanksHtml = quickBanks.map((bk) => `
-      <button type="button" class="rh-quick-tile" onclick="${bk.act}">
-        <div class="rh-quick-top">
-          <span class="rh-quick-name">${esc(bk.name)}</span>
+      <button type="button" class="rh-quick-tile is-visual ${bk.tone}" onclick="${bk.act}">
+        <div class="rh-quick-head-row">
+          <span class="rh-quick-ico ${bk.tone}" aria-hidden="true">${bk.ico}</span>
           <span class="rh-quick-tag">${esc(bk.tag)}</span>
         </div>
-        <div class="rh-quick-meta">${esc(bk.meta)}</div>
+        <div class="rh-quick-name">${esc(bk.name)}</div>
+        <div class="rh-quick-meta-row">
+          <span class="rh-quick-meta">${esc(bk.meta)}</span>
+          <span class="rh-quick-arr" aria-hidden="true">→</span>
+        </div>
       </button>
     `).join('');
+
+    const lRingPct = lpAvgBand ? Math.min(100, Math.round((lpAvgBand / 9) * 100)) : pctTotal;
+    const lRingOff = (176 * (1 - lRingPct / 100)).toFixed(1);
 
     el.innerHTML = `
       <div class="rh-layout rh-clean">
         <div class="rh-top-asym">
-          <div class="tot-hero-card rh-main-hero">
+          <div class="tot-hero-card rh-main-hero has-mascot is-listening">
             <div class="rh-hero-copy">
               <div class="rh-head-row">
                 <span class="tot-icon-tile" aria-hidden="true" style="width:36px;height:36px;">
@@ -1681,11 +1918,14 @@
               </div>
               <div class="rh-decks-grid-4">${barsHtml}</div>
               <div class="rh-hero-actions" style="margin-top:14px;">
-                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice')">Vào kho đề Practice →</button>
+                <button type="button" class="btn btn-primary tot-demo-btn" onclick="window.TotoroUI.setListeningPracticeSub('exams'); window.TotoroUI.enterSkillMode('Listening', 'practice')">Kho đề Practice →</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.openDictationStudio()">Dictation Studio</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'flashcard')">Flashcard</button>
                 <button type="button" class="tot-demo-btn" onclick="window.TotoroUI.enterSkillMode('Listening', 'task')">${totalTasks} Tasks</button>
               </div>
+            </div>
+            <div class="rh-hero-mascot-stage" aria-hidden="true">
+              <img class="rh-hero-mascot-img" src="assets/images/totoro_listening_mascot.webp" alt="" decoding="async" draggable="false">
             </div>
           </div>
 
@@ -1695,7 +1935,13 @@
                 <div class="tot-panel-title">Tiến độ Luyện nghe</div>
                 <div class="tot-panel-sub">Thống kê luyện đề &amp; từ vựng</div>
               </div>
-              <span class="rh-band-big tabular">${lpAvgBand ? `Band ${lpAvgBand.toFixed(1)}` : `${pctTotal}%`}</span>
+              <div class="rh-ring-wrap is-teal" aria-label="Tiến độ Listening">
+                <svg viewBox="0 0 64 64">
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="var(--bg-subtle)" stroke-width="5.5"/>
+                  <circle cx="32" cy="32" r="28" fill="none" stroke="#28707D" stroke-width="5.5" stroke-linecap="round" stroke-dasharray="176" stroke-dashoffset="${lRingOff}" transform="rotate(-90 32 32)"/>
+                </svg>
+                <span class="rh-ring-val tabular">${lpAvgBand ? lpAvgBand.toFixed(1) : `${pctTotal}%`}</span>
+              </div>
             </div>
             <div class="rh-kpi-strip tabular">
               <div class="rh-kpi-cell">

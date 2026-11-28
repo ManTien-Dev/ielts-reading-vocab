@@ -16872,3 +16872,1046 @@ html[data-skill="listening"] #screen-tasks-hub .tot-task-card:active {
 .tot-hist-sk-tag.is-listening { background: var(--info-soft); color: var(--info); }
 .tot-hist-sk-tag.is-writing { background: var(--streak-soft); color: var(--streak); }
 .tot-hist-sk-tag.is-speaking { background: var(--ok-soft); color: var(--ok); }
+
+/* =========================================================
+   ILLUSTRATED TOTORO EDITORIAL HOME & 4-SKILL OVERVIEW
+   ========================================================= */
+.tot-atelier-hero {
+  overflow: visible;
+}
+.tot-atelier-left {
+  align-items: center;
+  gap: 16px;
+}
+.tot-atelier-mascot-stage {
+  position: relative;
+  width: 224px;
+  height: 148px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  margin: -14px 0 -16px;
+}
+.tot-atelier-mascot-stage::before {
+  content: '';
+  position: absolute;
+  inset: 10px 8px 4px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 52% 58%, rgba(164, 194, 154, 0.28) 0%, rgba(235, 223, 195, 0.22) 48%, transparent 74%);
+  pointer-events: none;
+}
+.tot-atelier-mascot-img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(0 8px 14px rgba(36, 34, 31, 0.14));
+  transition: transform 280ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tot-atelier-hero:hover .tot-atelier-mascot-img {
+    transform: translateY(-3px);
+  }
+}
+html[data-theme="dark"] .tot-atelier-mascot-stage::before {
+  background: radial-gradient(ellipse at 52% 58%, rgba(235, 226, 204, 0.20) 0%, rgba(124, 174, 122, 0.12) 52%, transparent 74%);
+}
+
+/* 4-Skill Illustrated Showcase Strip on Global HOME */
+.tot-home-skills-showcase {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+.tot-sk-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 15px;
+  border: 1px solid var(--border);
+  background: var(--surface-panel);
+  box-shadow: 0 2px 0 var(--lip-card);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 180ms var(--ease-out), border-color 180ms ease, box-shadow 180ms ease;
+}
+.tot-sk-card:focus-visible {
+  outline: 2.5px solid var(--accent);
+  outline-offset: 2px;
+}
+.tot-sk-card:active {
+  transform: scale(0.985);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tot-sk-card:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+    box-shadow: 0 4px 0 var(--lip-card), 0 14px 26px -18px rgba(36, 34, 31, 0.24);
+  }
+  .tot-sk-card:hover .tot-sk-mascot {
+    transform: translateY(-4px) scale(1.03);
+  }
+  .tot-sk-card:hover .tot-sk-cta {
+    transform: translateX(3px);
+  }
+}
+
+.tot-sk-stage {
+  position: relative;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 14px 8px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+.tot-sk-card.is-reading .tot-sk-stage {
+  background: linear-gradient(155deg, #e2efe3 0%, #f3f7ee 60%, #eee7d7 100%);
+}
+.tot-sk-card.is-listening .tot-sk-stage {
+  background: linear-gradient(155deg, #deeff2 0%, #eff8f9 60%, #e9ede8 100%);
+}
+.tot-sk-card.is-writing .tot-sk-stage {
+  background: linear-gradient(155deg, #f3e9d6 0%, #faf5eb 60%, #ede4d3 100%);
+}
+.tot-sk-card.is-speaking .tot-sk-stage {
+  background: linear-gradient(155deg, #e4e8f5 0%, #f3f5fa 60%, #ecebe6 100%);
+}
+
+html[data-theme="dark"] .tot-sk-card.is-reading .tot-sk-stage {
+  background: linear-gradient(155deg, #1d3224 0%, #1a271f 64%, #1f2520 100%);
+}
+html[data-theme="dark"] .tot-sk-card.is-listening .tot-sk-stage {
+  background: linear-gradient(155deg, #1a3036 0%, #182529 64%, #1d2426 100%);
+}
+html[data-theme="dark"] .tot-sk-card.is-writing .tot-sk-stage {
+  background: linear-gradient(155deg, #32271d 0%, #26201a 64%, #24211d 100%);
+}
+html[data-theme="dark"] .tot-sk-card.is-speaking .tot-sk-stage {
+  background: linear-gradient(155deg, #24293d 0%, #1d2130 64%, #1f222a 100%);
+}
+
+.tot-sk-glow {
+  position: absolute;
+  width: 146px;
+  height: 112px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 253, 246, 0.78) 0%, transparent 72%);
+  pointer-events: none;
+}
+html[data-theme="dark"] .tot-sk-glow {
+  background: radial-gradient(circle, rgba(248, 242, 224, 0.22) 0%, transparent 72%);
+}
+.tot-sk-mascot {
+  position: relative;
+  z-index: 1;
+  max-height: 132px;
+  max-width: 84%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 12px rgba(32, 34, 30, 0.16));
+  transition: transform 240ms var(--ease-out);
+}
+.tot-sk-pill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 6px rgba(24, 28, 24, 0.08);
+}
+
+.tot-sk-body {
+  padding: 13px 15px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1 1 auto;
+}
+.tot-sk-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.tot-sk-stat {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tot-sk-meter {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.tot-sk-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 260ms var(--ease-out);
+}
+.tot-sk-card.is-listening .tot-sk-meter > span { background: #2A7482; }
+.tot-sk-card.is-writing .tot-sk-meter > span { background: var(--streak, #A3682B); }
+.tot-sk-card.is-speaking .tot-sk-meter > span { background: #4E5E91; }
+
+.tot-sk-foot {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.tot-sk-cta {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  display: inline-block;
+  transition: transform 180ms var(--ease-out);
+}
+.tot-sk-card.is-listening .tot-sk-cta { color: #246875; }
+.tot-sk-card.is-writing .tot-sk-cta { color: var(--streak, #9A6024); }
+.tot-sk-card.is-speaking .tot-sk-cta { color: #475689; }
+html[data-theme="dark"] .tot-sk-card.is-listening .tot-sk-cta { color: #6FC4D2; }
+html[data-theme="dark"] .tot-sk-card.is-speaking .tot-sk-cta { color: #9FB1E6; }
+
+/* Skill Overview Illustrated Mascot Hero (Reading · Listening · Writing · Speaking) */
+.rh-main-hero.has-mascot {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 178px;
+  align-items: center;
+  gap: 18px;
+  overflow: hidden;
+}
+.rh-main-hero.has-mascot .rh-hero-actions {
+  gap: 7px;
+}
+.rh-main-hero.has-mascot .rh-hero-actions .tot-demo-btn {
+  padding-left: 12px;
+  padding-right: 12px;
+  white-space: nowrap;
+}
+.rh-hero-mascot-stage {
+  position: relative;
+  width: 178px;
+  height: 184px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.rh-hero-mascot-stage::before {
+  content: '';
+  position: absolute;
+  inset: 12px 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(164, 198, 158, 0.28) 0%, transparent 72%);
+}
+.rh-main-hero.is-listening .rh-hero-mascot-stage::before {
+  background: radial-gradient(circle, rgba(140, 200, 210, 0.28) 0%, transparent 72%);
+}
+.rh-main-hero.is-writing .rh-hero-mascot-stage::before {
+  background: radial-gradient(circle, rgba(224, 195, 148, 0.30) 0%, transparent 72%);
+}
+.rh-main-hero.is-speaking .rh-hero-mascot-stage::before {
+  background: radial-gradient(circle, rgba(165, 178, 224, 0.28) 0%, transparent 72%);
+}
+html[data-theme="dark"] .rh-hero-mascot-stage::before {
+  background: radial-gradient(circle, rgba(244, 236, 214, 0.16) 0%, transparent 72%) !important;
+}
+.rh-hero-mascot-img {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  max-height: 174px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px rgba(32, 34, 30, 0.15));
+  transition: transform 280ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .rh-main-hero.has-mascot:hover .rh-hero-mascot-img {
+    transform: translateY(-3px) scale(1.02);
+  }
+}
+
+/* Visual SVG Radial Progress Ring on Skill Overview Summary Card */
+.rh-ring-wrap {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.rh-ring-wrap svg {
+  width: 58px;
+  height: 58px;
+  display: block;
+}
+.rh-ring-val {
+  position: absolute;
+  font-size: 13px;
+  font-weight: 850;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+/* Cleaner, Airier Rhythm Chart Bars (Soft vertical tint instead of heavy beige slabs) */
+#home-chart-bars .tot-chart-track {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-subtle) 58%, transparent) 0%, color-mix(in srgb, var(--bg-subtle) 92%, transparent) 100%);
+  border: 1px dashed color-mix(in srgb, var(--border-strong) 55%, transparent);
+}
+
+@media (max-width: 1120px) {
+  .tot-atelier-mascot-stage {
+    width: 178px;
+    height: 124px;
+  }
+  .tot-home-skills-showcase {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .rh-main-hero.has-mascot {
+    grid-template-columns: minmax(0, 1fr) 136px !important;
+  }
+  .rh-hero-mascot-stage {
+    width: 136px;
+    height: 146px;
+  }
+  .rh-hero-mascot-img {
+    max-height: 138px;
+  }
+}
+@media (max-width: 640px) {
+  .tot-atelier-left {
+    flex-direction: column-reverse;
+    align-items: center;
+    text-align: center;
+  }
+  .tot-atelier-actions {
+    justify-content: center;
+  }
+  .tot-atelier-mascot-stage {
+    width: 186px;
+    height: 126px;
+    margin: -4px 0 2px;
+  }
+  .tot-home-skills-showcase {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .tot-sk-stage {
+    height: 118px;
+  }
+  .tot-sk-mascot {
+    max-height: 104px;
+  }
+  .rh-main-hero.has-mascot {
+    grid-template-columns: 1fr !important;
+  }
+  .rh-hero-mascot-stage {
+    width: 148px;
+    height: 138px;
+    margin: 4px auto 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tot-atelier-mascot-img,
+  .tot-sk-card,
+  .tot-sk-mascot,
+  .tot-sk-cta,
+  .rh-hero-mascot-img,
+  .rh-quick-tile.is-visual,
+  .rh-quick-arr,
+  .tot-plan-ico,
+  .tot-mon-ico {
+    transition: none !important;
+  }
+}
+
+/* =========================================================
+   CUSTOM GRAPHIC FUNCTION BLOCKS (HOME 6 BLOCKS + OVERVIEW QUICK TILES)
+   ========================================================= */
+
+/* 1. Daily Plan Checklist Medallions */
+#home-plan-checklist .tot-plan-row {
+  gap: 11px;
+  align-items: center;
+}
+.tot-plan-ico {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 160ms var(--ease-out);
+}
+.tot-plan-ico svg { width: 17px; height: 17px; }
+.tot-plan-ico.is-vocab { background: var(--accent-soft); color: var(--accent); }
+.tot-plan-ico.is-focus { background: var(--streak-soft); color: var(--streak); }
+.tot-plan-ico.is-practice { background: color-mix(in srgb, #28707D 13%, transparent); color: #246571; }
+html[data-theme="dark"] .tot-plan-ico.is-practice { color: #75C9D7; }
+#home-plan-checklist .tot-plan-row.is-done .tot-plan-ico {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+#home-plan-checklist .tot-plan-row-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+#home-plan-checklist .tot-plan-chk {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-3);
+}
+#home-plan-checklist .tot-plan-row.is-done .tot-plan-chk {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #ffffff;
+}
+@media (hover: hover) and (pointer: fine) {
+  #home-plan-checklist .tot-plan-row:hover .tot-plan-ico { transform: scale(1.06); }
+}
+
+/* 2. Target Band Semicircular SVG Arc Gauge */
+.tot-band-gauge-row {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 6px 0 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.tot-band-arc-box {
+  position: relative;
+  width: 136px;
+  height: 82px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.tot-band-arc-svg {
+  width: 132px;
+  height: 78px;
+  display: block;
+}
+.tot-band-arc-center {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.05;
+}
+.tot-band-arc-center .tot-ed-score-lbl {
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.tot-band-arc-center .tot-ed-score-serif {
+  font-size: 27px;
+  line-height: 1.08;
+}
+.tot-band-side-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+.tot-band-stat-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: var(--surface-item);
+}
+.tot-band-stat-row .tot-ed-score-lbl {
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.tot-band-stat-row .tot-ed-score-num {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* 3. Modern Sleek Rhythm Chart Columns */
+#home-chart-bars .tot-chart-track {
+  width: 68%;
+  margin: 0 auto;
+  border-radius: 10px 10px 6px 6px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 32%, transparent) 0%, color-mix(in srgb, var(--bg-subtle) 84%, transparent) 100%);
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+}
+#home-chart-bars .tot-chart-col.today .tot-chart-track {
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-soft) 58%, transparent) 0%, color-mix(in srgb, var(--accent-soft) 24%, transparent) 100%);
+}
+#home-chart-bars .tot-chart-fill {
+  background: linear-gradient(180deg, #528C5C 0%, var(--accent) 100%);
+  border-radius: 8px 8px 4px 4px;
+}
+#home-chart-bars .tot-chart-col.today .tot-chart-lbl {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+/* 4. Visual Top-3 Mini Podium inside Class Leaderboard */
+.tot-lb-podium-stage {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  padding: 8px 4px 10px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.tot-pod-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  min-width: 0;
+  position: relative;
+}
+.tot-pod-crown {
+  width: 17px;
+  height: 17px;
+  color: #D29632;
+  margin-bottom: -2px;
+}
+.tot-pod-av {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  background: var(--surface-item);
+  color: var(--ink);
+  border: 2px solid var(--border-strong);
+}
+.tot-pod-col.is-p1 .tot-pod-av {
+  width: 40px;
+  height: 40px;
+  font-size: 13px;
+  background: linear-gradient(145deg, #F6E5BA, #E8C97F);
+  color: #4D330A;
+  border-color: #D29632;
+}
+.tot-pod-col.is-p2 .tot-pod-av {
+  background: linear-gradient(145deg, #ECEFF2, #D8DFE5);
+  color: #2E3A45;
+  border-color: #9DA9B5;
+}
+.tot-pod-col.is-p3 .tot-pod-av {
+  background: linear-gradient(145deg, #F1DFCE, #DFBFA3);
+  color: #4E2F17;
+  border-color: #BC8356;
+}
+.tot-pod-col.is-me .tot-pod-name {
+  color: var(--accent);
+}
+.tot-pod-name {
+  font-size: 11.5px;
+  font-weight: 750;
+  color: var(--ink);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tot-pod-pts {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-2);
+  display: inline-flex;
+  align-items: center;
+}
+.tot-pod-base {
+  width: 100%;
+  border-radius: 8px 8px 4px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 850;
+  color: var(--ink-2);
+  background: var(--surface-item);
+  margin-top: 2px;
+}
+.tot-pod-col.is-p1 .tot-pod-base {
+  height: 30px;
+  background: linear-gradient(180deg, color-mix(in srgb, #E5B655 34%, var(--surface)) 0%, color-mix(in srgb, #E5B655 16%, var(--surface)) 100%);
+  color: #7A5110;
+}
+.tot-pod-col.is-p2 .tot-pod-base {
+  height: 22px;
+  background: color-mix(in srgb, #9DA9B5 22%, var(--surface));
+}
+.tot-pod-col.is-p3 .tot-pod-base {
+  height: 18px;
+  background: color-mix(in srgb, #C78C5E 22%, var(--surface));
+}
+html[data-theme="dark"] .tot-pod-col.is-p1 .tot-pod-base { color: #F2CE7A; }
+
+/* 5. Roadmap Progress Skill Icon Badges */
+#home-monitor-bars .tot-mon-meter-btn {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  width: 100%;
+  text-align: left;
+  transition: background-color 150ms ease, transform 160ms var(--ease-out);
+}
+#home-monitor-bars .tot-mon-meter-btn:active { transform: scale(0.985); }
+@media (hover: hover) and (pointer: fine) {
+  #home-monitor-bars .tot-mon-meter-btn:hover { background: var(--surface-item); }
+  #home-monitor-bars .tot-mon-meter-btn:hover .tot-mon-ico { transform: scale(1.06); }
+}
+.tot-mon-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 160ms var(--ease-out);
+}
+.tot-mon-ico svg { width: 16px; height: 16px; }
+.tot-mon-ico.is-reading { background: var(--accent-soft); color: var(--accent); }
+.tot-mon-ico.is-listening { background: color-mix(in srgb, #2A7482 14%, transparent); color: #246875; }
+.tot-mon-ico.is-writing { background: var(--streak-soft); color: var(--streak); }
+.tot-mon-ico.is-speaking { background: color-mix(in srgb, #4E5E91 14%, transparent); color: #475689; }
+html[data-theme="dark"] .tot-mon-ico.is-listening { color: #6FC4D2; }
+html[data-theme="dark"] .tot-mon-ico.is-speaking { color: #9FB1E6; }
+.tot-mon-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tot-mon-body .tot-mon-meter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+.tot-mon-body .tot-mastery-bar {
+  display: block;
+  width: 100%;
+}
+.tot-mon-body .tot-mon-fill {
+  display: block;
+  height: 100%;
+}
+
+/* 6. Illustrated Totoro Empty State */
+.tot-empty-illustrated {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px;
+  border-radius: 12px;
+  background: var(--surface-item);
+}
+.tot-empty-illustrated .tot-foot-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@media (max-width: 520px) {
+  .tot-empty-illustrated {
+    flex-wrap: wrap;
+  }
+  .tot-empty-illustrated .tot-foot-btn {
+    margin-left: auto;
+  }
+}
+.tot-empty-illustrated.is-compact {
+  padding: 9px 11px;
+  gap: 10px;
+}
+.tot-empty-mascot {
+  width: 52px;
+  height: 58px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 8px rgba(32, 34, 30, 0.14));
+}
+.tot-empty-illustrated.is-compact .tot-empty-mascot {
+  width: 42px;
+  height: 48px;
+}
+.tot-empty-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.tot-empty-copy strong {
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--ink);
+}
+.tot-empty-copy span {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+/* 7. Graphic Quick-Launch Tiles across All 4 Skill Overviews */
+.rh-quick-tile.is-visual {
+  padding: 14px 15px 13px;
+  gap: 7px;
+  background: var(--surface-panel);
+  box-shadow: 0 2px 0 var(--lip-card);
+  transition: transform 180ms var(--ease-out), border-color 160ms ease, box-shadow 180ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .rh-quick-tile.is-visual:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+    box-shadow: 0 4px 0 var(--lip-card), 0 12px 22px -16px rgba(36, 34, 31, 0.22);
+  }
+  .rh-quick-tile.is-visual:hover .rh-quick-arr {
+    transform: translateX(3px);
+    color: var(--accent);
+  }
+}
+.rh-quick-head-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.rh-quick-ico {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rh-quick-ico svg { width: 17px; height: 17px; }
+.rh-quick-ico.is-sage { background: var(--accent-soft); color: var(--accent); }
+.rh-quick-ico.is-teal { background: color-mix(in srgb, #2A7482 14%, transparent); color: #246875; }
+.rh-quick-ico.is-warm { background: var(--streak-soft); color: var(--streak); }
+.rh-quick-ico.is-indigo { background: color-mix(in srgb, #4E5E91 14%, transparent); color: #475689; }
+html[data-theme="dark"] .rh-quick-ico.is-teal { color: #6FC4D2; }
+html[data-theme="dark"] .rh-quick-ico.is-indigo { color: #9FB1E6; }
+
+.rh-quick-meta-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rh-quick-arr {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-3);
+  transition: transform 160ms var(--ease-out), color 160ms ease;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .tot-band-gauge-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+  .tot-band-side-stats {
+    width: 100%;
+  }
+}
+
+/* Executive Data-Graphic 4-Skill Cards on HOME (Clean, Professional, Above-the-Fold) */
+.tot-sk-card.is-pro {
+  padding: 15px 15px 13px;
+  gap: 13px;
+  border-radius: 14px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 0 var(--lip-card);
+  justify-content: space-between;
+}
+.tot-sk-pro-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tot-sk-pro-id {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.tot-sk-pro-ico {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: linear-gradient(145deg, #E4F2E5 0%, #CAE3CD 100%);
+  border: 1.5px solid rgba(47, 110, 68, 0.28);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.72), 0 4px 10px -5px rgba(36, 78, 48, 0.34);
+  transition: transform 180ms var(--ease-out), box-shadow 180ms ease;
+}
+.tot-sk-pro-ico svg { width: 32px; height: 32px; display: block; }
+.tot-sk-card.is-listening .tot-sk-pro-ico {
+  background: linear-gradient(145deg, #DEF1F4 0%, #BFE0E6 100%);
+  border-color: rgba(33, 110, 124, 0.28);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.75), 0 4px 10px -5px rgba(24, 92, 106, 0.34);
+}
+.tot-sk-card.is-writing .tot-sk-pro-ico {
+  background: linear-gradient(145deg, #F8ECD6 0%, #EBD3AB 100%);
+  border-color: rgba(178, 114, 41, 0.30);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.75), 0 4px 10px -5px rgba(136, 84, 24, 0.32);
+}
+.tot-sk-card.is-speaking .tot-sk-pro-ico {
+  background: linear-gradient(145deg, #E5E9F8 0%, #CBD3EE 100%);
+  border-color: rgba(74, 91, 148, 0.28);
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.75), 0 4px 10px -5px rgba(56, 70, 120, 0.34);
+}
+html[data-theme="dark"] .tot-sk-pro-ico {
+  background: linear-gradient(145deg, #253C2C 0%, #1C2E21 100%);
+  border-color: rgba(124, 186, 134, 0.34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 4px 12px -4px rgba(0, 0, 0, 0.45);
+}
+html[data-theme="dark"] .tot-sk-card.is-listening .tot-sk-pro-ico {
+  background: linear-gradient(145deg, #1E383F 0%, #172B31 100%);
+  border-color: rgba(111, 196, 210, 0.34);
+}
+html[data-theme="dark"] .tot-sk-card.is-writing .tot-sk-pro-ico {
+  background: linear-gradient(145deg, #3D3020 0%, #2D2317 100%);
+  border-color: rgba(226, 178, 102, 0.34);
+}
+html[data-theme="dark"] .tot-sk-card.is-speaking .tot-sk-pro-ico {
+  background: linear-gradient(145deg, #272E47 0%, #1E2438 100%);
+  border-color: rgba(159, 177, 230, 0.34);
+}
+
+.tot-sk-pro-titles {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tot-sk-card.is-pro .tot-sk-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.tot-sk-card.is-pro .tot-sk-stat {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.tot-sk-pro-ring {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.tot-sk-pro-ring svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+}
+.tot-sk-pro-ring-val {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 850;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.tot-sk-pro-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.tot-sk-pro-kpis {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tot-sk-pro-kpis strong {
+  color: var(--ink);
+  font-weight: 800;
+}
+.tot-sk-pro-dot { color: var(--ink-3); }
+
+.tot-sk-pro-go {
+  border: none;
+  background: transparent;
+  padding: 3px 5px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 140ms ease, transform 140ms var(--ease-out);
+}
+.tot-sk-card.is-listening .tot-sk-pro-go { color: #246875; }
+.tot-sk-card.is-writing .tot-sk-pro-go { color: var(--streak, #9A6024); }
+.tot-sk-card.is-speaking .tot-sk-pro-go { color: #475689; }
+html[data-theme="dark"] .tot-sk-card.is-listening .tot-sk-pro-go { color: #6FC4D2; }
+html[data-theme="dark"] .tot-sk-card.is-speaking .tot-sk-pro-go { color: #9FB1E6; }
+.tot-sk-pro-arr {
+  display: inline-block;
+  transition: transform 160ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tot-sk-card.is-pro:hover .tot-sk-pro-ico { transform: scale(1.06); }
+  .tot-sk-card.is-pro:hover .tot-sk-pro-arr { transform: translateX(3px); }
+  .tot-sk-pro-go:hover { background: var(--surface-item); }
+}
+@media (max-width: 640px) {
+  .tot-sk-card.is-pro { padding: 12px 13px 11px; gap: 8px; }
+  .tot-sk-pro-top { flex-wrap: wrap; align-items: flex-start; gap: 6px; }
+  .tot-sk-pro-id { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .tot-sk-pro-ico { width: 38px; height: 38px; border-radius: 10px; }
+  .tot-sk-pro-ico svg { width: 26px; height: 26px; }
+  .tot-sk-pro-ring { width: 38px; height: 38px; }
+  .tot-sk-pro-ring svg { width: 38px; height: 38px; }
+  .tot-sk-pro-ring-val { font-size: 10px; }
+  .tot-sk-pro-kpis { display: none; }
+  .tot-sk-pro-foot { justify-content: flex-end; padding-top: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tot-sk-pro-ico,
+  .tot-sk-pro-arr,
+  .tot-sk-pro-go { transition: none !important; }
+}
+
+/* Full-Bleed Hand-Drawn Studio Ghibli Skill Scenes */
+.tot-sk-stage.is-ghibli-scene {
+  height: auto;
+  aspect-ratio: 16 / 9.5;
+  padding: 0;
+  background: #232821 !important;
+  border-bottom: 1px solid var(--border);
+}
+.tot-sk-scene-img {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 45%;
+  transition: transform 320ms var(--ease-out);
+}
+.tot-sk-scene-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(22, 24, 18, 0.14) 0%, rgba(22, 24, 18, 0) 42%, rgba(22, 24, 18, 0.16) 100%);
+  pointer-events: none;
+}
+.tot-sk-stage.is-ghibli-scene .tot-sk-pill {
+  background: rgba(252, 249, 241, 0.92);
+  color: #23221f;
+  border: 1px solid rgba(36, 34, 31, 0.14);
+  backdrop-filter: blur(4px);
+}
+html[data-theme="dark"] .tot-sk-stage.is-ghibli-scene .tot-sk-pill {
+  background: rgba(24, 28, 24, 0.84);
+  color: #f4f1e6;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tot-sk-card:hover .tot-sk-scene-img {
+    transform: scale(1.045);
+  }
+}
+
+@media (max-width: 640px) {
+  .tot-sk-stage.is-ghibli-scene { height: auto !important; aspect-ratio: 16 / 10; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tot-sk-scene-img { transition: none !important; }
+}
