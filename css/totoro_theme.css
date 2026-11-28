@@ -17917,131 +17917,55 @@ html[data-theme="dark"] .tot-sk-stage.is-ghibli-scene .tot-sk-pill {
 }
 
 /* ==========================================================================
-   ZERO-OVERFLOW HEADER GUARD (TEACHER PREVIEW + LAPTOP 1024px–1520px + MOBILE)
-   Prevents right-edge clipping of .tot-account-trigger when #btn-teacher-preview
-   ("Quay lại Quản lý") and 4 skill nav tabs are shown simultaneously.
+   COMPACT ICON-ONLY TEACHER PREVIEW BUTTON (KEEPS ALL OTHER HEADER ITEMS SAME)
    ========================================================================== */
 header.app-header {
   box-sizing: border-box !important;
   max-width: min(1440px, 100%) !important;
 }
-header.app-header .header-left,
-header.app-header .header-actions {
-  min-width: 0;
+
+body.is-teacher-preview #btn-teacher-preview,
+#btn-teacher-preview.is-preview-icon {
+  width: 36px !important;
+  min-width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  border-radius: 10px !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  flex-shrink: 0 !important;
+}
+body.is-teacher-preview #btn-teacher-preview #btn-teacher-preview-text,
+#btn-teacher-preview.is-preview-icon #btn-teacher-preview-text {
+  display: none !important;
+}
+body.is-teacher-preview #btn-teacher-preview .hdr-btn-icon,
+#btn-teacher-preview.is-preview-icon .hdr-btn-icon {
+  width: 17px !important;
+  height: 17px !important;
+  margin: 0 !important;
 }
 
-/* When Teacher Preview ("Quay lại Quản lý") is visible on desktop/laptop <= 1520px */
-@media (max-width: 1520px) {
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) {
-    padding-left: 14px !important;
-    padding-right: 14px !important;
-    gap: 8px !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .header-left {
-    gap: 8px !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .header-actions {
+/* Invisible 3-4px padding trim so 1280px & 1536px/1920px never overflow by ~40px while keeping EVERY button intact */
+body.is-teacher-preview header.app-header .tot-nav-tab {
+  padding-left: 13px !important;
+  padding-right: 13px !important;
+}
+@media (max-width: 1390px) and (min-width: 1200px) {
+  body.is-teacher-preview header.app-header {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
     gap: 6px !important;
   }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .brand-mark-svg {
-    width: 36px;
-    height: 36px;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .brand-name-txt {
-    font-size: 14.5px;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-skill-trigger {
-    height: 35px;
-    padding: 0 10px;
-    font-size: 12.5px;
-    gap: 5px;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-nav-tab {
-    height: 36px !important;
-    padding: 0 12px !important;
-    font-size: 13.5px !important;
-    gap: 6px !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-nav-tab .tot-ico {
-    width: 16px;
-    height: 16px;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #hdr-streak-pill {
-    display: none !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-hdr-btn span.hdr-lbl-hide-sm {
-    display: none !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #btn-appearance-pop {
-    width: 36px !important;
-    min-width: 36px !important;
-    height: 36px !important;
-    padding: 0 !important;
-    justify-content: center !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #btn-teacher-preview {
-    height: 36px !important;
-    padding: 0 11px !important;
-    font-size: 12.5px !important;
-    white-space: nowrap !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-account-trigger {
-    height: 36px;
-    padding: 0 9px 0 5px;
-    gap: 6px;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-account-trigger #header-user-id {
-    max-width: 82px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-/* Standard & Teacher Preview tighter laptops (<= 1280px) */
-@media (max-width: 1280px) {
-  header.app-header .tot-hdr-btn span.hdr-lbl-hide-sm {
-    display: none !important;
-  }
-  header.app-header #btn-appearance-pop {
-    width: 36px !important;
-    min-width: 36px !important;
-    padding: 0 !important;
-    justify-content: center !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .brand-name-txt {
-    display: none !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-nav-tab {
-    padding: 0 10px !important;
-    font-size: 13px !important;
-  }
-}
-
-/* Narrow tablet landscape / split-screen desktop (768px–1080px) with Teacher Preview */
-@media (max-width: 1080px) {
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-account-trigger #header-user-id {
-    display: none !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) .tot-nav-tab {
-    padding: 0 8px !important;
+  body.is-teacher-preview header.app-header .header-left { gap: 7px !important; }
+  body.is-teacher-preview header.app-header .header-actions { gap: 5px !important; }
+  body.is-teacher-preview header.app-header .tot-nav-tab {
+    padding-left: 9px !important;
+    padding-right: 9px !important;
     font-size: 12.5px !important;
     gap: 4px !important;
   }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #btn-teacher-preview {
-    padding: 0 8px !important;
-    font-size: 12px !important;
-  }
-}
-
-@media (max-width: 900px) and (min-width: 768px) {
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #btn-teacher-preview-text {
-    display: none !important;
-  }
-  header.app-header:has(#btn-teacher-preview:not([style*="display: none"]):not([style*="display:none"])) #btn-teacher-preview {
-    width: 36px !important;
-    min-width: 36px !important;
-    padding: 0 !important;
-    justify-content: center !important;
-  }
+  body.is-teacher-preview header.app-header .brand-name-txt { font-size: 13.5px !important; }
+  body.is-teacher-preview header.app-header .tot-streak-pill,
+  body.is-teacher-preview header.app-header .tot-hdr-btn { padding-left: 8px !important; padding-right: 8px !important; }
 }

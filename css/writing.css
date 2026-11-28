@@ -4806,6 +4806,18 @@ mark.ws-cd-hl {
   display: flex;
   flex-direction: column;
 }
+.ws-exam-room.is-submitted .ws-ins-right {
+  overflow-y: auto !important;
+}
+.ws-exam-room.is-submitted .ws-ins-editor-wrap {
+  height: auto !important;
+  flex: 0 0 auto !important;
+}
+.ws-exam-room.is-submitted .ws-ins-editor {
+  min-height: 150px !important;
+  max-height: 240px !important;
+  flex: 0 0 auto !important;
+}
 .ws-exam-room.ins-mode-practice .ws-ins-editor {
   flex: 1 1 auto;
   min-height: 360px;

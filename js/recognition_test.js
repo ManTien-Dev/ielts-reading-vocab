@@ -483,26 +483,20 @@
       );
       return;
     }
-    // 3rd strike: void current round (for list_final) or fail current task exam cleanly
+    // 3rd strike: NEVER wipe student progress — preserve exact cursor/answers so student resumes seamlessly!
     B()?.closeCheatWarningModal?.();
     if (session.mode === 'task_final') {
       const tid = session.taskId;
+      saveRecogTaskDraft();
       closeModalShell();
       window.TasksModule?.triggerExternalAntiCheatLock?.(tid, `${reason} (Lần 3)`);
     } else if (session.mode === 'old_review' || session.mode === 'task_study_quiz') {
-      session.cursor = 0;
-      session.correctCount = 0;
-      session.wrongIds = [];
       closeModalShell();
-      B()?.showToast?.('Đã dừng lượt Speed Quiz do rời màn hình kiểm tra (các từ trả lời đúng vẫn đã lưu Đã thuộc)!');
+      B()?.showToast?.('Đã tạm dừng Speed Quiz (tiến trình & các từ trả lời đúng vẫn được giữ nguyên)!');
     } else {
-      // Void current 50-word round back to start of this round (keeps prior completed rounds intact)
-      const roundStart = Math.floor(session.cursor / ROUND_SIZE) * ROUND_SIZE;
-      session.cursor = roundStart;
-      session.roundCorrect = 0;
-      session.roundWrongIds = [];
+      // Preserve exact cursor & round progress (zero reset!)
       persistListCheckpoint();
-      B()?.showToast?.('Vi phạm rời tab lần 2 — đã hủy kết quả chặng 50 từ hiện tại, mời làm lại chặng này!');
+      B()?.showToast?.('Đã tạm dừng Speed Quiz do rời tab — tiến trình của bạn vẫn được giữ nguyên để làm tiếp!');
       renderRoundIntro();
     }
   }
@@ -545,16 +539,54 @@
     B()?.scheduleCloudPush?.();
   }
 
+  function getRecogTaskDraftKey(tid) {
+    const uid = String(B()?.getScopedUid?.() || 'guest');
+    return `ielts_recog_task_draft_v1_${uid}_${tid}`;
+  }
+  function saveRecogTaskDraft() {
+    if (!session || session.mode !== 'task_final' || !session.taskId) return;
+    try {
+      localStorage.setItem(getRecogTaskDraftKey(session.taskId), JSON.stringify({
+        taskId: session.taskId,
+        orderIds: session.orderIds,
+        cursor: Number(session.cursor || 0),
+        correctCount: Number(session.correctCount || 0),
+        wrongIds: Array.isArray(session.wrongIds) ? session.wrongIds : [],
+        updatedAt: Date.now(),
+      }));
+    } catch (_) {}
+  }
+  function loadRecogTaskDraft(tid) {
+    try {
+      const raw = localStorage.getItem(getRecogTaskDraftKey(tid));
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+  }
+  function clearRecogTaskDraft(tid) {
+    if (!tid) return;
+    try { localStorage.removeItem(getRecogTaskDraftKey(tid)); } catch (_) {}
+  }
+
   // ---- Entry 1: Task Final Exam for Reading Tasks (fnd_*, acd_*, adv_*) ----
   function startTaskFinalExam(taskObj, onCompleteCallback) {
     if (!taskObj || !Array.isArray(taskObj.words) || !taskObj.words.length) return;
     stopTimers();
     leaveWarnings = 0;
     const itemById = new Map();
-    const orderIds = shuffleArr(taskObj.words).map((w) => {
-      itemById.set(w.id, w);
-      return w.id;
-    });
+    taskObj.words.forEach((w) => itemById.set(w.id, w));
+    let orderIds = shuffleArr(taskObj.words).map((w) => w.id);
+    let cursor = 0;
+    let correctCount = 0;
+    let wrongIds = [];
+    let resumed = false;
+    const saved = loadRecogTaskDraft(taskObj.id);
+    if (saved && Array.isArray(saved.orderIds) && saved.orderIds.length === taskObj.words.length && saved.cursor > 0 && saved.cursor < saved.orderIds.length && saved.orderIds.every((id) => itemById.has(id))) {
+      orderIds = saved.orderIds.slice();
+      cursor = Number(saved.cursor || 0);
+      correctCount = Number(saved.correctCount || 0);
+      wrongIds = Array.isArray(saved.wrongIds) ? saved.wrongIds.filter((id) => itemById.has(id)) : [];
+      resumed = true;
+    }
 
     session = {
       mode: 'task_final',
@@ -565,10 +597,11 @@
       pool: taskObj.words,
       itemById,
       orderIds,
-      cursor: 0,
+      cursor,
+      resumed,
       phase: 'intro', // intro | quiz | error_loop | result
-      correctCount: 0,
-      wrongIds: [],
+      correctCount,
+      wrongIds,
       errorQueue: [],
       errorAttempts: 0,
       currentItem: null,
@@ -1264,6 +1297,7 @@
     }
 
     if (session.mode === 'task_final' || session.mode === 'old_review') {
+      if (session.mode === 'task_final') clearRecogTaskDraft(session.taskId);
       if (typeof session.onCompleteCallback === 'function') {
         session.onCompleteCallback({
           taskId: session.taskId,

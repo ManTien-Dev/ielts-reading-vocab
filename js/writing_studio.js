@@ -3953,6 +3953,7 @@
                     <div class="ws-prac-btns">
                       <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="WritingStudio.startFullWritingTest('${esc(ft.id)}', 'practice')">Luyện 60p</button>
                       <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="WritingStudio.startFullWritingTest('${esc(ft.id)}', 'exam')">Thi thật 60p</button>
+                      ${doneSet.has(ft.id) ? `<button type="button" class="btn" style="grid-column:1 / -1;padding:7px 10px;font-size:12px;background:var(--accent-soft);color:var(--accent);border-color:var(--accent);" onclick="WritingStudio.openHistoryReviewByPrompt('${esc(ft.id)}')">Xem lại bài đã nộp &amp; Nhận xét →</button>` : ''}
                       ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'writing', itemId: '${esc(ft.id)}', isFull: true, title: '${esc(ft.title).replace(/'/g, "\\'")}', subtitle: 'Full Writing Test · 60 phút' })" title="Tạo link giao Full Writing Test này cho học sinh">🔗 Giao link Full Test này</button>` : ''}
                     </div>
                   </div>
@@ -4063,6 +4064,7 @@
                   <div class="ws-prac-btns">
                     <button type="button" class="btn" style="padding:8px 10px;font-size:12.5px;" onclick="WritingStudio.startPracticePrompt('${esc(p.id)}', 'practice')">Luyện tập</button>
                     <button type="button" class="btn btn-primary" style="padding:8px 10px;font-size:12.5px;" onclick="WritingStudio.startPracticePrompt('${esc(p.id)}', 'exam')">Thi thật</button>
+                    ${isDone ? `<button type="button" class="btn" style="grid-column:1 / -1;padding:7px 10px;font-size:12px;background:var(--accent-soft);color:var(--accent);border-color:var(--accent);" onclick="WritingStudio.openHistoryReviewByPrompt('${esc(p.id)}')">Xem lại bài đã nộp &amp; Nhận xét →</button>` : ''}
                     ${isTeacherBypass() ? `<button type="button" class="rp-btn-assign" style="grid-column:1 / -1;padding:6px 10px;font-size:12px;" onclick="event.stopPropagation(); window.TeacherStudio?.openPracticeAssignModal?.({ skill: 'writing', itemId: '${esc(p.id)}', isFull: false, title: '${esc(String(p.prompt || '').slice(0, 80)).replace(/'/g, "\\'")}', subtitle: '${esc(p.type || 'Task 2').replace(/'/g, "\\'")}' })" title="Tạo link giao đề Writing này cho học sinh">🔗 Giao link đề này</button>` : ''}
                   </div>
                 </div>
@@ -5103,6 +5105,7 @@
     clearSavedPracDraft();
     clearInterval(pracState.timerId);
     if (curEd) curEd.readOnly = true;
+    document.getElementById('ws-practice-room')?.classList.add('is-submitted');
 
     const submitBtn = document.getElementById('ws-prac-submit');
     if (submitBtn) {
@@ -5173,8 +5176,13 @@
       }
 
       const fullHtml = `
-        <div class="ws-ins-res-title">Kết quả Full IELTS Writing Test · Overall Band ${weighted.toFixed(1)} (Part 1: ${b1.toFixed(1)} · Part 2: ${b2.toFixed(1)})</div>
-        <div style="font-size:12.5px;color:var(--ink-2);margin-bottom:10px;">Trọng số chuẩn Cambridge: Part 1 (1/3 · ${wc1} từ) + Part 2 (2/3 · ${wc2} từ)</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+          <div>
+            <div class="ws-ins-res-title" style="margin:0;">Kết quả Full IELTS Writing Test · Overall Band ${weighted.toFixed(1)} (Part 1: ${b1.toFixed(1)} · Part 2: ${b2.toFixed(1)})</div>
+            <div style="font-size:12.5px;color:var(--ink-2);margin-top:2px;">Trọng số chuẩn Cambridge: Part 1 (1/3 · ${wc1} từ) + Part 2 (2/3 · ${wc2} từ)</div>
+          </div>
+          <button type="button" class="btn btn-primary" style="padding:7px 12px;font-size:12.5px;" onclick="WritingStudio.openHistoryReview(0)">Xem toàn văn bài đã nộp</button>
+        </div>
         ${r1 && window.IeltsGrader?.renderExaminerReportHtml ? window.IeltsGrader.renderExaminerReportHtml(r1, { title: 'Part 1 · Academic Task 1' }) : ''}
         ${renderTask1GuideHtml(pracState.part1)}
         <div style="margin-top:14px;">${r2 && window.IeltsGrader?.renderExaminerReportHtml ? window.IeltsGrader.renderExaminerReportHtml(r2, { title: 'Part 2 · Academic Task 2' }) : ''}</div>
@@ -5184,6 +5192,7 @@
         const curBox = document.getElementById('ws-prac-result');
         curBox.style.display = 'block';
         curBox.innerHTML = fullHtml;
+        curBox.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
       }
       renderPracticeHub();
       return;
@@ -5250,16 +5259,26 @@
       savePracticeHist(hist);
     }
 
+    const submittedEssayBannerHtml = `
+      <div style="margin-bottom:12px;padding:12px 14px;border-radius:11px;border:1px solid var(--border);background:var(--surface);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+          <strong style="font-size:12.5px;color:var(--accent);text-transform:uppercase;letter-spacing:0.04em;">Bài viết của bạn (${wc} words · Band ${finalBand.toFixed(1)})</strong>
+          <button type="button" class="btn" style="padding:5px 10px;font-size:12px;" onclick="WritingStudio.openHistoryReview(0)">Mở bảng xem chi tiết</button>
+        </div>
+        <div style="white-space:pre-wrap;font-size:13.6px;line-height:1.72;color:var(--ink);">${esc(essay)}</div>
+      </div>
+    `;
     const reportHtml = report && window.IeltsGrader?.renderExaminerReportHtml
       ? window.IeltsGrader.renderExaminerReportHtml(report, { title: isTask1 ? 'Kết quả chấm IELTS Writing Task 1' : 'Kết quả chấm IELTS Writing Task 2' })
       : `<div class="ws-ins-res-title">Đã nộp bài (${wc} words · Band ${finalBand.toFixed(1)})</div>`;
-    activePracRef.lastResultHtml = reportHtml + guideHtml;
+    activePracRef.lastResultHtml = submittedEssayBannerHtml + reportHtml + guideHtml;
 
     if (pracState === activePracRef) {
       const curBox = document.getElementById('ws-prac-result');
       if (curBox) {
         curBox.style.display = 'block';
         curBox.innerHTML = activePracRef.lastResultHtml;
+        curBox.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
       }
     }
     renderPracticeHub();
@@ -5456,13 +5475,23 @@
           </div>
         </div>`;
     } else {
+      const t1Obj = (h.isTask1 || /^Task 1/i.test(String(h.type || '')))
+        ? (DATA_T1().TASK1_PROMPTS || []).find((x) => x.id === h.promptId)
+        : null;
       bodyHtml = `
         <div style="display:flex;flex-direction:column;gap:14px;">
+          ${t1Obj ? `
+            <div style="padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface);">
+              <div style="font-size:12.5px;color:var(--ink-2);line-height:1.55;margin-bottom:8px;">${esc(t1Obj.prompt || '')}</div>
+              <div style="max-width:560px;margin:0 auto;">${renderTask1VisualHtml(t1Obj, true)}</div>
+            </div>
+          ` : ''}
           <div style="padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--surface-item);">
             <div style="font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--accent);margin-bottom:6px;">Bài viết của bạn (${h.wordCount || 0} words)</div>
             <div style="white-space:pre-wrap;font-size:13.8px;line-height:1.72;color:var(--ink);">${h.essay ? esc(h.essay) : '<em style="color:var(--ink-3);">Lượt nộp cũ trước khi nâng cấp lưu bài viết chi tiết — các bài nộp mới từ nay sẽ lưu đầy đủ toàn văn bài viết &amp; nhận xét AI.</em>'}</div>
           </div>
           ${h.report && window.IeltsGrader?.renderExaminerReportHtml ? window.IeltsGrader.renderExaminerReportHtml(h.report, { title: h.isTask1 ? 'Nhận xét AI · Task 1' : 'Nhận xét AI · Task 2' }) : ''}
+          ${t1Obj ? renderTask1GuideHtml(t1Obj) : ''}
         </div>`;
     }
 
@@ -5495,6 +5524,13 @@
         </div>
       </div>`;
     document.body.appendChild(overlay);
+  }
+
+  function openHistoryReviewByPrompt(promptId) {
+    const hist = getPracticeHist();
+    const idx = hist.findIndex((h) => h && h.promptId === promptId);
+    if (idx >= 0) openHistoryReview(idx);
+    else toast('Chưa có bài nộp nào cho đề này.');
   }
 
   function renderWritingHomePanel(el) {
@@ -5762,6 +5798,7 @@
     renderPracticeHub,
     renderWritingHomePanel,
     openHistoryReview,
+    openHistoryReviewByPrompt,
     closeHistoryReview,
     getOverallStats,
     selectModule,

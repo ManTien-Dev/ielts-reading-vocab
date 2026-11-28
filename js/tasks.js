@@ -10,6 +10,7 @@
   const LOCAL_AI_KEY_STORAGE = 'ielts_gemini_local_key_v1';
   const TEACHER_SENT_TASKS_KEY = 'ielts_teacher_sent_tasks_v1';
   const ACTIVE_TASK_EXAM_KEY_BASE = 'ielts_active_task_exam_';
+  const TASK_EXAM_DRAFT_KEY_BASE = 'ielts_task_exam_draft_v1_';
   const TASK_DEADLINE_KEY_BASE = 'ielts_task_deadlines_';
   const ASSIGNED_TASKS_KEY_BASE = 'ielts_assigned_tasks_';
   const TEACHER_LIVE_DEADLINES_KEY = 'ielts_teacher_live_deadlines_v1';
@@ -538,8 +539,73 @@
     } catch (_) {}
   }
 
+  function loadTaskExamDraft(taskId) {
+    const uid = getScopedStorageUid();
+    if (!uid || !taskId) return null;
+    try {
+      const map = JSON.parse(localStorage.getItem(`${TASK_EXAM_DRAFT_KEY_BASE}${uid}`) || '{}') || {};
+      const d = map[taskId];
+      if (!d || typeof d !== 'object') return null;
+      return d;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function saveTaskExamDraft() {
+    if (!activeTask || activeStage < 1 || taskTestPassed || isPreviewTestMode || isTeacherOrBypassed()) return;
+    const uid = getScopedStorageUid();
+    if (!uid) return;
+    try {
+      const map = JSON.parse(localStorage.getItem(`${TASK_EXAM_DRAFT_KEY_BASE}${uid}`) || '{}') || {};
+      const t3Input = document.getElementById('t3-translation-input') || document.getElementById('task-t3-input');
+      map[activeTask.id] = {
+        taskId: activeTask.id,
+        stage: activeStage,
+        t1Completed: Boolean(t1Completed),
+        t2Completed: Boolean(t2Completed),
+        t1BoardIndex: Number(t1BoardIndex || 0),
+        t1Boards: Array.isArray(_runtimeT1Boards) ? _runtimeT1Boards : [],
+        t1MatchedIds: Array.from(t1MatchedIds || []),
+        t1Mistakes: Number(t1Mistakes || 0),
+        t1WrongWordIds: Array.from(t1WrongWordIds || []),
+        t2Index: Number(t2Index || 0),
+        t2Correct: Number(t2Correct || 0),
+        t2WrongRecords: Array.isArray(t2WrongRecords) ? t2WrongRecords : [],
+        t2ParaBoardIndex: Number(t2ParaBoardIndex || 0),
+        t2ParaMatchedIds: Array.from(t2ParaMatchedIds || []),
+        t2ParaDone: Boolean(t2ParaDone),
+        t2WbBoardIndex: Number(t2WbBoardIndex || 0),
+        t2WbFills: t2WbFills ? { ...t2WbFills } : {},
+        t2WbDone: Boolean(t2WbDone),
+        t2ClipIndex: Number(t2ClipIndex || 0),
+        t3ReadingAnswers: t3ReadingAnswers ? { ...t3ReadingAnswers } : {},
+        t3V2Step1Locked: Boolean(t3V2Step1Locked),
+        t3V2Step1Snapshot: t3V2Step1Snapshot || null,
+        t3V2HeadingAnswers: t3V2HeadingAnswers ? { ...t3V2HeadingAnswers } : {},
+        t3V2SummaryFills: t3V2SummaryFills ? { ...t3V2SummaryFills } : {},
+        t3TranslationText: t3Input ? String(t3Input.value || '') : '',
+        updatedAt: Date.now(),
+      };
+      localStorage.setItem(`${TASK_EXAM_DRAFT_KEY_BASE}${uid}`, JSON.stringify(map));
+    } catch (_) {}
+  }
+
+  function clearTaskExamDraft(taskId) {
+    const uid = getScopedStorageUid();
+    if (!uid || !taskId) return;
+    try {
+      const map = JSON.parse(localStorage.getItem(`${TASK_EXAM_DRAFT_KEY_BASE}${uid}`) || '{}') || {};
+      if (map[taskId]) {
+        delete map[taskId];
+        localStorage.setItem(`${TASK_EXAM_DRAFT_KEY_BASE}${uid}`, JSON.stringify(map));
+      }
+    } catch (_) {}
+  }
+
   function persistActiveExamSnapshot() {
     if (!activeTask || isTeacherOrBypassed()) return;
+    saveTaskExamDraft();
     saveActiveExamSession({
       taskId: activeTask.id,
       startedAt: taskStartedAt || Date.now(),
@@ -3267,13 +3333,13 @@
       pillEl.style.borderColor = '#dc2626';
     }
     if (bannerEl) {
-      bannerEl.innerHTML = 'Bạn đang làm bài Test kết thúc Task! Nếu thoát ra lúc này, bài làm dở sẽ bị hủy và <strong>Task này sẽ bị khóa 30 phút</strong>.';
+      bannerEl.innerHTML = 'Bạn đang làm bài Test kết thúc Task! Nếu thoát ra lúc này, <strong>Task sẽ tạm khóa 30 phút</strong> — toàn bộ tiến trình bài làm của bạn vẫn được <strong>lưu giữ nguyên vẹn</strong> để làm tiếp sau khi mở khóa.';
     }
     if (detailEl) {
-      detailEl.innerHTML = 'Bắt buộc phải hoàn thành đủ bài Test kết thúc Task (Test 1 + Test 2 + Test 3) mới được tính hoàn thành Task. Hệ thống không cho phép thoát tạm miễn phí giữa bài Test — chỉ Giáo viên mới có thể mở khóa sớm nếu bạn xác nhận thoát.';
+      detailEl.innerHTML = 'Hệ thống luôn bảo toàn toàn bộ đáp án bạn đã làm. Khi hết 30 phút hoặc được Giáo viên mở khóa sớm, bạn chỉ cần vào lại Task này để làm tiếp từ đúng vị trí đang dở.';
     }
     if (confirmBtn) {
-      confirmBtn.textContent = 'Bỏ thi & Khóa Task 30 phút';
+      confirmBtn.textContent = 'Lưu bài & Thoát (Khóa 30 phút)';
     }
     if (goTestBtn) {
       goTestBtn.style.display = 'none';
@@ -3383,6 +3449,8 @@
   function lockAndExitActiveTask(toastMsg) {
     if (!activeTask || isTeacherOrBypassed()) return;
     const failedTaskId = activeTask.id;
+    // Preserve full student progress so they can continue seamlessly after unlock/cooldown!
+    saveTaskExamDraft();
     dismissTaskExitWarn();
     clearActiveExamSession();
     const locks = loadTaskLocks();
@@ -3390,7 +3458,7 @@
     saveTaskLocks(locks);
     B()?.saveAndSync?.();
     exitTaskWorkspace(false);
-    B()?.showToast(toastMsg);
+    B()?.showToast(`${toastMsg} (Tiến trình bài làm đã được lưu nguyên vẹn để làm tiếp sau khi mở khóa)`);
     openTaskBriefModal(failedTaskId);
   }
 
@@ -3416,7 +3484,7 @@
           container.parentNode.insertBefore(banner, container);
         }
         const leftTries = 3 - taskLeaveWarnings;
-        banner.textContent = `Cảnh báo (lần ${taskLeaveWarnings}/3): Không chuyển tab hay bấm ra ngoài! Còn ${leftTries} lần — lần 3 sẽ khóa Task 30 phút và mất hết bài làm.`;
+        banner.textContent = `Cảnh báo (lần ${taskLeaveWarnings}/3): Không chuyển tab hay bấm ra ngoài! Còn ${leftTries} lần — lần 3 sẽ tạm khóa Task 30 phút (tiến trình bài làm vẫn được giữ nguyên).`;
       }
       B()?.openCheatWarningModal?.(
         customReason || 'Không bấm ra ngoài hay chuyển tab khi đang làm Test!',
@@ -3724,6 +3792,59 @@
         taskStartedAt = Date.now();
       }
     }
+    const savedDraft = !isTeacherOrBypassed() ? loadTaskExamDraft(activeTask.id) : null;
+    if (savedDraft && Number(savedDraft.stage) >= 1 && Number(savedDraft.stage) <= 3) {
+      activeStage = Number(savedDraft.stage);
+      taskTestPassed = false;
+      t1Completed = Boolean(savedDraft.t1Completed);
+      t2Completed = Boolean(savedDraft.t2Completed);
+      t3Completed = false;
+      lastT3Grade = null;
+      t1BoardIndex = Number(savedDraft.t1BoardIndex || 0);
+      t1Mistakes = Number(savedDraft.t1Mistakes || 0);
+      t1WrongWordIds = new Set(Array.isArray(savedDraft.t1WrongWordIds) ? savedDraft.t1WrongWordIds : []);
+      if (Array.isArray(savedDraft.t1Boards) && savedDraft.t1Boards.length) {
+        _runtimeT1Boards = savedDraft.t1Boards;
+      } else {
+        buildRuntimeT1Boards(activeTask);
+      }
+      setupT1Board();
+      if (Array.isArray(savedDraft.t1MatchedIds) && savedDraft.t1MatchedIds.length) {
+        t1MatchedIds = new Set(savedDraft.t1MatchedIds);
+      }
+      if (activeStage >= 2) {
+        initTest2State(activeTask);
+        t2Index = Number(savedDraft.t2Index || 0);
+        t2Correct = Number(savedDraft.t2Correct || 0);
+        t2WrongRecords = Array.isArray(savedDraft.t2WrongRecords) ? savedDraft.t2WrongRecords : [];
+        t2ParaBoardIndex = Number(savedDraft.t2ParaBoardIndex || 0);
+        t2ParaMatchedIds = new Set(Array.isArray(savedDraft.t2ParaMatchedIds) ? savedDraft.t2ParaMatchedIds : []);
+        t2ParaDone = Boolean(savedDraft.t2ParaDone);
+        t2WbBoardIndex = Number(savedDraft.t2WbBoardIndex || 0);
+        t2WbFills = savedDraft.t2WbFills ? { ...savedDraft.t2WbFills } : {};
+        t2WbDone = Boolean(savedDraft.t2WbDone);
+        t2ClipIndex = Number(savedDraft.t2ClipIndex || 0);
+      }
+      if (activeStage === 3) {
+        resetT3V2State(activeTask);
+        initTest3ReadingQuiz(activeTask);
+        t3ReadingAnswers = savedDraft.t3ReadingAnswers ? { ...savedDraft.t3ReadingAnswers } : {};
+        t3V2Step1Locked = Boolean(savedDraft.t3V2Step1Locked);
+        t3V2Step1Snapshot = savedDraft.t3V2Step1Snapshot || null;
+        t3V2HeadingAnswers = savedDraft.t3V2HeadingAnswers ? { ...savedDraft.t3V2HeadingAnswers } : {};
+        t3V2SummaryFills = savedDraft.t3V2SummaryFills ? { ...savedDraft.t3V2SummaryFills } : {};
+      }
+      renderTaskStage();
+      if (activeStage === 3 && savedDraft.t3TranslationText) {
+        setTimeout(() => {
+          const inp = document.getElementById('t3-translation-input') || document.getElementById('task-t3-input');
+          if (inp && !inp.value) inp.value = savedDraft.t3TranslationText;
+        }, 30);
+      }
+      B()?.showToast?.(`Đã khôi phục tiến trình Test ${activeStage} của ${activeTask.label} — bạn tiếp tục làm bài nhé!`);
+      return;
+    }
+
     activeStage = 1;
     taskTestPassed = false;
     t1Completed = false;
@@ -7212,6 +7333,7 @@
 
     taskTestPassed = true;
     clearActiveExamSession();
+    clearTaskExamDraft(activeTask.id);
     stopIdleMonitor();
     B()?.syncExamLock?.(false);
     document.getElementById('screen-task')?.classList.remove('exam-no-copy');
@@ -7426,6 +7548,9 @@
   if (!window.__taskBeforeUnloadBound) {
     window.__taskBeforeUnloadBound = true;
     window.addEventListener('beforeunload', (e) => {
+      if (activeTask && activeStage >= 1 && !taskTestPassed && !isPreviewTestMode) {
+        saveTaskExamDraft();
+      }
       if (!hasIncompleteActiveTask()) return;
       const msg = activeStage >= 1
         ? 'Bạn đang làm bài Test kết thúc Task! Nếu đóng hoặc tải lại tab lúc này, bài thi sẽ bị hủy và Task có thể bị khóa 30 phút.'

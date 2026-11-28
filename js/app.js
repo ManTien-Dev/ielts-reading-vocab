@@ -1134,6 +1134,10 @@
     let listeningTaskProgress = {};
     let writingTaskProgress = {};
     let speakingTaskProgress = {};
+    let writingPracticeHistory = [];
+    let readingPracticeHistory = [];
+    let listeningPracticeHistory = [];
+    let speakingPracticeHistory = [];
     try {
       taskProgress = JSON.parse(localStorage.getItem(`${TASK_PROGRESS_KEY_BASE}${scoped}`) || '{}') || {};
       taskLocks = JSON.parse(localStorage.getItem(`${TASK_LOCKS_KEY_BASE}${scoped}`) || '{}') || {};
@@ -1143,6 +1147,51 @@
       const spDone = JSON.parse(localStorage.getItem(`totoro_speaking_task_done_v1_${scoped}`) || '{}') || {};
       const spLegacy = JSON.parse(localStorage.getItem(`totoro_speaking_task_prog_v1_${scoped}`) || '{}') || {};
       speakingTaskProgress = { ...spLegacy, ...spDone };
+
+      const wHistRaw = JSON.parse(localStorage.getItem(`totoro_writing_prac_hist_v1_${scoped}`) || '[]');
+      if (Array.isArray(wHistRaw)) {
+        writingPracticeHistory = wHistRaw.slice(0, 15).map((h) => ({
+          promptId: h.promptId,
+          isTask1: Boolean(h.isTask1),
+          isFull: Boolean(h.isFull),
+          type: h.type || '',
+          prompt: String(h.prompt || '').slice(0, 260),
+          part1Title: h.part1Title || '',
+          part2Prompt: h.part2Prompt ? String(h.part2Prompt).slice(0, 220) : '',
+          mode: h.mode || 'practice',
+          wordCount: Number(h.wordCount || 0),
+          wc1: h.wc1, wc2: h.wc2, b1: h.b1, b2: h.b2,
+          band: Number(h.band || 0),
+          criteria: h.criteria || null,
+          essay: h.essay ? String(h.essay).slice(0, 4500) : '',
+          essay1: h.essay1 ? String(h.essay1).slice(0, 3000) : '',
+          essay2: h.essay2 ? String(h.essay2).slice(0, 4000) : '',
+          completedAt: Number(h.completedAt || 0),
+        }));
+      }
+      const rStoreRaw = JSON.parse(localStorage.getItem(`ielts_reading_practice_store_v1_${scoped}`) || '{}');
+      if (Array.isArray(rStoreRaw?.history)) {
+        readingPracticeHistory = rStoreRaw.history.slice(0, 25).map((h) => ({
+          itemId: h.itemId, title: h.title, source: h.source, isFull: !!h.isFull,
+          score: h.score, total: h.total, band: h.band, elapsedSec: h.elapsedSec,
+          mastered: !!h.mastered, completedAt: h.completedAt
+        }));
+      }
+      const lStoreRaw = JSON.parse(localStorage.getItem(`ielts_listening_practice_v1_${scoped}`) || '{}');
+      if (Array.isArray(lStoreRaw?.history)) {
+        listeningPracticeHistory = lStoreRaw.history.slice(0, 25).map((h) => ({
+          itemId: h.itemId, title: h.title, source: h.source, isFull: !!h.isFull,
+          score: h.score, total: h.total, band: h.band, elapsedSec: h.elapsedSec,
+          submittedAt: h.submittedAt || h.completedAt
+        }));
+      }
+      const sHistRaw = JSON.parse(localStorage.getItem(`totoro_speaking_prac_hist_v1_${scoped}`) || '[]');
+      if (Array.isArray(sHistRaw)) {
+        speakingPracticeHistory = sHistRaw.slice(0, 25).map((h) => ({
+          cueId: h.cueId, cueTitle: h.cueTitle, part: h.part, band: h.band,
+          durationSec: h.durationSec, wpm: h.wpm, at: h.at || h.completedAt
+        }));
+      }
 
       // Merge active Reading Practice / Listening / Writing / Speaking locks into unified taskLocks for 4-skill teacher monitoring
       const nowMs = Date.now();
@@ -1183,6 +1232,10 @@
       listeningTaskProgress,
       writingTaskProgress,
       speakingTaskProgress,
+      writingPracticeHistory,
+      readingPracticeHistory,
+      listeningPracticeHistory,
+      speakingPracticeHistory,
       taskLocks,
       teacherUnlockedAt: Number(localStorage.getItem(`${TEACHER_UNLOCK_KEY_BASE}${scoped}`) || 0),
       teacherTaskUnlocks,
@@ -1353,6 +1406,31 @@
         } catch (_) {}
       }
     });
+
+    // Merge Writing Practice History from Cloud (keeps full submitted essays synced across devices)
+    if (Array.isArray(sd.writingPracticeHistory) && sd.writingPracticeHistory.length) {
+      try {
+        const wKey = `totoro_writing_prac_hist_v1_${scoped}`;
+        const localW = JSON.parse(localStorage.getItem(wKey) || '[]');
+        const arr = Array.isArray(localW) ? localW.slice() : [];
+        const sigSet = new Set(arr.map((x) => `${x?.promptId || ''}::${Number(x?.completedAt || 0)}`));
+        let wDirty = false;
+        sd.writingPracticeHistory.forEach((rec) => {
+          if (!rec || !rec.promptId) return;
+          const sig = `${rec.promptId}::${Number(rec.completedAt || 0)}`;
+          if (!sigSet.has(sig)) {
+            arr.push(rec);
+            sigSet.add(sig);
+            wDirty = true;
+          }
+        });
+        if (wDirty) {
+          arr.sort((a, b) => Number(b?.completedAt || 0) - Number(a?.completedAt || 0));
+          localStorage.setItem(wKey, JSON.stringify(arr.slice(0, 60)));
+          changed = true;
+        }
+      } catch (_) {}
+    }
 
     const LOCK_WINDOW_MS = 30 * 60 * 1000;
     const cloudUnlockedAt = Number(sd.teacherUnlockedAt || 0);
@@ -6986,7 +7064,6 @@
         const pausedAt = Date.now();
         const card = document.querySelector('#modal-recall-check .recall-check-card');
         const inp = document.getElementById('recall-word-input');
-        if (inp && recallStage === 1) inp.value = '';
         if (card) card.style.setProperty('visibility', 'hidden');
         const fb = document.getElementById('recall-feedback');
         if (fb) {
